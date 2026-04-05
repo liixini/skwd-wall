@@ -1,5 +1,10 @@
 # Skwd-wall
 
+<img width="2560" height="1439" alt="image" src="https://github.com/user-attachments/assets/157100e4-88e5-4542-8eba-fea0576e8801" />
+<img width="2562" height="1440" alt="image" src="https://github.com/user-attachments/assets/367a6a0d-a384-490d-abe2-98c053ff9ffc" />
+<img width="2556" height="1440" alt="image" src="https://github.com/user-attachments/assets/c1ff7edd-7e7b-4787-8290-21bf040ae15a" />
+<img width="2559" height="1439" alt="image" src="https://github.com/user-attachments/assets/10613dc2-3724-4243-8970-b5ace1ba9c2a" />
+
 ## What is Skwd-wall?
 
 An image/video/Wallpaper Engine wallpaper selector from my shell [Skwd](https://www.github.com/liixini/skwd) with maximalist animations and more flair than you can shake a stick at. Now separated as a standalone component for use with other shells.
