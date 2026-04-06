@@ -173,7 +173,7 @@ Process {
       else if (data.indexOf("Loading Steam API") >= 0)
         dlProc.statusMessage(dlProc.currentId, "Connecting to Steam...")
       else if (data.indexOf("Logging in") >= 0 || data.indexOf("Waiting for user info") >= 0)
-        dlProc.statusMessage(dlProc.currentId, "Logging in... Skwd-wall is not frozen it just takes time! You can exit Skwd-wall, download will happen in the background!")
+        dlProc.statusMessage(dlProc.currentId, "Logging in... Program isn't frozen this takes time!")
     }
   }
 
