@@ -184,13 +184,19 @@ Item {
         Image {
             id: thumbImage
             anchors.fill: parent
-            source: "file://" + model.thumb
+            source: model.thumb ? ("file://" + model.thumb) : ""
             fillMode: Image.PreserveAspectCrop
             smooth: true
             asynchronous: true
             cache: false
             sourceSize.width: 400
             sourceSize.height: 720
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            visible: thumbImage.status !== Image.Ready
+            color: delegateItem.colors ? Qt.rgba(delegateItem.colors.surfaceVariant.r, delegateItem.colors.surfaceVariant.g, delegateItem.colors.surfaceVariant.b, 0.8) : Qt.rgba(0.18, 0.20, 0.25, 0.8)
         }
 
         Rectangle {
