@@ -30,9 +30,12 @@ Item {
     property int imageOptimizeTotal: 0
     property string imageOptimizeFile: ""
 
+    property bool tagCloudOpen: false
+
     signal settingsToggled()
     signal wallhavenToggled()
     signal steamWorkshopToggled()
+    signal tagCloudToggled()
 
     readonly property int _skew: 10
 
@@ -150,6 +153,14 @@ Item {
                     }
                 }
             }
+        }
+
+        FilterButton {
+            colors: filterBar.colors
+            icon: "\u{f0349}"
+            tooltip: "Tags"
+            isActive: filterBar.tagCloudOpen
+            onClicked: filterBar.tagCloudToggled()
         }
 
         FilterButton {

@@ -363,9 +363,17 @@ Scope {
       imageOptimizeFile: ImageOptimizeService.currentFile
       wallhavenBrowserOpen: wallpaperSelector.wallhavenBrowserOpen
       steamWorkshopBrowserOpen: wallpaperSelector.steamWorkshopBrowserOpen
+      tagCloudOpen: wallpaperSelector.tagCloudVisible
       onSettingsToggled: wallpaperSelector.settingsOpen = !wallpaperSelector.settingsOpen
       onWallhavenToggled: { wallpaperSelector.steamWorkshopBrowserOpen = false; wallpaperSelector.wallhavenBrowserOpen = !wallpaperSelector.wallhavenBrowserOpen }
       onSteamWorkshopToggled: { wallpaperSelector.wallhavenBrowserOpen = false; wallpaperSelector.steamWorkshopBrowserOpen = !wallpaperSelector.steamWorkshopBrowserOpen }
+      onTagCloudToggled: {
+        wallpaperSelector.tagCloudVisible = !wallpaperSelector.tagCloudVisible
+        if (!wallpaperSelector.tagCloudVisible) {
+          tagCloud.reset()
+          wallpaperSelector._setSelectedTags([])
+        }
+      }
       visible: !wallpaperSelector.anyBrowserOpen
       opacity: wallpaperSelector.anyBrowserOpen ? 0 : 1
       Behavior on opacity { NumberAnimation { duration: Style.animNormal } }
