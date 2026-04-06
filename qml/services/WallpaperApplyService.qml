@@ -44,16 +44,25 @@ QtObject {
     function applyStatic(path) {
         console.log("WallpaperApplyService.applyStatic:", path, "wallpaperDir:", wallpaperDir)
         _saveState("static", path, "")
-        awwwProcess.command = ["sh", "-c",
-            "pkill mpvpaper 2>/dev/null; " +
-            "pkill -9 -f '[l]inux-wallpaperengine' 2>/dev/null; " +
-            "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4") + "; " +
-            "if ! pgrep -x awww-daemon >/dev/null; then " +
-            "  setsid awww-daemon >/dev/null 2>&1 & disown; " +
-            "  for i in 1 2 3 4 5; do sleep 0.3; pgrep -x awww-daemon >/dev/null && break; done; " +
-            "fi; " +
-            "awww img " + JSON.stringify(path) +
-            " --transition-type wipe --transition-angle 45 --transition-duration 0.5"]
+        if (Config.isKDE) {
+            awwwProcess.command = ["sh", "-c",
+                "pkill mpvpaper 2>/dev/null; " +
+                "pkill -9 -f '[l]inux-wallpaperengine' 2>/dev/null; " +
+                "pkill awww 2>/dev/null; pkill awww-daemon 2>/dev/null; " +
+                "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4") + "; " +
+                "plasma-apply-wallpaperimage " + JSON.stringify(path)]
+        } else {
+            awwwProcess.command = ["sh", "-c",
+                "pkill mpvpaper 2>/dev/null; " +
+                "pkill -9 -f '[l]inux-wallpaperengine' 2>/dev/null; " +
+                "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4") + "; " +
+                "if ! pgrep -x awww-daemon >/dev/null; then " +
+                "  setsid awww-daemon >/dev/null 2>&1 & disown; " +
+                "  for i in 1 2 3 4 5; do sleep 0.3; pgrep -x awww-daemon >/dev/null && break; done; " +
+                "fi; " +
+                "awww img " + JSON.stringify(path) +
+                " --transition-type wipe --transition-angle 45 --transition-duration 0.5"]
+        }
         awwwProcess.running = true
         _extractAndTheme(path)
         wallpaperApplied("static", _basename(path), path)
@@ -61,15 +70,37 @@ QtObject {
 
     function applyVideo(path) {
         _saveState("video", path, "")
-        mpvProcess.command = ["sh", "-c",
-            "pkill awww 2>/dev/null; pkill awww-daemon 2>/dev/null; " +
-            "pkill mpvpaper 2>/dev/null; " +
-            "pkill -9 -f '[l]inux-wallpaperengine' 2>/dev/null; " +
-            "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4") + "; " +
-            "nohup setsid mpvpaper -o " + (wallpaperMute ? "'loop --mute=yes'" : "'loop'") + " '*' " + JSON.stringify(path) + " </dev/null >/dev/null 2>&1 &"]
-        mpvProcess.running = true
+        if (Config.isKDE) {
+            _applyKdeVideo(path)
+        } else {
+            mpvProcess.command = ["sh", "-c",
+                "pkill awww 2>/dev/null; pkill awww-daemon 2>/dev/null; " +
+                "pkill mpvpaper 2>/dev/null; " +
+                "pkill -9 -f '[l]inux-wallpaperengine' 2>/dev/null; " +
+                "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4") + "; " +
+                "nohup setsid mpvpaper -o " + (wallpaperMute ? "'loop --mute=yes'" : "'loop'") + " '*' " + JSON.stringify(path) + " </dev/null >/dev/null 2>&1 &"]
+            mpvProcess.running = true
+        }
         _extractVideoThumb(path)
         wallpaperApplied("video", _basename(path), path)
+    }
+
+    function _applyKdeVideo(path) {
+        var plugin = Config.kdeVideoPlugin
+        var videoUrl = "file://" + path
+        var muteMode = wallpaperMute ? "4" : "0"
+        var script =
+            "var allDesktops = desktops();" +
+            "for (var i = 0; i < allDesktops.length; i++) {" +
+            "  var d = allDesktops[i];" +
+            "  d.wallpaperPlugin = '" + plugin + "';" +
+            "  d.currentConfigGroup = ['Wallpaper', '" + plugin + "', 'General'];" +
+            "  d.writeConfig('VideoUrls', '[{\"filename\":\"" + videoUrl + "\",\"enabled\":true}]');" +
+            "  d.writeConfig('MuteMode', '" + muteMode + "');" +
+            "}"
+        mpvProcess.command = ["qdbus6", "org.kde.plasmashell", "/PlasmaShell",
+                              "org.kde.PlasmaShell.evaluateScript", script]
+        mpvProcess.running = true
     }
 
     function applyWE(weId) {
@@ -197,12 +228,16 @@ QtObject {
                     _symLinkProcess.command = ["ln", "-sf", videoPath,
                                                service.videoDir + "/lockscreen-video.mp4"]
                     _symLinkProcess.running = true
-                    var opts = "loop"
-                    if (service.wallpaperMute) opts = "loop --mute=yes"
-                    weProcess.command = ["sh", "-c",
-                        "pkill mpvpaper 2>/dev/null; " +
-                        "nohup setsid mpvpaper -o '" + opts + "' '*' " + JSON.stringify(videoPath) + " </dev/null >/dev/null 2>&1 &"]
-                    weProcess.running = true
+                    if (Config.isKDE) {
+                        service._applyKdeVideo(videoPath)
+                    } else {
+                        var opts = "loop"
+                        if (service.wallpaperMute) opts = "loop --mute=yes"
+                        weProcess.command = ["sh", "-c",
+                            "pkill mpvpaper 2>/dev/null; " +
+                            "nohup setsid mpvpaper -o '" + opts + "' '*' " + JSON.stringify(videoPath) + " </dev/null >/dev/null 2>&1 &"]
+                        weProcess.running = true
+                    }
                 } else {
                     _launchWEScene(id)
                 }

@@ -157,4 +157,11 @@ QtObject {
 
     readonly property var postProcessing: _data.postProcessing ?? []
     readonly property bool postProcessOnRestore: _data.postProcessOnRestore === true
+
+    readonly property bool isKDE: {
+        var desktop = (Quickshell.env("XDG_CURRENT_DESKTOP") || "").toLowerCase()
+        return desktop.indexOf("kde") >= 0 || desktop.indexOf("plasma") >= 0
+    }
+
+    readonly property string kdeVideoPlugin: "luisbocanegra.smart.video.wallpaper.reborn"
 }

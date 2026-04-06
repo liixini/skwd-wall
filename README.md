@@ -98,6 +98,32 @@ quickshell ipc -p ~/skwd-wall/daemon.qml call wallpaper toggle
 
 Research how to do this in your specific compositor, I'm sure it supports keybinds and executing on launch.
 
+## KDE Plasma - If you're a KDE user start here before proceeding
+
+Skwd-wall auto-detects KDE Plasma and uses native Plasma APIs instead of awww/mpvpaper (as KDE Plasma doesn't play nice like that).
+
+**Static wallpapers** work out of the box via `plasma-apply-wallpaperimage` - no extra setup needed.
+
+**Video wallpapers** require the [Smart Video Wallpaper Reborn](https://github.com/luisbocanegra/plasma-smart-video-wallpaper-reborn) Plasma plugin. Without it, video wallpapers will not work on KDE.
+
+### Installing the video wallpaper plugin
+
+**Arch Linux:**
+```sh
+yay -S plasma6-wallpapers-smart-video-wallpaper-reborn
+```
+
+**Fedora:**
+```sh
+sudo dnf install plasma-smart-video-wallpaper-reborn
+```
+
+**KDE Store (any distro):**
+
+Install via the KDE Store: right click Desktop > Desktop and Wallpaper > Get New Plugins > search "Smart Video Wallpaper Reborn" (or just select it, should be in the top)
+
+After installing, Skwd-wall will automatically use the plugin for video wallpapers. No configuration required.
+
 ### Arch Linux
 
 ```
