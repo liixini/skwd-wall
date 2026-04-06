@@ -41,7 +41,7 @@ QtObject {
     readonly property string wallpaperDir: _resolve(_data.paths?.wallpaper)
         || (homeDir + "/Pictures/Wallpapers")
     readonly property string videoDir: _resolve(_data.paths?.videoWallpaper)
-        || (homeDir + "/videowalls")
+        || wallpaperDir
     readonly property string weDir: _resolve(_data.paths?.steamWorkshop)
         || _detectWeDir()
     function _detectWeDir() {

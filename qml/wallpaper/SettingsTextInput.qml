@@ -8,6 +8,7 @@ Column {
     property string value: ""
     property string placeholder: ""
     property var onCommit
+    property var onFocused
 
     width: parent ? parent.width : 0
     spacing: 2
@@ -50,6 +51,9 @@ Column {
                 visible: !inputField.text && !inputField.activeFocus
             }
 
+            onActiveFocusChanged: {
+                if (activeFocus && root.onFocused) root.onFocused()
+            }
             onEditingFinished: {
                 if (root.onCommit) root.onCommit(text)
             }

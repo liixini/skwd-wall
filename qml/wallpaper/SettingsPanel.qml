@@ -601,15 +601,17 @@ Item {
           label: "Wallpaper directory"
           value: Config.wallpaperDir
           placeholder: "~/Pictures/Wallpapers"
+          onFocused: function() { _restartWarningPopup.open() }
           onCommit: function(v) { settingsPanel._saveConfigKey("paths.wallpaper", v) }
         }
 
         SettingsTextInput {
           colors: settingsPanel.colors
-          label: "Cache directory"
-          value: Config.cacheDir
-          placeholder: "~/.cache/skwd-wall"
-          onCommit: function(v) { settingsPanel._saveConfigKey("paths.cache", v) }
+          label: "Video directory"
+          value: Config.videoDir
+          placeholder: "(same as wallpaper directory)"
+          onFocused: function() { _restartWarningPopup.open() }
+          onCommit: function(v) { settingsPanel._saveConfigKey("paths.videoWallpaper", v) }
         }
       }
 
@@ -1828,6 +1830,61 @@ Item {
           enabled: false
           opacity: 0.35
         }
+      }
+    }
+  }
+
+  Rectangle {
+    id: _restartWarningPopup
+    visible: false
+    anchors.fill: parent
+    z: 200
+    color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surface.r, settingsPanel.colors.surface.g, settingsPanel.colors.surface.b, 0.97) : Qt.rgba(0.08, 0.08, 0.12, 0.97)
+    radius: 8
+
+    function open() { visible = true }
+    function close() { visible = false }
+
+    MouseArea { anchors.fill: parent; onClicked: function(mouse) { mouse.accepted = true } }
+
+    Column {
+      anchors.centerIn: parent
+      spacing: 12
+      width: parent.width * 0.7
+
+      Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: "\u{f0028}"
+        font.family: Style.fontFamilyNerdIcons; font.pixelSize: 28
+        color: "#ffb74d"
+      }
+
+      Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: "RESTART REQUIRED"
+        font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; font.letterSpacing: 1.5
+        color: settingsPanel.colors ? settingsPanel.colors.surfaceText : "#fff"
+      }
+
+      Text {
+        width: parent.width
+        horizontalAlignment: Text.AlignHCenter
+        text: "Directory changes will take effect after restarting the app. Don't forget that includes the daemon!"
+        font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+        color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.5)
+        wrapMode: Text.WordWrap
+        lineHeight: 1.3
+      }
+
+      Item { width: 1; height: 2 }
+
+      FilterButton {
+        anchors.horizontalCenter: parent.horizontalCenter
+        colors: settingsPanel.colors
+        label: "OK"
+        skew: 8; height: 26
+        isActive: true
+        onClicked: _restartWarningPopup.close()
       }
     }
   }
