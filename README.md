@@ -11,8 +11,9 @@ An image/video/Wallpaper Engine wallpaper selector from my shell [Skwd](https://
 
 ## What's cool about it?
 - **Unified media support**: Handle images, videos, and even Wallpaper Engine scenes in one place.
-- **Matugen colour schemes**: Automatically extracts colour palettes from wallpapers for a cohesive UI - this includes video & WE.
+- **Matugen colour schemes**: Automatically extracts colour palettes from wallpapers for a cohesive UI - this includes video & WE. Have an external Matugen configuration already? No problem - simply point to it in the Matugen configuration tab.
 - **Launch Matugen scripts**: Many applications need a script to refresh its theming and not only an update of their colour file, and Skwd-wall can be configured to execute any arbitrary script.
+- **Postprocessing**: Skwd-wall supports sending commands after selecting a wallpaper with useful data placeholders like %path%, %type% and %name%.
 - **Configurable**: Most dimensions and options are configurable to fit your preferences.
 - **Tag system**: Support for any tag you want for easy and quick search and filtering, but also Ollama integration for automated tagging.
 - **Restores wallpaper on boot**: It tracks the last wallpaper application command and reruns it on next boot.
