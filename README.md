@@ -139,7 +139,13 @@ Pass inputs to your modules via `specialArgs`, then in `configuration.nix`:
 { pkgs, inputs, ... }:
 {
   environment.systemPackages = with pkgs; [
-    inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}.default
+    # Quickshell with QtMultimedia seemingly we need to use their pinned nixpkgs
+    # to avoid Qt version mismatches between your system nixpkgs and the flake's
+    (let
+      qsPkgs = inputs.quickshell.inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+    in inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}.default.withModules [
+      qsPkgs.qt6.qtmultimedia
+    ])
     inputs.awww.packages.${pkgs.stdenv.hostPlatform.system}.awww
     curl
     sqlite
@@ -151,10 +157,14 @@ Pass inputs to your modules via `specialArgs`, then in `configuration.nix`:
     roboto-mono
     material-design-icons
     matugen
-    qt6.qtmultimedia
   ];
 }
 ```
+
+> **Note:** QtMultimedia is required for video previews. On KDE Plasma sessions it may work
+> without the `.withModules` line since Plasma provides QtMultimedia system-wide, but on
+> standalone compositors like Hyprland or Niri you **must** pass it explicitly via `.withModules`
+> or the UI will silently fail to load.
 
 Clone and run:
 
