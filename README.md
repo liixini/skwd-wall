@@ -1,9 +1,22 @@
+![Stars](https://img.shields.io/github/stars/liixini/skwd-wall?style=flat-square)
+![License](https://img.shields.io/github/license/liixini/skwd-wall?style=flat-square)
+![Last Commit](https://img.shields.io/github/last-commit/liixini/skwd-wall?style=flat-square)
+![Repo Size](https://img.shields.io/github/repo-size/liixini/skwd-wall?style=flat-square)
+![Issues](https://img.shields.io/github/issues/liixini/skwd-wall?style=flat-square)
+
+![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=for-the-badge&logo=archlinux&logoColor=white)
+![Fedora](https://img.shields.io/badge/Fedora-51A2DA?style=for-the-badge&logo=fedora&logoColor=white)
+![NixOS](https://img.shields.io/badge/NixOS-5277C3?style=for-the-badge&logo=nixos&logoColor=white)
+
 # Skwd-wall
 
 <img width="2560" height="1439" alt="image" src="https://github.com/user-attachments/assets/157100e4-88e5-4542-8eba-fea0576e8801" />
 <img width="2562" height="1440" alt="image" src="https://github.com/user-attachments/assets/367a6a0d-a384-490d-abe2-98c053ff9ffc" />
-<img width="2556" height="1440" alt="image" src="https://github.com/user-attachments/assets/c1ff7edd-7e7b-4787-8290-21bf040ae15a" />
-<img width="2559" height="1439" alt="image" src="https://github.com/user-attachments/assets/10613dc2-3724-4243-8970-b5ace1ba9c2a" />
+<img width="2558" height="1439" alt="image" src="https://github.com/user-attachments/assets/b73eff46-fa62-40cd-9109-9170adaa1dc5" />
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/577611da-d03d-4bf7-88c3-69b782cac668" />
+<img width="2560" height="1439" alt="image" src="https://github.com/user-attachments/assets/a221355a-2530-42bb-a9c1-54d31062c7af" />
+
+
 
 ## What is Skwd-wall?
 
@@ -24,7 +37,13 @@ An image/video/Wallpaper Engine wallpaper selector from my shell [Skwd](https://
 - **Built-in video optimization** *(WIP)*: Video conversion to hevc with bitrate and resolution control is coming soon.
 - **Retention out of the box**: Accidentally converted your 4k wallpaper to 1080p webp? No problem - Skwd-wall moves the originals to a retention directory and only deletes them automatically after the retention period on opt-in.
 - **Wide system support**: Anywhere you can resolve the dependencies below and you have a wlr-layer-shell capable compositor, this should run.
-- **For those that don't speak nerd**: That means it works on Arch/Fedora/NixOS with things like KDE Plasma, Hyprland or Niri - but pretty much any Wayland compositor.
+- **For those that don't speak nerd**: That means it works on OS:es like Arch, Fedora & NixOS and downstream OS:es like CachyOS and Nobara but also with things like KDE Plasma, Hyprland, Sway or Niri - pretty much any Wayland compositor. It does **not** work with GNOME.
+- **Keybinds**: A lot of features in Skwd-wall is navigatable by keybinds, available for reference under the keybind configuration tab.
+
+## What isn't cool about it yet?
+- **Subdirectories**: Currently working on subdirectory support.
+- **COPR/AUR/Nix Flake**: Looking into creating packages for easy installation and updates.
+- **Keybind customization**: Investigating being able to customise keybinds freely to suit your preferences.
 
 ## The long story - Personal motivation and development practices
 This is part of my personal shell Skwd that I have broken out into standalone components because it was a popular request.
@@ -40,7 +59,7 @@ In testing the daemon consumes about 100 MB (PSS) and deals with things like bac
 
 The GUI on the other hand sits at about 175 MB (PSS) for about a 1000 wallpapers, but scaling with roughly 60 KB / wall. This is a deliberate design decision to cache as much data as possible to enable smooth retrieval of objects with any arbitrary search and quick.
 
-The wallpaper applications are spawned detached meaning you can completely kill the daemon with no ill effect outside of the cold start taking a bit longer as new wallpapers are processed on start or by the daemon as it detects them.
+The wallpaper applications are spawned detached meaning you can completely kill the daemon with no ill effect outside of the cold start taking a bit longer as new wallpapers are processed on start by the daemon as it detects them.
 
 ## Dependencies
 ### Required
@@ -70,6 +89,9 @@ The wallpaper applications are spawned detached meaning you can completely kill 
 | [linux-wallpaperengine](https://github.com/Almamu/linux-wallpaperengine) | Wallpaper Engine scene rendering. **_Not required if you only want video wallpapers_**!                                                                                                                                                | |
 
 ## Install
+
+### Base wallpaper path
+The base wallpaper path is ~/Pictures/Wallpapers so that's where you put your pictures and videos unless you want to customise and put them elsewhere.
 
 ### Before proceeding, read carefully:
 Skwd-wall launches on demand and exits when you close the selector, keeping zero memory footprint when not in use but uses a daemon for doing background tasks like keeping long running jobs open. All cached data (thumbnails, color palettes, tags) is persisted to disk and reloaded on next launch.
@@ -108,6 +130,12 @@ Skwd-wall auto-detects KDE Plasma and uses native Plasma APIs instead of awww/mp
 
 ### Installing the video wallpaper plugin
 
+**KDE Store (any distro):**
+
+Install via the KDE Store: right click Desktop > Desktop and Wallpaper > Get New Plugins > search "Smart Video Wallpaper Reborn" (or just select it, should be in the top)
+
+After installing, Skwd-wall will automatically use the plugin for video wallpapers. No configuration required.
+
 **Arch Linux:**
 ```sh
 yay -S plasma6-wallpapers-smart-video-wallpaper-reborn
@@ -117,12 +145,6 @@ yay -S plasma6-wallpapers-smart-video-wallpaper-reborn
 ```sh
 sudo dnf install plasma-smart-video-wallpaper-reborn
 ```
-
-**KDE Store (any distro):**
-
-Install via the KDE Store: right click Desktop > Desktop and Wallpaper > Get New Plugins > search "Smart Video Wallpaper Reborn" (or just select it, should be in the top)
-
-After installing, Skwd-wall will automatically use the plugin for video wallpapers. No configuration required.
 
 ### Arch Linux
 
@@ -138,7 +160,7 @@ git clone https://github.com/liixini/skwd-wall && cd skwd-wall
 # set this up with your exec once of choice, such as a .desktop file, in your compositor etc.
 quickshell -p daemon.qml
 
-# this is the part you keybind somehow!
+# this is the part you keybind somehow which launches the UI!
 quickshell ipc -p daemon.qml call wallpaper toggle
 ```
 
@@ -202,7 +224,7 @@ git clone https://github.com/liixini/skwd-wall && cd skwd-wall
 # set this up with your exec once of choice, such as a .desktop file, in your compositor etc.
 quickshell -p daemon.qml
 
-# this is the part you keybind somehow!
+# this is the part you keybind somehow which launches the UI!
 quickshell ipc -p daemon.qml call wallpaper toggle
 ```
 
@@ -258,7 +280,7 @@ git clone https://github.com/liixini/skwd-wall && cd skwd-wall
 # set this up with your exec once of choice, such as a .desktop file, in your compositor etc.
 quickshell -p daemon.qml
 
-# this is the part you keybind somehow!
+# this is the part you keybind somehow which launches the UI!
 quickshell ipc -p daemon.qml call wallpaper toggle
 ```
 
