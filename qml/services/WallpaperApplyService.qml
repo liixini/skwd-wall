@@ -373,7 +373,7 @@ QtObject {
         var hashFiles = outputs.map(function(f) { return JSON.stringify(f) }).join(" ")
         var before = hashFiles ? "_BEFORE=$(md5sum " + hashFiles + " 2>/dev/null | sort); " : ""
         var imgArg = " image -t " + JSON.stringify(matugenScheme) +
-            " --source-color-index 0 " + JSON.stringify(imagePath)
+            " $(matugen --version 2>/dev/null | grep -qE '^matugen [4-9]' && echo '--source-color-index 0') " + JSON.stringify(imagePath)
         var defaultCfg = Config.defaultMatugenConfig
         var matugen = "command -v matugen >/dev/null && { " +
             "matugen -c " + JSON.stringify(_matugenConfig) + imgArg + "; " +
