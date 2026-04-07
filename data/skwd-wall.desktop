@@ -7,4 +7,3 @@ Exec=quickshell ipc -p /usr/share/skwd-wall/daemon.qml call wallpaper toggle
 Terminal=false
 Categories=Utility;Settings;
 Keywords=wallpaper;background;theme;color;
-NoDisplay=true
