@@ -31,6 +31,7 @@
             inotify-tools 
             sqlite 
             curl
+            file
             awww.packages.${system}.awww
           ];
         in {
