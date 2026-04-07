@@ -1,6 +1,5 @@
 # Skwd-wall
 
-![Stars](https://img.shields.io/github/stars/liixini/skwd-wall?style=for-the-badge)
 ![License](https://img.shields.io/github/license/liixini/skwd-wall?style=for-the-badge)
 ![Last Commit](https://img.shields.io/github/last-commit/liixini/skwd-wall?style=for-the-badge)
 ![Repo Size](https://img.shields.io/github/repo-size/liixini/skwd-wall?style=for-the-badge)
