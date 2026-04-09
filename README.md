@@ -153,11 +153,11 @@ sudo dnf install plasma-smart-video-wallpaper-reborn
 
 ## Arch Linux
 ```
-sudo pacman -S curl sqlite ffmpeg imagemagick inotify-tools ttf-nerd-fonts-symbols qt6-multimedia ttf-roboto ttf-roboto-mono
+sudo pacman -S curl jq sqlite ffmpeg imagemagick inotify-tools ttf-nerd-fonts-symbols qt6-multimedia ttf-roboto ttf-roboto-mono
 yay -S quickshell-git awww-bin matugen-bin ttf-material-design-icons-desktop-git
 ```
 
-Optional: `sudo pacman -S jq ollama && yay -S mpvpaper steamcmd linux-wallpaperengine-git`
+Optional: `sudo pacman -S ollama && yay -S mpvpaper steamcmd linux-wallpaperengine-git`
 
 `git clone https://github.com/liixini/skwd-wall && cd skwd-wall`
 
@@ -203,6 +203,7 @@ Pass inputs to your modules via `specialArgs`, then in `configuration.nix`:
     ])
     inputs.awww.packages.${pkgs.stdenv.hostPlatform.system}.awww
     curl
+    jq
     file
     sqlite
     ffmpeg
@@ -269,7 +270,7 @@ Once installed you can launch daemon with `skwd-wall-daemon` and toggle with `sk
 
 </details>
 
-Optional: add `ollama`, `jq`, `mpvpaper` to your system packages as needed.
+Optional: add `ollama`, `mpvpaper` to your system packages as needed.
 
 ### Fedora
 
@@ -283,10 +284,10 @@ sudo dnf copr enable scottames/awww
 Install dependencies:
 
 ```sh
-sudo dnf install quickshell awww curl sqlite ffmpeg ImageMagick inotify-tools \
+sudo dnf install quickshell awww jq curl sqlite ffmpeg ImageMagick inotify-tools \
   qt6-qtmultimedia google-roboto-fonts google-roboto-condensed-fonts google-roboto-mono-fonts
   
-  Optional: `sudo dnf install jq ollama mpvpaper`
+  Optional: `sudo dnf install ollama mpvpaper`
 ```
 
 Install matugen via cargo:
