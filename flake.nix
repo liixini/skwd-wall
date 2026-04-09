@@ -29,7 +29,8 @@
             ffmpeg 
             imagemagick 
             inotify-tools 
-            sqlite 
+            sqlite
+            jq
             curl
             file
             awww.packages.${system}.awww
