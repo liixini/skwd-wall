@@ -263,7 +263,7 @@ QtObject {
         var cmd = "nohup setsid linux-wallpaperengine " + audioFlag +
             " --no-fullscreen-pause --noautomute" + screenArgs +
             " --clamp border" +
-            assetsArg + " " + JSON.stringify(weId) +
+            assetsArg + " " + JSON.stringify(service.weDir + "/" + weId) +
             " </dev/null >/dev/null 2>&1 &"
         console.log("WallpaperApplyService: launching WE scene:", cmd)
         weProcess.command = ["sh", "-c", cmd]
