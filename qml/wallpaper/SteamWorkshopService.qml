@@ -110,7 +110,6 @@ QtObject {
       authPaused = obj.authPaused || false
       authFailedCount = obj.authFailedCount || 0
     } catch (e) {
-      // ignore parse errors on partial writes
     }
   }
 

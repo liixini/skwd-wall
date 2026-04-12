@@ -2,10 +2,6 @@ pragma Singleton
 import QtQuick
 import ".."
 
-/**
- * Thin IPC wrapper — delegates to skwd-daemon matugen.* commands.
- * Listens to skwd.wall.matugen.* events for state updates.
- */
 QtObject {
     id: service
 
@@ -21,7 +17,6 @@ QtObject {
     }
 
     function removeOne(key) {
-        // No-op — daemon handles cache management
     }
 
     function rebuild() {

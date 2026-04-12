@@ -205,7 +205,6 @@ QtObject {
       delete _activeDownloads[id]
       downloadFinished(id)
       queueLength = _downloadQueue.length + _batchRemaining
-      // Advance to the next item in the batch
       var nextId = proc.currentId
       if (nextId && nextId !== id && _batchRemaining > 0) {
         activeId = nextId
@@ -217,7 +216,6 @@ QtObject {
       _writeStatus()
     })
     proc.onBatchDone.connect(function(success) {
-      // Mark any items not resolved by itemDone
       for (var k = 0; k < ids.length; k++) {
         var sid = ids[k]
         if (downloadStatus[sid] === "downloading" || downloadStatus[sid] === "queued") {

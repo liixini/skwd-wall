@@ -44,8 +44,6 @@ QtObject {
   property bool favouriteFilterActive: false
   property bool _favouritesLoaded: false
 
-  // ── Data loading via DaemonClient ──────────────
-
   function _loadFromDaemon() {
     console.log("[WSS] _loadFromDaemon called, DaemonClient.ready=" + DaemonClient.ready)
     DaemonClient.listWallpapers(false, function(result, error) {
@@ -85,7 +83,6 @@ QtObject {
 
       console.log("[WSS] built " + items.length + " model items from " + walls.length + " daemon rows")
       _wallpaperData = items
-      // Rebuild key lookup set
       var keys = {}
       for (var k = 0; k < items.length; k++) {
         var lookupKey = items[k].weId || items[k].name
@@ -129,8 +126,6 @@ QtObject {
     }
   }
 
-  // ── DaemonClient event connections ─────────────
-
   property var _daemonConn: Connections {
     target: DaemonClient
     function onReadyChanged() {
@@ -149,7 +144,6 @@ QtObject {
       console.log("[WSS] onWeItemAdded: " + weId + " dir=" + weDir)
     }
 
-    // ── Cache event (new item cached — append to model) ──
     function onItemCached(data) {
       var type = data.type || "static"
       var name = data.name || ""
@@ -177,7 +171,6 @@ QtObject {
       _wallpaperData.push(item)
       _wallpaperDataKeys[lookupKey] = true
 
-      // Insert into filteredModel in sorted position
       var idx = _findInsertIndex(item)
       service.filteredModel.insert(idx, item)
     }
@@ -202,11 +195,9 @@ QtObject {
       console.log("[WSS] onFileAdded: " + name + " path=" + path + " type=" + type)
     }
 
-    // ── In-place rename (auto-optimize .jpg → .webp) ──
     function onFileRenamed(oldName, newName) {
       console.log("[WSS] onFileRenamed: " + oldName + " -> " + newName)
 
-      // Update filteredModel
       for (var i = 0; i < service.filteredModel.count; i++) {
         if (service.filteredModel.get(i).name === oldName) {
           service.filteredModel.setProperty(i, "name", newName)
@@ -215,7 +206,6 @@ QtObject {
         }
       }
 
-      // Update backing data
       for (var j = 0; j < _wallpaperData.length; j++) {
         if (_wallpaperData[j].name === oldName) {
           _wallpaperData[j].name = newName
@@ -228,11 +218,9 @@ QtObject {
       _wallpaperDataKeys[newName] = true
     }
 
-    // ── In-place removal (no full reload) ──────────
     function onFileRemoved(name, type) {
       console.log("[WSS] onFileRemoved: " + name + " type=" + type)
 
-      // Remove from filteredModel
       for (var i = service.filteredModel.count - 1; i >= 0; i--) {
         var fi = service.filteredModel.get(i)
         if (fi.name === name) {
@@ -241,7 +229,6 @@ QtObject {
         }
       }
 
-      // Remove from backing data
       for (var j = _wallpaperData.length - 1; j >= 0; j--) {
         if (_wallpaperData[j].name === name) {
           _wallpaperData.splice(j, 1)
@@ -252,7 +239,6 @@ QtObject {
       delete _wallpaperDataKeys[name]
     }
 
-    // ── Folder removal (remove all items with matching names) ──
     function onFolderRemoved(names) {
       var nameSet = {}
       for (var n = 0; n < names.length; n++) nameSet[names[n]] = true
@@ -272,8 +258,6 @@ QtObject {
     }
   }
 
-  // ── Favourites ─────────────────────────────────
-
   function isFavourite(name, weId) {
     var key = weId ? weId : name
     return !!favouritesDb[key]
@@ -291,8 +275,6 @@ QtObject {
     DaemonClient.setFavourite(key, !!db[key])
     if (favouriteFilterActive) updateFilteredModel()
   }
-
-  // ── Tags ───────────────────────────────────────
 
   function getWallpaperTags(name, weId) {
     if (weId) return tagsDb[weId] || []
@@ -350,8 +332,6 @@ QtObject {
     })
   }
 
-  // ── Ollama state ───────────────────────────────
-
   property bool ollamaTaggingActive: false
   property bool ollamaColorsActive: false
   property bool ollamaActive: ollamaTaggingActive || ollamaColorsActive
@@ -360,8 +340,6 @@ QtObject {
   property int ollamaColoredCount: 0
   property string ollamaEta: ""
   property string ollamaLogLine: ""
-
-  // ── Model / filter ─────────────────────────────
 
   property var _wallpaperData: []
   property var _wallpaperDataKeys: ({})
@@ -449,8 +427,6 @@ QtObject {
   }
   onSelectedTypeFilterChanged: updateFilteredModel()
 
-  // ── Apply ──────────────────────────────────────
-
   function applyStatic(path) {
     DaemonClient.applyStatic(path)
     service.wallpaperApplied()
@@ -464,8 +440,6 @@ QtObject {
   function applyVideo(path) {
     DaemonClient.applyVideo(path)
   }
-
-  // ── Delete ─────────────────────────────────────
 
   function deleteWallpaperItem(type, name, weId) {
     for (var i = filteredModel.count - 1; i >= 0; i--) {
@@ -493,8 +467,6 @@ QtObject {
     _unsubscribeWE.running = true
   }
 
-  // ── Rescan ─────────────────────────────────────
-
   function clearData() {
     cacheReady = false
     cacheResult = ""
@@ -503,8 +475,6 @@ QtObject {
     updateFilteredModel()
     DaemonClient.clearData()
   }
-
-  // ── Utility Processes ──────────────────────────
 
   property var _clearCache: Process {
     id: clearCache
@@ -517,8 +487,6 @@ QtObject {
 
   property var _unsubscribeWE: Process { command: ["bash", "-c", "true"] }
 
-  // ── Analysis / Optimize (still QML-side) ───────
-
   property var _analysisConn: Connections {
     target: WallpaperAnalysisService
     function onProgressUpdated() {
@@ -529,7 +497,6 @@ QtObject {
       service.ollamaColoredCount = WallpaperAnalysisService.coloredCount
       service.ollamaLogLine = WallpaperAnalysisService.lastLog
       service.ollamaEta = WallpaperAnalysisService.eta
-      // Auto-clear error messages after 5s when not running
       if (!WallpaperAnalysisService.running && WallpaperAnalysisService.lastLog)
         _ollamaErrorClearTimer.restart()
     }

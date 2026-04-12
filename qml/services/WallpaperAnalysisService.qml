@@ -2,10 +2,6 @@ pragma Singleton
 import QtQuick
 import ".."
 
-/**
- * Thin IPC wrapper — delegates to skwd-daemon analysis.* commands.
- * Listens to skwd.wall.analysis.* events for state updates.
- */
 QtObject {
     id: service
 

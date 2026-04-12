@@ -48,7 +48,6 @@ ShellRoot {
         _logWithRam("open requested")
     }
 
-    // Read VmRSS, VmSize, and PSS from /proc/self and log with RAM usage
     function _logWithRam(label) {
         _ramProbeLabel = label
         _ramProbe.command = ["bash", "-c",

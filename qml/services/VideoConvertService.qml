@@ -2,10 +2,6 @@ pragma Singleton
 import QtQuick
 import ".."
 
-/**
- * Thin IPC wrapper — delegates to skwd-daemon video_convert.* commands.
- * Listens to skwd.wall.convert.* events for state updates.
- */
 QtObject {
     id: svc
 

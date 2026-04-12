@@ -79,7 +79,6 @@ Item {
         opacity: hexItem.pulledOut ? 0 : 1
         Behavior on opacity { NumberAnimation { duration: Style.animFast } }
 
-            // Placeholder skeleton (visible when no thumbnail yet)
             Rectangle {
                 id: hexPlaceholder
                 anchors.centerIn: parent

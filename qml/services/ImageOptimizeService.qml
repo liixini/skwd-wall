@@ -2,10 +2,6 @@ pragma Singleton
 import QtQuick
 import ".."
 
-/**
- * Thin IPC wrapper — delegates to skwd-daemon optimize.* commands.
- * Listens to skwd.wall.optimize.* events for state updates.
- */
 QtObject {
     id: svc
 

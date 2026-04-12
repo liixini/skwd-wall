@@ -425,7 +425,6 @@ Rectangle {
                     height: 24
                     z: isSelected ? 10 : (isHovered ? 5 : 1)
 
-                    // Staggered entrance: each chip gets a delay based on index
                     property real _animProgress: 1
                     opacity: _animProgress
                     transform: Translate { y: (1 - tagParaChip._animProgress) * 12 }
@@ -444,7 +443,6 @@ Rectangle {
                         from: 0; to: 1
                         duration: 250
                         easing.type: Easing.OutCubic
-                        // Stagger: 8ms per chip, max ~480ms for 60 chips
                         Component.onCompleted: _entranceAnim.delay = index * 8
                     }
 

@@ -115,7 +115,6 @@ Process {
     onRead: data => {
       console.log("[Steam DL batch] " + data)
 
-      // Detect which item steamcmd is working on
       if (data.indexOf("Downloading item") >= 0) {
         var nums = data.match(/\d{7,}/g)
         if (nums) {
@@ -134,7 +133,6 @@ Process {
         }
       }
 
-      // Per-item success
       if (data.indexOf("Success") >= 0 || data.indexOf("fully installed") >= 0) {
         var successId = dlProc.currentId
         var sNums = data.match(/\d{7,}/g)
@@ -148,7 +146,6 @@ Process {
         }
         if (successId) dlProc._markItemDone(successId, true)
       }
-      // Progress percent (only when not a success line)
       else {
         var match = data.match(/(\d+(?:\.\d+)?)\s*%/)
         if (match && dlProc.currentId) {
@@ -158,14 +155,12 @@ Process {
         }
       }
 
-      // Credential error
       if (data.indexOf("Cached credentials not found") >= 0 || data.indexOf("Login Failure") >= 0) {
         dlProc._credentialError = true
         dlProc.statusMessage(dlProc.currentId, "Steam login required. Run: steamcmd +login " + dlProc._login + " +quit")
         dlProc.credentialError(dlProc.currentId)
       }
 
-      // Phase messages
       if (data.indexOf("Checking for available update") >= 0)
         dlProc.statusMessage(dlProc.currentId, "Checking for updates...")
       else if (data.indexOf("Verifying installation") >= 0)

@@ -3,33 +3,18 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-/**
- * DaemonClient — Singleton that connects to skwd-daemon over Unix socket.
- *
- * Protocol: JSON Lines over $XDG_RUNTIME_DIR/skwd/daemon.sock
- * Events use the skwd.wall.* namespace.
- *
- * Services should use call() for RPC and connect to eventReceived for push events.
- */
 QtObject {
     id: client
 
-    // ── Connection state ──────────────────────────────
     readonly property bool connected: _socket.connected
     property bool ready: false
 
-    // ── Cache state (from daemon events) ──────────────
     property bool cacheRunning: false
     property int cacheProgress: 0
     property int cacheTotal: 0
 
-    // ── Signals ───────────────────────────────────────
-
-    // Generic event — all daemon-pushed events fire through here.
-    // Services filter by event name in their own Connections block.
     signal eventReceived(string event, var data)
 
-    // File watcher events
     signal fileAdded(string name, string path, string type)
     signal fileRemoved(string name, string type)
     signal fileRenamed(string oldName, string newName)
@@ -38,17 +23,13 @@ QtObject {
     signal weItemRemoved(string weId)
     signal scanDone()
 
-    // Cache events
     signal cacheReady()
     signal itemCached(var data)
 
-    // Wallpaper events
     signal wallpaperApplied(string type, string name, string path, string weId)
     signal wallpaperToggle()
     signal wallpaperShow()
     signal wallpaperHide()
-
-    // ── Public API ────────────────────────────────────
 
     function call(method, params, callback) {
         if (!_socket.connected) {
@@ -62,7 +43,6 @@ QtObject {
         _socket.flush()
     }
 
-    // Convenience wrappers
     function subscribe(events) { call("subscribe", {events: events}) }
     function status(callback)  { call("status", {}, callback) }
 
@@ -117,8 +97,6 @@ QtObject {
         call("wall.weather", {}, callback)
     }
 
-    // ── Private implementation ────────────────────────
-
     property int _nextId: 1
     property var _pending: ({})
 
@@ -146,10 +124,8 @@ QtObject {
     }
 
     function _handleEvent(event, data) {
-        // Generic signal — services listen on this
         client.eventReceived(event, data)
 
-        // Typed signals for backward compatibility
         switch (event) {
         case "skwd.wall.file_added":
             client.fileAdded(data.name || "", data.path || "", data.type || "static"); break
@@ -184,8 +160,6 @@ QtObject {
         }
     }
 
-    // ── Socket ────────────────────────────────────────
-
     property var _socket: Socket {
         path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/skwd/daemon.sock"
 
@@ -218,7 +192,6 @@ QtObject {
         }
     }
 
-    // Expire stale pending callbacks after 30s
     property var _cleanupTimer: Timer {
         interval: 30000
         running: true

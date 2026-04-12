@@ -46,7 +46,6 @@ Rectangle {
 
             Text {
                 text: {
-                    // Show log line as status when no progress yet (Connecting/Error)
                     if (root.ollamaTaggedCount === 0 && root.ollamaTotalThumbs === 0 && root.ollamaLogLine)
                         return root.ollamaLogLine
                     var status = "ANALYZING"

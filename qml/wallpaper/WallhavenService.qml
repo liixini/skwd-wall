@@ -151,7 +151,6 @@ QtObject {
     proc.running = true
   }
 
-  // Map hue bucket → closest Wallhaven API hex color
   readonly property var _hueToWallhavenColor: ({
     0:  "cc0000",  // red
     1:  "ff6600",  // orange
