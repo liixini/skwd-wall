@@ -1,5 +1,5 @@
 # Skwd-wall
-###### WIP - Manual tags (not automatic ones) not working & some wallpapers not having thumbnails is known behaviour, and is fixed together with many other things in the new version that is currently in testing. Expecting to release it 13-17/4 depending on my available time.
+###### WIP - Manual tags (not automatic ones) not working & some wallpapers not having thumbnails in slice mode on certain hardware is known behaviour, and is fixed together with many other things in the new version that is currently in testing. Expecting to release it 13-17/4 depending on my available time.
 
 ![License](https://img.shields.io/github/license/liixini/skwd-wall?style=for-the-badge)
 ![Last Commit](https://img.shields.io/github/last-commit/liixini/skwd-wall?style=for-the-badge)
