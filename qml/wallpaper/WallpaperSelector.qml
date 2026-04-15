@@ -177,7 +177,7 @@ Scope {
       _snapshotImage.visible = false
       _snapshotImage.source = ""
       service.filterTransitioning = false
-      sliceListView.cacheBuffer = Math.round(wallpaperSelector.expandedWidth / 2)
+      sliceListView.cacheBuffer = wallpaperSelector.expandedWidth
     }
   }
 
@@ -190,7 +190,7 @@ Scope {
         _snapshotImage.source = ""
         service.commitFilteredModel()
         service.filterTransitioning = false
-        sliceListView.cacheBuffer = Math.round(wallpaperSelector.expandedWidth / 2)
+        sliceListView.cacheBuffer = wallpaperSelector.expandedWidth
       }
     }
   }
@@ -253,7 +253,7 @@ Scope {
     console.log("[BIND] _isSlice=", _isSlice, "isHexMode=", isHexMode, "isGridMode=", isGridMode, "cardVisible=", cardVisible, "showing=", showing)
     if (_isSlice) {
       sliceListView.model = Qt.binding(function() { return service.filteredModel })
-      sliceListView.cacheBuffer = Math.round(wallpaperSelector.expandedWidth / 2)
+      sliceListView.cacheBuffer = wallpaperSelector.expandedWidth
       _positionTimer.posIdx = Math.min(Math.max(0, sliceListView.currentIndex), Math.max(0, (service.filteredModel ? service.filteredModel.count : 1) - 1))
       console.log("[BIND] slice: count=", (service.filteredModel ? service.filteredModel.count : "null"), "currentIndex=", sliceListView.currentIndex, "posIdx=", _positionTimer.posIdx, "visible=", sliceListView.visible, "width=", sliceListView.width, "height=", sliceListView.height)
       _positionTimer.restart()
@@ -551,7 +551,7 @@ Scope {
       flickDeceleration: 1500
       maximumFlickVelocity: 3000
       boundsBehavior: Flickable.StopAtBounds
-      cacheBuffer: wallpaperSelector.expandedWidth + sliceListView.visibleCount * (wallpaperSelector.sliceWidth + wallpaperSelector.sliceSpacing)
+      cacheBuffer: wallpaperSelector.expandedWidth
 
       visible: wallpaperSelector.cardVisible && !wallpaperSelector.anyBrowserOpen && !wallpaperSelector.isHexMode && !wallpaperSelector.isGridMode
 

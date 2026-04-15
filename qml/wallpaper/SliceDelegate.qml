@@ -196,9 +196,9 @@ Item {
             fillMode: Image.PreserveAspectCrop
             smooth: true
             asynchronous: true
-            cache: false
-            sourceSize.width: 400
-            sourceSize.height: 720
+            cache: true
+            sourceSize.width: delegateItem.isCurrent ? 400 : Math.ceil(delegateItem.sliceWidth * 1.5)
+            sourceSize.height: delegateItem.isCurrent ? 720 : Math.ceil(delegateItem.height * 0.5)
             onStatusChanged: {
                 if (status === Image.Error)
                     console.warn("[SliceDelegate] Image FAILED for index", delegateItem.index,
