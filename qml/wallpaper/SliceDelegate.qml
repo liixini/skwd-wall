@@ -104,6 +104,7 @@ Item {
     readonly property real _fullZone: Math.min(0.6, (expandedWidth / 2 + 2 * (sliceWidth + (_listView ? _listView.spacing : 0))) / _halfView)
     readonly property real _normDist: Math.abs(_itemCenterX - _viewCenterX) / _halfView
     opacity: _normDist <= _fullZone ? 1.0 : Math.max(0, 1.0 - (_normDist - _fullZone) / (1.2 - _fullZone))
+    readonly property bool _nearViewport: opacity > 0.01
     Behavior on width {
         enabled: !suppressWidthAnim
         NumberAnimation { duration: Style.animExpand; easing.type: Easing.OutCubic }
@@ -145,7 +146,7 @@ Item {
         width: delegateItem.width
         height: delegateItem.height
         visible: false
-        layer.enabled: true
+        layer.enabled: delegateItem._nearViewport
         layer.smooth: true
         Shape {
             anchors.fill: parent
@@ -276,7 +277,7 @@ Item {
             color: Qt.rgba(0, 0, 0, delegateItem.isCurrent ? 0 : (delegateItem.isHovered ? 0.15 : 0.4))
             Behavior on color { ColorAnimation { duration: Style.animNormal } }
         }
-        layer.enabled: true
+        layer.enabled: delegateItem._nearViewport
         layer.smooth: true
         layer.effect: MultiEffect {
             maskEnabled: true
@@ -297,7 +298,7 @@ Item {
             live: true
         }
 
-        layer.enabled: true
+        layer.enabled: delegateItem._nearViewport
         layer.smooth: true
         layer.effect: MultiEffect {
             maskEnabled: true
@@ -846,7 +847,7 @@ Item {
                 onClicked: delegateItem.flipped = false
             }
 
-            layer.enabled: true
+            layer.enabled: delegateItem._nearViewport
             layer.smooth: true
             layer.effect: MultiEffect {
                 maskEnabled: true
