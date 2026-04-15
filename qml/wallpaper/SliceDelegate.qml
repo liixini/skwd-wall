@@ -199,6 +199,16 @@ Item {
             cache: false
             sourceSize.width: 400
             sourceSize.height: 720
+            onStatusChanged: {
+                if (status === Image.Error)
+                    console.warn("[SliceDelegate] Image FAILED for index", delegateItem.index,
+                                 "thumb:", delegateItem.model.thumb,
+                                 "source:", source)
+                else if (status === Image.Null && source !== "")
+                    console.warn("[SliceDelegate] Image NULL for index", delegateItem.index,
+                                 "thumb:", delegateItem.model.thumb,
+                                 "source:", source)
+            }
             opacity: status === Image.Ready ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutCubic } }
         }
