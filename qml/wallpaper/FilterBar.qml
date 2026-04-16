@@ -338,9 +338,11 @@ Item {
                                 parts.push("PROCESSING")
                         }
                         if (filterBar.ollamaActive) {
-                            if (filterBar.ollamaTotal > 0)
-                                parts.push("OLLAMA " + filterBar.ollamaProgress + "/" + filterBar.ollamaTotal)
-                            else
+                            if (filterBar.ollamaTotal > 0) {
+                                var ollamaText = "OLLAMA " + filterBar.ollamaProgress + "/" + filterBar.ollamaTotal
+                                if (filterBar.ollamaEta) ollamaText += " (" + filterBar.ollamaEta + ")"
+                                parts.push(ollamaText)
+                            } else
                                 parts.push("OLLAMA")
                         } else if (filterBar.ollamaLogLine !== "") {
                             parts.push("OLLAMA")

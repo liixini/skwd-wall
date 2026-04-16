@@ -15,6 +15,7 @@ depends=(
   'awww'
   'mpvpaper'
   'matugen'
+  'jq'
   'ttf-nerd-fonts-symbols'
   'ttf-roboto'
 )

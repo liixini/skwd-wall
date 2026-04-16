@@ -617,7 +617,7 @@ Item {
 
         SettingsToggle {
           colors: settingsPanel.colors
-          label: "Tag consolidation"
+          label: "WIP! Tag consolidation Extremely alpha"
           checked: Config.ollamaConsolidateEnabled
           onToggle: function(v) { settingsPanel._saveConfigKey("ollama.consolidateEnabled", v) }
         }

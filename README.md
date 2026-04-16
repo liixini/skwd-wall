@@ -61,7 +61,8 @@ Performance is a big consideration for Skwd.
 
 The daemon takes a tiny 10 MB of RAM and is the only permanent thing taking memory on your system.
 As Skwd-wall shuts down entirely between uses it has zero footprint when not in use, and while in use it takes between 150 to 300 MB of RAM depending on the size of your wallpaper collection.
-This RAM is freed you close Skwd-wall again.
+
+As Skwd-wall isn't simply flipping between hidden and shown fast startup times is a must and it takes about 0.2 seconds to start, with an optional 400 ms fade in animation.
 
 ## Dependencies
 ### Required
@@ -79,13 +80,14 @@ This RAM is freed you close Skwd-wall again.
 | [inotify-tools](https://github.com/inotify-tools/inotify-tools)                                                                                                                            | Used to see if there's changes in the wallpaper directories to trigger add or delete functionality                   |
 | [Nerd Fonts Symbols](https://www.nerdfonts.com)                                                                                                                                            | UI icons, as they're symbols we can colour them any way we like which is good when Matugen does the colouring        |
 | [Roboto](https://fonts.google.com/specimen/Roboto) + [Roboto Condensed](https://fonts.google.com/specimen/Roboto+Condensed) + [Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono) | The main fonts used in Skwd                                                                                          | | And this too                                                                                                         |
+| [mpvpaper](https://github.com/GhostNaN/mpvpaper)                                                                                                                                           | Video wallpaper backend                                                                                              |
+| [jq](https://jqlang.github.io/jq/)                                                                                                                                                         | JSON processing for various internal operations                                                                      |
 | [Material Design Icons](https://pictogrammers.com/library/mdi/)                                                                                                                            | Not all symbols are in nerd fonts symbols, so this supplements that                                                  |
 
 ### Optional
 
 | Dependency                                                               | Why                                                                                                                                                                                                                                    |
 |--------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [mpvpaper](https://github.com/GhostNaN/mpvpaper)                         | Required for video wallpapers                                                                                                                                                                                                          |
 | [ollama](https://ollama.com)                                             | Used for computer vision to automatically tag wallpapers. Disabled by default - enable in settings                                                                                                                                     |
 | [steamcmd](https://developer.valvesoftware.com/wiki/SteamCMD)            | Steam Workshop integration for the in-app browsing of Wallpaper Engine wallpapers. Requires API keys and an actual purchased copy of Wallpaper Engine. Disabled by default but the functionality is in there if you want to try it out |
 | [linux-wallpaperengine](https://github.com/Almamu/linux-wallpaperengine) | Wallpaper Engine scene rendering. **_Not required if you only want video wallpapers_**!                                                                                                                                                | |
@@ -95,19 +97,7 @@ This RAM is freed you close Skwd-wall again.
 ### Base wallpaper path
 The base wallpaper path is ~/Pictures/Wallpapers so that's where you put your pictures and videos unless you want to customise and put them elsewhere.
 
-### Before proceeding, read carefully:
-Skwd-wall launches on demand and exits when you close the selector, keeping zero memory footprint when not in use but uses a daemon for doing background tasks like keeping long running jobs open. All cached data (thumbnails, color palettes, tags) is persisted to disk and reloaded on next launch.
-
-Skwd-wall detatches all wallpaper processes meaning you can kill it entirely after setting a wallpaper if needed. I suggest `pkill -f "skwd-wall"`.
-
-### To run the software
-
-Start the daemon:
-```
-quickshell -p /path/to/installation/daemon.qml
-```
-
-Then bind a key to toggle the selector via IPC:
+### Compositor-specific examples on how to launch
 
 ```
 # Niri
@@ -120,27 +110,20 @@ bind = SUPER+T, exec, skwd wall toggle
 skwd wall toggle
 ```
 
-Research how to do this in your specific compositor, I'm sure it supports keybinds and executing on launch.
+Research how to do this in your specific compositor, I'm sure it supports keybinds.
 
 ### Arch Linux
-
-Install skwd-wall from the AUR (pulls in all dependencies automatically including skwd-daemon):
 
 ```sh
 yay -S skwd-wall
 ```
 
-Optional:
-```sh
-yay -S ollama steamcmd linux-wallpaperengine
-```
-
-The daemon auto-enables on your next login. To start it immediately without logging out:
+Enable Skwd-daemon:
 ```sh
 systemctl --user enable --now skwd-daemon.service
 ```
 
-Launch the wallpaper selector:
+Launch Skwd-wall:
 ```sh
 skwd wall toggle
 ```
@@ -151,144 +134,47 @@ Bind this command to a key in your compositor for quick access.
 
 ### NixOS
 
-**Warning**! I am not a NixOS user. This is the trial and error configuration I used in my NixOS VM for testing.
-If you are a NixOS user please make a pull request if you feel there's easier ways to do this because I am sure there are.
+```sh
+nix profile install github:liixini/skwd-wall
+```
 
 <details>
-  <summary>Install instructions by me, trainee NixOS wizard</summary>
-  Add the flake inputs for quickshell and awww to your `flake.nix`:
+<summary>Declarative alternative (configuration.nix)</summary>
+
+Add the flake input to your `flake.nix`:
 
 ```nix
 {
   inputs = {
-    quickshell.url = "github:quickshell-mirror/quickshell";
-    awww.url = "git+https://codeberg.org/LGFae/awww";
+    skwd-wall.url = "github:liixini/skwd-wall";
   };
 }
 ```
 
-Pass inputs to your modules via `specialArgs`, then in `configuration.nix`:
+Then add the package to your `configuration.nix`:
 
 ```nix
 { pkgs, inputs, ... }:
 {
-  environment.systemPackages = with pkgs; [
-    # Quickshell with QtMultimedia seemingly we need to use their pinned nixpkgs
-    # to avoid Qt version mismatches between your system nixpkgs and the flake's
-    (let
-      qsPkgs = inputs.quickshell.inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system};
-    in inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}.default.withModules [
-      qsPkgs.qt6.qtmultimedia
-    ])
-    inputs.awww.packages.${pkgs.stdenv.hostPlatform.system}.awww
-    curl
-    sqlite
-    ffmpeg
-    imagemagick
-    inotify-tools
-    nerd-fonts.symbols-only
-    roboto
-    roboto-mono
-    material-design-icons
-    matugen
+  environment.systemPackages = [
+    inputs.skwd-wall.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 }
 ```
+</details>
 
-> **Note:** QtMultimedia is required for video previews. On KDE Plasma sessions it may work
-> without the `.withModules` line since Plasma provides QtMultimedia system-wide, but on
-> standalone compositors like Hyprland or Niri you **must** pass it explicitly via `.withModules`
-> or the UI will silently fail to load.
-
-Clone and run:
-
+Enable Skwd-daemon:
 ```sh
-git clone https://github.com/liixini/skwd-wall && cd skwd-wall
-
-# the -p part is for PATH, extend to match the path where you find daemon.qml
-# set this up with your exec once of choice, such as a .desktop file, in your compositor etc.
-quickshell -p daemon.qml
-
-# this is the part you keybind somehow which launches the UI!
-quickshell ipc -p daemon.qml call wallpaper toggle
-```
-</details>
-
-<details>
-  <summary>Install instructions by happyzxzxz, certified NixOS wizard. I haven't tested this but I am very thankful for the help!</summary>
-  So, the way to improve NixOS install is to use flakes. Basically you just add flakes in your experimental features in configuration.nix:
-nix.settings.experimental-features = [ "nix-command" "flakes" ]
-and then you create flake.nix file in your repository with this content:
-  
-```
-flake.nix
-
-{
-  description = "A wallpaper manager for quickshell";
-
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    quickshell.url = "github:quickshell-mirror/quickshell";
-    awww.url = "git+https://codeberg.org/LGFae/awww";
-  };
-
-  outputs = { self, nixpkgs, quickshell, awww, ... }:
-    let
-      foreachSystem = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" ];
-    in {
-      packages = foreachSystem (system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-
-          # Use the nixpkgs from Quickshell to avoid Qt mismatches
-          qsPkgs = quickshell.inputs.nixpkgs.legacyPackages.${system};
-          
-          quickshellWithModules = quickshell.packages.${system}.default.withModules (with qsPkgs.qt6; [
-            qtmultimedia
-            qtsvg
-            qt5compat
-            qtwayland
-          ]);
-
-          runtimeDeps = with pkgs; [
-            matugen 
-            ffmpeg 
-            imagemagick 
-            inotify-tools 
-            sqlite 
-            curl
-            awww.packages.${system}.awww
-          ];
-        in {
-          default = pkgs.stdenv.mkDerivation {
-            pname = "skwd-wall";
-            version = "unstable";
-            src = ./.;
-
-            nativeBuildInputs = [ pkgs.makeWrapper ];
-
-            installPhase = ''
-              mkdir -p $out/share/skwd-wall
-              cp -r . $out/share/skwd-wall
-
-              makeWrapper ${quickshellWithModules}/bin/quickshell $out/bin/skwd-wall-daemon \
-                --prefix PATH : ${pkgs.lib.makeBinPath runtimeDeps} \
-                --add-flags "-p $out/share/skwd-wall/daemon.qml"
-
-              makeWrapper ${quickshellWithModules}/bin/quickshell $out/bin/skwd-wall-toggle \
-                --add-flags "ipc -p $out/share/skwd-wall/daemon.qml call wallpaper toggle"
-            '';
-          };
-        });
-    };
-}
+systemctl --user enable --now skwd-daemon.service
 ```
 
-Next you can run nix profile install . in the repo folder to install it on your system.
-Once installed you can launch daemon with skwd-wall-daemon and toggle with skwd-wall-toggle
-</details>
+Launch Skwd-wall:
+```sh
+skwd wall toggle
+```
 
-Optional: add `ollama`, `jq`, `mpvpaper` to your system packages as needed.
+Bind this command to a key in your compositor for quick access.
+
 
 ### Fedora
 
@@ -300,21 +186,13 @@ sudo dnf copr enable scottames/awww
 sudo dnf copr enable piixini/skwd
 ```
 
-Install skwd-wall (pulls in all dependencies automatically, including mpvpaper and ollama as recommended):
+Install skwd-wall:
 
 ```sh
 sudo dnf install skwd-wall
 ```
 
-> **Note:** Ollama is installed as a recommended dependency for automated wallpaper tagging.
-> To skip recommended packages: `sudo dnf install --setopt=install_weak_deps=False skwd-wall`
-
-Optional:
-```sh
-sudo dnf install jq
-```
-
-The daemon auto-enables on your next login. To start it immediately without logging out:
+Enable Skwd-daemon:
 ```sh
 systemctl --user enable --now skwd-daemon.service
 ```
@@ -327,11 +205,11 @@ skwd wall toggle
 
 Bind this command to a key in your compositor for quick access.
 
-### KDE Plasma is a bit different
+## KDE Plasma hits different
 
-Skwd-wall auto-detects KDE Plasma and uses native Plasma APIs instead of awww/mpvpaper (as KDE Plasma doesn't play nice like that).
+Skwd-wall auto-detects KDE Plasma and uses native Plasma APIs instead of awww/mpvpaper.
 
-**Static wallpapers** work out of the box via `plasma-apply-wallpaperimage` - no extra setup needed.
+**Static wallpapers** work out of the box via `plasma-apply-wallpaperimage` - you don't have to do anything, it just works but still good to know.
 
 **Video wallpapers** require the [Smart Video Wallpaper Reborn](https://github.com/luisbocanegra/plasma-smart-video-wallpaper-reborn) Plasma plugin. Without it, video wallpapers will not work on KDE.
 
@@ -353,12 +231,33 @@ yay -S plasma6-wallpapers-smart-video-wallpaper-reborn
 sudo dnf install plasma-smart-video-wallpaper-reborn
 ```
 
+## Optional - Wallpaper Engine, Steamcmd & Ollama
+Skwd-wall supports two optional features - Wallpaper Engine wallpapers through [Linux Wallpaper Engine](https://github.com/Almamu/linux-wallpaperengine) and automated tagging for the tag search feature using computer vision through [Ollama](https://ollama.com/).
+
+
+### Wallpaper Engine
+As far as I am aware to use Wallpaper Engine on Linux you have to own the Steam application.
+Swkd-wall finds Wallpaper Engine wallpapers automatically and sorts them based on type (video or Wallpaper Engine Scene) but you can also use the built-in Wallpaper Engine browser.
+
+If you don't want to use the default Wallpaper Engine browser you can use Skwd-wall's internal one, which uses [Steamcmd](https://developer.valvesoftware.com/wiki/SteamCMD) (Valve's Command Line Interface for Steam) to search the Workshop behind the scenes. While you won't have to interact with Steamcmd more than logging in once so that Skwd-wall can use your token to browse the Workshop and download Wallpaper Engine workshop items (wallpapers) for you, it is quite the nerdy setup.
+
+### Ollama
+Ollama is a local-only LLM that in Skwd-wall's case is used to automatically tag wallpapers as it is a very easy way to setup computer vision.
+You simply need to enter the Ollama URL, download a model that supports computer vision e.g. `ollama pull gemma3:4b` and select the model in the field in Skwd-wall's Ollama settings - it automatically fetches installed models from Ollama for you.
+
+You then press the O-button in the filter bar that is start / stop and after a couple of wallpapers tagged it will give you an estimated time until completion. You are safe to close Skwd-wall at this point as Skwd-daemon is the one executing the job and listening to the start/stop commands from Skwd-wall.
+
+This does not overwrite existing tags should you already have tags set up. In testing I've found gemma3:4b to be very good at tagging while also being reasonable on the hardware requirements.
+
+There's also a WIP tag consolidation system where similar tags get merged, but it is highly experimental right now.
 
 ## Acknowledgements
 Ilyamiro1 for the 250 IQ idea to use duckduckgo to retrieve wallpapers which made me realise wallhaven.cc & Steam have API:s for similar functionality.
 Also for implementing my ideas of parallelogram animations and colour sorting in his wallpaper selector - just happy people like my whacky ideas.
 
 Horizon0427 for his [excellent hexagon wallpaper selector](https://github.com/Horizon0427/Arch-Config) from which I designed my hexagon style presentation entirely, with added animations and other features.
+
+Happyzxzxz for showing me the Nix wizard way to do NixOS things.
 
 ## License
 

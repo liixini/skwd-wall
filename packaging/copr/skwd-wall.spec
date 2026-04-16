@@ -28,10 +28,10 @@ Requires:       google-roboto-condensed-fonts
 Requires:       google-roboto-mono-fonts
 Requires:       skwd-fonts
 
-Recommends:     mpvpaper
+Requires:       mpvpaper
+Requires:       jq
 
-Suggests:       ollama
-Suggests:       jq
+Recommends:     ollama
 
 %description
 A Quickshell-based image, video, and Wallpaper Engine wallpaper selector with
