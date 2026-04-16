@@ -315,57 +315,37 @@ Optional: add `ollama`, `jq`, `mpvpaper` to your system packages as needed.
 
 ### Fedora
 
-Enable the COPR repos for quickshell and awww:
+Enable the COPR repos:
 
 ```sh
 sudo dnf copr enable errornointernet/quickshell
 sudo dnf copr enable scottames/awww
+sudo dnf copr enable liixini/skwd
 ```
 
-Install dependencies:
+Install skwd-wall (pulls in all dependencies automatically):
 
 ```sh
-sudo dnf install quickshell awww curl sqlite ffmpeg ImageMagick inotify-tools \
-  qt6-qtmultimedia google-roboto-fonts google-roboto-condensed-fonts google-roboto-mono-fonts
-  
-  Optional: `sudo dnf install jq ollama mpvpaper`
+sudo dnf install skwd-wall
 ```
 
-Install matugen via cargo:
+Optional:
+```sh
+sudo dnf install jq ollama mpvpaper
+```
+
+The daemon auto-enables on your next login. To start it immediately without logging out:
+```sh
+systemctl --user enable --now skwd-daemon.service
+```
+
+Launch the wallpaper selector:
 
 ```sh
-cargo install matugen
+skwd wall toggle
 ```
 
-If cargo isn't already in your PATH, add it to bash or zsh or whatever you use, bash example below:
-```
-echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-Install Nerd Fonts Symbols and Material Design Icons:
-
-```sh
-mkdir -p ~/.local/share/fonts
-curl -fLo ~/.local/share/fonts/SymbolsNerdFontMono-Regular.ttf \
-  https://github.com/ryanoasis/nerd-fonts/raw/HEAD/patched-fonts/NerdFontsSymbolsOnly/SymbolsNerdFontMono-Regular.ttf
-curl -fLo ~/.local/share/fonts/MaterialDesignIconsDesktop.ttf \
-  https://github.com/Templarian/MaterialDesign-Desktop-Font/raw/HEAD/MaterialDesignIconsDesktop.ttf
-fc-cache -fv
-```
-
-Clone and run:
-
-```sh
-git clone https://github.com/liixini/skwd-wall && cd skwd-wall
-
-# the -p part is for PATH, extend to match the path where you find daemon.qml
-# set this up with your exec once of choice, such as a .desktop file, in your compositor etc.
-quickshell -p daemon.qml
-
-# this is the part you keybind somehow which launches the UI!
-quickshell ipc -p daemon.qml call wallpaper toggle
-```
+Bind this command to a key in your compositor for quick access.
 
 
 
