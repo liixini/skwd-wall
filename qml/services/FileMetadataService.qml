@@ -15,6 +15,23 @@ QtObject {
         return metadataDb[key] || null
     }
 
+    function loadFromDaemonData(wallpapers) {
+        var db = {}
+        for (var i = 0; i < wallpapers.length; i++) {
+            var r = wallpapers[i]
+            var key = r.key || r.name
+            if (r.filesize || r.width || r.height) {
+                db[key] = {
+                    filesize: r.filesize || 0,
+                    width: r.width || 0,
+                    height: r.height || 0
+                }
+            }
+        }
+        metadataDb = db
+        loaded = true
+    }
+
     function probeIfNeeded(key, path, type) {
         if (!path || metadataDb[key] || _probing[key]) return
         _probing[key] = true
@@ -43,7 +60,7 @@ QtObject {
         if (_running || _queue.length === 0) return
         _running = true
         _current = _queue.shift()
-        var p = DbService.shellQuote(_current.path)
+        var p = _shellQuote(_current.path)
         var cmd
         if (_current.type === "video") {
             cmd = "s=$(stat -c '%s' " + p + " 2>/dev/null) && " +
@@ -51,11 +68,15 @@ QtObject {
                   "printf '%s\\t%s\\n' \"$s\" \"$(echo \"$d\" | tr ',' $'\\t')\""
         } else {
             cmd = "s=$(stat -c '%s' " + p + " 2>/dev/null) && " +
-                  "d=$(magick identify -format $'%w\\t%h' " + DbService.shellQuote(_current.path + "[0]") + " 2>/dev/null) && " +
+                  "d=$(magick identify -format $'%w\\t%h' " + _shellQuote(_current.path + "[0]") + " 2>/dev/null) && " +
                   "printf '%s\\t%s\\n' \"$s\" \"$d\""
         }
         _probeProcess.command = ["sh", "-c", cmd]
         _probeProcess.running = true
+    }
+
+    function _shellQuote(s) {
+        return "'" + String(s).replace(/'/g, "'\\''") + "'"
     }
 
     property var _probeProcess: Process {
@@ -77,29 +98,12 @@ QtObject {
                     var db = service.metadataDb
                     db[cur.key] = meta
                     service.metadataDb = db
-                    DbService.exec(
-                        "UPDATE meta SET filesize=" + meta.filesize +
-                        ",width=" + meta.width + ",height=" + meta.height +
-                        " WHERE key=" + DbService.sqlStr(cur.key) + ";"
-                    )
+                    DaemonClient.updateMetadata(cur.key, meta.filesize, meta.width, meta.height)
                     service.metadataReady(cur.key)
                 }
             }
             delete service._probing[cur.key]
             service._startNext()
         }
-    }
-
-    Component.onCompleted: {
-        var rows = DbService.query("SELECT key,filesize,width,height FROM meta WHERE filesize IS NOT NULL")
-        for (var i = 0; i < rows.length; i++) {
-            metadataDb[rows[i].key] = {
-                filesize: rows[i].filesize || 0,
-                width: rows[i].width || 0,
-                height: rows[i].height || 0
-            }
-        }
-        metadataDb = metadataDb
-        loaded = true
     }
 }

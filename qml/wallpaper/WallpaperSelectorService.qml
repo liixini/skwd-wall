@@ -101,6 +101,7 @@ QtObject {
       cacheReady = true
       cacheResult = "cached"
 
+      FileMetadataService.loadFromDaemonData(walls)
       _rebuildPopularTags()
       updateFilteredModel()
 

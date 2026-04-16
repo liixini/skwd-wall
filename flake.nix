@@ -18,6 +18,7 @@
           qsPkgs = quickshell.inputs.nixpkgs.legacyPackages.${system};
 
           quickshellWithModules = quickshell.packages.${system}.default.withModules (with qsPkgs.qt6; [
+            qtimageformats
             qtmultimedia
             qtsvg
             qt5compat
@@ -34,6 +35,7 @@
             inotify-tools
             sqlite
             curl
+            file
             mpvpaper
             jq
             awww.packages.${system}.awww

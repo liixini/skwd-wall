@@ -1280,10 +1280,10 @@ Item {
 
           FilterButton {
             colors: settingsPanel.colors
-            label: WallpaperCacheService.running ? "CLEARING..." : "CLEAR ALL DATA"
+            label: DaemonClient.cacheRunning ? "CLEARING..." : "CLEAR ALL DATA"
             skew: 8
             height: 28
-            enabled: !WallpaperCacheService.running
+            enabled: !DaemonClient.cacheRunning
             onClicked: settingsPanel.service.clearData()
           }
         }

@@ -93,6 +93,10 @@ QtObject {
         call("wall.set_matugen_batch", {entries: entries}, callback)
     }
 
+    function updateMetadata(key, filesize, width, height) {
+        call("wall.update_metadata", {key: key, filesize: filesize, width: width, height: height})
+    }
+
     function fetchWeather(callback) {
         call("wall.weather", {}, callback)
     }
