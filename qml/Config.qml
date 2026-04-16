@@ -57,6 +57,7 @@ QtObject {
     readonly property string ollamaModel: _data.ollama?.model ?? ""
 
     readonly property bool matugenEnabled: _data.features?.matugen !== false
+    readonly property bool videoAutoScale: _data.features?.videoAutoScale !== false
     readonly property bool ollamaEnabled: _data.features?.ollama !== false
     readonly property bool steamEnabled: _data.features?.steam !== false
     readonly property bool wallhavenEnabled: _data.features?.wallhaven !== false
