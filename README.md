@@ -117,16 +117,13 @@ Research how to do this in your specific compositor, I'm sure it supports keybin
 ### Arch Linux
 
 ```sh
+# Install Skwd-wall and all its dependencies
 yay -S skwd-wall
-```
 
-Enable Skwd-daemon:
-```sh
+# Enable Skwd-daemon:
 systemctl --user enable --now skwd-daemon.service
-```
 
-Launch Skwd-wall:
-```sh
+# Launch Skwd-wall:
 skwd wall toggle
 ```
 
@@ -135,14 +132,6 @@ Bind this command to a key in your compositor for quick access.
 > **Note:** `yay` is an AUR helper. If you don't have it, install it or use another helper like `paru`.
 
 ### NixOS
-
-```sh
-nix profile install github:liixini/skwd-wall/experimental/rust-refactor --no-write-lock-file
-```
-
-<details>
-<summary>Declarative alternative (configuration.nix)</summary>
-
 Add the flake input to your `flake.nix`:
 
 ```nix
@@ -163,7 +152,6 @@ Then add the package to your `configuration.nix`:
   ];
 }
 ```
-</details>
 
 Enable Skwd-daemon:
 ```sh
@@ -177,7 +165,6 @@ skwd wall toggle
 
 Bind this command to a key in your compositor for quick access.
 
-
 ### Fedora
 
 Enable the COPR repos:
@@ -188,26 +175,29 @@ sudo dnf copr enable scottames/awww
 sudo dnf copr enable piixini/skwd
 ```
 
-Install skwd-wall:
-
 ```sh
+# Install skwd-wall
 sudo dnf install skwd-wall
-```
 
-Enable Skwd-daemon:
-```sh
+# Enable Skwd-daemon:
 systemctl --user enable --now skwd-daemon.service
-```
 
-Launch the wallpaper selector:
-
-```sh
+# Launch Skwd-wall:
 skwd wall toggle
 ```
 
 Bind this command to a key in your compositor for quick access.
 
-## KDE Plasma hits different
+## Compositor-specific tweaks (KDE Plasma, Hyprland etc)
+
+### Hyprland
+In testing I experienced issues with NixOS + systemctl service autostart on Hyprland.
+This was resolved by adding a basic exec once to `hyprland.conf`, e.g.
+`exec-once = systemctl --user start skwd-daemon`
+
+I am sure there's a much more graceful way to solve this, but I am not a Hyprland user and this works.
+
+### KDE Plasma
 
 Skwd-wall auto-detects KDE Plasma and uses native Plasma APIs instead of awww/mpvpaper.
 
