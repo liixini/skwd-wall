@@ -52,6 +52,11 @@ QtObject {
     if (!safeId) return
     var sz = parseInt(fileSize) || 0
     console.log("[SteamWorkshopService] requesting download " + safeId + " size=" + sz)
+
+    var updated = Object.assign({}, downloadStatus)
+    updated[safeId] = "queued"
+    downloadStatus = updated
+    downloadQueueLength = downloadQueueLength + 1
     requestWriter.path = _requestFilePath
     requestWriter.setText(safeId + "\n" + sz)
     DaemonClient.call("steam.download", {"id": safeId}, function(resp) {
