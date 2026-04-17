@@ -108,6 +108,7 @@ QtObject {
 
     readonly property string matugenConfig: cacheDir + "/matugen-config.toml"
     readonly property string defaultMatugenConfig: _resolve(_data.defaultMatugenConfig ?? "~/.config/matugen/config.toml")
+    readonly property string externalMatugenCommand: _data.externalMatugenCommand ?? "matugen -c %config% image %path%"
     readonly property string matugenScheme: (_data.matugen && _data.matugen.schemeType) ? _data.matugen.schemeType : "scheme-fidelity"
     readonly property string matugenMode: (_data.matugen && _data.matugen.mode) ? _data.matugen.mode : "dark"
 

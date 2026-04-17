@@ -456,7 +456,7 @@ Item {
 
         SettingsToggle {
           colors: settingsPanel.colors
-          label: "WIP - Only images per monitor"
+          label: "WIP - Video and WE support coming. Apply wallpapers per monitor."
           checked: Config.wallpaperPerMonitor
           onToggle: function(v) { settingsPanel._saveConfigKey("general.wallpaperPerMonitor", v) }
         }
@@ -1563,6 +1563,40 @@ Item {
             clip: true; selectByMouse: true
             text: Config.defaultMatugenConfig
             onEditingFinished: settingsPanel._saveConfigKey("defaultMatugenConfig", text)
+          }
+        }
+
+        Item { width: 1; height: 2 }
+
+        Text {
+          text: "EXTERNAL MATUGEN COMMAND"
+          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1
+          color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+        }
+
+        Text {
+          width: parent.width
+          text: "Shell command to run with the external config. Use %config% for the config path and %path% for the wallpaper path. Matugen v4 users: add --source-color-index 0 after 'image' to avoid interactive prompts."
+          font.family: Style.fontFamily; font.pixelSize: 10
+          color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.5) : Qt.rgba(1, 1, 1, 0.35)
+          wrapMode: Text.Wrap
+        }
+
+        Rectangle {
+          width: parent.width; height: 26; radius: 4
+          color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.15, 0.15, 0.2, 0.6)
+          border.width: _extMatugenCmdInput.activeFocus ? 1 : 0
+          border.color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.5) : Qt.rgba(1, 1, 1, 0.3)
+
+          TextInput {
+            id: _extMatugenCmdInput
+            anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
+            verticalAlignment: TextInput.AlignVCenter
+            font.family: Style.fontFamilyCode; font.pixelSize: 11
+            color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"
+            clip: true; selectByMouse: true
+            text: Config.externalMatugenCommand
+            onEditingFinished: settingsPanel._saveConfigKey("externalMatugenCommand", text)
           }
         }
 
