@@ -133,11 +133,9 @@ yay -S skwd-wall
 # Enable Skwd-daemon:
 systemctl --user enable --now skwd-daemon.service
 
-# Launch Skwd-wall:
+# Launch Skwd-wall. Bind this command to a key in your compositor for quick access:
 skwd wall toggle
 ```
-
-Bind this command to a key in your compositor for quick access.
 
 > **Note:** `yay` is an AUR helper. If you don't have it, install it or use another helper like `paru`.
 
@@ -257,7 +255,7 @@ Swkd-wall finds Wallpaper Engine wallpapers automatically and sorts them based o
 
 However if you don't want to use the default Wallpaper Engine browser you can use Skwd-wall's internal one, which uses [Steamcmd](https://developer.valvesoftware.com/wiki/SteamCMD) which is Valve's Command Line Interface for Steam to search the Workshop behind the scenes.
 
-You won't have to interact with Steamcmd more than logging in once so that Skwd-wall can use your token to browse the Workshop and download Wallpaper Engine workshop items (wallpapers) for you and Skwd-wall will warn you if your token has expired or needs refreshing (read: you need to log into Steam again).
+You won't have to interact with Steamcmd more than logging in once so that Skwd-wall can use your logged in Steamcmd to browse the Workshop and download Wallpaper Engine workshop items (wallpapers) for you and Skwd-wall will warn you if your token has expired or needs refreshing (read: you need to log into Steam again).
 
 Skwd-wall **does not** handle any of your Steam credentials - this is all done through Valve's Steamcmd - it simply tries to use Steamcmd and either you're logged in or you're not. This means that I will not be implementing in-app login flows for this - I do not wish to handle any authentication and I leave this solely on the shoulders of Valve.
 
