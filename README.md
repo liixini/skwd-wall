@@ -49,10 +49,8 @@ An image/video/Wallpaper Engine wallpaper selector from my shell [Skwd](https://
 - **Wide system support**: Anywhere you can resolve the dependencies below and you have a wlr-layer-shell capable compositor, this should run.
 - **For those that don't speak nerd**: That means it works on OS:es like Arch, Fedora & NixOS and downstream OS:es like CachyOS and Nobara but also with things like KDE Plasma, Hyprland, Sway or Niri - pretty much any Wayland compositor. It does **not** work with GNOME.
 - **Keybinds**: A lot of features in Skwd-wall is navigatable by keybinds, available for reference under the keybind configuration tab.
-
-## What isn't cool about it yet?
-- **Different wallpapers on different monitors**: Looking into the best design to set different wallpapers on different monitors.
-- **Keybind customization**: Investigating being able to customise keybinds freely to suit your preferences.
+- **Random wallpaper**: Press once for a random wallpaper, keep toggled for a random wallpaper every X seconds, X being configurable in the settings.
+- **Different wallpapers on different monitors**: *(WIP)* You can enable an option to have a popup that allows you to select which monitors your wallpaper should apply to. Image only currently, but working on support for video and WE.
 
 ## The long story - Personal motivation and development practices
 This is part of my personal shell Skwd that I have broken out into standalone components because it was a popular request.
@@ -136,6 +134,10 @@ systemctl --user enable --now skwd-daemon.service
 # Launch Skwd-wall. Bind this command to a key in your compositor for quick access:
 skwd wall toggle
 ```
+
+If you're updating Skwd-wall, note that Skwd-wall is two applications - Skwd-wall and Skwd-daemon.
+Skwd-daemon is automatically installed as part of installing Skwd-wall, but if you're updating and not updating all packages you need to
+either use `yay -S skwd-wall --devel` or `yay -S skwd-wall skwd-daemon` 
 
 > **Note:** `yay` is an AUR helper. If you don't have it, install it or use another helper like `paru`.
 
