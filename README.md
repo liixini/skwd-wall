@@ -282,3 +282,6 @@ Happyzxzxz for showing me the Nix wizard way to do NixOS things.
 ## License
 
 [MIT](LICENSE)
+
+
+<!-- Fix #47 -->
