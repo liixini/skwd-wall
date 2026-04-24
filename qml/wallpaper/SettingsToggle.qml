@@ -10,15 +10,15 @@ Row {
     property var onToggle
 
     width: parent ? parent.width : 0
-    height: 28
-    spacing: 8
+    height: 28 * Config.uiScale
+    spacing: 8 * Config.uiScale
 
     property real _skew: 4
 
     Item {
         id: track
-        width: 40
-        height: 20
+        width: 40 * Config.uiScale
+        height: 20 * Config.uiScale
         anchors.verticalCenter: parent.verticalCenter
 
         Shape {
@@ -41,8 +41,8 @@ Row {
 
         Item {
             id: thumb
-            width: 16
-            height: 14
+            width: 16 * Config.uiScale
+            height: 14 * Config.uiScale
             anchors.verticalCenter: parent.verticalCenter
             x: root.checked ? parent.width - width - 3 : 3
             Behavior on x { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutCubic } }
@@ -74,7 +74,7 @@ Row {
         text: root.label
         anchors.verticalCenter: parent.verticalCenter
         font.family: Style.fontFamily
-        font.pixelSize: 11
+        font.pixelSize: 11 * Config.uiScale
         font.weight: Font.Medium
         color: root.colors ? root.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
     }

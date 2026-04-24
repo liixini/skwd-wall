@@ -54,7 +54,7 @@ Item {
       Item { width: 14; height: 1 }
 
       Rectangle {
-        width: 200; height: 24; radius: 0
+        width: 200 * Config.uiScale; height: 24 * Config.uiScale; radius: 0
         color: browser.colors ? Qt.rgba(browser.colors.surface.r, browser.colors.surface.g, browser.colors.surface.b, 0.8)
                                : Qt.rgba(0.15, 0.17, 0.22, 0.8)
         border.width: searchInput.activeFocus ? 2 : 1
@@ -65,16 +65,16 @@ Item {
 
         TextInput {
           id: searchInput
-          anchors.fill: parent; anchors.margins: 6
-          font.family: Style.fontFamily; font.pixelSize: 11
+          anchors.fill: parent; anchors.margins: 6 * Config.uiScale
+          font.family: Style.fontFamily; font.pixelSize: 11 * Config.uiScale
           color: browser.colors ? browser.colors.surfaceText : "#e0e0e0"
           clip: true
           Keys.onReturnPressed: { browser.swService.query = text; browser.swService.search(1) }
           Keys.onEscapePressed: browser.escapePressed()
         }
         Text {
-          anchors.fill: parent; anchors.margins: 6
-          font.family: Style.fontFamily; font.pixelSize: 11
+          anchors.fill: parent; anchors.margins: 6 * Config.uiScale
+          font.family: Style.fontFamily; font.pixelSize: 11 * Config.uiScale
           color: browser.colors ? Qt.rgba(browser.colors.surfaceText.r, browser.colors.surfaceText.g, browser.colors.surfaceText.b, 0.35)
                                 : Qt.rgba(1, 1, 1, 0.3)
           text: "SEARCH STEAM WORKSHOP..."

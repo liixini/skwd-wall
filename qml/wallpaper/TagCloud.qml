@@ -28,7 +28,7 @@ Rectangle {
     width: parentWidth
     Behavior on width { NumberAnimation { duration: Style.animExpand; easing.type: Easing.OutCubic } }
 
-    height: tagCloudVisible ? 154 : 0
+    height: tagCloudVisible ? 154 * Config.uiScale : 0
     visible: tagCloudVisible
     radius: 16
     clip: true
@@ -228,16 +228,16 @@ Rectangle {
         Text {
             text: "\u{f0349}"
             font.family: Style.fontFamilyNerdIcons
-            font.pixelSize: 14
+            font.pixelSize: 14 * Config.uiScale
             color: tagCloud.colors ? Qt.rgba(tagCloud.colors.surfaceText.r, tagCloud.colors.surfaceText.g, tagCloud.colors.surfaceText.b, 0.5) : Qt.rgba(1, 1, 1, 0.4)
             anchors.verticalCenter: parent.verticalCenter
         }
 
         Rectangle {
             id: tagSearchBox
-            width: parent.width - 30
-            height: 26
-            radius: 13
+            width: parent.width - 30 * Config.uiScale
+            height: 26 * Config.uiScale
+            radius: 13 * Config.uiScale
             color: tagCloud.colors ? Qt.rgba(tagCloud.colors.surface.r, tagCloud.colors.surface.g, tagCloud.colors.surface.b, 0.5) : Qt.rgba(0, 0, 0, 0.3)
             border.width: tagSearchInput.activeFocus ? 1 : 0
             border.color: tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.5) : Qt.rgba(1, 1, 1, 0.3)
@@ -251,11 +251,11 @@ Rectangle {
             TextInput {
                 id: tagSearchInput
                 anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
+                anchors.leftMargin: 12 * Config.uiScale
+                anchors.rightMargin: 12 * Config.uiScale
                 verticalAlignment: TextInput.AlignVCenter
                 font.family: Style.fontFamily
-                font.pixelSize: 11
+                font.pixelSize: 11 * Config.uiScale
                 font.letterSpacing: 0.3
                 color: tagCloud.colors ? tagCloud.colors.surfaceText : "#fff"
                 clip: true
@@ -369,11 +369,11 @@ Rectangle {
 
             Text {
                 anchors.right: parent.right
-                anchors.rightMargin: 8
+                anchors.rightMargin: 8 * Config.uiScale
                 anchors.verticalCenter: parent.verticalCenter
                 text: "\u{f0156}"
                 font.family: Style.fontFamilyNerdIcons
-                font.pixelSize: 12
+                font.pixelSize: 12 * Config.uiScale
                 color: tagCloud.colors ? Qt.rgba(tagCloud.colors.surfaceText.r, tagCloud.colors.surfaceText.g, tagCloud.colors.surfaceText.b, 0.4) : Qt.rgba(1, 1, 1, 0.3)
                 visible: tagSearchInput.text.length > 0
 
@@ -420,9 +420,9 @@ Rectangle {
                     id: tagParaChip
                     property bool isSelected: modelData.selected
                     property bool isHovered: tagParaMouse.containsMouse
-                    property int skew: 10
-                    width: tagParaText.implicitWidth + 24 + skew
-                    height: 24
+                    property int skew: 10 * Config.uiScale
+                    width: tagParaText.implicitWidth + 24 * Config.uiScale + skew
+                    height: 24 * Config.uiScale
                     z: isSelected ? 10 : (isHovered ? 5 : 1)
 
                     property real _animProgress: 1
@@ -488,7 +488,7 @@ Rectangle {
                             ? (tagCloud.colors ? tagCloud.colors.primaryText : "#000")
                             : (tagCloud.colors ? tagCloud.colors.tertiary : "#8bceff")
                         font.family: Style.fontFamily
-                        font.pixelSize: 10
+                        font.pixelSize: 10 * Config.uiScale
                         font.weight: tagParaChip.isSelected ? Font.Bold : Font.Bold
                         font.letterSpacing: 0.5
                     }

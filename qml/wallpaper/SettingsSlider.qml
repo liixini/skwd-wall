@@ -14,18 +14,18 @@ Column {
     property bool enabled: true
 
     width: parent ? parent.width : 0
-    spacing: 4
+    spacing: 4 * Config.uiScale
     opacity: enabled ? 1.0 : 0.4
 
     Row {
         width: parent.width
-        spacing: 8
+        spacing: 8 * Config.uiScale
 
         Text {
             text: root.label
             anchors.verticalCenter: parent.verticalCenter
             font.family: Style.fontFamily
-            font.pixelSize: 11
+            font.pixelSize: 11 * Config.uiScale
             font.weight: Font.Medium
             color: root.colors ? root.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
@@ -37,7 +37,7 @@ Column {
             text: ""
             visible: false
             font.family: Style.fontFamily
-            font.pixelSize: 11
+            font.pixelSize: 11 * Config.uiScale
         }
 
         Text {
@@ -45,7 +45,7 @@ Column {
             text: root.value
             anchors.right: parent.right
             font.family: Style.fontFamilyCode
-            font.pixelSize: 11
+            font.pixelSize: 11 * Config.uiScale
             font.weight: Font.Bold
             color: root.colors ? root.colors.primary : Qt.rgba(1, 1, 1, 0.7)
         }
@@ -54,7 +54,7 @@ Column {
     Item {
         id: track
         width: parent.width
-        height: 18
+        height: 18 * Config.uiScale
 
         readonly property real _skew: 4
         readonly property real _range: Math.max(1, root.max - root.min)
@@ -98,7 +98,7 @@ Column {
 
         Item {
             id: thumb
-            width: 6
+            width: 6 * Config.uiScale
             height: track.height + 6
             anchors.verticalCenter: parent.verticalCenter
             x: Math.max(0, Math.min(track.width - width, track._fillWidth - width / 2))

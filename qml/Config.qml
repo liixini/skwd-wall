@@ -91,6 +91,7 @@ QtObject {
     readonly property bool wallpaperPerMonitor: _data.general?.wallpaperPerMonitor === true
     readonly property bool notifyOnWallpaperChange: _data.general?.notifyOnWallpaperChange !== false
     readonly property string notificationsBuiltIn: _data.notifications?.builtIn ?? "never"
+    readonly property real uiScale: Math.max(1.0, Math.min(2.0, _data.general?.uiScale ?? 1.0))
 
     readonly property bool matugenEnabled: _data.features?.matugen !== false
     readonly property bool ollamaEnabled: _data.features?.ollama !== false

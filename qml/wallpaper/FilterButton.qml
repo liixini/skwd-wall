@@ -18,8 +18,8 @@ Item {
 
     signal clicked()
 
-    width: _label.implicitWidth + 24 + skew
-    height: 24
+    width: _label.implicitWidth + 24 * Config.uiScale + skew
+    height: 24 * Config.uiScale
     z: isActive ? 10 : (isHovered ? 5 : 1)
 
     readonly property bool isHovered: _mouse.containsMouse
@@ -64,7 +64,7 @@ Item {
         id: _label
         anchors.centerIn: parent
         text: btn.icon || btn.label
-        font.pixelSize: btn.useNerdFont ? 14 : 10
+        font.pixelSize: (btn.useNerdFont ? 14 : 10) * Config.uiScale
         font.family: btn.useNerdFont ? Style.fontFamilyNerdIcons : Style.fontFamily
         font.weight: btn.useNerdFont ? Font.Normal : Font.Bold
         font.letterSpacing: btn.useNerdFont ? 0 : 0.5

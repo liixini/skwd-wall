@@ -14,8 +14,8 @@ Item {
 
     signal selected(string key)
 
-    width: _btnLabel.implicitWidth + _arrow.implicitWidth + 28 + skew
-    height: 24
+    width: _btnLabel.implicitWidth + _arrow.implicitWidth + 28 * Config.uiScale + skew
+    height: 24 * Config.uiScale
     z: _popupOpen ? 100 : (isHovered ? 5 : 1)
 
     readonly property bool isHovered: _mouse.containsMouse
@@ -64,7 +64,7 @@ Item {
             id: _btnLabel
             text: dropdown.displayValue || dropdown.label
             font.family: Style.fontFamily
-            font.pixelSize: 10
+            font.pixelSize: 10 * Config.uiScale
             font.weight: Font.Bold
             font.letterSpacing: 0.5
             color: dropdown._popupOpen
@@ -75,7 +75,7 @@ Item {
         Text {
             id: _arrow
             text: dropdown._popupOpen ? "▲" : "▼"
-            font.pixelSize: 7
+            font.pixelSize: 7 * Config.uiScale
             color: _btnLabel.color
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -112,8 +112,8 @@ Item {
                 model: dropdown.model
 
                 Rectangle {
-                    width: Math.max(_itemLabel.implicitWidth + 20, 80)
-                    height: 22
+                    width: Math.max(_itemLabel.implicitWidth + 20 * Config.uiScale, 80 * Config.uiScale)
+                    height: 22 * Config.uiScale
                     radius: 2
                     color: _itemIsActive
                         ? (dropdown.colors ? Qt.rgba(dropdown.colors.primary.r, dropdown.colors.primary.g, dropdown.colors.primary.b, 0.25) : Qt.rgba(1, 1, 1, 0.15))
@@ -128,7 +128,7 @@ Item {
                         anchors.centerIn: parent
                         text: modelData.label
                         font.family: Style.fontFamily
-                        font.pixelSize: 10
+                        font.pixelSize: 10 * Config.uiScale
                         font.weight: parent._itemIsActive ? Font.Bold : Font.Medium
                         font.letterSpacing: 0.3
                         color: parent._itemIsActive

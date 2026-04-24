@@ -10,25 +10,25 @@ Column {
     property var onSelect
 
     width: parent ? parent.width : 0
-    spacing: 2
+    spacing: 2 * Config.uiScale
 
     Text {
         text: root.label
         font.family: Style.fontFamily
-        font.pixelSize: 11
+        font.pixelSize: 11 * Config.uiScale
         font.weight: Font.Medium
         color: root.colors ? root.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
     }
 
     Flow {
         width: parent.width
-        spacing: 4
+        spacing: 4 * Config.uiScale
 
         Repeater {
             model: root.model
             Item {
-                width: _comboLabel.implicitWidth + 24 + 8
-                height: 26
+                width: _comboLabel.implicitWidth + 24 * Config.uiScale + 8 * Config.uiScale
+                height: 26 * Config.uiScale
                 z: _comboIsActive ? 10 : (_comboMouse.containsMouse ? 5 : 1)
 
                 property bool _comboIsActive: root.value === modelData
@@ -73,7 +73,7 @@ Column {
                     anchors.centerIn: parent
                     text: modelData
                     font.family: Style.fontFamily
-                    font.pixelSize: 10
+                    font.pixelSize: 10 * Config.uiScale
                     font.weight: Font.Bold
                     font.letterSpacing: 0.5
                     color: parent._comboIsActive

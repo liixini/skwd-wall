@@ -37,7 +37,7 @@ Item {
     signal tagCloudToggled()
     signal modeToggled(string mode)
 
-    readonly property int _skew: 10
+    readonly property int _skew: 10 * Config.uiScale
     property real maxWidth: 99999
 
     width: Math.min(filterRow.width, maxWidth)
@@ -180,14 +180,14 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "\u{f0028}"
                         font.family: Style.fontFamilyNerdIcons
-                        font.pixelSize: 16
+                        font.pixelSize: 16 * Config.uiScale
                         color: "#ffb74d"
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Select at least one random source category in settings"
                         font.family: Style.fontFamily
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * Config.uiScale
                         font.letterSpacing: 0.2
                         color: filterBar.colors ? filterBar.colors.surfaceText : "#fff"
                     }
@@ -204,7 +204,7 @@ Item {
             model: 13
 
             Item {
-                width: 28; height: 24
+                width: 28 * Config.uiScale; height: 24 * Config.uiScale
                 readonly property int filterValue: index < 12 ? index : 99
                 readonly property bool isSelected: filterBar.service ? filterBar.service.selectedColorFilter === filterValue : false
                 readonly property color hueColor: index === 12 ? Qt.hsla(0, 0, 0.45, 1.0) : Qt.hsla(index / 12.0, 0.65, 0.45, 1.0)
@@ -315,7 +315,7 @@ Item {
 
         Item {
             width: _countLabel.implicitWidth + 24 + filterBar._skew
-            height: 24
+            height: 24 * Config.uiScale
 
             Canvas {
                 anchors.fill: parent
@@ -352,7 +352,7 @@ Item {
                     return fc + (fc !== tc ? "/" + tc : "")
                 }
                 font.family: Style.fontFamily
-                font.pixelSize: 10
+                font.pixelSize: 10 * Config.uiScale
                 font.weight: Font.Bold
                 font.letterSpacing: 0.5
                 color: filterBar.colors ? Qt.rgba(filterBar.colors.surfaceText.r, filterBar.colors.surfaceText.g, filterBar.colors.surfaceText.b, 0.5) : Qt.rgba(1, 1, 1, 0.4)
@@ -362,7 +362,7 @@ Item {
         Item {
             visible: filterBar.cacheLoading || filterBar.ollamaActive || filterBar.ollamaLogLine !== "" || filterBar.videoConvertRunning || filterBar.imageOptimizeRunning
             width: visible ? (_statusRow.width + 24 + filterBar._skew) : 0
-            height: 24
+            height: 24 * Config.uiScale
 
             Canvas {
                 anchors.fill: parent
@@ -397,7 +397,7 @@ Item {
 
                 Text {
                     text: "󰔟"
-                    font.pixelSize: 11
+                    font.pixelSize: 11 * Config.uiScale
                     font.family: Style.fontFamilyNerdIcons
                     color: filterBar.colors ? filterBar.colors.primary : Style.fallbackAccent
                     anchors.verticalCenter: parent.verticalCenter
@@ -442,7 +442,7 @@ Item {
                         return parts.join(" · ")
                     }
                     font.family: Style.fontFamily
-                    font.pixelSize: 9
+                    font.pixelSize: 9 * Config.uiScale
                     font.weight: Font.Bold
                     font.letterSpacing: 0.5
                     color: filterBar.colors ? Qt.rgba(filterBar.colors.primary.r, filterBar.colors.primary.g, filterBar.colors.primary.b, 0.8) : Qt.rgba(0.5, 0.76, 0.97, 0.8)
@@ -454,7 +454,7 @@ Item {
         Item {
             visible: (filterBar.videoConvertRunning && filterBar.videoConvertFile !== "") || (filterBar.imageOptimizeRunning && filterBar.imageOptimizeFile !== "")
             width: visible ? (180 + 24 + filterBar._skew) : 0
-            height: 24
+            height: 24 * Config.uiScale
             Behavior on width { NumberAnimation { duration: Style.animFast } }
 
             Canvas {
@@ -489,7 +489,7 @@ Item {
                 width: Math.min(implicitWidth, 180)
                 text: filterBar.imageOptimizeRunning ? filterBar.imageOptimizeFile : filterBar.videoConvertFile
                 font.family: Style.fontFamilyCode
-                font.pixelSize: 8
+                font.pixelSize: 8 * Config.uiScale
                 font.letterSpacing: 0.3
                 elide: Text.ElideMiddle
                 maximumLineCount: 1
@@ -500,7 +500,7 @@ Item {
         Item {
             visible: filterBar.ollamaLogLine !== ""
             width: visible ? (Math.min(_ollamaLogText.implicitWidth, 220) + 24 + filterBar._skew) : 0
-            height: 24
+            height: 24 * Config.uiScale
             Behavior on width { NumberAnimation { duration: Style.animFast } }
 
             Canvas {
@@ -535,7 +535,7 @@ Item {
                 width: Math.min(implicitWidth, 220)
                 text: filterBar.ollamaLogLine
                 font.family: Style.fontFamilyCode
-                font.pixelSize: 8
+                font.pixelSize: 8 * Config.uiScale
                 font.letterSpacing: 0.3
                 elide: Text.ElideMiddle
                 maximumLineCount: 1

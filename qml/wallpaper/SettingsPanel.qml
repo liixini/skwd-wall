@@ -23,6 +23,8 @@ Item {
 
   signal themeChanged(string scheme, string mode)
 
+  function _s(v) { return v * Config.uiScale }
+
   property var _ollamaFetchProc: Process {
     onExited: function(code) {
       settingsPanel._ollamaModelsFetching = false
@@ -80,7 +82,7 @@ Item {
   }
 
   z: 102
-  width: settingsPanel.activeTab === "performance" || settingsPanel.activeTab === "general" ? 780 : 580
+  width: (settingsPanel.activeTab === "performance" || settingsPanel.activeTab === "general" ? 780 : 580) * Config.uiScale
   Behavior on width { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutCubic } }
   height: tabRow.height + contentLoader.height + 36
 
@@ -298,7 +300,7 @@ Item {
       color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surface.r, settingsPanel.colors.surface.g, settingsPanel.colors.surface.b, 0.5) : Qt.rgba(0, 0, 0, 0.3)
     }
 
-    Row {
+    Flow {
       id: selectorContent
       anchors.left: parent.left
       anchors.right: parent.right
@@ -319,7 +321,7 @@ Item {
 
         Text {
           text: "LAYOUT"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -335,7 +337,7 @@ Item {
             FilterButton {
               colors: settingsPanel.colors
               label: modelData.label
-              skew: 8; height: 26
+              skew: 8 * Config.uiScale; height: 26 * Config.uiScale
               isActive: Config.displayMode === modelData.key
               onClicked: {
                 if (modelData.key === "mosaic" && Config.displayMode !== "mosaic")
@@ -350,7 +352,7 @@ Item {
 
         Text {
           text: "PRESETS"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -368,7 +370,7 @@ Item {
             FilterButton {
               colors: settingsPanel.colors
               label: modelData.label
-              skew: 8; height: 26
+              skew: 8 * Config.uiScale; height: 26 * Config.uiScale
               isActive: Config.wallpaperExpandedWidth === modelData.expanded && Config.wallpaperSliceHeight === modelData.sliceH
               onClicked: settingsPanel._applyPreset(modelData.expanded, modelData.sliceH, modelData.sliceW, modelData.visible, modelData.gap, modelData.skew)
               tooltip: modelData.expanded + "×" + modelData.sliceH + " (16:9)"
@@ -386,7 +388,7 @@ Item {
               property bool isEmpty: !presetData
               colors: settingsPanel.colors
               label: modelData
-              skew: 8; height: 26
+              skew: 8 * Config.uiScale; height: 26 * Config.uiScale
               isActive: {
                 if (isEmpty) return false
                 if (Config.displayMode === "slices") return Config.wallpaperExpandedWidth === presetData.expandedWidth && Config.wallpaperSliceHeight === presetData.sliceHeight
@@ -417,7 +419,7 @@ Item {
       }
 
       Rectangle {
-        width: 1; anchors.top: parent.top; anchors.bottom: parent.bottom
+        width: 0; height: 0; visible: false
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.1) : Qt.rgba(1, 1, 1, 0.08)
       }
 
@@ -427,7 +429,7 @@ Item {
 
         Text {
           text: Config.displayMode === "hex" ? "HEX GRID" : (Config.displayMode === "wall" ? "WALL" : (Config.displayMode === "mosaic" ? "MOSAIC" : "SIZE"))
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -453,7 +455,7 @@ Item {
       }
 
       Rectangle {
-        width: 1; anchors.top: parent.top; anchors.bottom: parent.bottom
+        width: 0; height: 0; visible: false
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.1) : Qt.rgba(1, 1, 1, 0.08)
       }
 
@@ -463,7 +465,7 @@ Item {
 
         Text {
           text: "GEOMETRY"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
           visible: Config.displayMode === "slices"
         }
@@ -476,7 +478,7 @@ Item {
 
         Text {
           text: "APPLY"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -490,15 +492,15 @@ Item {
         Text {
           width: parent.width
           text: "WIP — Video and WE support coming."
-          font.family: Style.fontFamily; font.pixelSize: 10
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10)
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.4) : Qt.rgba(1, 1, 1, 0.3)
           wrapMode: Text.Wrap
         }
       }
 
       Rectangle {
-        visible: Config.displayMode === "slices"
-        width: 1; anchors.top: parent.top; anchors.bottom: parent.bottom
+        visible: false
+        width: 0; height: 0
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.1) : Qt.rgba(1, 1, 1, 0.08)
       }
 
@@ -509,7 +511,7 @@ Item {
 
         Text {
           text: "CORNERS"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -532,7 +534,7 @@ Item {
       }
     }
 
-    Row {
+    Flow {
       id: generalContent
       anchors.left: parent.left
       anchors.right: parent.right
@@ -545,7 +547,7 @@ Item {
 
         Text {
           text: "GENERAL"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -581,7 +583,7 @@ Item {
 
         Text {
           text: "FEATURES"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -650,7 +652,7 @@ Item {
 
         Text {
           text: "MORE FEATURES"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -698,7 +700,7 @@ Item {
 
         Text {
           text: "BUILT-IN NOTIFICATIONS"
-          font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 1.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Bold; font.letterSpacing: 1.2
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.tertiary.r, settingsPanel.colors.tertiary.g, settingsPanel.colors.tertiary.b, 0.8) : Qt.rgba(1, 1, 1, 0.4)
           topPadding: 6
         }
@@ -714,7 +716,7 @@ Item {
             FilterButton {
               colors: settingsPanel.colors
               label: modelData.label
-              skew: 8; height: 24
+              skew: 8 * Config.uiScale; height: 24 * Config.uiScale
               isActive: Config.notificationsBuiltIn === modelData.key
               tooltip: {
                 if (modelData.key === "auto") return "Run skwd's notification daemon only if no other one is active"
@@ -730,8 +732,21 @@ Item {
           width: parent.width
           text: "Restart daemon to apply"
           wrapMode: Text.WordWrap
-          font.family: Style.fontFamily; font.pixelSize: 9; font.italic: true
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(9); font.italic: true
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.outline.r, settingsPanel.colors.outline.g, settingsPanel.colors.outline.b, 0.7) : Qt.rgba(1, 1, 1, 0.3)
+        }
+
+        SettingsTextInput {
+          colors: settingsPanel.colors
+          label: "UI scale (1.0–2.0)"
+          value: Config.uiScale.toFixed(2)
+          placeholder: "1.00"
+          onCommit: function(v) {
+            var n = parseFloat(v)
+            if (isNaN(n)) n = 1.0
+            n = Math.max(1.0, Math.min(2.0, n))
+            settingsPanel._saveConfigKey("general.uiScale", n)
+          }
         }
       }
 
@@ -741,7 +756,7 @@ Item {
 
         Text {
           text: "RANDOM"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -756,7 +771,7 @@ Item {
 
         Text {
           text: "SOURCES"
-          font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 1.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Bold; font.letterSpacing: 1.2
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.tertiary.r, settingsPanel.colors.tertiary.g, settingsPanel.colors.tertiary.b, 0.8) : Qt.rgba(1, 1, 1, 0.4)
           topPadding: 4
         }
@@ -800,7 +815,7 @@ Item {
       }
     }
 
-    Row {
+    Flow {
       id: ollamaContent
       anchors.left: parent.left
       anchors.right: parent.right
@@ -817,7 +832,7 @@ Item {
 
         Text {
           text: "CONNECTION"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -864,7 +879,7 @@ Item {
       }
 
       Rectangle {
-        width: 1; anchors.top: parent.top; anchors.bottom: parent.bottom
+        width: 0; height: 0; visible: false
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.1) : Qt.rgba(1, 1, 1, 0.08)
       }
 
@@ -874,7 +889,7 @@ Item {
 
         Text {
           text: "DATA"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -885,7 +900,7 @@ Item {
             id: _consolidateTagsBtn
             colors: settingsPanel.colors
             label: "CONSOLIDATE TAGS"
-            skew: 8; height: 26
+            skew: 8 * Config.uiScale; height: 26 * Config.uiScale
             hasActiveColor: true
             isActive: _consolidateTagsBtn.isHovered
             enabled: Config.ollamaConsolidateEnabled
@@ -897,7 +912,7 @@ Item {
         Text {
           width: parent.width
           text: "Sends all existing tags to Ollama to merge synonyms into canonical forms."
-          font.family: Style.fontFamily; font.pixelSize: 10; font.letterSpacing: 0.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10); font.letterSpacing: 0.2
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.45) : Qt.rgba(1, 1, 1, 0.35)
           wrapMode: Text.WordWrap
           lineHeight: 1.3
@@ -910,7 +925,7 @@ Item {
             id: _deleteTagsBtn
             colors: settingsPanel.colors
             label: "DELETE ALL TAGS"
-            skew: 8; height: 26
+            skew: 8 * Config.uiScale; height: 26 * Config.uiScale
             hasActiveColor: true
             activeColor: "#c62828"
             isActive: _deleteTagsBtn.isHovered
@@ -921,7 +936,7 @@ Item {
         Text {
           width: parent.width
           text: "Clears all Ollama-generated tags. The next analysis pass will re-tag everything with the current model."
-          font.family: Style.fontFamily; font.pixelSize: 10; font.letterSpacing: 0.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10); font.letterSpacing: 0.2
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.45) : Qt.rgba(1, 1, 1, 0.35)
           wrapMode: Text.WordWrap
           lineHeight: 1.3
@@ -929,7 +944,7 @@ Item {
       }
     }
 
-    Row {
+    Flow {
       id: pathsContent
       anchors.left: parent.left
       anchors.right: parent.right
@@ -942,7 +957,7 @@ Item {
 
         Text {
           text: "DIRECTORIES"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -966,7 +981,7 @@ Item {
       }
 
       Rectangle {
-        width: 1; anchors.top: parent.top; anchors.bottom: parent.bottom
+        width: 0; height: 0; visible: false
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.1) : Qt.rgba(1, 1, 1, 0.08)
       }
 
@@ -976,7 +991,7 @@ Item {
 
         Text {
           text: "STEAM"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -1006,7 +1021,7 @@ Item {
       }
     }
 
-    Row {
+    Flow {
       id: wallhavenContent
       anchors.left: parent.left
       anchors.right: parent.right
@@ -1019,7 +1034,7 @@ Item {
 
         Text {
           text: "GRID"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -1041,7 +1056,7 @@ Item {
 
         Text {
           text: "THUMBNAIL"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
           topPadding: 8
         }
@@ -1071,7 +1086,7 @@ Item {
 
         Text {
           text: "API"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -1085,7 +1100,7 @@ Item {
       }
     }
 
-    Row {
+    Flow {
       id: steamContent
       anchors.left: parent.left
       anchors.right: parent.right
@@ -1098,7 +1113,7 @@ Item {
 
         Text {
           text: "GRID"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -1120,7 +1135,7 @@ Item {
 
         Text {
           text: "THUMBNAIL"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
           topPadding: 8
         }
@@ -1150,7 +1165,7 @@ Item {
 
         Text {
           text: "API"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -1172,7 +1187,7 @@ Item {
       }
     }
 
-    Row {
+    Flow {
       id: performanceContent
       anchors.left: parent.left
       anchors.right: parent.right
@@ -1185,14 +1200,14 @@ Item {
 
         Text {
           text: "IMAGE OPTIMIZATION"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
         Text {
           width: parent.width
           text: "Converts PNG, JPEG, and GIF images to WebP format. Smaller file sizes with no visible quality loss. Steam Workshop assets are never modified."
-          font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceVariantText.r, settingsPanel.colors.surfaceVariantText.g, settingsPanel.colors.surfaceVariantText.b, 0.8) : Qt.rgba(1, 1, 1, 0.5)
           wrapMode: Text.WordWrap
           lineHeight: 1.3
@@ -1221,7 +1236,7 @@ Item {
           ]
           Text {
             text: (Config.imageOptimizePreset === modelData.key ? "▸ " : "  ") + modelData.key.toUpperCase() + ":  " + modelData.desc
-            font.family: Style.fontFamily; font.pixelSize: 10; font.letterSpacing: 0.2
+            font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10); font.letterSpacing: 0.2
             color: Config.imageOptimizePreset === modelData.key
               ? (settingsPanel.colors ? settingsPanel.colors.primary : Style.fallbackAccent)
               : (settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceVariantText.r, settingsPanel.colors.surfaceVariantText.g, settingsPanel.colors.surfaceVariantText.b, 0.7) : Qt.rgba(1, 1, 1, 0.4))
@@ -1239,7 +1254,7 @@ Item {
         Text {
           width: parent.width
           text: "Images above the cap are downscaled. Smaller images are never upscaled."
-          font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceVariantText.r, settingsPanel.colors.surfaceVariantText.g, settingsPanel.colors.surfaceVariantText.b, 0.8) : Qt.rgba(1, 1, 1, 0.5)
           wrapMode: Text.WordWrap
           lineHeight: 1.3
@@ -1266,14 +1281,14 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             visible: !ImageOptimizeService.running && settingsPanel._lastOptimizeResult !== ""
             text: settingsPanel._lastOptimizeResult
-            font.family: Style.fontFamily; font.pixelSize: 10; font.letterSpacing: 0.2
+            font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10); font.letterSpacing: 0.2
             color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceVariantText.r, settingsPanel.colors.surfaceVariantText.g, settingsPanel.colors.surfaceVariantText.b, 0.8) : Qt.rgba(1, 1, 1, 0.5)
           }
         }
       }
 
       Rectangle {
-        width: 1; anchors.top: parent.top; anchors.bottom: parent.bottom
+        width: 0; height: 0; visible: false
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.1) : Qt.rgba(1, 1, 1, 0.08)
       }
 
@@ -1290,14 +1305,14 @@ Item {
 
           Text {
             text: "VIDEO OPTIMIZATION  ·  WIP"
-            font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+            font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
             color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
           }
 
           Text {
             width: parent.width
             text: "Re-encodes video wallpapers to HEVC (H.265) for significantly smaller sizes. This feature is currently under development."
-            font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+            font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
             color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceVariantText.r, settingsPanel.colors.surfaceVariantText.g, settingsPanel.colors.surfaceVariantText.b, 0.8) : Qt.rgba(1, 1, 1, 0.5)
             wrapMode: Text.WordWrap
             lineHeight: 1.3
@@ -1324,7 +1339,7 @@ Item {
             ]
             Text {
               text: (Config.videoConvertPreset === modelData.key ? "▸ " : "  ") + modelData.key.toUpperCase() + ":  " + modelData.desc
-              font.family: Style.fontFamily; font.pixelSize: 10; font.letterSpacing: 0.2
+              font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10); font.letterSpacing: 0.2
               color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceVariantText.r, settingsPanel.colors.surfaceVariantText.g, settingsPanel.colors.surfaceVariantText.b, 0.7) : Qt.rgba(1, 1, 1, 0.4)
             }
           }
@@ -1352,7 +1367,7 @@ Item {
       }
 
       Rectangle {
-        width: 1; anchors.top: parent.top; anchors.bottom: parent.bottom
+        width: 0; height: 0; visible: false
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.1) : Qt.rgba(1, 1, 1, 0.08)
       }
 
@@ -1362,14 +1377,14 @@ Item {
 
         Text {
           text: "VIDEO PREVIEWS"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
         Text {
           width: parent.width
           text: "Play animated thumbnails when hovering over video wallpapers."
-          font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceVariantText.r, settingsPanel.colors.surfaceVariantText.g, settingsPanel.colors.surfaceVariantText.b, 0.8) : Qt.rgba(1, 1, 1, 0.5)
           wrapMode: Text.WordWrap
           lineHeight: 1.3
@@ -1386,14 +1401,14 @@ Item {
 
         Text {
           text: "TRASH"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
         Text {
           width: parent.width
           text: "Originals are moved to trash before optimization, so you can recover them if needed."
-          font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceVariantText.r, settingsPanel.colors.surfaceVariantText.g, settingsPanel.colors.surfaceVariantText.b, 0.8) : Qt.rgba(1, 1, 1, 0.5)
           wrapMode: Text.WordWrap
           lineHeight: 1.3
@@ -1403,7 +1418,7 @@ Item {
 
         Text {
           text: "IMAGES"
-          font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 1.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Bold; font.letterSpacing: 1.2
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -1437,7 +1452,7 @@ Item {
 
             Text {
               text: "VIDEOS  ·  WIP"
-              font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 1.2
+              font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Bold; font.letterSpacing: 1.2
               color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
             }
 
@@ -1458,7 +1473,7 @@ Item {
       }
 
       Rectangle {
-        width: 1; anchors.top: parent.top; anchors.bottom: parent.bottom
+        width: 0; height: 0; visible: false
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.1) : Qt.rgba(1, 1, 1, 0.08)
       }
 
@@ -1468,14 +1483,14 @@ Item {
 
         Text {
           text: "THUMBNAILS"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
         Text {
           width: parent.width
           text: "Maximum number of thumbnail jobs that run in parallel during cache rebuilds."
-          font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceVariantText.r, settingsPanel.colors.surfaceVariantText.g, settingsPanel.colors.surfaceVariantText.b, 0.8) : Qt.rgba(1, 1, 1, 0.5)
           wrapMode: Text.WordWrap
           lineHeight: 1.3
@@ -1493,14 +1508,14 @@ Item {
 
         Text {
           text: "CACHE"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
         Text {
           width: parent.width
           text: "Clear all cached thumbnails and regenerate from scratch."
-          font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceVariantText.r, settingsPanel.colors.surfaceVariantText.g, settingsPanel.colors.surfaceVariantText.b, 0.8) : Qt.rgba(1, 1, 1, 0.5)
           wrapMode: Text.WordWrap
           lineHeight: 1.3
@@ -1561,14 +1576,14 @@ Item {
 
       Text {
         text: "COMMANDS"
-        font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
         color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
       }
 
       Text {
         width: parent.width
         text: "Shell commands to run after every wallpaper change. Use %type% (static/video/we), %name%, and %path% as placeholders."
-        font.family: Style.fontFamily; font.pixelSize: 11
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.4)
         wrapMode: Text.Wrap
       }
@@ -1582,7 +1597,7 @@ Item {
         Text {
           anchors.centerIn: parent
           text: "+ ADD COMMAND"
-          font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 0.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Bold; font.letterSpacing: 0.5
           color: settingsPanel.colors ? settingsPanel.colors.primary : Style.fallbackAccent
         }
 
@@ -1622,7 +1637,7 @@ Item {
               anchors.rightMargin: 8
               verticalAlignment: TextInput.AlignVCenter
               font.family: Style.fontFamilyCode
-              font.pixelSize: 11
+              font.pixelSize: settingsPanel._s(11)
               color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"
               clip: true
               selectByMouse: true
@@ -1645,7 +1660,7 @@ Item {
             Text {
               anchors.centerIn: parent
               text: "✕"
-              font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold
+              font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold
               color: settingsPanel.colors ? settingsPanel.colors.primary : Qt.rgba(1, 0.3, 0.3, 0.8)
             }
 
@@ -1707,7 +1722,7 @@ Item {
 
         Text {
           text: "SCHEME TYPE"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -1721,7 +1736,7 @@ Item {
 
         Text {
           text: "MODE"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -1757,14 +1772,14 @@ Item {
 
         Text {
           text: "EXTERNAL MATUGEN CONFIG"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
         Text {
           width: parent.width
           text: "Path to an external matugen config file such as the one from your existing setup. This runs alongside Skwd-wall's internal Matugen configuration."
-          font.family: Style.fontFamily; font.pixelSize: 10
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10)
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.5) : Qt.rgba(1, 1, 1, 0.35)
           wrapMode: Text.Wrap
         }
@@ -1779,7 +1794,7 @@ Item {
             id: _defaultCfgInput
             anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
             verticalAlignment: TextInput.AlignVCenter
-            font.family: Style.fontFamilyCode; font.pixelSize: 11
+            font.family: Style.fontFamilyCode; font.pixelSize: settingsPanel._s(11)
             color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"
             clip: true; selectByMouse: true
             text: Config.defaultMatugenConfig
@@ -1791,14 +1806,14 @@ Item {
 
         Text {
           text: "EXTERNAL MATUGEN COMMAND"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
         Text {
           width: parent.width
           text: "Shell command to run with the external config. Use %config% for the config path and %path% for the wallpaper path. Matugen v4 users: add --source-color-index 0 after 'image' to avoid interactive prompts."
-          font.family: Style.fontFamily; font.pixelSize: 10
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10)
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.5) : Qt.rgba(1, 1, 1, 0.35)
           wrapMode: Text.Wrap
         }
@@ -1813,7 +1828,7 @@ Item {
             id: _extMatugenCmdInput
             anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
             verticalAlignment: TextInput.AlignVCenter
-            font.family: Style.fontFamilyCode; font.pixelSize: 11
+            font.family: Style.fontFamilyCode; font.pixelSize: settingsPanel._s(11)
             color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"
             clip: true; selectByMouse: true
             text: Config.externalMatugenCommand
@@ -1823,14 +1838,14 @@ Item {
 
         Text {
           text: "INTEGRATIONS"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
         Text {
           width: parent.width
           text: "Matugen colour-theming integrations. Each entry generates themed output from a template and optionally runs a reload command."
-          font.family: Style.fontFamily; font.pixelSize: 11
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.4)
           wrapMode: Text.Wrap
         }
@@ -1853,7 +1868,7 @@ Item {
               Column {
                 width: (parent.width - _integRemoveBtn.width - parent.spacing * 2) * 0.2
                 spacing: 2
-                Text { text: "name"; font.family: Style.fontFamily; font.pixelSize: 9; color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1,1,1,0.4) }
+                Text { text: "name"; font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(9); color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1,1,1,0.4) }
                 Rectangle {
                   width: parent.width; height: 22; radius: 3
                   color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.15,0.15,0.2,0.6)
@@ -1861,7 +1876,7 @@ Item {
                   border.color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.5) : Qt.rgba(1,1,1,0.3)
                   TextInput {
                     id: _nameIn; anchors.fill: parent; anchors.leftMargin: 4; anchors.rightMargin: 4
-                    verticalAlignment: TextInput.AlignVCenter; font.family: Style.fontFamilyCode; font.pixelSize: 10
+                    verticalAlignment: TextInput.AlignVCenter; font.family: Style.fontFamilyCode; font.pixelSize: settingsPanel._s(10)
                     color: settingsPanel.colors ? settingsPanel.colors.surfaceText : "#ccc"; clip: true; selectByMouse: true
                     text: modelData.name || ""
                     onEditingFinished: { var a = settingsPanel._cloneIntegrations(); a[index].name = text; settingsPanel._saveConfigKey("integrations", a) }
@@ -1872,7 +1887,7 @@ Item {
               Column {
                 width: (parent.width - _integRemoveBtn.width - parent.spacing * 2) * 0.25
                 spacing: 2
-                Text { text: "template"; font.family: Style.fontFamily; font.pixelSize: 9; color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1,1,1,0.4) }
+                Text { text: "template"; font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(9); color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1,1,1,0.4) }
                 Rectangle {
                   width: parent.width; height: 22; radius: 3
                   color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.15,0.15,0.2,0.6)
@@ -1880,7 +1895,7 @@ Item {
                   border.color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.5) : Qt.rgba(1,1,1,0.3)
                   TextInput {
                     id: _tplIn; anchors.fill: parent; anchors.leftMargin: 4; anchors.rightMargin: 4
-                    verticalAlignment: TextInput.AlignVCenter; font.family: Style.fontFamilyCode; font.pixelSize: 10
+                    verticalAlignment: TextInput.AlignVCenter; font.family: Style.fontFamilyCode; font.pixelSize: settingsPanel._s(10)
                     color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"; clip: true; selectByMouse: true
                     text: modelData.template || ""
                     onEditingFinished: { var a = settingsPanel._cloneIntegrations(); a[index].template = text; settingsPanel._saveConfigKey("integrations", a) }
@@ -1891,7 +1906,7 @@ Item {
               Column {
                 width: (parent.width - _integRemoveBtn.width - parent.spacing * 2) * 0.3
                 spacing: 2
-                Text { text: "output"; font.family: Style.fontFamily; font.pixelSize: 9; color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1,1,1,0.4) }
+                Text { text: "output"; font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(9); color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1,1,1,0.4) }
                 Rectangle {
                   width: parent.width; height: 22; radius: 3
                   color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.15,0.15,0.2,0.6)
@@ -1899,7 +1914,7 @@ Item {
                   border.color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.5) : Qt.rgba(1,1,1,0.3)
                   TextInput {
                     id: _outIn; anchors.fill: parent; anchors.leftMargin: 4; anchors.rightMargin: 4
-                    verticalAlignment: TextInput.AlignVCenter; font.family: Style.fontFamilyCode; font.pixelSize: 10
+                    verticalAlignment: TextInput.AlignVCenter; font.family: Style.fontFamilyCode; font.pixelSize: settingsPanel._s(10)
                     color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"; clip: true; selectByMouse: true
                     text: modelData.output || ""
                     onEditingFinished: { var a = settingsPanel._cloneIntegrations(); a[index].output = text; settingsPanel._saveConfigKey("integrations", a) }
@@ -1910,7 +1925,7 @@ Item {
               Column {
                 width: (parent.width - _integRemoveBtn.width - parent.spacing * 2) * 0.25
                 spacing: 2
-                Text { text: "reload"; font.family: Style.fontFamily; font.pixelSize: 9; color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1,1,1,0.4) }
+                Text { text: "reload"; font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(9); color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1,1,1,0.4) }
                 Rectangle {
                   width: parent.width; height: 22; radius: 3
                   color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.15,0.15,0.2,0.6)
@@ -1918,7 +1933,7 @@ Item {
                   border.color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.5) : Qt.rgba(1,1,1,0.3)
                   TextInput {
                     id: _reloadIn; anchors.fill: parent; anchors.leftMargin: 4; anchors.rightMargin: 4
-                    verticalAlignment: TextInput.AlignVCenter; font.family: Style.fontFamilyCode; font.pixelSize: 10
+                    verticalAlignment: TextInput.AlignVCenter; font.family: Style.fontFamilyCode; font.pixelSize: settingsPanel._s(10)
                     color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"; clip: true; selectByMouse: true
                     text: modelData.reload || ""
                     onEditingFinished: { var a = settingsPanel._cloneIntegrations(); a[index].reload = text || undefined; settingsPanel._saveConfigKey("integrations", a) }
@@ -1935,7 +1950,7 @@ Item {
                   : "transparent"
                 Text {
                   anchors.centerIn: parent; text: "✕"
-                  font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold
+                  font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Bold
                   color: settingsPanel.colors ? settingsPanel.colors.primary : Qt.rgba(1,0.3,0.3,0.8)
                 }
                 MouseArea {
@@ -1954,7 +1969,7 @@ Item {
             : (settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.15,0.15,0.2,0.6))
           Text {
             anchors.centerIn: parent; text: "+ ADD INTEGRATION"
-            font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 0.5
+            font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Bold; font.letterSpacing: 0.5
             color: settingsPanel.colors ? settingsPanel.colors.primary : Style.fallbackAccent
           }
           MouseArea {
@@ -1996,7 +2011,7 @@ Item {
 
         Text {
           text: "NAVIGATION"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -2014,13 +2029,13 @@ Item {
             Text {
               anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
               text: modelData.key
-              font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 0.3
+              font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Bold; font.letterSpacing: 0.3
               color: settingsPanel.colors ? settingsPanel.colors.primary : Style.fallbackAccent
             }
             Text {
               anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
               text: modelData.action
-              font.family: Style.fontFamily; font.pixelSize: 11
+              font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
               color: settingsPanel.colors ? settingsPanel.colors.surfaceText : Qt.rgba(1, 1, 1, 0.7)
             }
           }
@@ -2028,7 +2043,7 @@ Item {
       }
 
       Rectangle {
-        width: 1; anchors.top: parent.top; anchors.bottom: parent.bottom
+        width: 0; height: 0; visible: false
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.1) : Qt.rgba(1, 1, 1, 0.08)
       }
 
@@ -2038,7 +2053,7 @@ Item {
 
         Text {
           text: "FILTERS & TAGS"
-          font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Bold; font.letterSpacing: 1.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
           color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
 
@@ -2056,13 +2071,13 @@ Item {
             Text {
               anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
               text: modelData.key
-              font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 0.3
+              font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Bold; font.letterSpacing: 0.3
               color: settingsPanel.colors ? settingsPanel.colors.primary : Style.fallbackAccent
             }
             Text {
               anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
               text: modelData.action
-              font.family: Style.fontFamily; font.pixelSize: 11
+              font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
               color: settingsPanel.colors ? settingsPanel.colors.surfaceText : Qt.rgba(1, 1, 1, 0.7)
             }
           }
@@ -2092,14 +2107,14 @@ Item {
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: "\u{f0027}"
-        font.family: Style.fontFamilyNerdIcons; font.pixelSize: 28
+        font.family: Style.fontFamilyNerdIcons; font.pixelSize: settingsPanel._s(28)
         color: "#ef5350"
       }
 
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: "DELETE ALL TAGS?"
-        font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; font.letterSpacing: 1.5
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(14); font.weight: Font.Bold; font.letterSpacing: 1.5
         color: settingsPanel.colors ? settingsPanel.colors.surfaceText : "#fff"
       }
 
@@ -2107,7 +2122,7 @@ Item {
         width: parent.width
         horizontalAlignment: Text.AlignHCenter
         text: "This will erase every tag and re-analyse all wallpapers with the current model. This cannot be undone."
-        font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.5)
         wrapMode: Text.WordWrap
         lineHeight: 1.3
@@ -2118,7 +2133,7 @@ Item {
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: 'Type "delete" to confirm'
-        font.family: Style.fontFamily; font.pixelSize: 11
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.5) : Qt.rgba(1, 1, 1, 0.4)
       }
 
@@ -2135,7 +2150,7 @@ Item {
           anchors.leftMargin: 14; anchors.rightMargin: 14
           verticalAlignment: TextInput.AlignVCenter
           horizontalAlignment: TextInput.AlignHCenter
-          font.family: Style.fontFamily; font.pixelSize: 12; font.letterSpacing: 0.5
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(12); font.letterSpacing: 0.5
           color: settingsPanel.colors ? settingsPanel.colors.surfaceText : "#fff"
           clip: true
           Keys.onEscapePressed: _deleteConfirmPopup.close()
@@ -2155,7 +2170,7 @@ Item {
         FilterButton {
           colors: settingsPanel.colors
           label: "CANCEL"
-          skew: 8; height: 26
+          skew: 8 * Config.uiScale; height: 26 * Config.uiScale
           onClicked: _deleteConfirmPopup.close()
         }
 
@@ -2164,7 +2179,7 @@ Item {
           property bool canConfirm: _deleteConfirmInput.text.toLowerCase().trim() === "delete"
           colors: settingsPanel.colors
           label: "CONFIRM"
-          skew: 8; height: 26
+          skew: 8 * Config.uiScale; height: 26 * Config.uiScale
           hasActiveColor: true
           activeColor: canConfirm ? "#c62828" : Qt.rgba(0.5, 0.5, 0.5, 0.3)
           isActive: canConfirm
@@ -2201,14 +2216,14 @@ Item {
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: "\u{f03e}"
-        font.family: Style.fontFamilyNerdIcons; font.pixelSize: 28
+        font.family: Style.fontFamilyNerdIcons; font.pixelSize: settingsPanel._s(28)
         color: settingsPanel.colors ? settingsPanel.colors.primary : Style.fallbackAccent
       }
 
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: "OPTIMIZE ALL IMAGES?"
-        font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; font.letterSpacing: 1.5
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(14); font.weight: Font.Bold; font.letterSpacing: 1.5
         color: settingsPanel.colors ? settingsPanel.colors.surfaceText : "#fff"
       }
 
@@ -2224,7 +2239,7 @@ Item {
             ", max " + (r ? r.maxW + "x" + r.maxH : "?") +
             "). Originals are moved to trash. Already optimized files will be skipped."
         }
-        font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.5)
         wrapMode: Text.WordWrap
         lineHeight: 1.3
@@ -2234,7 +2249,7 @@ Item {
         width: parent.width
         horizontalAlignment: Text.AlignHCenter
         text: "Only images in your wallpaper directory are processed"
-        font.family: Style.fontFamily; font.pixelSize: 10; font.letterSpacing: 0.2
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10); font.letterSpacing: 0.2
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.4) : Qt.rgba(1, 1, 1, 0.35)
         wrapMode: Text.WordWrap
         lineHeight: 1.3
@@ -2249,14 +2264,14 @@ Item {
         FilterButton {
           colors: settingsPanel.colors
           label: "CANCEL"
-          skew: 8; height: 26
+          skew: 8 * Config.uiScale; height: 26 * Config.uiScale
           onClicked: _optimizeConfirmPopup.close()
         }
 
         FilterButton {
           colors: settingsPanel.colors
           label: "OPTIMIZE"
-          skew: 8; height: 26
+          skew: 8 * Config.uiScale; height: 26 * Config.uiScale
           isActive: true
           onClicked: {
             _optimizeConfirmPopup.close()
@@ -2288,14 +2303,14 @@ Item {
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: "\u{f03d}"
-        font.family: Style.fontFamilyNerdIcons; font.pixelSize: 28
+        font.family: Style.fontFamilyNerdIcons; font.pixelSize: settingsPanel._s(28)
         color: settingsPanel.colors ? settingsPanel.colors.primary : Style.fallbackAccent
       }
 
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: "OPTIMIZE ALL VIDEOS?"
-        font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; font.letterSpacing: 1.5
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(14); font.weight: Font.Bold; font.letterSpacing: 1.5
         color: settingsPanel.colors ? settingsPanel.colors.surfaceText : "#fff"
       }
 
@@ -2310,7 +2325,7 @@ Item {
             ", max " + (p ? p.maxrate : "?") + ", " + (r ? r.maxW + "x" + r.maxH : "?") +
             "). Originals are moved to trash. Already converted files will be skipped."
         }
-        font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.5)
         wrapMode: Text.WordWrap
         lineHeight: 1.3
@@ -2320,7 +2335,7 @@ Item {
         width: parent.width
         horizontalAlignment: Text.AlignHCenter
         text: "This may take a while depending on the number and size of videos."
-        font.family: Style.fontFamily; font.pixelSize: 10; font.letterSpacing: 0.2
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10); font.letterSpacing: 0.2
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.4) : Qt.rgba(1, 1, 1, 0.35)
         wrapMode: Text.WordWrap
         lineHeight: 1.3
@@ -2335,14 +2350,14 @@ Item {
         FilterButton {
           colors: settingsPanel.colors
           label: "CANCEL"
-          skew: 8; height: 26
+          skew: 8 * Config.uiScale; height: 26 * Config.uiScale
           onClicked: _convertConfirmPopup.close()
         }
 
         FilterButton {
           colors: settingsPanel.colors
           label: "CONVERT"
-          skew: 8; height: 26
+          skew: 8 * Config.uiScale; height: 26 * Config.uiScale
           isActive: false
           enabled: false
           opacity: 0.35
@@ -2375,14 +2390,14 @@ Item {
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: "\u{f0028}"
-        font.family: Style.fontFamilyNerdIcons; font.pixelSize: 28
+        font.family: Style.fontFamilyNerdIcons; font.pixelSize: settingsPanel._s(28)
         color: "#ffb74d"
       }
 
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: _warningPopup.title
-        font.family: Style.fontFamily; font.pixelSize: 14; font.weight: Font.Bold; font.letterSpacing: 1.5
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(14); font.weight: Font.Bold; font.letterSpacing: 1.5
         color: settingsPanel.colors ? settingsPanel.colors.surfaceText : "#fff"
       }
 
@@ -2390,7 +2405,7 @@ Item {
         width: parent.width
         horizontalAlignment: Text.AlignHCenter
         text: _warningPopup.message
-        font.family: Style.fontFamily; font.pixelSize: 11; font.letterSpacing: 0.2
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.letterSpacing: 0.2
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.5)
         wrapMode: Text.WordWrap
         lineHeight: 1.3
@@ -2402,7 +2417,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         colors: settingsPanel.colors
         label: "OK"
-        skew: 8; height: 26
+        skew: 8 * Config.uiScale; height: 26 * Config.uiScale
         isActive: true
         onClicked: _warningPopup.close()
       }

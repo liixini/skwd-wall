@@ -264,7 +264,7 @@ Scope {
   property int sliceSpacing: Config.wallpaperSliceSpacing
   Behavior on sliceSpacing { NumberAnimation { duration: Style.animExpand; easing.type: Easing.OutCubic } }
   property bool suppressWidthAnim: false
-  property int topBarHeight: 50
+  property int topBarHeight: 50 * Config.uiScale
   property bool tagCloudVisible: false
   property bool _filterBarManuallyShown: Config.filterBarAlwaysVisible
   property bool _filterBarHoverRevealed: false
