@@ -128,8 +128,17 @@ Research how to do this in your specific compositor, I'm sure it supports keybin
 # Install Skwd-wall and all its dependencies
 yay -S skwd-wall
 
-# Enable Skwd-daemon:
+# Enable Skwd-daemon
 systemctl --user enable --now skwd-daemon.service
+
+# Note that on some setups you will need to execute skwd-daemon on startup
+# Here are some examples:
+
+#   # Niri (~/.config/niri/config.kdl)
+#   spawn-at-startup "skwd-daemon"
+#
+#   # Hyprland (~/.config/hypr/hyprland.conf)
+#   exec-once = skwd-daemon
 
 # Launch Skwd-wall. Bind this command to a key in your compositor for quick access:
 skwd wall toggle
@@ -173,8 +182,17 @@ Then add the package to your `configuration.nix`:
 # Rebuild:
 sudo nixos-rebuild switch
 
-# Enable Skwd-daemon:
+# Enable Skwd-daemon
 systemctl --user enable --now skwd-daemon.service
+
+# Note that on some setups you will need to execute skwd-daemon on startup
+# Here are some examples:
+
+#   # Niri (~/.config/niri/config.kdl)
+#   spawn-at-startup "skwd-daemon"
+#
+#   # Hyprland (~/.config/hypr/hyprland.conf)
+#   exec-once = skwd-daemon
 
 # Launch Skwd-wall. Bind this command to a key in your compositor for quick access:
 skwd wall toggle
@@ -196,8 +214,17 @@ sudo dnf copr enable piixini/skwd
 # Install skwd-wall:
 sudo dnf install skwd-wall
 
-# Enable Skwd-daemon:
+# Enable Skwd-daemon
 systemctl --user enable --now skwd-daemon.service
+
+# Note that on some setups you will need to execute skwd-daemon on startup
+# Here are some examples:
+
+#   # Niri (~/.config/niri/config.kdl)
+#   spawn-at-startup "skwd-daemon"
+#
+#   # Hyprland (~/.config/hypr/hyprland.conf)
+#   exec-once = skwd-daemon
 
 # Launch Skwd-wall. Bind this command to a key in your compositor for quick access:
 skwd wall toggle
