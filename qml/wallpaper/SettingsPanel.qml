@@ -248,7 +248,7 @@ Item {
           { key: "general",   label: "GENERAL" },
           { key: "paths",     label: "PATHS" },
           { key: "performance", label: "PERFORMANCE" },
-          { key: "postprocessing", label: "POSTPROCESSING" },
+          { key: "postprocessing", label: "EXTERNAL" },
           { key: "keybinds",  label: "KEYBINDS" },
           { key: "theme",     label: "THEME" }
         ]
@@ -491,7 +491,7 @@ Item {
 
         Text {
           width: parent.width
-          text: "WIP — Video and WE support coming."
+          text: "WIP Video and WE support coming."
           font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(10)
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.4) : Qt.rgba(1, 1, 1, 0.3)
           wrapMode: Text.Wrap
@@ -696,6 +696,13 @@ Item {
           label: "Notify on wallpaper change"
           checked: Config.notifyOnWallpaperChange
           onToggle: function(v) { settingsPanel._saveConfigKey("general.notifyOnWallpaperChange", v) }
+        }
+
+        SettingsToggle {
+          colors: settingsPanel.colors
+          label: "Restore wallpaper on startup"
+          checked: Config.restoreOnStartup
+          onToggle: function(v) { settingsPanel._saveConfigKey("restoreOnStartup", v) }
         }
 
         Text {
@@ -1553,11 +1560,15 @@ Item {
         policy: ScrollBar.AlwaysOff
       }
 
+      function _entryCmd(e)  { return (typeof e === "string") ? e : (e ? (e.command || "") : "") }
+      function _entryType(e) { return (typeof e === "string") ? "all" : (e && e.type ? e.type : "all") }
+
       function _snapshotCmds() {
         var cmds = []
         for (var i = 0; i < postCmdRepeater.count; i++) {
           var item = postCmdRepeater.itemAt(i)
-          if (item) cmds.push(item.children[0].children[0].text)
+          if (!item) continue
+          cmds.push({ command: item.cmdText, type: item.entryType || "all" })
         }
         return cmds
       }
@@ -1569,7 +1580,22 @@ Item {
 
       SettingsToggle {
         colors: settingsPanel.colors
-        label: "Run on startup restore"
+        label: "Disable internal wallpaper application"
+        checked: Config.pickOnlyMode
+        onToggle: function(v) { settingsPanel._saveConfigKey("pickOnlyMode", v) }
+      }
+
+      Text {
+        width: parent.width
+        text: "Disable internal wallpaper application and use the post-processing commands to apply them manually in other software."
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
+        color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.4)
+        wrapMode: Text.Wrap
+      }
+
+      SettingsToggle {
+        colors: settingsPanel.colors
+        label: "Run post-processing on startup restore"
         checked: Config.postProcessOnRestore
         onToggle: function(v) { settingsPanel._saveConfigKey("postProcessOnRestore", v) }
       }
@@ -1582,7 +1608,8 @@ Item {
 
       Text {
         width: parent.width
-        text: "Shell commands to run after every wallpaper change. Use %type% (static/video/we), %name%, and %path% as placeholders."
+        text: "Shell commands to run after every wallpaper change. The pills filter by type ALL fires for every change.\n" +
+              "Placeholders:  %path%  =  wallpaper file or WE folder    •    %thumb%  =  always an image    •    %type%  =  image / video / we    •    %name%  =  basename"
         font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
         color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.4)
         wrapMode: Text.Wrap
@@ -1608,7 +1635,7 @@ Item {
           cursorShape: Qt.PointingHandCursor
           onClicked: {
             var cmds = postprocessingContent._snapshotCmds()
-            cmds.push("")
+            cmds.push({ command: "", type: "all" })
             settingsPanel._saveConfigKey("postProcessing", cmds)
           }
         }
@@ -1618,61 +1645,97 @@ Item {
         id: postCmdRepeater
         model: Config.postProcessing
 
-        Row {
+        Item {
+          id: postRow
           width: _postprocessingInner.width
-          spacing: 6
+          height: typeRow.height + cmdRow.height + 4
 
-          Rectangle {
-            width: parent.width - removeBtn.width - parent.spacing
-            height: 26
-            radius: 4
-            color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.15, 0.15, 0.2, 0.6)
-            border.width: cmdInput.activeFocus ? 1 : 0
-            border.color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.5) : Qt.rgba(1, 1, 1, 0.3)
+          property string entryType: postprocessingContent._entryType(modelData)
+          property string cmdText: cmdInput.text
 
-            TextInput {
-              id: cmdInput
-              anchors.fill: parent
-              anchors.leftMargin: 8
-              anchors.rightMargin: 8
-              verticalAlignment: TextInput.AlignVCenter
-              font.family: Style.fontFamilyCode
-              font.pixelSize: settingsPanel._s(11)
-              color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"
-              clip: true
-              selectByMouse: true
-              text: modelData
-
-              onEditingFinished: {
-                var cmds = postprocessingContent._snapshotCmds()
-                settingsPanel._saveConfigKey("postProcessing", cmds)
+          Row {
+            id: typeRow
+            spacing: -4
+            Repeater {
+              model: [
+                { key: "all",    label: "ALL" },
+                { key: "static", label: "IMG" },
+                { key: "video",  label: "VID" },
+                { key: "we",     label: "WE" }
+              ]
+              FilterButton {
+                colors: settingsPanel.colors
+                label: modelData.label
+                skew: 8 * Config.uiScale
+                height: 22 * Config.uiScale
+                isActive: postRow.entryType === modelData.key
+                onClicked: {
+                  postRow.entryType = modelData.key
+                  settingsPanel._saveConfigKey("postProcessing", postprocessingContent._snapshotCmds())
+                }
               }
             }
           }
 
-          Rectangle {
-            id: removeBtn
-            width: 26; height: 26; radius: 4
-            color: removeMa.containsMouse
-              ? (settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.25) : Qt.rgba(1, 0.3, 0.3, 0.25))
-              : "transparent"
+          Row {
+            id: cmdRow
+            anchors.top: typeRow.bottom
+            anchors.topMargin: 4
+            width: parent.width
+            spacing: 6
 
-            Text {
-              anchors.centerIn: parent
-              text: "✕"
-              font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold
-              color: settingsPanel.colors ? settingsPanel.colors.primary : Qt.rgba(1, 0.3, 0.3, 0.8)
+            Rectangle {
+              width: parent.width - removeBtn.width - parent.spacing
+              height: 26
+              radius: 4
+              color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.15, 0.15, 0.2, 0.6)
+              border.width: cmdInput.activeFocus ? 1 : 0
+              border.color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.5) : Qt.rgba(1, 1, 1, 0.3)
+
+              TextInput {
+                id: cmdInput
+                anchors.fill: parent
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                verticalAlignment: TextInput.AlignVCenter
+                font.family: Style.fontFamilyCode
+                font.pixelSize: settingsPanel._s(11)
+                color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"
+                clip: true
+                selectByMouse: true
+                text: postprocessingContent._entryCmd(modelData)
+
+                onEditingFinished: {
+                  var cmds = postprocessingContent._snapshotCmds()
+                  settingsPanel._saveConfigKey("postProcessing", cmds)
+                }
+              }
             }
 
-            MouseArea {
-              id: removeMa
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                var cmds = postprocessingContent._snapshotCmds()
-                cmds.splice(index, 1)
-                settingsPanel._saveConfigKey("postProcessing", cmds)
+            Rectangle {
+              id: removeBtn
+              width: 26; height: 26; radius: 4
+              color: removeMa.containsMouse
+                ? (settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.25) : Qt.rgba(1, 0.3, 0.3, 0.25))
+                : "transparent"
+
+              Text {
+                anchors.centerIn: parent
+                text: "✕"
+                font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold
+                color: settingsPanel.colors ? settingsPanel.colors.primary : Qt.rgba(1, 0.3, 0.3, 0.8)
+              }
+
+              MouseArea {
+                id: removeMa
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  var cmds = postprocessingContent._snapshotCmds()
+                  cmds.splice(index, 1)
+                  settingsPanel._saveConfigKey("postProcessing", cmds)
+                }
               }
             }
           }

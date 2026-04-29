@@ -215,6 +215,9 @@ QtObject {
 
     readonly property var postProcessing: _data.postProcessing ?? []
     readonly property bool postProcessOnRestore: _data.postProcessOnRestore === true
+    readonly property string externalWallpaperCommand: _data.externalWallpaperCommand ?? ""
+    readonly property bool pickOnlyMode: _data.pickOnlyMode === true
+    readonly property bool restoreOnStartup: _data.restoreOnStartup !== false
 
     readonly property bool isKDE: {
         var desktop = (Quickshell.env("XDG_CURRENT_DESKTOP") || "").toLowerCase()

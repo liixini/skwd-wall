@@ -35,23 +35,48 @@ QtObject {
     property bool _restoring: false
 
     signal wallpaperApplied(string type, string name, string path)
-    onWallpaperApplied: {
-        _runPostProcessing(type, name, path)
-        if (!_restoring && Config.notifyOnWallpaperChange)
-            _runReload("command -v notify-send >/dev/null && notify-send 'Wallpaper Changed' || true")
-        _restoring = false
+
+    readonly property string _killBackends:
+        "pkill mpvpaper 2>/dev/null; " +
+        "pkill -9 -f '[l]inux-wallpaperengine' 2>/dev/null; " +
+        "pkill awww 2>/dev/null; pkill awww-daemon 2>/dev/null; "
+
+    property string _videoCtxPath: ""
+    property string _videoCtxName: ""
+
+    function _videoThumbPath(videoPath) {
+        var name = _basename(videoPath).replace(/\.[^.]+$/, "") + ".jpg"
+        return cacheDir + "/wallpaper/video-thumbs/" + name
+    }
+
+    function _runExternalApply(type, applyPath, thumb) {
+        var cmd = Config.externalWallpaperCommand
+        if (!cmd) return
+        var name = _basename(applyPath)
+        cmd = cmd.replace(/%type%/g, type)
+                 .replace(/%name%/g, name)
+                 .replace(/%path%/g, applyPath)
+                 .replace(/%thumb%/g, thumb || "")
+        _runDetached(cmd)
     }
 
     function applyStatic(path) {
         console.log("WallpaperApplyService.applyStatic:", path, "wallpaperDir:", wallpaperDir)
         _saveState("static", path, "")
-        if (Config.isKDE) {
+        _wePendingId = ""
+        _wePendingThumb = ""
+        if (Config.pickOnlyMode || Config.externalWallpaperCommand) {
             awwwProcess.command = ["sh", "-c",
-                "pkill mpvpaper 2>/dev/null; " +
-                "pkill -9 -f '[l]inux-wallpaperengine' 2>/dev/null; " +
-                "pkill awww 2>/dev/null; pkill awww-daemon 2>/dev/null; " +
+                _killBackends +
+                "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4")]
+            awwwProcess.running = true
+            _runExternalApply("static", path, path)
+        } else if (Config.isKDE) {
+            awwwProcess.command = ["sh", "-c",
+                _killBackends +
                 "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4") + "; " +
                 "plasma-apply-wallpaperimage " + JSON.stringify(path)]
+            awwwProcess.running = true
         } else {
             awwwProcess.command = ["sh", "-c",
                 "pkill mpvpaper 2>/dev/null; " +
@@ -63,15 +88,23 @@ QtObject {
                 "fi; " +
                 "awww img " + JSON.stringify(path) +
                 " --transition-type wipe --transition-angle 45 --transition-duration 0.5"]
+            awwwProcess.running = true
         }
-        awwwProcess.running = true
         _extractAndTheme(path)
         wallpaperApplied("static", _basename(path), path)
+        _firePostProcessing("static", _basename(path), path, path)
     }
 
     function applyVideo(path) {
         _saveState("video", path, "")
-        if (Config.isKDE) {
+        _videoCtxPath = path
+        _videoCtxName = _basename(path)
+        if (Config.pickOnlyMode || Config.externalWallpaperCommand) {
+            mpvProcess.command = ["sh", "-c",
+                _killBackends +
+                "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4")]
+            mpvProcess.running = true
+        } else if (Config.isKDE) {
             _applyKdeVideo(path)
         } else {
             mpvProcess.command = ["sh", "-c",
@@ -107,10 +140,17 @@ QtObject {
     function applyWE(weId) {
         _saveState("we", "", weId)
         _reclaimOllamaVram()
-        _pendingAction = function() {
-            _launchWE(weId)
-            _extractWEThumb(weId)
-            wallpaperApplied("we", weId, weDir + "/" + weId)
+        if (Config.pickOnlyMode || Config.externalWallpaperCommand) {
+            _pendingAction = function() {
+                _extractWEThumb(weId)
+                wallpaperApplied("we", weId, weDir + "/" + weId)
+            }
+        } else {
+            _pendingAction = function() {
+                _launchWE(weId)
+                _extractWEThumb(weId)
+                wallpaperApplied("we", weId, weDir + "/" + weId)
+            }
         }
         _killAll()
     }
@@ -321,13 +361,21 @@ QtObject {
     property var _videoThumbProcess: Process {
         id: videoThumbProcess
         onExited: function(code) {
+            var thumb = service._videoThumbPath(service._videoCtxPath)
+            if (Config.externalWallpaperCommand)
+                service._runExternalApply("video", service._videoCtxPath, thumb)
+            service._firePostProcessing("video", service._videoCtxName, service._videoCtxPath, thumb)
             if (code === 2) { console.log("WallpaperApplyService: matugen output unchanged, skipping reloads"); return }
             service._propagateColors()
         }
     }
 
+    property string _wePendingId: ""
+    property string _wePendingThumb: ""
+
     function _extractWEThumb(weId) {
         _weFindPreviewStdout = []
+        _wePendingId = weId
         _weFindPreview.command = ["find", weDir + "/" + weId, "-maxdepth", "1",
                                   "-iname", "preview.*", "-type", "f"]
         _weFindPreview.running = true
@@ -339,11 +387,18 @@ QtObject {
         onExited: {
             var preview = _weFindPreviewStdout.join("").trim().split("\n")[0]
             if (preview) {
+                service._wePendingThumb = preview
                 _copyAndTheme.command = ["sh", "-c",
                     "mkdir -p " + JSON.stringify(service.cacheDir + "/wallpaper") + "; " +
                     "cp " + JSON.stringify(preview) + " " + JSON.stringify(service.cacheDir + "/wallpaper/current.jpg") + " 2>/dev/null; " +
                     service._matugenCmd(preview)]
                 _copyAndTheme.running = true
+            } else if (service._wePendingId) {
+                var weId = service._wePendingId
+                service._wePendingId = ""
+                if (Config.externalWallpaperCommand)
+                    service._runExternalApply("we", service.weDir + "/" + weId, "")
+                service._firePostProcessing("we", weId, service.weDir + "/" + weId, "")
             }
         }
         stdout: SplitParser {
@@ -354,6 +409,15 @@ QtObject {
     property var _copyAndTheme: Process {
         id: copyAndThemeProcess
         onExited: function(code) {
+            if (service._wePendingId) {
+                var weId = service._wePendingId
+                var thumb = service._wePendingThumb
+                service._wePendingId = ""
+                service._wePendingThumb = ""
+                if (Config.externalWallpaperCommand)
+                    service._runExternalApply("we", service.weDir + "/" + weId, thumb)
+                service._firePostProcessing("we", weId, service.weDir + "/" + weId, thumb)
+            }
             if (code === 2) { console.log("WallpaperApplyService: matugen output unchanged, skipping reloads"); return }
             service._propagateColors()
         }
@@ -423,14 +487,34 @@ QtObject {
         xhr.send(JSON.stringify({model: ollamaModel, keep_alive: 0}))
     }
 
-    function _runPostProcessing(type, name, path) {
+    function _firePostProcessing(type, name, path, thumb) {
+        _runPostProcessing(type, name, path, thumb)
+        if (!_restoring && Config.notifyOnWallpaperChange)
+            _runReload("command -v notify-send >/dev/null && notify-send 'Wallpaper Changed' || true")
+        _restoring = false
+    }
+
+    function _runPostProcessing(type, name, path, thumb) {
         if (_restoring && !Config.postProcessOnRestore) return
         var cmds = Config.postProcessing
         if (!cmds || cmds.length === 0) return
         for (var i = 0; i < cmds.length; i++) {
-            var cmd = cmds[i]
+            var entry = cmds[i]
+            if (!entry) continue
+            var cmd, entryType
+            if (typeof entry === "string") {
+                cmd = entry
+                entryType = "all"
+            } else {
+                cmd = entry.command || ""
+                entryType = entry.type || "all"
+            }
             if (!cmd) continue
-            cmd = cmd.replace(/%type%/g, type).replace(/%name%/g, name).replace(/%path%/g, path)
+            if (entryType !== "all" && entryType !== type) continue
+            cmd = cmd.replace(/%type%/g, type)
+                     .replace(/%name%/g, name)
+                     .replace(/%path%/g, path)
+                     .replace(/%thumb%/g, thumb || "")
             _runDetached(cmd)
         }
     }

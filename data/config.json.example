@@ -121,6 +121,9 @@
         }
     },
     "wallpaperMute": true,
+    "pickOnlyMode": false,
+    "externalWallpaperCommand": "",
+    "postProcessing": [],
     "performance": {
         "imageOptimizePreset": "balanced",
         "imageOptimizeResolution": "2k",
