@@ -28,17 +28,23 @@ Scope {
       service.updateFilteredModel()
   }
 
-  function _applyItem(item) {
-    if (Config.wallpaperPerMonitor) {
+  function _resetFilters() {
+    service.selectedColorFilter = -1
+    service.selectedTypeFilter = ""
+    _setSelectedTags([])
+  }
+
+  function _applyItem(item, forcePicker) {
+    if (forcePicker || Config.wallpaperPerMonitor) {
       _monitorPicker.open(item)
       return
     }
-    _doApply(item, null)
+    _doApply(item, null, null, null)
   }
 
-  function _doApply(item, outputs) {
-    if (item.type === "we") service.applyWE(item.weId)
-    else if (item.type === "video") service.applyVideo(item.path, outputs)
+  function _doApply(item, outputs, audioMap, volumeMap) {
+    if (item.type === "we") service.applyWE(item.weId, outputs, audioMap, volumeMap)
+    else if (item.type === "video") service.applyVideo(item.path, outputs, audioMap, volumeMap)
     else service.applyStatic(item.path, outputs)
   }
 
@@ -388,6 +394,13 @@ Scope {
     WlrLayershell.keyboardFocus: wallpaperSelector.showing ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     exclusionMode: ExclusionMode.Ignore
+
+    Shortcut {
+      sequence: "Ctrl+X"
+      context: Qt.WindowShortcut
+      onActivated: wallpaperSelector._resetFilters()
+    }
+
     Rectangle {
       anchors.fill: parent
       color: Qt.rgba(0, 0, 0, 0.5)
@@ -489,8 +502,7 @@ Scope {
       }
     }
 
-    // Thin hover hot-zone at the top edge — reveals the filter bar even when
-    // the user has hidden it, so they can never get locked out.
+    
     MouseArea {
       id: filterHoverZone
       anchors.top: parent.top
@@ -787,6 +799,7 @@ Scope {
         skewOffset: wallpaperSelector.skewOffset
         service: wallpaperSelector.selectorService
         suppressWidthAnim: wallpaperSelector.suppressWidthAnim
+        applyRequest: function(item, forcePicker) { wallpaperSelector._applyItem(item, forcePicker) }
       }
     }
     Image {
@@ -1011,6 +1024,7 @@ Scope {
             service: wallpaperSelector.selectorService
             itemData: service.filteredModel.get(flatIdx)
             isSelected: hexCol.colIdx === hexListView._selectedCol && rowIdx === hexListView._selectedRow
+            applyRequest: function(item, forcePicker) { wallpaperSelector._applyItem(item, forcePicker) }
 
             x: 0
             y: hexListView._yOffset + rowIdx * hexListView._stepY + (hexCol.colIdx % 2 !== 0 ? hexListView._hexH / 2 : 0) + hexCol._arcOffset
@@ -1396,7 +1410,8 @@ Scope {
                 }, gpos.x, gpos.y, gridThumbDelegate)
               } else {
                 var d = gridThumbDelegate.model
-                wallpaperSelector._applyItem(d)
+                var forcePicker = !!(mouse.modifiers & Qt.ControlModifier)
+                wallpaperSelector._applyItem(d, forcePicker)
               }
             }
           }
@@ -1494,6 +1509,10 @@ Scope {
           _gridMeta = FileMetadataService.getMetadata(key)
           if (!_gridMeta)
             FileMetadataService.probeIfNeeded(key, overlayData.path, overlayData.type === "video" ? "video" : "image")
+        }
+        if (wallpaperSelector.selectorService) {
+          if (overlayOpen) wallpaperSelector.selectorService.beginTagsEdit()
+          else wallpaperSelector.selectorService.endTagsEdit()
         }
       }
       Connections {
@@ -1804,7 +1823,7 @@ Scope {
                     if (!gridBackOverlay.overlayData) return
                     var raw = text.toLowerCase()
                     var words = raw.split(/\s+/).filter(function(w) { return w.length > 0 })
-                    var wpTags = wallpaperSelector.selectorService.getWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId).slice()
+                    var wpTags = wallpaperSelector.selectorService.getWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId, gridTagsSection.wpThumb).slice()
                     var changed = false
                     for (var i = 0; i < words.length; i++) {
                       if (_sessionTags.indexOf(words[i]) === -1) _sessionTags.push(words[i])
@@ -1820,7 +1839,7 @@ Scope {
                       var wi = wpTags.indexOf(toRemove[r])
                       if (wi !== -1) { wpTags.splice(wi, 1); changed = true }
                     }
-                    if (changed) wallpaperSelector.selectorService.setWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId, wpTags)
+                    if (changed) wallpaperSelector.selectorService.setWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId, wpTags, gridTagsSection.wpThumb)
                   }
                   Keys.onReturnPressed: function(event) { event.accepted = true }
                   Keys.onEscapePressed: { _syncing = true; text = ""; _sessionTags = []; _syncing = false; gridBackOverlay.hide() }
@@ -1842,6 +1861,7 @@ Scope {
 
                 property string wpName: gridBackOverlay.overlayData ? gridBackOverlay.overlayData.name : ""
                 property string wpWeId: gridBackOverlay.overlayData ? (gridBackOverlay.overlayData.weId || "") : ""
+                property string wpThumb: gridBackOverlay.overlayData ? (gridBackOverlay.overlayData.thumb || "") : ""
                 property var currentTags: {
                   if (!gridBackOverlay.overlayOpen) return []
                   var db = wallpaperSelector.selectorService ? wallpaperSelector.selectorService.tagsDb : null
@@ -1882,9 +1902,9 @@ Scope {
                         MouseArea {
                           id: _gridTagMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                           onClicked: {
-                            var tags = wallpaperSelector.selectorService.getWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId).slice()
+                            var tags = wallpaperSelector.selectorService.getWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId, gridTagsSection.wpThumb).slice()
                             var idx = tags.indexOf(modelData); if (idx !== -1) tags.splice(idx, 1)
-                            wallpaperSelector.selectorService.setWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId, tags)
+                            wallpaperSelector.selectorService.setWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId, tags, gridTagsSection.wpThumb)
                           }
                         }
                       }
@@ -1901,15 +1921,40 @@ Scope {
                 id: gridActionRow
                 width: parent.width; height: 32; spacing: 8
 
+                property int _slotCount: gridBackOverlay.overlayData && gridBackOverlay.overlayData.type === "we" ? 4 : 3
+                property real _slotWidth: (width - spacing * (_slotCount - 1)) / _slotCount
+
                 ActionButton {
-                  width: gridBackOverlay.overlayData && gridBackOverlay.overlayData.type === "we" ? (parent.width - parent.spacing * 2) / 3 : (parent.width - parent.spacing) / 2
+                  width: gridActionRow._slotWidth
                   colors: wallpaperSelector.colors
                   icon: "\u{f0208}"; label: "VIEW"
                   onClicked: { if (!gridBackOverlay.overlayData) return; var p = gridBackOverlay.overlayData.path; Qt.openUrlExternally(ImageService.fileUrl(p.substring(0, p.lastIndexOf("/")))); gridBackOverlay.hide() }
                 }
 
                 ActionButton {
-                  width: gridBackOverlay.overlayData && gridBackOverlay.overlayData.type === "we" ? (parent.width - parent.spacing * 2) / 3 : (parent.width - parent.spacing) / 2
+                  width: gridActionRow._slotWidth
+                  colors: wallpaperSelector.colors
+                  icon: "\u{f0450}"; label: retagInFlight ? "TAGGING…" : "RETAG"
+                  property bool retagInFlight: false
+                  enabled: !retagInFlight && Config.ollamaEnabled && gridBackOverlay.overlayData
+                  onClicked: {
+                    if (!gridBackOverlay.overlayData) return
+                    var key = (gridBackOverlay.overlayData.weId || "")
+                      ? gridBackOverlay.overlayData.weId
+                      : ImageService.thumbKey(gridBackOverlay.overlayData.thumb || "", gridBackOverlay.overlayData.name || "")
+                    if (!key) return
+                    retagInFlight = true
+                    DaemonClient.retagOne(key, function(_r, _e) { _gridRetagResetTimer.restart() })
+                  }
+                  Timer {
+                    id: _gridRetagResetTimer
+                    interval: 8000
+                    onTriggered: parent.retagInFlight = false
+                  }
+                }
+
+                ActionButton {
+                  width: gridActionRow._slotWidth
                   colors: wallpaperSelector.colors
                   icon: "\u{f0a79}"; label: "DELETE"; danger: true
                   onClicked: { if (!gridBackOverlay.overlayData) return; wallpaperSelector.selectorService.deleteWallpaperItem(gridBackOverlay.overlayData.type, gridBackOverlay.overlayData.name, gridBackOverlay.overlayData.weId || ""); gridBackOverlay.hide() }
@@ -1917,7 +1962,7 @@ Scope {
 
                 ActionButton {
                   visible: gridBackOverlay.overlayData && gridBackOverlay.overlayData.type === "we"
-                  width: visible ? (parent.width - parent.spacing * 2) / 3 : 0
+                  width: visible ? gridActionRow._slotWidth : 0
                   colors: wallpaperSelector.colors
                   icon: "\u{f0bef}"; label: "STEAM"
                   onClicked: { wallpaperSelector.selectorService.openSteamPage(gridBackOverlay.overlayData.weId || ""); gridBackOverlay.hide() }
@@ -1960,6 +2005,10 @@ Scope {
           _hexMeta = FileMetadataService.getMetadata(key)
           if (!_hexMeta)
             FileMetadataService.probeIfNeeded(key, overlayData.path, overlayData.type === "video" ? "video" : "image")
+        }
+        if (wallpaperSelector.selectorService) {
+          if (overlayOpen) wallpaperSelector.selectorService.beginTagsEdit()
+          else wallpaperSelector.selectorService.endTagsEdit()
         }
       }
       Connections {
@@ -2312,7 +2361,7 @@ Scope {
                     if (!hexBackOverlay.overlayData) return
                     var raw = text.toLowerCase()
                     var words = raw.split(/\s+/).filter(function(w) { return w.length > 0 })
-                    var wpTags = wallpaperSelector.selectorService.getWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId).slice()
+                    var wpTags = wallpaperSelector.selectorService.getWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId, overlayTagsSection.wpThumb).slice()
                     var changed = false
                     for (var i = 0; i < words.length; i++) {
                       if (_sessionTags.indexOf(words[i]) === -1) _sessionTags.push(words[i])
@@ -2328,7 +2377,7 @@ Scope {
                       var wi = wpTags.indexOf(toRemove[r])
                       if (wi !== -1) { wpTags.splice(wi, 1); changed = true }
                     }
-                    if (changed) wallpaperSelector.selectorService.setWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId, wpTags)
+                    if (changed) wallpaperSelector.selectorService.setWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId, wpTags, overlayTagsSection.wpThumb)
                   }
                   Keys.onReturnPressed: function(event) { event.accepted = true }
                   Keys.onEscapePressed: { _syncing = true; text = ""; _sessionTags = []; _syncing = false; hexBackOverlay.hide() }
@@ -2350,6 +2399,7 @@ Scope {
 
                 property string wpName: hexBackOverlay.overlayData ? hexBackOverlay.overlayData.name : ""
                 property string wpWeId: hexBackOverlay.overlayData ? (hexBackOverlay.overlayData.weId || "") : ""
+                property string wpThumb: hexBackOverlay.overlayData ? (hexBackOverlay.overlayData.thumb || "") : ""
                 property var currentTags: {
                   if (!hexBackOverlay.overlayOpen) return []
                   var db = wallpaperSelector.selectorService ? wallpaperSelector.selectorService.tagsDb : null
@@ -2390,9 +2440,9 @@ Scope {
                         MouseArea {
                           id: _tagMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                           onClicked: {
-                            var tags = wallpaperSelector.selectorService.getWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId).slice()
+                            var tags = wallpaperSelector.selectorService.getWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId, overlayTagsSection.wpThumb).slice()
                             var idx = tags.indexOf(modelData); if (idx !== -1) tags.splice(idx, 1)
-                            wallpaperSelector.selectorService.setWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId, tags)
+                            wallpaperSelector.selectorService.setWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId, tags, overlayTagsSection.wpThumb)
                           }
                         }
                       }
@@ -2409,15 +2459,40 @@ Scope {
                 id: overlayActionRow
                 width: parent.width; height: 32; spacing: 8
 
+                property int _slotCount: hexBackOverlay.overlayData && hexBackOverlay.overlayData.type === "we" ? 4 : 3
+                property real _slotWidth: (width - spacing * (_slotCount - 1)) / _slotCount
+
                 ActionButton {
-                  width: hexBackOverlay.overlayData && hexBackOverlay.overlayData.type === "we" ? (parent.width - parent.spacing * 2) / 3 : (parent.width - parent.spacing) / 2
+                  width: overlayActionRow._slotWidth
                   colors: wallpaperSelector.colors
                   icon: "\u{f0208}"; label: "VIEW"
                   onClicked: { if (!hexBackOverlay.overlayData) return; var p = hexBackOverlay.overlayData.path; Qt.openUrlExternally(ImageService.fileUrl(p.substring(0, p.lastIndexOf("/")))); hexBackOverlay.hide() }
                 }
 
                 ActionButton {
-                  width: hexBackOverlay.overlayData && hexBackOverlay.overlayData.type === "we" ? (parent.width - parent.spacing * 2) / 3 : (parent.width - parent.spacing) / 2
+                  width: overlayActionRow._slotWidth
+                  colors: wallpaperSelector.colors
+                  icon: "\u{f0450}"; label: retagInFlight ? "TAGGING…" : "RETAG"
+                  property bool retagInFlight: false
+                  enabled: !retagInFlight && Config.ollamaEnabled && hexBackOverlay.overlayData
+                  onClicked: {
+                    if (!hexBackOverlay.overlayData) return
+                    var key = (hexBackOverlay.overlayData.weId || "")
+                      ? hexBackOverlay.overlayData.weId
+                      : ImageService.thumbKey(hexBackOverlay.overlayData.thumb || "", hexBackOverlay.overlayData.name || "")
+                    if (!key) return
+                    retagInFlight = true
+                    DaemonClient.retagOne(key, function(_r, _e) { _hexRetagResetTimer.restart() })
+                  }
+                  Timer {
+                    id: _hexRetagResetTimer
+                    interval: 8000
+                    onTriggered: parent.retagInFlight = false
+                  }
+                }
+
+                ActionButton {
+                  width: overlayActionRow._slotWidth
                   colors: wallpaperSelector.colors
                   icon: "\u{f0a79}"; label: "DELETE"; danger: true
                   onClicked: { if (!hexBackOverlay.overlayData) return; wallpaperSelector.selectorService.deleteWallpaperItem(hexBackOverlay.overlayData.type, hexBackOverlay.overlayData.name, hexBackOverlay.overlayData.weId || ""); hexBackOverlay.hide() }
@@ -2425,7 +2500,7 @@ Scope {
 
                 ActionButton {
                   visible: hexBackOverlay.overlayData && hexBackOverlay.overlayData.type === "we"
-                  width: visible ? (parent.width - parent.spacing * 2) / 3 : 0
+                  width: visible ? overlayActionRow._slotWidth : 0
                   colors: wallpaperSelector.colors
                   icon: "\u{f0bef}"; label: "STEAM"
                   onClicked: { wallpaperSelector.selectorService.openSteamPage(hexBackOverlay.overlayData.weId || ""); hexBackOverlay.hide() }
@@ -2463,8 +2538,9 @@ Scope {
     anchors.fill: parent
     z: 300
     colors: wallpaperSelector.colors
-    onAccepted: function(item, outputs) {
-      wallpaperSelector._doApply(item, outputs)
+    wallpaperService: service
+    onAccepted: function(item, outputs, audioMap, volumeMap) {
+      wallpaperSelector._doApply(item, outputs, audioMap, volumeMap)
     }
   }
 

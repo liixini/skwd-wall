@@ -2,6 +2,7 @@ WallpaperSelector 1.0 WallpaperSelector.qml
 WallpaperSelectorService 1.0 WallpaperSelectorService.qml
 ActionButton 1.0 ActionButton.qml
 CacheProgressBar 1.0 CacheProgressBar.qml
+ColorFilterStrip 1.0 ColorFilterStrip.qml
 FilterBar 1.0 FilterBar.qml
 FilterButton 1.0 FilterButton.qml
 FilterDropdown 1.0 FilterDropdown.qml
@@ -16,6 +17,7 @@ SettingsToggle 1.0 SettingsToggle.qml
 SettingsCombo 1.0 SettingsCombo.qml
 SettingsSlider 1.0 SettingsSlider.qml
 SettingsPanel 1.0 SettingsPanel.qml
+ShaderPicker 1.0 ShaderPicker.qml
 SliceDelegate 1.0 SliceDelegate.qml
 TagCloud 1.0 TagCloud.qml
 WallhavenBrowser 1.0 WallhavenBrowser.qml

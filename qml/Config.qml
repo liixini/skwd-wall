@@ -17,18 +17,21 @@ QtObject {
     readonly property string installDir: Quickshell.env("SKWD_WALL_INSTALL")
         || configDir
 
+    property var _data: ({})
+    property bool configLoaded: false
+
     property var _configFile: FileView {
         path: BootstrapService.ready ? (configDir + "/config.json") : ""
         watchChanges: true
-        onFileChanged: _configFile.reload()
+        onLoaded: config._reparse()
+        onFileChanged: { reload(); config._reparse() }
     }
-    property string _rawText: _configFile.__text ?? ""
-    readonly property bool configLoaded: _rawText !== ""
-    property var _data: {
-        var raw = _rawText
-        if (!raw) return {}
-        try { return JSON.parse(raw) }
-        catch (e) { return {} }
+
+    function _reparse() {
+        var raw = _configFile.text() || ""
+        if (!raw) { config._data = {}; config.configLoaded = false; return }
+        try { config._data = JSON.parse(raw); config.configLoaded = true }
+        catch (e) { config._data = {}; config.configLoaded = false }
     }
 
     function saveKey(path, value) {
@@ -99,6 +102,15 @@ QtObject {
     readonly property bool wallhavenEnabled: _data.features?.wallhaven !== false
     readonly property bool videoPreviewEnabled: _data.features?.videoPreview !== false
     readonly property bool videoAutoScale: _data.features?.videoAutoScale === true
+
+    readonly property bool transitionEnabled: _data.transition?.enabled !== false
+    readonly property string transitionShader: _data.transition?.shader ?? "random"
+    readonly property int transitionDurationMs: {
+        var v = _data.transition?.durationMs
+        if (typeof v !== "number") return 600
+        return Math.max(50, Math.min(5000, Math.round(v)))
+    }
+    readonly property string fillMode: _data.display?.fillMode ?? "fill"
     readonly property bool wallpaperMute: _data.wallpaperMute !== false
     readonly property int wallpaperVolume: {
         var v = _data.wallpaperVolume

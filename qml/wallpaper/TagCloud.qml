@@ -165,7 +165,12 @@ Rectangle {
 
                 var hasAll = true
                 for (var s = 0; s < selected.length; s++) {
-                    if (wTags.indexOf(selected[s]) === -1) { hasAll = false; break }
+                    var sel = selected[s]
+                    if (sel.length > 1 && sel.charAt(0) === "-") {
+                        if (wTags.indexOf(sel.substring(1)) !== -1) { hasAll = false; break }
+                    } else {
+                        if (wTags.indexOf(sel) === -1) { hasAll = false; break }
+                    }
                 }
                 if (!hasAll) continue
                 for (var ti = 0; ti < wTags.length; ti++) {
@@ -202,10 +207,14 @@ Rectangle {
 
         var suggest = ""
         if (query.length > 0) {
+            
+            
+            var queryNeg = query.length > 1 && query.charAt(0) === "-"
+            var queryBare = queryNeg ? query.substring(1) : query
             var bestCount = -1
             for (var ai = 0; ai < result.length; ai++) {
-                if (!result[ai].selected && (result[ai].tag.indexOf(query) === 0 || _stem(result[ai].tag) === _stem(query)) && result[ai].count > bestCount) {
-                    suggest = result[ai].tag
+                if (!result[ai].selected && (result[ai].tag.indexOf(queryBare) === 0 || _stem(result[ai].tag) === _stem(queryBare)) && result[ai].count > bestCount) {
+                    suggest = (queryNeg ? "-" : "") + result[ai].tag
                     bestCount = result[ai].count
                 }
             }
@@ -274,14 +283,19 @@ Rectangle {
                     var locked = []
                     var partial = ""
                     for (var j = 0; j < words.length; j++) {
-                        if (tagSet[words[j]]) locked.push(words[j])
-                        else partial = words[j]
+                        var w = words[j]
+                        var isNeg = w.length > 1 && w.charAt(0) === "-"
+                        var bare = isNeg ? w.substring(1) : w
+                        if (bare.length > 0 && tagSet[bare]) locked.push(isNeg ? "-" + bare : bare)
+                        else partial = w
                     }
 
                     var endsWithSpace = raw.length > 0 && raw[raw.length - 1] === ' '
                     if (!endsWithSpace && words.length > 0) {
                         var lastWord = words[words.length - 1]
-                        var li = locked.indexOf(lastWord)
+                        var lastIsNeg = lastWord.length > 1 && lastWord.charAt(0) === "-"
+                        var lastNorm = lastIsNeg ? "-" + lastWord.substring(1) : lastWord
+                        var li = locked.indexOf(lastNorm)
                         if (li !== -1 && li === locked.length - 1) locked.pop()
                         partial = lastWord
                     }
@@ -504,20 +518,25 @@ Rectangle {
                             var tag = modelData.tag
                             var tags = svc.selectedTags.slice()
                             var idx = tags.indexOf(tag)
+                            var negIdx = tags.indexOf("-" + tag)
                             var removing = idx !== -1
-                            if (removing) tags.splice(idx, 1)
-                            else tags.push(tag)
+                            
+                            if (negIdx !== -1) tags.splice(negIdx, 1)
+                            if (idx !== -1) tags.splice(idx > negIdx ? idx - 1 : idx, 1)
+                            if (!removing) tags.push(tag)
                             svc.selectedTags = tags
                             svc.updateFilteredModel(true)
 
                             tagCloud._syncingText = true
+                            
+                            
+                            var stripRe = new RegExp('(^|\\s)-?' + tag + '\\b\\s*', 'gi')
+                            var cleared = tagSearchInput.text.replace(stripRe, '$1').replace(/^\s+/, '')
                             if (removing) {
-                                var re = new RegExp('\\b' + tag + '\\b\\s*', 'i')
-                                tagSearchInput.text = tagSearchInput.text.replace(re, '').replace(/^\s+/, '')
+                                tagSearchInput.text = cleared
                             } else {
-                                var cur = tagSearchInput.text
-                                var suffix = (cur.length > 0 && cur[cur.length - 1] !== ' ') ? ' ' : ''
-                                tagSearchInput.text = cur + suffix + tag + ' '
+                                var suffix = (cleared.length > 0 && cleared[cleared.length - 1] !== ' ') ? ' ' : ''
+                                tagSearchInput.text = cleared + suffix + tag + ' '
                             }
                             tagCloud._syncingText = false
                             tagCloud._recomputeTags()

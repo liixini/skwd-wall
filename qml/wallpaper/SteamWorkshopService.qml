@@ -77,11 +77,11 @@ QtObject {
   property var _statusFileView: FileView {
     path: swService._statusFilePath
     watchChanges: true
-    onFileChanged: _statusFileView.reload()
+    onLoaded: swService._parseStatusFile()
+    onFileChanged: { reload(); swService._parseStatusFile() }
   }
 
-  property string _statusRaw: _statusFileView.__text ?? ""
-  on_StatusRawChanged: _parseStatusFile()
+  property string _statusRaw: ""
 
   function refreshDownloadStatus() {
     if (_statusFileView.path)
@@ -89,9 +89,10 @@ QtObject {
   }
 
   function _parseStatusFile() {
-    if (!_statusRaw) return
+    swService._statusRaw = _statusFileView.text() || ""
+    if (!swService._statusRaw) return
     try {
-      var obj = JSON.parse(_statusRaw)
+      var obj = JSON.parse(swService._statusRaw)
       var newStatus = {}
       var newProgress = {}
       var downloads = obj.downloads || {}

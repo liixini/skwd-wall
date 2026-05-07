@@ -63,6 +63,10 @@ Column {
 
         Shape {
             anchors.fill: parent
+            layer.enabled: true
+            layer.smooth: true
+            layer.samples: 4
+            preferredRendererType: Shape.CurveRenderer
             ShapePath {
                 fillColor: root.colors
                     ? Qt.rgba(root.colors.surfaceVariant.r, root.colors.surfaceVariant.g, root.colors.surfaceVariant.b, 0.6)
@@ -85,6 +89,10 @@ Column {
             anchors.bottom: parent.bottom
             width: Math.max(track._skew * 2 + 1, track._fillWidth)
             visible: track._ratio > 0
+            layer.enabled: true
+            layer.smooth: true
+            layer.samples: 4
+            preferredRendererType: Shape.CurveRenderer
             ShapePath {
                 fillColor: root.colors ? root.colors.primary : Qt.rgba(0.5, 0.7, 1.0, 1.0)
                 strokeWidth: 0
@@ -98,13 +106,17 @@ Column {
 
         Item {
             id: thumb
-            width: 6 * Config.uiScale
+            width: 8 * Config.uiScale
             height: track.height + 6
             anchors.verticalCenter: parent.verticalCenter
             x: Math.max(0, Math.min(track.width - width, track._fillWidth - width / 2))
 
             Shape {
                 anchors.fill: parent
+                layer.enabled: true
+                layer.smooth: true
+                layer.samples: 4
+                preferredRendererType: Shape.CurveRenderer
                 ShapePath {
                     fillColor: root.colors ? root.colors.primaryText : "#000"
                     strokeColor: root.colors ? root.colors.primary : Qt.rgba(0.5, 0.7, 1.0, 1.0)

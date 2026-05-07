@@ -26,7 +26,7 @@ QtObject {
     signal cacheReady()
     signal itemCached(var data)
 
-    signal wallpaperApplied(string type, string name, string path, string weId)
+    signal wallpaperApplied(string type, string name, string path, string weId, string key)
     signal wallpaperToggle()
     signal wallpaperShow()
     signal wallpaperHide()
@@ -55,20 +55,39 @@ QtObject {
     function show()   { call("wall.show", {}) }
     function hide()   { call("wall.hide", {}) }
 
-    function applyStatic(path, outputs, callback) {
+    function applyStatic(path, outputs, neighbors, callback) {
         var params = {type: "static", path: path}
         if (outputs && outputs.length > 0) params.outputs = outputs
+        if (neighbors && neighbors.length > 0) params.neighbors = neighbors
         call("wall.apply", params, callback)
     }
-    function applyVideo(path, outputs, callback) {
+    function applyVideo(path, outputs, neighbors, audioMap, volumeMap, callback) {
         var params = {type: "video", path: path}
         if (outputs && outputs.length > 0) params.outputs = outputs
+        if (neighbors && neighbors.length > 0) params.neighbors = neighbors
+        if (audioMap) params.outputs_audio = audioMap
+        if (volumeMap) params.outputs_volume = volumeMap
         call("wall.apply", params, callback)
     }
-    function applyWE(weId, screens, callback) {
-        call("wall.apply", {type: "we", we_id: weId, screens: screens || []}, callback)
+    function applyWE(weId, screens, audioMap, volumeMap, callback) {
+        var params = {type: "we", we_id: weId, screens: screens || []}
+        if (audioMap) params.outputs_audio = audioMap
+        if (volumeMap) params.outputs_volume = volumeMap
+        call("wall.apply", params, callback)
     }
     function restore(callback) { call("wall.restore", {}, callback) }
+    function outputs(callback) { call("wall.outputs", {}, callback) }
+    function setAudio(mute, volume, callback) {
+        let params = {}
+        if (mute !== undefined && mute !== null) params.mute = !!mute
+        if (volume !== undefined && volume !== null) params.volume = volume | 0
+        call("wall.set_audio", params, callback)
+    }
+
+    function preheat(path) {
+        if (!path) return
+        call("wall.preheat", {path: path})
+    }
     function retheme(scheme, mode, callback) { call("wall.retheme", {scheme: scheme || "", mode: mode || ""}, callback) }
 
     function rebuildCache(callback)    { call("wall.cache_rebuild", {}, callback) }
@@ -89,6 +108,12 @@ QtObject {
         if (hue !== undefined && hue !== null) params.hue = hue
         if (sat !== undefined && sat !== null) params.sat = sat
         call("wall.update_analysis", params, callback)
+    }
+    function retagOne(key, callback) {
+        call("wall.analysis.retag_one", {key: key}, callback)
+    }
+    function recomputeColors(callback) {
+        call("wall.recompute_colors", {}, callback)
     }
     function importFromQml(callback) { call("wall.import", {}, callback) }
     function deleteItem(name, type, weId, callback) {
@@ -186,7 +211,7 @@ QtObject {
         case "skwd.wall.cached":
             client.itemCached(data); break
         case "skwd.wall.applied":
-            client.wallpaperApplied(data.type || "", data.name || "", data.path || "", data.we_id || ""); break
+            client.wallpaperApplied(data.type || "", data.name || "", data.path || "", data.we_id || "", data.key || ""); break
         case "skwd.wall.toggle":
             client.wallpaperToggle(); break
         case "skwd.wall.show":

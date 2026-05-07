@@ -33,6 +33,21 @@ Item {
         if (thumb.status === Image.Ready) _startRevealForCurrentSource()
     }
 
+    onHoveredChanged: {
+        if (cell.hovered) _preheatTimer.restart()
+        else _preheatTimer.stop()
+    }
+
+    Timer {
+        id: _preheatTimer
+        interval: 120
+        repeat: false
+        onTriggered: {
+            if (cell.itemData && cell.itemData.path)
+                DaemonClient.preheat(cell.itemData.path)
+        }
+    }
+
     x: cellData ? cellData.bbox.x : 0
     y: cellData ? cellData.bbox.y : 0
     width: cellData ? cellData.bbox.w : 0
@@ -44,7 +59,7 @@ Item {
         NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutCubic }
     }
 
-    // Mask in cell-local coordinates
+    
     Item {
         id: maskShape
         anchors.fill: parent
@@ -80,7 +95,7 @@ Item {
         }
     }
 
-    // Background tint (visible while image loads)
+    
     Rectangle {
         anchors.fill: parent
         color: cell.colors ? Qt.rgba(cell.colors.surfaceContainer.r, cell.colors.surfaceContainer.g, cell.colors.surfaceContainer.b, 0.5)

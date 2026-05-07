@@ -63,13 +63,15 @@ QtObject {
         var videoFile = r.video_file || "", weId = r.we_id || ""
         var mtime = r.mtime || 0
         var hue = r.hue != null ? r.hue : 99, sat = r.sat || 0
+        var richness = r.richness != null ? r.richness : 0
+        var applyCount = r.apply_count != null ? r.apply_count : 0
 
         items.push({
           name: name, type: type, thumb: thumb,
           path: type === "static" ? service.wallpaperDir + "/" + name
               : (type === "video" ? (videoFile || service.videoDir + "/" + name) : ""),
           weId: weId, videoFile: videoFile,
-          mtime: mtime, hue: hue, saturation: sat,
+          mtime: mtime, hue: hue, saturation: sat, richness: richness, applyCount: applyCount,
           placeholder: false
         })
 
@@ -139,6 +141,32 @@ QtObject {
       console.log("[WSS] onWeItemAdded: " + weId + " dir=" + weDir)
     }
 
+    
+    function onWallpaperApplied(type, name, path, weId, key) {
+      var matchKey = key || weId || (name || "").replace(/\.[^.]+$/, "")
+      if (!matchKey) return
+      
+      for (var i = 0; i < service._wallpaperData.length; i++) {
+        var item = service._wallpaperData[i]
+        var itemKey = item.weId || (item.name || "").replace(/\.[^.]+$/, "")
+        if (itemKey === matchKey) {
+          item.applyCount = (item.applyCount || 0) + 1
+          break
+        }
+      }
+      
+      for (var j = 0; j < service.filteredModel.count; j++) {
+        var row = service.filteredModel.get(j)
+        var rowKey = (row.weId || "")
+          ? row.weId
+          : (row.name || "").replace(/\.[^.]+$/, "")
+        if (rowKey === matchKey) {
+          service.filteredModel.setProperty(j, "applyCount", (row.applyCount || 0) + 1)
+          break
+        }
+      }
+    }
+
     function onItemCached(data) {
       var type = data.type || "static"
       var name = data.name || ""
@@ -151,16 +179,18 @@ QtObject {
       var mtime = data.mtime || 0
       var hue = data.hue != null ? data.hue : 99
       var sat = data.sat || 0
+      var richness = data.richness != null ? data.richness : 0
+      var applyCount = data.apply_count != null ? data.apply_count : 0
 
       var lookupKey = weId || name
-      if (_wallpaperDataKeys[lookupKey]) return  // already in model
+      if (_wallpaperDataKeys[lookupKey]) return
 
       var item = {
         name: name, type: type, thumb: thumb,
         path: type === "static" ? service.wallpaperDir + "/" + name
             : (type === "video" ? service.videoDir + "/" + name : ""),
         weId: weId, videoFile: videoFile,
-        mtime: mtime, hue: hue, saturation: sat,
+        mtime: mtime, hue: hue, saturation: sat, richness: richness, applyCount: applyCount,
         placeholder: false
       }
       _wallpaperData.push(item)
@@ -176,6 +206,19 @@ QtObject {
         var existing = service.filteredModel.get(i)
         if (sortMode === "date") {
           if (item.mtime > existing.mtime) return i
+        } else if (sortMode === "pop") {
+          var popItem = item.saturation - item.richness / 15
+          var popEx = existing.saturation - existing.richness / 15
+          if (popItem > popEx) return i
+        } else if (sortMode === "richness") {
+          if (item.richness > existing.richness) return i
+          if (item.richness === existing.richness && item.saturation > existing.saturation) return i
+        } else if (sortMode === "minimalist") {
+          if (item.richness < existing.richness) return i
+          if (item.richness === existing.richness && item.saturation > existing.saturation) return i
+        } else if (sortMode === "applied") {
+          if (item.applyCount > existing.applyCount) return i
+          if (item.applyCount === existing.applyCount && item.mtime > existing.mtime) return i
         } else {
           var hueNew = item.hue === 99 ? 100 : item.hue
           var hueEx = existing.hue === 99 ? 100 : existing.hue
@@ -271,22 +314,46 @@ QtObject {
     if (favouriteFilterActive) updateFilteredModel()
   }
 
-  function getWallpaperTags(name, weId) {
+  
+  function getWallpaperTags(name, weId, thumb) {
     if (weId) return tagsDb[weId] || []
+    if (thumb) {
+      var tk = ImageService.thumbKey(thumb, name)
+      if (tk && tagsDb[tk]) return tagsDb[tk]
+    }
     var byName = tagsDb[name]
     if (byName) return byName
     var stem = name.replace(/\.[^.]+$/, "")
     return tagsDb[stem] || []
   }
 
-  function setWallpaperTags(name, weId, tags) {
-    var key = weId ? weId : name.replace(/\.[^.]+$/, "")
+  function setWallpaperTags(name, weId, tags, thumb) {
+    var key = weId ? weId : (thumb ? ImageService.thumbKey(thumb, name) : name.replace(/\.[^.]+$/, ""))
+    if (!key) return
     var db = JSON.parse(JSON.stringify(tagsDb))
     db[key] = tags
     tagsDb = db
     _rebuildPopularTags()
     DaemonClient.updateAnalysis(key, tags, null, null, null, null)
-    if (selectedTags.length > 0) updateFilteredModel()
+    
+    
+    if (selectedTags.length > 0 && _tagsEditingCount === 0) _debouncedUpdate.restart()
+    else if (_tagsEditingCount > 0) _filterPendingAfterEdit = true
+  }
+
+  
+  property int _tagsEditingCount: 0
+  property bool _filterPendingAfterEdit: false
+
+  function beginTagsEdit() {
+    _tagsEditingCount += 1
+  }
+  function endTagsEdit() {
+    if (_tagsEditingCount > 0) _tagsEditingCount -= 1
+    if (_tagsEditingCount === 0 && _filterPendingAfterEdit) {
+      _filterPendingAfterEdit = false
+      if (selectedTags.length > 0) _debouncedUpdate.restart()
+    }
   }
 
   function _rebuildPopularTags() {
@@ -363,13 +430,25 @@ QtObject {
       if (favouriteFilterActive && !isFavourite(item.name, item.weId)) continue
 
       if (selectedTags.length > 0) {
-        var wallpaperTags = tagsDb[lookupKey]
-        if (!wallpaperTags) continue
+        
+        
+        var wallpaperTags = tagsDb[lookupKey] || []
+        var hasPositive = false
         var allTagsMatch = true
         for (var t = 0; t < selectedTags.length; t++) {
-          if (wallpaperTags.indexOf(selectedTags[t]) === -1) { allTagsMatch = false; break }
+          var raw = selectedTags[t]
+          if (raw && raw.charAt(0) === "-") {
+            var excluded = raw.substring(1)
+            if (excluded && wallpaperTags.indexOf(excluded) !== -1) { allTagsMatch = false; break }
+          } else {
+            hasPositive = true
+            if (wallpaperTags.indexOf(raw) === -1) { allTagsMatch = false; break }
+          }
         }
         if (!allTagsMatch) continue
+        
+        
+        if (hasPositive && wallpaperTags.length === 0) continue
       }
 
       if (weatherFilterActive && currentWeather.length > 0) {
@@ -386,12 +465,41 @@ QtObject {
         name: item.name, type: item.type, thumb: item.thumb, path: item.path,
         weId: item.weId, videoFile: item.videoFile, mtime: item.mtime,
         hue: hue, saturation: saturation,
+        richness: (item.richness != null ? item.richness : 0),
+        applyCount: (item.applyCount != null ? item.applyCount : 0),
         placeholder: !!item.placeholder
       })
     }
 
     if (sortMode === "date") {
       items.sort(function(a, b) { return b.mtime - a.mtime })
+    } else if (sortMode === "pop") {
+      items.sort(function(a, b) {
+        var popA = a.saturation - a.richness / 15
+        var popB = b.saturation - b.richness / 15
+        return popB - popA
+      })
+    } else if (sortMode === "richness") {
+      
+      
+      items.sort(function(a, b) {
+        if (a.richness !== b.richness) return b.richness - a.richness
+        return b.saturation - a.saturation
+      })
+    } else if (sortMode === "minimalist") {
+      
+      
+      items.sort(function(a, b) {
+        if (a.richness !== b.richness) return a.richness - b.richness
+        return b.saturation - a.saturation
+      })
+    } else if (sortMode === "applied") {
+      
+      
+      items.sort(function(a, b) {
+        if (a.applyCount !== b.applyCount) return b.applyCount - a.applyCount
+        return b.mtime - a.mtime
+      })
     } else {
       items.sort(function(a, b) {
         var hueA = a.hue === 99 ? 100 : a.hue
@@ -417,26 +525,51 @@ QtObject {
     modelUpdated()
   }
 
-  onSelectedColorFilterChanged: _debouncedUpdate.restart()
-
-  property var _debouncedUpdate: Timer {
-    interval: 0
-    onTriggered: service.updateFilteredModel()
-  }
+  onSelectedColorFilterChanged: updateFilteredModel()
   onSelectedTypeFilterChanged: updateFilteredModel()
 
+  function _collectNeighbors(path) {
+    var n = filteredModel.count
+    if (n === 0) return []
+    var idx = -1
+    for (var i = 0; i < n; i++) {
+      if (filteredModel.get(i).path === path) { idx = i; break }
+    }
+    if (idx < 0) return []
+    var picks = []
+    var maxNeighbors = 20
+    for (var step = 1; picks.length < maxNeighbors && step < n; step++) {
+      var fwd = idx + step
+      var back = idx - step
+      if (fwd < n) {
+        var fp = filteredModel.get(fwd).path
+        if (fp && fp !== path) picks.push(fp)
+        if (picks.length >= maxNeighbors) break
+      }
+      if (back >= 0) {
+        var bp = filteredModel.get(back).path
+        if (bp && bp !== path) picks.push(bp)
+      }
+    }
+    return picks
+  }
+
   function applyStatic(path, outputs) {
-    DaemonClient.applyStatic(path, outputs)
+    var neighbors = _collectNeighbors(path)
+    DaemonClient.applyStatic(path, outputs, neighbors)
     service.wallpaperApplied()
   }
 
-  function applyWE(id) {
-    var screens = Quickshell.screens.map(function(s) { return s.name })
-    DaemonClient.applyWE(id, screens)
+  function applyWE(id, outputs, audioMap, volumeMap) {
+    var screens = (outputs && outputs.length > 0)
+      ? outputs
+      : Quickshell.screens.map(function(s) { return s.name })
+    DaemonClient.applyWE(id, screens, audioMap, volumeMap)
   }
 
-  function applyVideo(path, outputs) {
-    DaemonClient.applyVideo(path, outputs)
+  function applyVideo(path, outputs, audioMap, volumeMap) {
+    var neighbors = _collectNeighbors(path)
+    DaemonClient.applyVideo(path, outputs, neighbors, audioMap, volumeMap)
   }
 
   function deleteWallpaperItem(type, name, weId) {

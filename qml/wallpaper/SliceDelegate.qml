@@ -17,6 +17,7 @@ Item {
     property int sliceWidth: 108
     property int skewOffset: 28
     property var service
+    property var applyRequest: null
 
     property int selectedIdx: -1
     property bool isCurrent: ListView.isCurrentItem
@@ -24,6 +25,16 @@ Item {
     property bool flipped: false
     property var _backMeta: null
     readonly property var _listView: ListView.view
+
+    Timer {
+        id: _preheatTimer
+        interval: 120
+        repeat: false
+        onTriggered: {
+            if (delegateItem.model && delegateItem.model.path)
+                DaemonClient.preheat(delegateItem.model.path)
+        }
+    }
 
     onFlippedChanged: {
         if (flipped && delegateItem.model.type !== "we") {
@@ -35,6 +46,17 @@ Item {
         if (!flipped) {
             addTagField._syncing = true; addTagField.text = ""; addTagField._sessionTags = []; addTagField._syncing = false
         }
+        
+        
+        if (delegateItem.service) {
+            if (flipped) delegateItem.service.beginTagsEdit()
+            else delegateItem.service.endTagsEdit()
+        }
+    }
+    Component.onDestruction: {
+        
+        
+        if (flipped && delegateItem.service) delegateItem.service.endTagsEdit()
     }
     Connections {
         target: FileMetadataService
@@ -88,6 +110,8 @@ Item {
             videoDelayTimer.stop()
             videoActive = false
         }
+        if (isCurrent) _preheatTimer.restart()
+        else _preheatTimer.stop()
     }
 
     Timer {
@@ -559,9 +583,6 @@ Item {
                         border.width: 1
                         border.color: addTagField.activeFocus
                             ? (delegateItem.colors ? Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.5) : Qt.rgba(1, 1, 1, 0.3))
-                            : (delegateItem.colors ? Qt.rgba(delegateItem.colors.outline.r, delegateItem.colors.outline.g, delegateItem.colors.outline.b, 0.2) : Qt.rgba(1, 1, 1, 0.1))
-                        Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
-                        Behavior on border.color { ColorAnimation { duration: Style.animVeryFast } }
                     }
 
                     TextInput {
@@ -577,7 +598,7 @@ Item {
                             if (_syncing) return
                             var raw = text.toLowerCase()
                             var words = raw.split(/\s+/).filter(function(w) { return w.length > 0 })
-                            var wpTags = delegateItem.service.getWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId).slice()
+                            var wpTags = delegateItem.service.getWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId, backTagsSection.wpThumb).slice()
                             var changed = false
                             for (var i = 0; i < words.length; i++) {
                                 if (_sessionTags.indexOf(words[i]) === -1) _sessionTags.push(words[i])
@@ -593,7 +614,7 @@ Item {
                                 var wi = wpTags.indexOf(toRemove[r])
                                 if (wi !== -1) { wpTags.splice(wi, 1); changed = true }
                             }
-                            if (changed) delegateItem.service.setWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId, wpTags)
+                            if (changed) delegateItem.service.setWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId, wpTags, backTagsSection.wpThumb)
                         }
                         Keys.onReturnPressed: function(event) { event.accepted = true }
                         Keys.onEscapePressed: {
@@ -696,10 +717,10 @@ Item {
                                         id: tagRemoveArea
                                         anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                         onClicked: {
-                                            var tags = delegateItem.service.getWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId).slice()
+                                            var tags = delegateItem.service.getWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId, backTagsSection.wpThumb).slice()
                                             var idx = tags.indexOf(modelData)
                                             if (idx !== -1) tags.splice(idx, 1)
-                                            delegateItem.service.setWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId, tags)
+                                            delegateItem.service.setWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId, tags, backTagsSection.wpThumb)
                                         }
                                     }
                                 }
@@ -721,8 +742,12 @@ Item {
                     width: parent.width; height: 30
                     spacing: 6
 
+                    
+                    property int _slotCount: delegateItem.model.type === "we" ? 4 : 3
+                    property real _slotWidth: (width - spacing * (_slotCount - 1)) / _slotCount
+
                     ActionButton {
-                        width: delegateItem.model.type === "we" ? (parent.width - parent.spacing * 2) / 3 : (parent.width - parent.spacing) / 2
+                        width: backActionRow._slotWidth
                         colors: delegateItem.colors
                         icon: "\u{f0208}"; label: "VIEW"
                         skew: Math.abs(delegateItem.skewOffset) * 0.4
@@ -734,7 +759,33 @@ Item {
                     }
 
                     ActionButton {
-                        width: delegateItem.model.type === "we" ? (parent.width - parent.spacing * 2) / 3 : (parent.width - parent.spacing) / 2
+                        width: backActionRow._slotWidth
+                        colors: delegateItem.colors
+                        icon: "\u{f0450}"; label: retagInFlight ? "TAGGING…" : "RETAG"
+                        skew: Math.abs(delegateItem.skewOffset) * 0.4
+                        property bool retagInFlight: false
+                        enabled: !retagInFlight && Config.ollamaEnabled
+                        onClicked: {
+                            var key = backTagsSection.wpWeId
+                                ? backTagsSection.wpWeId
+                                : ImageService.thumbKey(backTagsSection.wpThumb, backTagsSection.wpName)
+                            if (!key) return
+                            retagInFlight = true
+                            DaemonClient.retagOne(key, function(_result, _error) {
+                                
+                                
+                                _retagResetTimer.restart()
+                            })
+                        }
+                        Timer {
+                            id: _retagResetTimer
+                            interval: 8000
+                            onTriggered: parent.retagInFlight = false
+                        }
+                    }
+
+                    ActionButton {
+                        width: backActionRow._slotWidth
                         colors: delegateItem.colors
                         icon: "\u{f0a79}"; label: "DELETE"; danger: true
                         skew: Math.abs(delegateItem.skewOffset) * 0.4
@@ -752,7 +803,7 @@ Item {
 
                     ActionButton {
                         visible: delegateItem.model.type === "we"
-                        width: visible ? (parent.width - parent.spacing * 2) / 3 : 0
+                        width: visible ? backActionRow._slotWidth : 0
                         colors: delegateItem.colors
                         icon: "\u{f0bef}"; label: "STEAM"
                         skew: Math.abs(delegateItem.skewOffset) * 0.4
@@ -827,7 +878,10 @@ Item {
                 delegateItem.flipped = !delegateItem.flipped
             } else if (!delegateItem.flipped) {
                 if (delegateItem.isCurrent) {
-                    if (delegateItem.model.type === "we") {
+                    var forcePicker = !!(mouse.modifiers & Qt.ControlModifier)
+                    if (delegateItem.applyRequest) {
+                        delegateItem.applyRequest(delegateItem.model, forcePicker)
+                    } else if (delegateItem.model.type === "we") {
                         delegateItem.service.applyWE(delegateItem.model.weId)
                     } else if (delegateItem.model.type === "video") {
                         delegateItem.service.applyVideo(delegateItem.model.path)

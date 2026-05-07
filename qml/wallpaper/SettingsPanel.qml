@@ -245,7 +245,9 @@ Item {
       model: {
         var tabs = [
           { key: "selector",  label: "SELECTOR" },
+          { key: "paper",     label: "PAPER" },
           { key: "general",   label: "GENERAL" },
+          { key: "sort",      label: "SORT" },
           { key: "paths",     label: "PATHS" },
           { key: "performance", label: "PERFORMANCE" },
           { key: "postprocessing", label: "EXTERNAL" },
@@ -279,6 +281,7 @@ Item {
     anchors.topMargin: 8
     height: {
       if (settingsPanel.activeTab === "selector") return selectorContent.implicitHeight
+      if (settingsPanel.activeTab === "paper") return paperContent.implicitHeight
       if (settingsPanel.activeTab === "general") return generalContent.implicitHeight
       if (settingsPanel.activeTab === "ollama") return ollamaContent.implicitHeight
       if (settingsPanel.activeTab === "paths") return pathsContent.implicitHeight
@@ -289,6 +292,7 @@ Item {
       if (settingsPanel.activeTab === "theme") return _themeInner.implicitHeight
       if (settingsPanel.activeTab === "matugen") return Math.min(_matugenInner.implicitHeight, 360)
       if (settingsPanel.activeTab === "keybinds") return keybindsContent.implicitHeight
+      if (settingsPanel.activeTab === "sort") return sortContent.implicitHeight
       return 0
     }
     Behavior on height { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutCubic } }
@@ -534,6 +538,136 @@ Item {
       }
     }
 
+    Column {
+      id: paperContent
+      anchors.left: parent.left
+      anchors.right: parent.right
+      visible: settingsPanel.activeTab === "paper"
+      spacing: 12
+
+      readonly property var _shaderOptions: [
+        { key: "random",             label: "Random" },
+        { key: "bounce",             label: "Bounce" },
+        { key: "chromatic-bloom",    label: "Chromatic Bloom" },
+        { key: "circle-crop",        label: "Circle Crop" },
+        { key: "colour-distance",    label: "Colour Distance" },
+        { key: "crazy-parametric",   label: "Crazy Parametric" },
+        { key: "crosswarp",          label: "Cross Warp" },
+        { key: "crosshatch",         label: "Crosshatch" },
+        { key: "directional",        label: "Directional" },
+        { key: "directional-scaled", label: "Directional Scaled" },
+        { key: "directional-wipe",   label: "Directional Wipe" },
+        { key: "edge-transition",    label: "Edge Transition" },
+        { key: "fadecolor",          label: "Fadecolor" },
+        { key: "flyeye",             label: "Fly Eye" },
+        { key: "glitch",             label: "Glitch" },
+        { key: "glitch-displace",    label: "Glitch Displace" },
+        { key: "heat-melt",          label: "Heat Melt" },
+        { key: "ink-splash",         label: "Ink Splash" },
+        { key: "inkwell-drop",       label: "Inkwell Drop" },
+        { key: "iris",               label: "Iris" },
+        { key: "liquid-ripple",      label: "Liquid Ripple" },
+        { key: "morph",              label: "Morph" },
+        { key: "mosaic-tumble",      label: "Mosaic Tumble" },
+        { key: "overexposure",       label: "Overexposure" },
+        { key: "parametric-glitch",  label: "Parametric Glitch" },
+        { key: "perlin",             label: "Perlin" },
+        { key: "pixelate",           label: "Pixelate" },
+        { key: "pixelfade-wave",     label: "Pixelfade Wave" },
+        { key: "plasma-flow",        label: "Plasma Flow" },
+        { key: "polar-function",     label: "Polar Function" },
+        { key: "polka-dots-curtain", label: "Polka Dots Curtain" },
+        { key: "puzzle-right",       label: "Puzzle Right" },
+        { key: "randomsquares",      label: "Randomsquares" },
+        { key: "smoke",              label: "Smoke" },
+        { key: "soft-warp-fade",     label: "Soft Warp Fade" },
+        { key: "static-fade",        label: "Static Fade" },
+        { key: "voronoi-shatter",    label: "Voronoi Shatter" },
+        { key: "wave-warp",          label: "Wave Warp" },
+        { key: "zoom-blur-pull",     label: "Zoom Blur Pull" }
+      ]
+
+      readonly property var _fillModeOptions: [
+        { key: "fill",    label: "Fill",    desc: "Cover the screen, preserve aspect, crop overflow." },
+        { key: "fit",     label: "Fit",     desc: "Show entire image, preserve aspect, letterbox where needed." },
+        { key: "stretch", label: "Stretch", desc: "Scale to screen, ignoring aspect ratio." },
+        { key: "center",  label: "Center",  desc: "Native size, centered. No scaling." },
+        { key: "tile",    label: "Tile",    desc: "Repeat the image to cover the screen at native size." }
+      ]
+
+      Text {
+        text: "DISPLAY"
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
+        color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+      }
+
+      Text {
+        width: parent.width
+        text: "How the wallpaper image is fitted to your screen. Applies to both static images and videos."
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
+        color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.4)
+        wrapMode: Text.Wrap
+      }
+
+      Flow {
+        width: parent.width
+        spacing: 8
+
+        Repeater {
+          model: paperContent._fillModeOptions
+          delegate: FilterButton {
+            colors: settingsPanel.colors
+            label: modelData.label
+            isActive: Config.fillMode === modelData.key
+            onClicked: Config.saveKey("display.fillMode", modelData.key)
+          }
+        }
+      }
+
+      Item { width: 1; height: 8 }
+
+      Text {
+        text: "TRANSITIONS"
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
+        color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+      }
+
+      SettingsToggle {
+        colors: settingsPanel.colors
+        label: "Enable transitions"
+        checked: Config.transitionEnabled
+        onToggle: function(v) { Config.saveKey("transition.enabled", v) }
+      }
+
+      Item {
+        width: 160 * Config.uiScale
+        height: childrenRect.height
+        opacity: Config.transitionEnabled ? 1.0 : 0.4
+        SettingsInput {
+          colors: settingsPanel.colors
+          label: "Duration (ms)"
+          value: Config.transitionDurationMs
+          min: 100; max: 10000
+          onCommit: function(v) { Config.saveKey("transition.durationMs", v) }
+        }
+      }
+
+      Text {
+        text: "SHADER"
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
+        color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+        opacity: Config.transitionEnabled ? 1.0 : 0.4
+      }
+
+      ShaderPicker {
+        colors: settingsPanel.colors
+        model: paperContent._shaderOptions
+        value: Config.transitionShader
+        enabled: Config.transitionEnabled
+        onSelected: function(key) { Config.saveKey("transition.shader", key) }
+      }
+    }
+
     Flow {
       id: generalContent
       anchors.left: parent.left
@@ -621,7 +755,7 @@ Item {
           checked: Config.wallpaperMute
           onToggle: function(v) {
             settingsPanel._saveConfigKey("wallpaperMute", v)
-            _muteReloadTimer.restart()
+            DaemonClient.setAudio(v, Config.wallpaperVolume)
           }
         }
 
@@ -634,16 +768,9 @@ Item {
           enabled: !Config.wallpaperMute
           onCommit: function(v) {
             settingsPanel._saveConfigKey("wallpaperVolume", v)
-            _muteReloadTimer.restart()
+            DaemonClient.setAudio(Config.wallpaperMute, v)
           }
         }
-      }
-
-      Timer {
-        id: _muteReloadTimer
-        interval: 500
-        repeat: false
-        onTriggered: DaemonClient.restore()
       }
 
       Column {
@@ -947,6 +1074,141 @@ Item {
           color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.45) : Qt.rgba(1, 1, 1, 0.35)
           wrapMode: Text.WordWrap
           lineHeight: 1.3
+        }
+      }
+    }
+
+    
+    Column {
+      id: sortContent
+      anchors.left: parent.left
+      anchors.right: parent.right
+      visible: settingsPanel.activeTab === "sort"
+      spacing: 8
+
+      Text {
+        text: "SORT MODE"
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
+        color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+      }
+
+      Text {
+        width: parent.width
+        text: "How wallpapers are ordered in the selector. The same option is also available as a quick toggle in the filter bar."
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
+        color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.4)
+        wrapMode: Text.Wrap
+      }
+
+      Item { width: 1; height: 4 }
+
+      Repeater {
+        model: [
+          {
+            mode: "color",
+            label: "DEFAULT",
+            description: "Group by dominant color (red → orange → yellow → … → pink → neutral). Within each color, the most-saturated wallpapers come first."
+          },
+          {
+            mode: "pop",
+            label: "COLOR POP",
+            description: "Sort by how much vivid color the wallpaper actually contains, ignoring which color it is. Saturated, eye-catching wallpapers lead; muted and mostly-neutral ones drop to the back."
+          },
+          {
+            mode: "richness",
+            label: "COLOURFUL",
+            description: "Sort by palette diversity — wallpapers using many distinct colors lead, monochrome scenes fall to the back. Good for finding maximalist artwork and detailed illustrations."
+          },
+          {
+            mode: "minimalist",
+            label: "MINIMALIST",
+            description: "Inverse of richness — fewest colors first. Solid backgrounds, clean gradients, and single-subject compositions surface; busy multi-color images drop to the back."
+          },
+          {
+            mode: "applied",
+            label: "MOST APPLIED",
+            description: "Sorts by how often you've actually set this wallpaper. Your greatest hits lead; never-applied wallpapers fall back to newest-first within them."
+          },
+          {
+            mode: "date",
+            label: "NEWEST",
+            description: "Most recently added wallpapers first. Useful right after dropping new files into your wallpaper directory."
+          }
+        ]
+
+        Rectangle {
+          width: sortContent.width
+          height: _sortRow.implicitHeight + 20
+          radius: 8
+          color: _isActive
+            ? (settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.12) : Qt.rgba(1, 1, 1, 0.08))
+            : (settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.5) : Qt.rgba(0.1, 0.12, 0.18, 0.5))
+          border.width: _isActive ? 2 : 1
+          border.color: _isActive
+            ? (settingsPanel.colors ? settingsPanel.colors.primary : Style.fallbackAccent)
+            : (settingsPanel.colors ? Qt.rgba(settingsPanel.colors.outline.r, settingsPanel.colors.outline.g, settingsPanel.colors.outline.b, 0.25) : Qt.rgba(1, 1, 1, 0.1))
+          Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
+          Behavior on border.color { ColorAnimation { duration: Style.animVeryFast } }
+
+          property bool _isActive: settingsPanel.service && settingsPanel.service.sortMode === modelData.mode
+          property bool _hovered: _sortMouse.containsMouse
+
+          Row {
+            id: _sortRow
+            anchors.left: parent.left; anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 14; anchors.rightMargin: 14
+            spacing: 12
+
+            Rectangle {
+              width: 16; height: 16; radius: 8
+              anchors.verticalCenter: parent.verticalCenter
+              color: parent.parent._isActive
+                ? (settingsPanel.colors ? settingsPanel.colors.primary : Style.fallbackAccent)
+                : "transparent"
+              border.width: 2
+              border.color: settingsPanel.colors ? settingsPanel.colors.primary : Style.fallbackAccent
+              Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
+              Rectangle {
+                anchors.centerIn: parent
+                width: 6; height: 6; radius: 3
+                color: settingsPanel.colors ? settingsPanel.colors.primaryText : "#000"
+                visible: parent.parent.parent._isActive
+              }
+            }
+
+            Column {
+              width: parent.width - 16 - parent.spacing
+              spacing: 4
+              anchors.verticalCenter: parent.verticalCenter
+
+              Text {
+                text: modelData.label
+                font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(12); font.weight: Font.Bold; font.letterSpacing: 1.2
+                color: settingsPanel.colors ? settingsPanel.colors.surfaceText : "#fff"
+              }
+              Text {
+                width: parent.width
+                text: modelData.description
+                font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
+                color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.4)
+                wrapMode: Text.Wrap
+                lineHeight: 1.3
+              }
+            }
+          }
+
+          MouseArea {
+            id: _sortMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+              if (!settingsPanel.service) return
+              settingsPanel.service.sortMode = modelData.mode
+              settingsPanel.service.updateFilteredModel()
+            }
+          }
         }
       }
     }
@@ -1541,6 +1803,49 @@ Item {
             enabled: !DaemonClient.cacheRunning
             onClicked: settingsPanel.service.clearData()
           }
+
+          FilterButton {
+            id: _recomputeColorsBtn
+            colors: settingsPanel.colors
+            label: _recomputeColorsBtn._running ? "RECOMPUTING…" : "RECOMPUTE COLORS"
+            skew: 8
+            height: 28
+            enabled: !_recomputeColorsBtn._running
+            property bool _running: false
+            onClicked: {
+              _recomputeColorsBtn._running = true
+              DaemonClient.recomputeColors(function(_r, _e) {
+                
+                _recomputeColorsResetTimer.restart()
+              })
+            }
+            Timer {
+              id: _recomputeColorsResetTimer
+              interval: 60000
+              onTriggered: _recomputeColorsBtn._running = false
+            }
+            Connections {
+              target: DaemonClient
+              function onEventReceived(event, data) {
+                if (event === "skwd.wall.recompute_colors.complete") {
+                  _recomputeColorsBtn._running = false
+                  _recomputeColorsResetTimer.stop()
+                  
+                  if (settingsPanel.service && settingsPanel.service.refreshFromDb)
+                    settingsPanel.service.refreshFromDb()
+                }
+              }
+            }
+          }
+        }
+
+        Text {
+          width: parent.width
+          visible: true
+          text: "Recompute the per-wallpaper color bucket and saturation from the existing thumbnails using the current algorithm. Useful after the algorithm changes — does not touch tags or favourites."
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
+          color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.5) : Qt.rgba(1, 1, 1, 0.35)
+          wrapMode: Text.Wrap
         }
       }
     }

@@ -154,19 +154,19 @@ QtObject {
   }
 
   readonly property var _hueToWallhavenColor: ({
-    0:  "cc0000",  // red
-    1:  "ff6600",  // orange
-    2:  "ffcc33",  // yellow
-    3:  "77cc33",  // lime
-    4:  "669900",  // green
-    5:  "66cccc",  // teal
-    6:  "0099cc",  // cyan
-    7:  "0066cc",  // sky blue
-    8:  "333399",  // blue
-    9:  "663399",  // indigo
-    10: "993399",  // violet
-    11: "ea4c88",  // pink
-    99: "999999"   // neutral
+    0:  "cc0000",
+    1:  "ff6600",
+    2:  "ffcc33",
+    3:  "77cc33",
+    4:  "669900",
+    5:  "66cccc",
+    6:  "0099cc",
+    7:  "0066cc",
+    8:  "333399",
+    9:  "663399",
+    10: "993399",
+    11: "ea4c88",
+    99: "999999"
   })
 
   function _buildUrl() {

@@ -20,8 +20,9 @@ Requires:       awww
 Requires:       matugen
 Requires:       curl
 Requires:       sqlite
-Requires:       ffmpeg-free
-Requires:       ImageMagick
+Requires:       /usr/bin/ffmpeg
+Requires:       /usr/bin/ffprobe
+Requires:       /usr/bin/magick
 Requires:       inotify-tools
 Requires:       google-roboto-fonts
 Requires:       google-roboto-condensed-fonts

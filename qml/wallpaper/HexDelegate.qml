@@ -12,6 +12,7 @@ Item {
     property var service
     property int hexRadius: 140
     property var itemData
+    property var applyRequest: null
     property bool isSelected: false
     property bool isHovered: hexMouse.containsMouse
     property bool pulledOut: false
@@ -274,7 +275,10 @@ Item {
                 var gp = hexItem.mapToItem(null, hexItem._cx, hexItem._cy)
                 hexItem.flipRequested(hexItem.itemData, gp.x, gp.y, hexItem)
             } else if (mouse.button === Qt.LeftButton && hexItem.itemData) {
-                if (hexItem.itemData.type === "we") {
+                var forcePicker = !!(mouse.modifiers & Qt.ControlModifier)
+                if (hexItem.applyRequest) {
+                    hexItem.applyRequest(hexItem.itemData, forcePicker)
+                } else if (hexItem.itemData.type === "we") {
                     hexItem.service.applyWE(hexItem.itemData.weId)
                 } else if (hexItem.itemData.type === "video") {
                     hexItem.service.applyVideo(hexItem.itemData.path)
