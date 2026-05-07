@@ -22,3 +22,5 @@ packaging/aur/pkg/
 packaging/aur/src/
 packaging/aur/skwd-wall/
 packaging/aur/*.pkg.tar.zst
+CLAUDE.md
+data/scripts/test-transitions.sh
