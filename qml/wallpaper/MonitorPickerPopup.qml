@@ -30,14 +30,21 @@ Rectangle {
 
   function _thumbForEntry(entry) {
     if (!entry || !wallpaperService) return ""
-    var model = wallpaperService.filteredModel
-    if (!model) return ""
     var matchPath = entry.path || ""
     var matchWeId = entry.we_id || ""
-    for (var i = 0; i < model.count; i++) {
-      var row = model.get(i)
+    var data = wallpaperService._wallpaperData || []
+    for (var i = 0; i < data.length; i++) {
+      var row = data[i]
       if (matchWeId && row.weId === matchWeId) return row.thumb || ""
       if (matchPath && row.path === matchPath) return row.thumb || ""
+    }
+    var model = wallpaperService.filteredModel
+    if (model) {
+      for (var j = 0; j < model.count; j++) {
+        var mrow = model.get(j)
+        if (matchWeId && mrow.weId === matchWeId) return mrow.thumb || ""
+        if (matchPath && mrow.path === matchPath) return mrow.thumb || ""
+      }
     }
     return ""
   }

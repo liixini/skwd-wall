@@ -46,6 +46,13 @@ Scope {
     if (item.type === "we") service.applyWE(item.weId, outputs, audioMap, volumeMap)
     else if (item.type === "video") service.applyVideo(item.path, outputs, audioMap, volumeMap)
     else service.applyStatic(item.path, outputs)
+    if (Config.themePickerOnApply) {
+      Qt.callLater(function() { _themePicker.open() })
+    }
+  }
+
+  function openThemePicker() {
+    _themePicker.open()
   }
 
   function resetScroll() {
@@ -486,7 +493,7 @@ Scope {
       }
       onModeToggled: function(mode) {
         Config.saveKey("matugen.mode", mode)
-        DaemonClient.retheme(Config.matugenScheme, mode)
+        DaemonClient.retheme(Config.matugenScheme, mode, Config.matugenColorIndex)
       }
       visible: !wallpaperSelector.anyBrowserOpen
       enabled: wallpaperSelector._filterBarShown
@@ -558,7 +565,8 @@ Scope {
           service: wallpaperSelector.selectorService
           settingsOpen: wallpaperSelector.settingsOpen
           onCloseRequested: { wallpaperSelector.settingsOpen = false; wallpaperSelector._focusActiveList() }
-          onThemeChanged: function(scheme, mode) { DaemonClient.retheme(scheme, mode) }
+          onThemeChanged: function(scheme, mode, colorIndex) { DaemonClient.retheme(scheme, mode, (typeof colorIndex === "number") ? colorIndex : Config.matugenColorIndex) }
+          onOpenThemePicker: wallpaperSelector.openThemePicker()
         }
       }
     }
@@ -1029,17 +1037,8 @@ Scope {
             x: 0
             y: hexListView._yOffset + rowIdx * hexListView._stepY + (hexCol.colIdx % 2 !== 0 ? hexListView._hexH / 2 : 0) + hexCol._arcOffset
 
-            parallaxX: {
-              var viewCenterX = hexListView.width / 2
-              var normalized = (hexCol._colCenter - viewCenterX) / Math.max(1, viewCenterX)
-              return -normalized * hexListView._r * 0.6
-            }
-            parallaxY: {
-              var viewCenterY = hexListView.height / 2
-              var hexCenterY = y + height / 2
-              var normalized = (hexCenterY - viewCenterY) / Math.max(1, viewCenterY)
-              return -normalized * hexListView._r * 0.6
-            }
+            parallaxX: 0
+            parallaxY: 0
 
             scale: hexCol._colScale
             transformOrigin: hexCol._nearLeft ? Item.Left : Item.Right
@@ -2541,6 +2540,19 @@ Scope {
     wallpaperService: service
     onAccepted: function(item, outputs, audioMap, volumeMap) {
       wallpaperSelector._doApply(item, outputs, audioMap, volumeMap)
+    }
+  }
+
+  ThemePickerPopup {
+    id: _themePicker
+    anchors.fill: parent
+    z: 310
+    colors: wallpaperSelector.colors
+    onApplied: function(scheme, mode, colorIndex) {
+      Config.saveKey("matugen.schemeType", scheme)
+      Config.saveKey("matugen.mode", mode)
+      Config.saveKey("matugen.colorIndex", colorIndex)
+      DaemonClient.retheme(scheme, mode, colorIndex)
     }
   }
 

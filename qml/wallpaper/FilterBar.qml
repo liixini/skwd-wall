@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Shapes
 import ".."
 import "../services"
 
@@ -200,6 +201,350 @@ Item {
                     interval: 4000
                     running: _randomWarnPopup.visible
                     onTriggered: _randomWarnPopup.close()
+                }
+            }
+        }
+
+        FilterButton {
+            id: _audioBtn
+            visible: DaemonClient.audioCapableCount > 0 || _audioPopup.visible
+            colors: filterBar.colors
+            icon: !Config.wallpaperMute ? "\u{f057e}" : "\u{f075f}"
+            tooltip: !Config.wallpaperMute
+                ? ("Audio on (" + Config.wallpaperVolume + "%) - click to mute, right-click for slider")
+                : ("Audio muted - click to unmute, right-click for slider")
+            isActive: !Config.wallpaperMute
+            onClicked: {
+                var nextMute = !Config.wallpaperMute
+                Config.saveKey("wallpaperMute", nextMute)
+                DaemonClient.setAudio(nextMute, null, null, function() {
+                    DaemonClient.refreshAudioState()
+                })
+            }
+
+            WheelHandler {
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: function(ev) {
+                    var step = ev.angleDelta.y > 0 ? 5 : -5
+                    var v = Math.max(0, Math.min(100, Config.wallpaperVolume + step))
+                    if (v === Config.wallpaperVolume) return
+                    Config.saveKey("wallpaperVolume", v)
+                    DaemonClient.setAudio(null, v, null)
+                }
+            }
+
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                gesturePolicy: TapHandler.WithinBounds
+                onTapped: _audioPopup.open()
+            }
+
+            Popup {
+                id: _audioPopup
+                parent: _audioBtn
+                x: -((width - _audioBtn.width) / 2)
+                y: _audioBtn.height + 6
+                width: 320
+                padding: 12
+                modal: false
+                focus: false
+                closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
+
+                onAboutToShow: DaemonClient.refreshAudioState()
+
+                property var _volumes: ({})
+
+                function _volFor(group) {
+                    var v = _volumes[group.key]
+                    if (typeof v === "number") return v
+                    if (typeof group.volume === "number") return group.volume
+                    return Config.wallpaperVolume
+                }
+                function _setVolFor(group, v) {
+                    v = Math.round(Math.max(0, Math.min(100, v)))
+                    var m = _volumes
+                    m[group.key] = v
+                    _volumes = m
+                    DaemonClient.setAudio(null, v, group.outputs)
+                }
+                function _toggleMuteFor(group) {
+                    var nextMute = !group.muted
+                    if (nextMute) {
+                        DaemonClient.setAudio(true, null, group.outputs, function() {
+                            DaemonClient.refreshAudioState()
+                        })
+                    } else {
+                        var primary = group.primary || (group.outputs[0] || "")
+                        var others = group.outputs.filter(function(o) { return o !== primary })
+                        if (others.length > 0) {
+                            DaemonClient.setAudio(true, null, others)
+                        }
+                        if (primary) {
+                            DaemonClient.setAudio(false, null, [primary], function() {
+                                DaemonClient.refreshAudioState()
+                            })
+                        }
+                    }
+                }
+
+                background: Rectangle {
+                    color: filterBar.colors
+                        ? Qt.rgba(filterBar.colors.surface.r, filterBar.colors.surface.g, filterBar.colors.surface.b, 0.97)
+                        : Qt.rgba(0.08, 0.08, 0.12, 0.97)
+                    radius: 8
+                    border.width: 1
+                    border.color: filterBar.colors
+                        ? Qt.rgba(filterBar.colors.primary.r, filterBar.colors.primary.g, filterBar.colors.primary.b, 0.4)
+                        : Qt.rgba(1, 1, 1, 0.2)
+                }
+
+                contentItem: Column {
+                    spacing: 10
+
+                    Row {
+                        spacing: 8
+                        width: parent.width
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "\u{f057e}"
+                            font.family: Style.fontFamilyNerdIcons
+                            font.pixelSize: 16 * Config.uiScale
+                            color: filterBar.colors ? filterBar.colors.primary : Style.fallbackAccent
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Wallpaper audio"
+                            font.family: Style.fontFamily
+                            font.pixelSize: 11 * Config.uiScale
+                            font.weight: Font.Bold
+                            font.letterSpacing: 0.5
+                            color: filterBar.colors ? filterBar.colors.surfaceText : "#fff"
+                        }
+                    }
+
+                    Text {
+                        visible: (DaemonClient.audioGroups || []).length === 0
+                        width: parent.width
+                        text: "No audio sources are active right now."
+                        wrapMode: Text.WordWrap
+                        font.family: Style.fontFamily
+                        font.pixelSize: 10 * Config.uiScale
+                        font.italic: true
+                        color: filterBar.colors
+                            ? Qt.rgba(filterBar.colors.surfaceText.r, filterBar.colors.surfaceText.g, filterBar.colors.surfaceText.b, 0.55)
+                            : Qt.rgba(1, 1, 1, 0.45)
+                    }
+
+                    Repeater {
+                        model: DaemonClient.audioGroups || []
+
+                        Item {
+                            id: _audioRow
+                            width: 296
+                            height: 56
+
+                            property var group: modelData
+                            property int volValue: _audioPopup._volFor(modelData)
+                            readonly property real _skew: 6
+
+                            Connections {
+                                target: DaemonClient
+                                function onAudioGroupsChanged() {
+                                    _audioRow.volValue = _audioPopup._volFor(_audioRow.group)
+                                }
+                            }
+
+                            Shape {
+                                anchors.fill: parent
+                                layer.enabled: true
+                                layer.smooth: true
+                                layer.samples: 4
+                                preferredRendererType: Shape.CurveRenderer
+
+                                ShapePath {
+                                    fillColor: filterBar.colors
+                                        ? Qt.rgba(filterBar.colors.surfaceContainer.r, filterBar.colors.surfaceContainer.g, filterBar.colors.surfaceContainer.b, 0.8)
+                                        : Qt.rgba(0.1, 0.12, 0.18, 0.8)
+                                    strokeColor: filterBar.colors
+                                        ? Qt.rgba(filterBar.colors.primary.r, filterBar.colors.primary.g, filterBar.colors.primary.b, 0.18)
+                                        : Qt.rgba(1, 1, 1, 0.08)
+                                    strokeWidth: 1
+                                    startX: _audioRow._skew; startY: 0
+                                    PathLine { x: _audioRow.width;                       y: 0 }
+                                    PathLine { x: _audioRow.width - _audioRow._skew;     y: _audioRow.height }
+                                    PathLine { x: 0;                                     y: _audioRow.height }
+                                    PathLine { x: _audioRow._skew;                       y: 0 }
+                                }
+                            }
+
+                            Row {
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
+                                anchors.topMargin: 6
+                                anchors.bottomMargin: 6
+                                spacing: 8
+
+                                Item {
+                                    id: _muteIconHolder
+                                    width: 24
+                                    height: 24
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: _audioRow.group.muted ? "\u{f075f}" : "\u{f057e}"
+                                        font.family: Style.fontFamilyNerdIcons
+                                        font.pixelSize: 16 * Config.uiScale
+                                        color: _audioRow.group.muted
+                                            ? (filterBar.colors
+                                                ? Qt.rgba(filterBar.colors.surfaceText.r, filterBar.colors.surfaceText.g, filterBar.colors.surfaceText.b, 0.5)
+                                                : Qt.rgba(1, 1, 1, 0.4))
+                                            : (filterBar.colors ? filterBar.colors.primary : Style.fallbackAccent)
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: _audioPopup._toggleMuteFor(_audioRow.group)
+                                    }
+                                }
+
+                                Column {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 4
+                                    width: parent.width - _muteIconHolder.width - _volValTxt.width - parent.spacing * 2
+
+                                    Row {
+                                        width: parent.width
+                                        spacing: 6
+
+                                        Text {
+                                            text: _audioRow.group.name
+                                            elide: Text.ElideMiddle
+                                            width: parent.width - _outsTxt.width - parent.spacing
+                                            font.family: Style.fontFamily
+                                            font.pixelSize: 10 * Config.uiScale
+                                            font.weight: Font.Bold
+                                            font.letterSpacing: 0.3
+                                            color: filterBar.colors ? filterBar.colors.surfaceText : "#fff"
+                                        }
+
+                                        Text {
+                                            id: _outsTxt
+                                            text: (_audioRow.group.outputs || []).length > 1
+                                                ? ("× " + _audioRow.group.outputs.length)
+                                                : ""
+                                            font.family: Style.fontFamilyCode
+                                            font.pixelSize: 9 * Config.uiScale
+                                            color: filterBar.colors
+                                                ? Qt.rgba(filterBar.colors.surfaceText.r, filterBar.colors.surfaceText.g, filterBar.colors.surfaceText.b, 0.5)
+                                                : Qt.rgba(1, 1, 1, 0.4)
+                                        }
+                                    }
+
+                                    Item {
+                                        id: _rowVol
+                                        width: parent.width
+                                        height: 12
+
+                                        readonly property real _ratio: Math.max(0, Math.min(1, _audioRow.volValue / 100))
+                                        readonly property real _vskew: 3
+                                        readonly property real _fillW: Math.round(_rowTrack.width * _ratio)
+
+                                        Item {
+                                            id: _rowTrack
+                                            anchors.fill: parent
+
+                                            Shape {
+                                                anchors.fill: parent
+                                                layer.enabled: true
+                                                layer.smooth: true
+                                                layer.samples: 4
+                                                preferredRendererType: Shape.CurveRenderer
+                                                ShapePath {
+                                                    fillColor: filterBar.colors
+                                                        ? Qt.rgba(filterBar.colors.surfaceVariant.r, filterBar.colors.surfaceVariant.g, filterBar.colors.surfaceVariant.b, 0.55)
+                                                        : Qt.rgba(0.3, 0.3, 0.35, 0.55)
+                                                    strokeColor: filterBar.colors
+                                                        ? Qt.rgba(filterBar.colors.outline.r, filterBar.colors.outline.g, filterBar.colors.outline.b, 0.3)
+                                                        : Qt.rgba(1, 1, 1, 0.1)
+                                                    strokeWidth: 1
+                                                    startX: _rowVol._vskew; startY: 0
+                                                    PathLine { x: _rowTrack.width;                  y: 0 }
+                                                    PathLine { x: _rowTrack.width - _rowVol._vskew; y: _rowTrack.height }
+                                                    PathLine { x: 0;                                y: _rowTrack.height }
+                                                    PathLine { x: _rowVol._vskew;                   y: 0 }
+                                                }
+                                            }
+
+                                            Shape {
+                                                anchors.left: parent.left
+                                                anchors.top: parent.top
+                                                anchors.bottom: parent.bottom
+                                                width: Math.max(_rowVol._vskew * 2 + 1, _rowVol._fillW)
+                                                visible: _rowVol._ratio > 0
+                                                layer.enabled: true
+                                                layer.smooth: true
+                                                layer.samples: 4
+                                                preferredRendererType: Shape.CurveRenderer
+                                                ShapePath {
+                                                    fillColor: _audioRow.group.muted
+                                                        ? (filterBar.colors
+                                                            ? Qt.rgba(filterBar.colors.primary.r, filterBar.colors.primary.g, filterBar.colors.primary.b, 0.35)
+                                                            : Qt.rgba(0.5, 0.6, 0.8, 0.35))
+                                                        : (filterBar.colors ? filterBar.colors.primary : "#7986cb")
+                                                    strokeWidth: 0
+                                                    startX: _rowVol._vskew; startY: 0
+                                                    PathLine { x: parent.width;                       y: 0 }
+                                                    PathLine { x: parent.width - _rowVol._vskew;      y: _rowTrack.height }
+                                                    PathLine { x: 0;                                  y: _rowTrack.height }
+                                                    PathLine { x: _rowVol._vskew;                     y: 0 }
+                                                }
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                preventStealing: true
+                                                function _setFromX(x) {
+                                                    var w = _rowTrack.width
+                                                    if (w <= 0) return
+                                                    var clamped = Math.max(0, Math.min(w, x))
+                                                    var v = Math.round((clamped / w) * 100)
+                                                    _audioRow.volValue = v
+                                                    _audioPopup._setVolFor(_audioRow.group, v)
+                                                }
+                                                onPressed: function(mouse) { mouse.accepted = true; _setFromX(mouse.x) }
+                                                onPositionChanged: function(mouse) { if (pressed) _setFromX(mouse.x) }
+                                                onWheel: function(ev) {
+                                                    ev.accepted = true
+                                                    var step = ev.angleDelta.y > 0 ? 5 : -5
+                                                    var v = Math.max(0, Math.min(100, _audioRow.volValue + step))
+                                                    _audioRow.volValue = v
+                                                    _audioPopup._setVolFor(_audioRow.group, v)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    id: _volValTxt
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 30
+                                    horizontalAlignment: Text.AlignRight
+                                    text: _audioRow.volValue + "%"
+                                    font.family: Style.fontFamilyCode
+                                    font.pixelSize: 9 * Config.uiScale
+                                    color: filterBar.colors
+                                        ? Qt.rgba(filterBar.colors.surfaceText.r, filterBar.colors.surfaceText.g, filterBar.colors.surfaceText.b, 0.6)
+                                        : Qt.rgba(1, 1, 1, 0.5)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

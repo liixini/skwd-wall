@@ -556,7 +556,8 @@ QtObject {
 
   function applyStatic(path, outputs) {
     var neighbors = _collectNeighbors(path)
-    DaemonClient.applyStatic(path, outputs, neighbors)
+    var screens = Quickshell.screens.map(function(s) { return s.name })
+    DaemonClient.applyStatic(path, outputs, neighbors, screens)
     service.wallpaperApplied()
   }
 
@@ -569,7 +570,8 @@ QtObject {
 
   function applyVideo(path, outputs, audioMap, volumeMap) {
     var neighbors = _collectNeighbors(path)
-    DaemonClient.applyVideo(path, outputs, neighbors, audioMap, volumeMap)
+    var screens = Quickshell.screens.map(function(s) { return s.name })
+    DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)
   }
 
   function deleteWallpaperItem(type, name, weId) {

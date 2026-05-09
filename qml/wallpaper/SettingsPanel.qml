@@ -21,7 +21,8 @@ Item {
   property string _lastConvertResult: ""
   property string _lastOptimizeResult: ""
 
-  signal themeChanged(string scheme, string mode)
+  signal themeChanged(string scheme, string mode, var colorIndex)
+  signal openThemePicker()
 
   function _s(v) { return v * Config.uiScale }
 
@@ -659,12 +660,32 @@ Item {
         opacity: Config.transitionEnabled ? 1.0 : 0.4
       }
 
+      SettingsToggle {
+        colors: settingsPanel.colors
+        label: "Random shader per transition"
+        checked: Config.transitionShader === "random"
+        enabled: Config.transitionEnabled
+        onToggle: function(v) {
+          if (v) {
+            if (Config.transitionShader !== "random") {
+              settingsPanel._saveConfigKey("transition.lastShader", Config.transitionShader)
+            }
+            settingsPanel._saveConfigKey("transition.shader", "random")
+          } else {
+            var fallback = (Config._data.transition && Config._data.transition.lastShader) || "morph"
+            if (fallback === "random") fallback = "morph"
+            settingsPanel._saveConfigKey("transition.shader", fallback)
+          }
+        }
+      }
+
       ShaderPicker {
         colors: settingsPanel.colors
-        model: paperContent._shaderOptions
+        model: paperContent._shaderOptions.filter(function(s) { return s.key !== "random" })
         value: Config.transitionShader
-        enabled: Config.transitionEnabled
-        onSelected: function(key) { Config.saveKey("transition.shader", key) }
+        enabled: Config.transitionEnabled && Config.transitionShader !== "random"
+        opacity: (Config.transitionEnabled && Config.transitionShader !== "random") ? 1.0 : 0.4
+        onSelected: function(key) { settingsPanel._saveConfigKey("transition.shader", key) }
       }
     }
 
@@ -2113,7 +2134,46 @@ Item {
           label: ""
           value: Config.matugenMode
           model: ["dark", "light"]
-          onSelect: function(v) { settingsPanel._saveConfigKey("matugen.mode", v); settingsPanel.themeChanged(Config.matugenScheme, v) }
+          onSelect: function(v) { settingsPanel._saveConfigKey("matugen.mode", v); settingsPanel.themeChanged(Config.matugenScheme, v, Config.matugenColorIndex) }
+        }
+
+        Text {
+          text: "SOURCE COLOR INDEX"
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1
+          color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+        }
+
+        SettingsCombo {
+          colors: settingsPanel.colors
+          label: ""
+          value: String(Config.matugenColorIndex)
+          model: ["0", "1", "2", "3"]
+          onSelect: function(v) {
+            var idx = parseInt(v, 10) | 0
+            settingsPanel._saveConfigKey("matugen.colorIndex", idx)
+            settingsPanel.themeChanged(Config.matugenScheme, Config.matugenMode, idx)
+          }
+        }
+
+        Item { width: 1; height: 4 }
+
+        SettingsToggle {
+          colors: settingsPanel.colors
+          label: "Show theme picker after apply"
+          checked: Config.themePickerOnApply
+          onToggle: function(v) { settingsPanel._saveConfigKey("matugen.pickerOnApply", v) }
+        }
+
+        Item { width: 1; height: 2 }
+
+        FilterButton {
+          colors: settingsPanel.colors
+          label: "OPEN THEME PICKER"
+          skew: 8; height: 28
+          hasActiveColor: true
+          isActive: true
+          activeColor: settingsPanel.colors ? settingsPanel.colors.primary : "#7986cb"
+          onClicked: settingsPanel.openThemePicker()
         }
       }
     }

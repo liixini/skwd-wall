@@ -360,36 +360,21 @@ Item {
         }
     }
 
-    Item {
+    Rectangle {
         id: typeBadge
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 8
-        property real skew: 4
         property bool onRight: delegateItem.skewOffset >= 0
-        property real _tl: onRight ? skew : 0
-        property real _tr: onRight ? width : width - skew
-        property real _br: onRight ? width - skew : width
-        property real _bl: onRight ? 0 : skew
-        width: typeBadgeText.implicitWidth + 16 + skew
+        width: typeBadgeText.implicitWidth + 16
         height: 16
+        radius: Math.min(height / 2, delegateItem.animatedCornerRadius * 0.5)
         z: 10
         x: onRight
             ? parent.width - width - delegateItem._skAbs - 8
             : delegateItem._skAbs + 8
-
-        Shape {
-            anchors.fill: parent
-            ShapePath {
-                fillColor: Qt.rgba(0, 0, 0, 0.75)
-                strokeColor: delegateItem.colors ? Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.4) : Qt.rgba(1, 1, 1, 0.2)
-                strokeWidth: 1
-                startX: typeBadge._tl; startY: 0
-                PathLine { x: typeBadge._tr; y: 0 }
-                PathLine { x: typeBadge._br; y: typeBadge.height }
-                PathLine { x: typeBadge._bl; y: typeBadge.height }
-                PathLine { x: typeBadge._tl; y: 0 }
-            }
-        }
+        color: Qt.rgba(0, 0, 0, 0.75)
+        border.width: 1
+        border.color: delegateItem.colors ? Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.4) : Qt.rgba(1, 1, 1, 0.2)
 
         Text {
             id: typeBadgeText
@@ -583,6 +568,7 @@ Item {
                         border.width: 1
                         border.color: addTagField.activeFocus
                             ? (delegateItem.colors ? Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.5) : Qt.rgba(1, 1, 1, 0.3))
+                            : "transparent"
                     }
 
                     TextInput {

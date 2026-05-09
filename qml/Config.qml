@@ -139,6 +139,8 @@ QtObject {
     readonly property string externalMatugenCommand: _data.externalMatugenCommand ?? "matugen -c %config% image %path%"
     readonly property string matugenScheme: (_data.matugen && _data.matugen.schemeType) ? _data.matugen.schemeType : "scheme-fidelity"
     readonly property string matugenMode: (_data.matugen && _data.matugen.mode) ? _data.matugen.mode : "dark"
+    readonly property int matugenColorIndex: (_data.matugen && typeof _data.matugen.colorIndex === "number") ? Math.max(0, Math.min(3, _data.matugen.colorIndex | 0)) : 0
+    readonly property bool themePickerOnApply: (_data.matugen && _data.matugen.pickerOnApply === true) ? true : false
 
     readonly property var integrations: _data.integrations ?? []
     onIntegrationsChanged: _generateMatugenConfig()
