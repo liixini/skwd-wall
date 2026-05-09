@@ -153,36 +153,33 @@ either use `yay -S skwd-wall --devel` or `yay -S skwd-wall skwd-daemon`
 <Details>
 <Summary>NixOS</Summary>
 
-Two additions to your existing flake — no new `nixosConfigurations` block needed.
+Three lines into your existing flake. No new `nixosConfigurations`, no hostname plumbing.
 
-**1. In your `flake.nix`**, add the input and pass the module into your existing system's `modules` list:
-
-```nix
-{
-  inputs.skwd-wall.url = "github:liixini/skwd-wall";
-  #               ^ add this
-
-  outputs = { self, nixpkgs, skwd-wall, ... }: {
-    #                        ^ and add this
-    nixosConfigurations.<your existing host> = nixpkgs.lib.nixosSystem {
-      modules = [
-        ./configuration.nix
-        skwd-wall.nixosModules.default     # <-- and this line
-      ];
-    };
-  };
-}
-```
-
-**2. In `configuration.nix`** (or wherever you keep program config):
+**1.** In your `flake.nix`, add the flake input:
 
 ```nix
-{ ... }: {
-  programs.skwd-wall.enable = true;
-}
+inputs.skwd-wall.url = "github:liixini/skwd-wall";
 ```
 
-Rebuild and start the daemon:
+…destructure it from `outputs`:
+
+```nix
+outputs = { self, nixpkgs, skwd-wall, ... }: { ... };
+```
+
+…and add the module to your existing system's `modules` list (wherever you already have `./configuration.nix`):
+
+```nix
+skwd-wall.nixosModules.default
+```
+
+**2.** In `configuration.nix`:
+
+```nix
+programs.skwd-wall.enable = true;
+```
+
+**3.** Rebuild and start the daemon:
 
 ```sh
 sudo nixos-rebuild switch
