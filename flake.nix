@@ -102,5 +102,19 @@
             };
           };
         });
+
+      nixosModules.default = { config, lib, pkgs, ... }:
+        let
+          cfg = config.programs.skwd-wall;
+          skwd = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        in {
+          options.programs.skwd-wall.enable =
+            lib.mkEnableOption "Skwd-wall (wallpaper selector + skwd-daemon user service)";
+
+          config = lib.mkIf cfg.enable {
+            environment.systemPackages = [ skwd ];
+            systemd.packages = [ skwd ];
+          };
+        };
     };
 }

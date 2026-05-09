@@ -153,44 +153,47 @@ either use `yay -S skwd-wall --devel` or `yay -S skwd-wall skwd-daemon`
 <Details>
 <Summary>NixOS</Summary>
 
-Add the flake input to your `flake.nix`:
+In your `flake.nix`:
 
 ```nix
 {
-  inputs = {
-    skwd-wall.url = "github:liixini/skwd-wall";
+  inputs.skwd-wall.url = "github:liixini/skwd-wall";
+
+  outputs = { self, nixpkgs, skwd-wall, ... }: {
+    nixosConfigurations.<your-hostname> = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./configuration.nix
+        skwd-wall.nixosModules.default
+      ];
+    };
   };
 }
 ```
 
-Then add the package to your `configuration.nix`:
+Then in `configuration.nix`:
 
 ```nix
-{ pkgs, inputs, ... }:
-{
-  environment.systemPackages = [
-    inputs.skwd-wall.packages.${pkgs.stdenv.hostPlatform.system}.default
-  ];
+{ ... }: {
+  programs.skwd-wall.enable = true;
 }
 ```
 
-```sh
-# Rebuild:
-sudo nixos-rebuild switch
+Rebuild and start the daemon:
 
-# Enable Skwd-daemon
+```sh
+sudo nixos-rebuild switch
+systemctl --user daemon-reload
 systemctl --user enable --now skwd-daemon.service
 
-# Note that on some setups you will need to execute skwd-daemon on startup
-# Here are some examples:
-
+# Or auto-start it from your compositor:
 #   # Niri (~/.config/niri/config.kdl)
 #   spawn-at-startup "skwd-daemon"
 #
 #   # Hyprland (~/.config/hypr/hyprland.conf)
 #   exec-once = skwd-daemon
 
-# Launch Skwd-wall. Bind this command to a key in your compositor for quick access:
+# Launch the picker (bind to a key in your compositor for quick access):
 skwd wall toggle
 ```
 
