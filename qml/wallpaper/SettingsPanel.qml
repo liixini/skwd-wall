@@ -107,41 +107,18 @@ Item {
     }
   }
 
-  FileView {
-    id: _selectorConfigFile
-    path: Config.configDir + "/config.json"
-    preload: true
-  }
-
-  function _readConfig() {
-    _selectorConfigFile.reload()
-    try { return JSON.parse(_selectorConfigFile.text()) } catch(e) { return {} }
-  }
-
   function _cloneIntegrations() {
     return Config.integrations.map(function(e) { return JSON.parse(JSON.stringify(e)) })
   }
 
   function _saveField(key, value) {
-    var data = _readConfig()
-    if (!data.components) data.components = {}
-    if (typeof data.components.wallpaperSelector !== "object" || data.components.wallpaperSelector === null)
-      data.components.wallpaperSelector = { enabled: true }
-    data.components.wallpaperSelector[key] = value
-    _selectorConfigFile.setText(JSON.stringify(data, null, 2) + "\n")
+    if (!Config._data.components || typeof Config._data.components.wallpaperSelector !== "object" || Config._data.components.wallpaperSelector === null)
+      Config.saveKey("components.wallpaperSelector.enabled", true)
+    Config.saveKey("components.wallpaperSelector." + key, value)
   }
 
   function _saveConfigKey(path, value) {
-    var data = _readConfig()
-    var parts = path.split(".")
-    var obj = data
-    for (var i = 0; i < parts.length - 1; i++) {
-      if (typeof obj[parts[i]] !== "object" || obj[parts[i]] === null)
-        obj[parts[i]] = {}
-      obj = obj[parts[i]]
-    }
-    obj[parts[parts.length - 1]] = value
-    _selectorConfigFile.setText(JSON.stringify(data, null, 2) + "\n")
+    Config.saveKey(path, value)
   }
 
   function _showWarning(title, message) {
@@ -151,26 +128,15 @@ Item {
   }
 
   function _applyPreset(expanded, sliceH, sliceW, visible, gap, skew) {
-    var data = _readConfig()
-    if (!data.components) data.components = {}
-    if (typeof data.components.wallpaperSelector !== "object" || data.components.wallpaperSelector === null)
-      data.components.wallpaperSelector = { enabled: true }
-    data.components.wallpaperSelector.expandedWidth = expanded
-    data.components.wallpaperSelector.sliceHeight = sliceH
-    data.components.wallpaperSelector.sliceWidth = sliceW
-    data.components.wallpaperSelector.visibleCount = visible
-    data.components.wallpaperSelector.sliceSpacing = gap
-    data.components.wallpaperSelector.skewOffset = skew
-    _selectorConfigFile.setText(JSON.stringify(data, null, 2) + "\n")
+    Config.saveKey("components.wallpaperSelector.expandedWidth", expanded)
+    Config.saveKey("components.wallpaperSelector.sliceHeight", sliceH)
+    Config.saveKey("components.wallpaperSelector.sliceWidth", sliceW)
+    Config.saveKey("components.wallpaperSelector.visibleCount", visible)
+    Config.saveKey("components.wallpaperSelector.sliceSpacing", gap)
+    Config.saveKey("components.wallpaperSelector.skewOffset", skew)
   }
 
   function _saveCustomPreset(slot) {
-    var data = _readConfig()
-    if (!data.components) data.components = {}
-    if (typeof data.components.wallpaperSelector !== "object" || data.components.wallpaperSelector === null)
-      data.components.wallpaperSelector = { enabled: true }
-    if (!data.components.wallpaperSelector.customPresets)
-      data.components.wallpaperSelector.customPresets = {}
     var key = slot + "_" + Config.displayMode
     var preset = {}
     if (Config.displayMode === "slices") {
@@ -199,8 +165,7 @@ Item {
         gridThumbHeight: Config.gridThumbHeight
       }
     }
-    data.components.wallpaperSelector.customPresets[key] = preset
-    _selectorConfigFile.setText(JSON.stringify(data, null, 2) + "\n")
+    Config.saveKey("components.wallpaperSelector.customPresets." + key, preset)
   }
 
   function _loadCustomPreset(slot) {
@@ -2170,9 +2135,6 @@ Item {
           colors: settingsPanel.colors
           label: "OPEN THEME PICKER"
           skew: 8; height: 28
-          hasActiveColor: true
-          isActive: true
-          activeColor: settingsPanel.colors ? settingsPanel.colors.primary : "#7986cb"
           onClicked: settingsPanel.openThemePicker()
         }
       }

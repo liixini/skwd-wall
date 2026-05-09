@@ -35,9 +35,9 @@ QtObject {
     }
 
     function saveKey(path, value) {
-        _configWriter.reload()
+        var src = _data && typeof _data === "object" ? _data : {}
         var data
-        try { data = JSON.parse(_configWriter.text()) } catch(e) { data = {} }
+        try { data = JSON.parse(JSON.stringify(src)) } catch(e) { data = {} }
         var parts = path.split(".")
         var obj = data
         for (var i = 0; i < parts.length - 1; i++) {
@@ -46,6 +46,8 @@ QtObject {
             obj = obj[parts[i]]
         }
         obj[parts[parts.length - 1]] = value
+        config._data = data
+        config.configLoaded = true
         _configWriter.setText(JSON.stringify(data, null, 2) + "\n")
     }
 
