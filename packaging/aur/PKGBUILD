@@ -12,10 +12,10 @@ depends=(
   'qt6-multimedia'
   'qt6-declarative'
   'qt6-imageformats'
-  'awww'
-  'mpvpaper'
   'matugen'
-  'jq'
+  'curl'
+  'file'
+  'inotify-tools'
   'ttf-nerd-fonts-symbols'
   'ttf-roboto'
 )

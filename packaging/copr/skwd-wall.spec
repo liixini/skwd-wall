@@ -16,21 +16,14 @@ Requires:       quickshell
 Requires:       qt6-qtmultimedia
 Requires:       qt6-qtdeclarative
 Requires:       qt6-qtimageformats
-Requires:       awww
 Requires:       matugen
 Requires:       curl
-Requires:       sqlite
-Requires:       /usr/bin/ffmpeg
-Requires:       /usr/bin/ffprobe
-Requires:       /usr/bin/magick
+Requires:       file
 Requires:       inotify-tools
 Requires:       google-roboto-fonts
 Requires:       google-roboto-condensed-fonts
 Requires:       google-roboto-mono-fonts
 Requires:       skwd-fonts
-
-Requires:       mpvpaper
-Requires:       jq
 
 Recommends:     ollama
 

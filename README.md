@@ -76,17 +76,13 @@ As Skwd-wall isn't simply flipping between hidden and shown fast startup times i
 |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
 | [quickshell](https://github.com/quickshell-mirror/quickshell)                                                                                                                              | It is written with Quickshell... so um yeah                                                                          |
 | [Qt6 Multimedia](https://doc.qt.io/qt-6/qtmultimedia-index.html)                                                                                                                           | Powers the video previews                                                                                            |
-| [awww](https://codeberg.org/LGFae/awww)                                                                                                                                                    | Wallpaper software for images with cool effects when applying the wallpaper                                          |
 | [matugen](https://github.com/InioX/matugen)                                                                                                                                                | Automatic colour extraction from the wallpapers                                                                      |
-| [ffmpeg](https://ffmpeg.org)                                                                                                                                                               | Used to generate thumbnails from videos to have something to run Matugen on                                          |
+| [ffmpeg](https://ffmpeg.org)                                                                                                                                                               | Used by skwd-daemon for video thumbnails and the optional video transcoder                                           |
 | [ImageMagick](https://imagemagick.org)                                                                                                                                                     | Gives us the dominant colour and saturation for colour sorting                                                       |
 | [curl](https://curl.se)                                                                                                                                                                    | Qt has a built in web request function but curl just works better                                                    |
-| [sqlite3](https://sqlite.org)                                                                                                                                                              | We cache all our data in the database for lookups. JSON doesn't really like when you have 8 MB worth of data in a JSON file |
 | [inotify-tools](https://github.com/inotify-tools/inotify-tools)                                                                                                                            | Used to see if there's changes in the wallpaper directories to trigger add or delete functionality                   |
 | [Nerd Fonts Symbols](https://www.nerdfonts.com)                                                                                                                                            | UI icons, as they're symbols we can colour them any way we like which is good when Matugen does the colouring        |
-| [Roboto](https://fonts.google.com/specimen/Roboto) + [Roboto Condensed](https://fonts.google.com/specimen/Roboto+Condensed) + [Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono) | The main fonts used in Skwd                                                                                          | | And this too                                                                                                         |
-| [mpvpaper](https://github.com/GhostNaN/mpvpaper)                                                                                                                                           | Video wallpaper backend                                                                                              |
-| [jq](https://jqlang.github.io/jq/)                                                                                                                                                         | JSON processing for various internal operations                                                                      |
+| [Roboto](https://fonts.google.com/specimen/Roboto) + [Roboto Condensed](https://fonts.google.com/specimen/Roboto+Condensed) + [Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono) | The main fonts used in Skwd                                                                                          |
 | [Material Design Icons](https://pictogrammers.com/library/mdi/)                                                                                                                            | Not all symbols are in nerd fonts symbols, so this supplements that                                                  |
 
 ### Optional
@@ -208,7 +204,6 @@ skwd wall toggle
 ```sh
 # Enable the COPR repos
 sudo dnf copr enable errornointernet/quickshell
-sudo dnf copr enable scottames/awww
 sudo dnf copr enable piixini/skwd
 
 # Install skwd-wall:
@@ -249,7 +244,7 @@ I am sure there's a much more graceful way to solve this, but I am not a Hyprlan
 ### KDE Plasma
 <Details>
 <Summary>KDE Plasma fixes and tweaks</Summary>
-Skwd-wall auto-detects KDE Plasma and uses native Plasma APIs instead of awww/mpvpaper.
+Skwd-wall auto-detects KDE Plasma and uses Plasma's native wallpaper APIs instead of Skwd-paper.
 
 **Static wallpapers** work out of the box via `plasma-apply-wallpaperimage` - you don't have to do anything, it just works but still good to know.
 

@@ -108,8 +108,14 @@
             "output": "~/.config/zen/PROFILE_DIR/chrome/userChrome.css"
         },
         {
-            "name": "omp",
-            "reload": "~/.config/skwd-wall/scripts/reload-omp.sh"
+            "name": "omp-env",
+            "template": "omp-env.sh",
+            "output": "colors.env"
+        },
+        {
+            "name": "omp-theme",
+            "template": "omp.json",
+            "output": "~/.config/skwd/ext/omp/skwd.omp.json"
         }
     ],
     "components": {

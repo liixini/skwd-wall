@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "version": 3,
+  "final_space": true,
+  {% raw %}"console_title_template": "{{ .Shell }} in {{ .Folder }}",{% endraw %}
+  "palette": {
+    "primary": "{{colors.primary.default.hex}}",
+    "on-primary": "{{colors.on_primary.default.hex}}",
+    "primary-container": "{{colors.primary_container.default.hex}}",
+    "on-primary-container": "{{colors.on_primary_container.default.hex}}",
+    "tertiary": "{{colors.tertiary.default.hex}}",
+    "on-tertiary": "{{colors.on_tertiary.default.hex}}",
+    "tertiary-container": "{{colors.tertiary_container.default.hex}}",
+    "on-tertiary-container": "{{colors.on_tertiary_container.default.hex}}",
+    "surface": "{{colors.surface.default.hex}}",
+    "surface-variant": "{{colors.surface_variant.default.hex}}",
+    "on-surface-variant": "{{colors.on_surface_variant.default.hex}}",
+    "error": "{{colors.error.default.hex}}",
+    "on-error": "{{colors.on_error.default.hex}}",
+    "outline": "{{colors.outline.default.hex}}"
+  },
+  "blocks": [
+    {
+      "type": "prompt", "alignment": "left",
+      "segments": [
+        {% raw %}{"type":"time","style":"powerline","powerline_symbol":"","foreground":"p:on-primary","background":"p:primary","template":" {{ .CurrentDate | date \"15:04\" }} "},
+        {"type":"path","style":"powerline","powerline_symbol":"","foreground":"p:on-tertiary","background":"p:tertiary","template":"  {{ .Path }} ","properties":{"style":"agnoster_short","max_depth":3}},
+        {"type":"git","style":"powerline","powerline_symbol":"","foreground":"p:on-primary","background":"p:primary","template":"  {{ .HEAD }}{{ if .Working.Changed }}  {{ .Working.String }}{{ end }}{{ if .Staging.Changed }}  {{ .Staging.String }}{{ end }} ","properties":{"branch_icon":"","fetch_status":true,"fetch_stash_count":true}},
+        {"type":"status","style":"powerline","powerline_symbol":"","foreground":"p:on-error","background":"p:error","template":"  {{ .Code }} "}{% endraw %}
+      ]
+    },
+    {
+      "type": "prompt", "alignment": "right", "overflow": "hide",
+      "segments": [
+        {% raw %}{"type":"executiontime","style":"powerline","powerline_symbol":"","invert_powerline":true,"foreground":"p:on-surface-variant","background":"p:surface-variant","template":"  {{ .FormattedMs }} ","properties":{"threshold":2000,"style":"roundrock"}}{% endraw %}
+      ]
+    },
+    {
+      "type": "prompt", "alignment": "left", "newline": true,
+      "segments": [
+        {"type":"text","style":"plain","foreground":"p:primary","template":"❯ "}
+      ]
+    }
+  ]
+}

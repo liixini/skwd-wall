@@ -4,11 +4,10 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     quickshell.url = "github:quickshell-mirror/quickshell";
-    awww.url = "git+https://codeberg.org/LGFae/awww";
     skwd-daemon.url = "github:liixini/skwd-daemon";
   };
 
-  outputs = { self, nixpkgs, quickshell, awww, skwd-daemon, ... }:
+  outputs = { self, nixpkgs, quickshell, skwd-daemon, ... }:
     let
       forEachSystem = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" ];
     in {
@@ -33,12 +32,8 @@
             ffmpeg
             imagemagick
             inotify-tools
-            sqlite
             curl
             file
-            mpvpaper
-            jq
-            awww.packages.${system}.awww
           ];
 
           daemonDeps = runtimeDeps ++ [ quickshellWithModules ];
