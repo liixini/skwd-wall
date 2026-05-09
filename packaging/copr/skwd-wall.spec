@@ -25,7 +25,7 @@ Requires:       google-roboto-condensed-fonts
 Requires:       google-roboto-mono-fonts
 Requires:       skwd-fonts
 
-Recommends:     ollama
+Suggests:       ollama
 
 %description
 A Quickshell-based image, video, and Wallpaper Engine wallpaper selector with
