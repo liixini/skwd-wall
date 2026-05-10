@@ -1,7 +1,7 @@
 # Skwd-wall
 
 > [!CAUTION]
-> Skwd-wall now uses my own Skwd-paper wallpaper software. It has been flawless in testing, but please report if something isn't working as expected.
+> Skwd-wall now uses my own Skwd-paper wallpaper software for image and video wallpapers. It has been flawless in testing, but please report if something isn't working as expected.
 
 ![Stars](https://img.shields.io/github/stars/liixini/skwd-wall?style=for-the-badge)
 ![License](https://img.shields.io/github/license/liixini/skwd-wall?style=for-the-badge)
