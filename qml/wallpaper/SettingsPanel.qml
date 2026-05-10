@@ -818,44 +818,6 @@ Item {
           onToggle: function(v) { settingsPanel._saveConfigKey("restoreOnStartup", v) }
         }
 
-        Text {
-          text: "BUILT-IN NOTIFICATIONS"
-          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Bold; font.letterSpacing: 1.2
-          color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.tertiary.r, settingsPanel.colors.tertiary.g, settingsPanel.colors.tertiary.b, 0.8) : Qt.rgba(1, 1, 1, 0.4)
-          topPadding: 6
-        }
-
-        Row {
-          width: parent.width; spacing: -4
-          Repeater {
-            model: [
-              { key: "auto",   label: "Auto" },
-              { key: "always", label: "Always" },
-              { key: "never",  label: "Never" }
-            ]
-            FilterButton {
-              colors: settingsPanel.colors
-              label: modelData.label
-              skew: 8 * Config.uiScale; height: 24 * Config.uiScale
-              isActive: Config.notificationsBuiltIn === modelData.key
-              tooltip: {
-                if (modelData.key === "auto") return "Run skwd's notification daemon only if no other one is active"
-                if (modelData.key === "always") return "Always run skwd's notification daemon (may conflict with mako/dunst/etc.)"
-                return "Never run skwd's notification daemon (use your own)"
-              }
-              onClicked: settingsPanel._saveConfigKey("notifications.builtIn", modelData.key)
-            }
-          }
-        }
-
-        Text {
-          width: parent.width
-          text: "Restart daemon to apply"
-          wrapMode: Text.WordWrap
-          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(9); font.italic: true
-          color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.outline.r, settingsPanel.colors.outline.g, settingsPanel.colors.outline.b, 0.7) : Qt.rgba(1, 1, 1, 0.3)
-        }
-
         SettingsTextInput {
           colors: settingsPanel.colors
           label: "UI scale (1.0–2.0)"
