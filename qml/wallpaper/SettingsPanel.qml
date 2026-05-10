@@ -561,6 +561,279 @@ Item {
         { key: "tile",    label: "Tile",    desc: "Repeat the image to cover the screen at native size." }
       ]
 
+      readonly property var _engineOptions: [
+        { key: "skwd-paper", label: "Skwd-paper" },
+        { key: "awww",       label: "awww" }
+      ]
+
+      readonly property var _awwwTypeOptions: [
+        { key: "none",   label: "None" },
+        { key: "simple", label: "Simple" },
+        { key: "fade",   label: "Fade" },
+        { key: "wipe",   label: "Wipe" },
+        { key: "wave",   label: "Wave" },
+        { key: "grow",   label: "Grow" },
+        { key: "center", label: "Center" },
+        { key: "outer",  label: "Outer" },
+        { key: "left",   label: "Left" },
+        { key: "right",  label: "Right" },
+        { key: "top",    label: "Top" },
+        { key: "bottom", label: "Bottom" },
+        { key: "any",    label: "Any" },
+        { key: "random", label: "Random" }
+      ]
+
+      readonly property var _awwwFilterOptions: [
+        { key: "Nearest",    label: "Nearest" },
+        { key: "Bilinear",   label: "Bilinear" },
+        { key: "CatmullRom", label: "CatmullRom" },
+        { key: "Mitchell",   label: "Mitchell" },
+        { key: "Lanczos3",   label: "Lanczos3" }
+      ]
+
+      Text {
+        text: "WALLPAPER PROGRAM"
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
+        color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+      }
+
+      Text {
+        width: parent.width
+        text: "Which program puts pixels on the screen for static images. Skwd-paper is the built-in path with our own shader transitions; awww is the external Wayland wallpaper daemon with its own transition catalog. Video and Wallpaper Engine wallpapers always use the built-in path."
+        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11)
+        color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceText.r, settingsPanel.colors.surfaceText.g, settingsPanel.colors.surfaceText.b, 0.6) : Qt.rgba(1, 1, 1, 0.4)
+        wrapMode: Text.Wrap
+      }
+
+      Flow {
+        width: parent.width
+        spacing: 8
+
+        Repeater {
+          model: paperContent._engineOptions
+          delegate: FilterButton {
+            colors: settingsPanel.colors
+            label: modelData.label
+            isActive: Config.wallpaperEngine === modelData.key
+            onClicked: Config.saveKey("paper.engine", modelData.key)
+          }
+        }
+      }
+
+      Item { width: 1; height: 8 }
+
+      Column {
+        visible: Config.wallpaperEngine === "awww"
+        width: parent.width
+        spacing: 12
+
+        Text {
+          text: "AWWW TRANSITION"
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
+          color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+        }
+
+        Flow {
+          width: parent.width
+          spacing: 8
+
+          Repeater {
+            model: paperContent._awwwTypeOptions
+            delegate: FilterButton {
+              colors: settingsPanel.colors
+              label: modelData.label
+              isActive: Config.awwwTransitionType === modelData.key
+              onClicked: Config.saveKey("paper.awww.transitionType", modelData.key)
+            }
+          }
+        }
+
+        Row {
+          spacing: 16
+
+          Item {
+            width: 160 * Config.uiScale
+            height: childrenRect.height
+            SettingsInput {
+              colors: settingsPanel.colors
+              label: "Duration (ms)"
+              value: Config.awwwTransitionDurationMs
+              min: 100; max: 10000
+              onCommit: function(v) { Config.saveKey("paper.awww.transitionDurationMs", v) }
+            }
+          }
+
+          Item {
+            width: 160 * Config.uiScale
+            height: childrenRect.height
+            SettingsInput {
+              colors: settingsPanel.colors
+              label: "FPS"
+              value: Config.awwwTransitionFps
+              min: 15; max: 240
+              onCommit: function(v) { Config.saveKey("paper.awww.transitionFps", v) }
+            }
+          }
+
+          Item {
+            width: 160 * Config.uiScale
+            height: childrenRect.height
+            SettingsInput {
+              colors: settingsPanel.colors
+              label: "Step (1-255)"
+              value: Config.awwwTransitionStep
+              min: 1; max: 255
+              onCommit: function(v) { Config.saveKey("paper.awww.transitionStep", v) }
+            }
+          }
+        }
+
+        Row {
+          spacing: 16
+          visible: Config.awwwTransitionType === "wipe" || Config.awwwTransitionType === "wave"
+
+          Item {
+            width: 160 * Config.uiScale
+            height: childrenRect.height
+            SettingsInput {
+              colors: settingsPanel.colors
+              label: "Angle (deg)"
+              value: Config.awwwTransitionAngle
+              min: 0; max: 360
+              onCommit: function(v) { Config.saveKey("paper.awww.transitionAngle", v) }
+            }
+          }
+        }
+
+        Row {
+          spacing: 16
+          visible: Config.awwwTransitionType === "wave"
+
+          Item {
+            width: 160 * Config.uiScale
+            height: childrenRect.height
+            SettingsInput {
+              colors: settingsPanel.colors
+              label: "Wave width"
+              value: Config.awwwTransitionWaveWidth
+              min: 1; max: 500
+              onCommit: function(v) { Config.saveKey("paper.awww.transitionWaveWidth", v) }
+            }
+          }
+          Item {
+            width: 160 * Config.uiScale
+            height: childrenRect.height
+            SettingsInput {
+              colors: settingsPanel.colors
+              label: "Wave height"
+              value: Config.awwwTransitionWaveHeight
+              min: 1; max: 500
+              onCommit: function(v) { Config.saveKey("paper.awww.transitionWaveHeight", v) }
+            }
+          }
+        }
+
+        Column {
+          width: parent.width
+          spacing: 8
+          visible: Config.awwwTransitionType === "grow" || Config.awwwTransitionType === "outer"
+
+          Text {
+            text: "Position (e.g. center, top-left, 0.5,0.5, 200,400)"
+            font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Medium
+            color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+          }
+          Rectangle {
+            width: 320 * Config.uiScale
+            height: 26 * Config.uiScale
+            radius: 4
+            color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.15, 0.15, 0.2, 0.6)
+            border.width: posInput.activeFocus ? 1 : 0
+            border.color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.5) : Qt.rgba(1, 1, 1, 0.3)
+
+            TextInput {
+              id: posInput
+              anchors.fill: parent
+              anchors.leftMargin: 8 * Config.uiScale
+              anchors.rightMargin: 8 * Config.uiScale
+              verticalAlignment: TextInput.AlignVCenter
+              font.family: Style.fontFamilyCode
+              font.pixelSize: 11 * Config.uiScale
+              color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"
+              clip: true
+              selectByMouse: true
+              text: Config.awwwTransitionPos
+              onEditingFinished: Config.saveKey("paper.awww.transitionPos", text)
+            }
+          }
+          SettingsToggle {
+            colors: settingsPanel.colors
+            label: "Invert Y"
+            checked: Config.awwwInvertY
+            onToggle: function(v) { Config.saveKey("paper.awww.invertY", v) }
+          }
+        }
+
+        Column {
+          width: parent.width
+          spacing: 8
+          visible: Config.awwwTransitionType === "fade"
+
+          Text {
+            text: "Bezier (x1,y1,x2,y2)"
+            font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(11); font.weight: Font.Medium
+            color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+          }
+          Rectangle {
+            width: 320 * Config.uiScale
+            height: 26 * Config.uiScale
+            radius: 4
+            color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.surfaceContainer.r, settingsPanel.colors.surfaceContainer.g, settingsPanel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.15, 0.15, 0.2, 0.6)
+            border.width: bezInput.activeFocus ? 1 : 0
+            border.color: settingsPanel.colors ? Qt.rgba(settingsPanel.colors.primary.r, settingsPanel.colors.primary.g, settingsPanel.colors.primary.b, 0.5) : Qt.rgba(1, 1, 1, 0.3)
+
+            TextInput {
+              id: bezInput
+              anchors.fill: parent
+              anchors.leftMargin: 8 * Config.uiScale
+              anchors.rightMargin: 8 * Config.uiScale
+              verticalAlignment: TextInput.AlignVCenter
+              font.family: Style.fontFamilyCode
+              font.pixelSize: 11 * Config.uiScale
+              color: settingsPanel.colors ? settingsPanel.colors.tertiary : "#8bceff"
+              clip: true
+              selectByMouse: true
+              text: Config.awwwTransitionBezier
+              onEditingFinished: Config.saveKey("paper.awww.transitionBezier", text)
+            }
+          }
+        }
+
+        Item { width: 1; height: 4 }
+
+        Text {
+          text: "FILTER"
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
+          color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+        }
+        Flow {
+          width: parent.width
+          spacing: 8
+
+          Repeater {
+            model: paperContent._awwwFilterOptions
+            delegate: FilterButton {
+              colors: settingsPanel.colors
+              label: modelData.label
+              isActive: Config.awwwFilter === modelData.key
+              onClicked: Config.saveKey("paper.awww.filter", modelData.key)
+            }
+          }
+        }
+
+        Item { width: 1; height: 8 }
+      }
+
       Text {
         text: "DISPLAY"
         font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
@@ -592,65 +865,71 @@ Item {
 
       Item { width: 1; height: 8 }
 
-      Text {
-        text: "TRANSITIONS"
-        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
-        color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
-      }
+      Column {
+        visible: Config.wallpaperEngine === "skwd-paper"
+        width: parent.width
+        spacing: 12
 
-      SettingsToggle {
-        colors: settingsPanel.colors
-        label: "Enable transitions"
-        checked: Config.transitionEnabled
-        onToggle: function(v) { Config.saveKey("transition.enabled", v) }
-      }
-
-      Item {
-        width: 160 * Config.uiScale
-        height: childrenRect.height
-        opacity: Config.transitionEnabled ? 1.0 : 0.4
-        SettingsInput {
-          colors: settingsPanel.colors
-          label: "Duration (ms)"
-          value: Config.transitionDurationMs
-          min: 100; max: 10000
-          onCommit: function(v) { Config.saveKey("transition.durationMs", v) }
+        Text {
+          text: "TRANSITIONS"
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
+          color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
         }
-      }
 
-      Text {
-        text: "SHADER"
-        font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
-        color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
-        opacity: Config.transitionEnabled ? 1.0 : 0.4
-      }
+        SettingsToggle {
+          colors: settingsPanel.colors
+          label: "Enable transitions"
+          checked: Config.transitionEnabled
+          onToggle: function(v) { Config.saveKey("transition.enabled", v) }
+        }
 
-      SettingsToggle {
-        colors: settingsPanel.colors
-        label: "Random shader per transition"
-        checked: Config.transitionShader === "random"
-        enabled: Config.transitionEnabled
-        onToggle: function(v) {
-          if (v) {
-            if (Config.transitionShader !== "random") {
-              settingsPanel._saveConfigKey("transition.lastShader", Config.transitionShader)
-            }
-            settingsPanel._saveConfigKey("transition.shader", "random")
-          } else {
-            var fallback = (Config._data.transition && Config._data.transition.lastShader) || "morph"
-            if (fallback === "random") fallback = "morph"
-            settingsPanel._saveConfigKey("transition.shader", fallback)
+        Item {
+          width: 160 * Config.uiScale
+          height: childrenRect.height
+          opacity: Config.transitionEnabled ? 1.0 : 0.4
+          SettingsInput {
+            colors: settingsPanel.colors
+            label: "Duration (ms)"
+            value: Config.transitionDurationMs
+            min: 100; max: 10000
+            onCommit: function(v) { Config.saveKey("transition.durationMs", v) }
           }
         }
-      }
 
-      ShaderPicker {
-        colors: settingsPanel.colors
-        model: paperContent._shaderOptions.filter(function(s) { return s.key !== "random" })
-        value: Config.transitionShader
-        enabled: Config.transitionEnabled && Config.transitionShader !== "random"
-        opacity: (Config.transitionEnabled && Config.transitionShader !== "random") ? 1.0 : 0.4
-        onSelected: function(key) { settingsPanel._saveConfigKey("transition.shader", key) }
+        Text {
+          text: "SHADER"
+          font.family: Style.fontFamily; font.pixelSize: settingsPanel._s(13); font.weight: Font.Bold; font.letterSpacing: 1.5
+          color: settingsPanel.colors ? settingsPanel.colors.tertiary : Qt.rgba(1, 1, 1, 0.5)
+          opacity: Config.transitionEnabled ? 1.0 : 0.4
+        }
+
+        SettingsToggle {
+          colors: settingsPanel.colors
+          label: "Random shader per transition"
+          checked: Config.transitionShader === "random"
+          enabled: Config.transitionEnabled
+          onToggle: function(v) {
+            if (v) {
+              if (Config.transitionShader !== "random") {
+                settingsPanel._saveConfigKey("transition.lastShader", Config.transitionShader)
+              }
+              settingsPanel._saveConfigKey("transition.shader", "random")
+            } else {
+              var fallback = (Config._data.transition && Config._data.transition.lastShader) || "morph"
+              if (fallback === "random") fallback = "morph"
+              settingsPanel._saveConfigKey("transition.shader", fallback)
+            }
+          }
+        }
+
+        ShaderPicker {
+          colors: settingsPanel.colors
+          model: paperContent._shaderOptions.filter(function(s) { return s.key !== "random" })
+          value: Config.transitionShader
+          enabled: Config.transitionEnabled && Config.transitionShader !== "random"
+          opacity: (Config.transitionEnabled && Config.transitionShader !== "random") ? 1.0 : 0.4
+          onSelected: function(key) { settingsPanel._saveConfigKey("transition.shader", key) }
+        }
       }
     }
 
