@@ -2,6 +2,7 @@
 
 > [!CAUTION]
 > Skwd-wall now uses my own Skwd-paper wallpaper software for image and video wallpapers. It has been flawless in testing, but please report if something isn't working as expected.
+> Awww is still supported and now has new fancy settings under the Paper tab, but mpvpaper has been completely removed in favour of Skwd-paper.
 
 ![Stars](https://img.shields.io/github/stars/liixini/skwd-wall?style=for-the-badge)
 ![License](https://img.shields.io/github/license/liixini/skwd-wall?style=for-the-badge)
@@ -48,7 +49,7 @@ An image/video/Wallpaper Engine wallpaper selector from my shell [Skwd](https://
 - **For those that don't speak nerd**: That means it works on OS:es like Arch, Fedora & NixOS and downstream OS:es like CachyOS and Nobara but also with things like KDE Plasma, Hyprland, Sway or Niri - pretty much any Wayland compositor. It does **not** work with GNOME.
 - **Keybinds**: A lot of features in Skwd-wall is navigatable by keybinds, available for reference under the keybind configuration tab.
 - **Random wallpaper**: Press once for a random wallpaper, keep toggled for a random wallpaper every X seconds, X being configurable in the settings.
-- **Different wallpapers on different monitors**: *(WIP)* You can enable an option to have a popup that allows you to select which monitors your wallpaper should apply to. Image only currently, but working on support for video and WE.
+- **Different wallpapers on different monitors**: Control left click to select which monitors your wallpaper should apply to.
 
 ## The long story - Personal motivation and development practices
 This is part of my personal shell Skwd that I have broken out into standalone components because it was a popular request.
