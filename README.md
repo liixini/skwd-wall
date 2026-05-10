@@ -1,9 +1,7 @@
 # Skwd-wall
 
 > [!CAUTION]
-> Skwd-wall went through a complete backend rewrite to Rust as of 19/04/2026. Things might have stopped working - Please report them using the issue tracker on GitHub. I am just one person and it is easy for me to miss things when testing three different OS:es with different setups.
->
-> Using the pre-rewrite Skwd-wall? You will have to reinstall Skwd-wall to get updates as breaking changes has happened to support the Rust backend. This also includes your keybind configurations. On the bright side installation is super easy now :)
+> Skwd-wall now uses my own Skwd-paper wallpaper software for image and video wallpapers. It has been flawless in testing, but please report if something isn't working as expected.
 
 ![Stars](https://img.shields.io/github/stars/liixini/skwd-wall?style=for-the-badge)
 ![License](https://img.shields.io/github/license/liixini/skwd-wall?style=for-the-badge)
