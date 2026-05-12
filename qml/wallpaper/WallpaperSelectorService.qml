@@ -373,6 +373,11 @@ QtObject {
     popularTags = tagArray
   }
 
+  property var _debouncedUpdate: Timer {
+    interval: 0
+    onTriggered: service.updateFilteredModel()
+  }
+
   onFavouriteFilterActiveChanged: _debouncedUpdate.restart()
 
   onWeatherFilterActiveChanged: {
