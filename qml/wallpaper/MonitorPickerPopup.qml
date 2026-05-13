@@ -208,10 +208,16 @@ Rectangle {
 
             Item {
               id: thumbHolder
+              property real _aspect: {
+                var entry = monitorPicker._selectedOutputs[index]
+                if (!entry || !entry.width || !entry.height) return 16/9
+                return entry.width / entry.height
+              }
               anchors.verticalCenter: parent.verticalCenter
               anchors.left: monCheckbox.right
               anchors.leftMargin: 10
-              width: 64; height: 36
+              height: 36
+              width: Math.max(20, Math.min(80, Math.round(36 * _aspect)))
               clip: true
               opacity: {
                 var entry = monitorPicker._selectedOutputs[index]
