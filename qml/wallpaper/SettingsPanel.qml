@@ -2326,7 +2326,7 @@ Item {
           label: ""
           value: Config.matugenScheme.replace("scheme-", "")
           model: ["content", "expressive", "fidelity", "fruit-salad", "monochrome", "neutral", "rainbow", "tonal-spot", "vibrant"]
-          onSelect: function(v) { var full = "scheme-" + v; settingsPanel._saveConfigKey("matugen.schemeType", full); settingsPanel.themeChanged(full, Config.matugenMode) }
+          onSelect: function(v) { var full = "scheme-" + v; settingsPanel._saveConfigKey("matugen.schemeType", full); settingsPanel.themeChanged(full, Config.matugenMode, Config.matugenColorIndex) }
         }
 
         Text {

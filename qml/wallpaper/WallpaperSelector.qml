@@ -565,7 +565,10 @@ Scope {
           service: wallpaperSelector.selectorService
           settingsOpen: wallpaperSelector.settingsOpen
           onCloseRequested: { wallpaperSelector.settingsOpen = false; wallpaperSelector._focusActiveList() }
-          onThemeChanged: function(scheme, mode, colorIndex) { DaemonClient.retheme(scheme, mode, (typeof colorIndex === "number") ? colorIndex : Config.matugenColorIndex) }
+          onThemeChanged: function(scheme, mode, colorIndex) {
+            console.log("WallpaperSelector: themeChanged scheme=" + scheme + " mode=" + mode + " colorIndex=" + colorIndex)
+            DaemonClient.retheme(scheme, mode, (typeof colorIndex === "number") ? colorIndex : Config.matugenColorIndex)
+          }
           onOpenThemePicker: wallpaperSelector.openThemePicker()
         }
       }
