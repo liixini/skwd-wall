@@ -113,7 +113,7 @@
 
           config = lib.mkIf cfg.enable {
             environment.systemPackages = [ skwd ];
-            systemd.user.packages = [ skwd ];
+            systemd.packages = [ skwd ];
           };
         };
     };
