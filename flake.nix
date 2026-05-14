@@ -16,13 +16,17 @@
           pkgs = nixpkgs.legacyPackages.${system};
           qsPkgs = quickshell.inputs.nixpkgs.legacyPackages.${system};
 
-          quickshellWithModules = quickshell.packages.${system}.default.withModules (with qsPkgs.qt6; [
+          qtModules = with qsPkgs.qt6; [
             qtimageformats
             qtmultimedia
             qtsvg
             qt5compat
             qtwayland
-          ]);
+          ];
+
+          quickshellWithModules = quickshell.packages.${system}.default.withModules qtModules;
+
+          qtPluginPath = pkgs.lib.makeSearchPath "lib/qt-6/plugins" qtModules;
 
           daemon = skwd-daemon.packages.${system}.default;
 
@@ -65,17 +69,22 @@
 
               makeWrapper ${quickshellWithModules}/bin/quickshell $out/bin/skwd-wall \
                 --prefix PATH : ${pkgs.lib.makeBinPath runtimeDeps} \
+                --prefix QT_PLUGIN_PATH : "${qtPluginPath}" \
                 --add-flags "-p $out/share/skwd-wall/shell.qml"
 
               makeWrapper ${daemon}/bin/skwd $out/bin/skwd \
                 --prefix PATH : ${pkgs.lib.makeBinPath daemonDeps} \
+                --prefix QT_PLUGIN_PATH : "${qtPluginPath}" \
                 --set SKWD_SHELL_QML "$out/share/skwd-wall/shell.qml" \
-                --set SKWD_DATA_DIR "$out/share/skwd-wall/data"
+                --set SKWD_DATA_DIR "$out/share/skwd-wall/data" \
+                --set SKWD_HOST_QML "${daemon}/share/skwd/skwd-daemon/host/shell.qml"
 
               makeWrapper ${daemon}/bin/skwd-daemon $out/bin/skwd-daemon \
                 --prefix PATH : ${pkgs.lib.makeBinPath daemonDeps} \
+                --prefix QT_PLUGIN_PATH : "${qtPluginPath}" \
                 --set SKWD_SHELL_QML "$out/share/skwd-wall/shell.qml" \
-                --set SKWD_DATA_DIR "$out/share/skwd-wall/data"
+                --set SKWD_DATA_DIR "$out/share/skwd-wall/data" \
+                --set SKWD_HOST_QML "${daemon}/share/skwd/skwd-daemon/host/shell.qml"
 
               mkdir -p $out/lib/systemd/user
               substitute ${daemon}/lib/systemd/user/skwd-daemon.service \
