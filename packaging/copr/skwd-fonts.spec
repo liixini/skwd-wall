@@ -16,7 +16,7 @@ BuildArch:      noarch
 Requires:       fontconfig
 
 %description
-Bundles Nerd Fonts Symbols Only and Material Design Icons Desktop fonts
+Bundles Nerd Fonts Symbols Only and Material Design Icons fonts
 required by Skwd-wall for UI icons and symbols.
 
 %install

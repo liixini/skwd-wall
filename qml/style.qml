@@ -8,7 +8,7 @@ QtObject {
     readonly property string fontFamilyHeading: "Roboto"
     readonly property string fontFamilyMono: "monospace"
     readonly property string fontFamilyCode: "Roboto Mono"
-    readonly property string fontFamilyIcons: "Material Design Icons Desktop"
+    readonly property string fontFamilyIcons: "Material Design Icons"
     readonly property string fontFamilyNerdIcons: "Symbols Nerd Font"
     readonly property int fontTiny: 9
     readonly property int fontCaption: 11
