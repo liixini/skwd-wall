@@ -56,7 +56,7 @@
             "name": "ghostty",
             "template": "ghostty.conf",
             "output": "~/.config/ghostty/skwd-theme",
-            "reload": "pkill -USR1 ghostty"
+            "reload": "pkill -USR2 ghostty"
         },
         {
             "name": "niri",
@@ -106,16 +106,6 @@
             "name": "zen",
             "template": "zen.css",
             "output": "~/.config/zen/PROFILE_DIR/chrome/userChrome.css"
-        },
-        {
-            "name": "omp-env",
-            "template": "omp-env.sh",
-            "output": "colors.env"
-        },
-        {
-            "name": "omp-theme",
-            "template": "omp.json",
-            "output": "~/.config/skwd/ext/omp/skwd.omp.json"
         }
     ],
     "components": {

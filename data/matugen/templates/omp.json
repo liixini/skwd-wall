@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
   "version": 3,
   "final_space": true,
-  {% raw %}"console_title_template": "{{ .Shell }} in {{ .Folder }}",{% endraw %}
+  "console_title_template": "{{ "{{ .Shell }} in {{ .Folder }}" }}",
   "palette": {
     "primary": "{{colors.primary.default.hex}}",
     "on-primary": "{{colors.on_primary.default.hex}}",
@@ -23,16 +23,16 @@
     {
       "type": "prompt", "alignment": "left",
       "segments": [
-        {% raw %}{"type":"time","style":"powerline","powerline_symbol":"","foreground":"p:on-primary","background":"p:primary","template":" {{ .CurrentDate | date \"15:04\" }} "},
-        {"type":"path","style":"powerline","powerline_symbol":"","foreground":"p:on-tertiary","background":"p:tertiary","template":"  {{ .Path }} ","properties":{"style":"agnoster_short","max_depth":3}},
-        {"type":"git","style":"powerline","powerline_symbol":"","foreground":"p:on-primary","background":"p:primary","template":"  {{ .HEAD }}{{ if .Working.Changed }}  {{ .Working.String }}{{ end }}{{ if .Staging.Changed }}  {{ .Staging.String }}{{ end }} ","properties":{"branch_icon":"","fetch_status":true,"fetch_stash_count":true}},
-        {"type":"status","style":"powerline","powerline_symbol":"","foreground":"p:on-error","background":"p:error","template":"  {{ .Code }} "}{% endraw %}
+        {"type":"time","style":"powerline","powerline_symbol":"","foreground":"p:on-primary","background":"p:primary","template":"{{ " {{ .CurrentDate | date \\\"15:04\\\" }} " }}"},
+        {"type":"path","style":"powerline","powerline_symbol":"","foreground":"p:on-tertiary","background":"p:tertiary","template":"{{ "  {{ .Path }} " }}","properties":{"style":"agnoster_short","max_depth":3}},
+        {"type":"git","style":"powerline","powerline_symbol":"","foreground":"p:on-primary","background":"p:primary","template":"{{ "  {{ .HEAD }}{{ if .Working.Changed }}  {{ .Working.String }}{{ end }}{{ if .Staging.Changed }}  {{ .Staging.String }}{{ end }} " }}","properties":{"branch_icon":"","fetch_status":true,"fetch_stash_count":true}},
+        {"type":"status","style":"powerline","powerline_symbol":"","foreground":"p:on-error","background":"p:error","template":"{{ "  {{ .Code }} " }}"}
       ]
     },
     {
       "type": "prompt", "alignment": "right", "overflow": "hide",
       "segments": [
-        {% raw %}{"type":"executiontime","style":"powerline","powerline_symbol":"","invert_powerline":true,"foreground":"p:on-surface-variant","background":"p:surface-variant","template":"  {{ .FormattedMs }} ","properties":{"threshold":2000,"style":"roundrock"}}{% endraw %}
+        {"type":"executiontime","style":"powerline","powerline_symbol":"","invert_powerline":true,"foreground":"p:on-surface-variant","background":"p:surface-variant","template":"{{ "  {{ .FormattedMs }} " }}","properties":{"threshold":2000,"style":"roundrock"}}
       ]
     },
     {
