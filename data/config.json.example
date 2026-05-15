@@ -47,6 +47,12 @@
             "output": "colors.json"
         },
         {
+            "_comment": "MD3 colors for the Skwd shell widgets (skwd-bar etc)",
+            "name": "skwd",
+            "template": "quickshell-colors.json",
+            "output": "~/.cache/skwd/colors.json"
+        },
+        {
             "name": "kitty",
             "template": "kitty.conf",
             "output": "~/.config/kitty/skwd-theme.conf",

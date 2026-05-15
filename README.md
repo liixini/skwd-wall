@@ -121,7 +121,7 @@ Research how to do this in your specific compositor, I'm sure it supports keybin
 
 ```sh
 # Install Skwd-wall and all its dependencies
-yay -S skwd-wall
+yay -S skwd-daemon-bin skwd-wall
 
 # Enable Skwd-daemon
 systemctl --user enable --now skwd-daemon.service
@@ -141,7 +141,7 @@ skwd wall toggle
 
 If you're updating Skwd-wall, note that Skwd-wall is two applications - Skwd-wall and Skwd-daemon.
 Skwd-daemon is automatically installed as part of installing Skwd-wall, but if you're updating and not updating all packages you need to
-either use `yay -S skwd-wall --devel` or `yay -S skwd-wall skwd-daemon` 
+either use `yay -S skwd-wall --devel` or `yay -S skwd-daemon-bin skwd-wall` 
 
 > **Note:** `yay` is an AUR helper. If you don't have it, install it or use another helper like `paru`.
 
