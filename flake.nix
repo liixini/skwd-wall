@@ -38,6 +38,10 @@
             inotify-tools
             curl
             file
+            coreutils
+            bash
+            findutils
+            xdg-utils
           ];
 
           daemonDeps = runtimeDeps ++ [ quickshellWithModules ];
