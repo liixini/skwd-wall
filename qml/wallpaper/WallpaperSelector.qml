@@ -353,6 +353,22 @@ Scope {
   Behavior on cardHeight { NumberAnimation { duration: Style.animExpand; easing.type: Easing.OutCubic } }
 
   property bool settingsOpen: false
+  property bool effectsOpen: false
+
+  property string _currentSelectedPath: {
+    if (!service || !service.filteredModel) return ""
+    var idx = -1
+    if (Config.displayMode === "slices")      idx = sliceListView.currentIndex
+    else if (Config.displayMode === "hex" && hexListView)
+                                              idx = hexListView._selectedCol * hexListView._rows + hexListView._selectedRow
+    else if (Config.displayMode === "wall" && thumbGridView)
+                                              idx = thumbGridView.hoveredIdx
+    else if (Config.displayMode === "mosaic" && mosaicView)
+                                              idx = mosaicView.hoveredIdx
+    if (idx < 0 || idx >= service.filteredModel.count) return ""
+    var item = service.filteredModel.get(idx)
+    return item ? (item.path || "") : ""
+  }
   property real _settingsShift: {
     if (!settingsOpen) return 0
     var h = settingsLoader.height
@@ -463,6 +479,7 @@ Scope {
       colors: wallpaperSelector.colors
       service: service
       settingsOpen: wallpaperSelector.settingsOpen
+      effectsOpen: wallpaperSelector.effectsOpen
       ollamaActive: service.ollamaActive
       cacheLoading: service.cacheLoading
       cacheProgress: service.cacheProgress
@@ -483,7 +500,8 @@ Scope {
       steamWorkshopBrowserOpen: wallpaperSelector.steamWorkshopBrowserOpen
       tagCloudOpen: wallpaperSelector.tagCloudVisible
       weatherFilterActive: service.weatherFilterActive
-      onSettingsToggled: { wallpaperSelector.settingsOpen = !wallpaperSelector.settingsOpen; if (!wallpaperSelector.settingsOpen) wallpaperSelector._focusActiveList() }
+      onSettingsToggled: { wallpaperSelector.effectsOpen = false; wallpaperSelector.settingsOpen = !wallpaperSelector.settingsOpen; if (!wallpaperSelector.settingsOpen) wallpaperSelector._focusActiveList() }
+      onEffectsToggled: { wallpaperSelector.settingsOpen = false; wallpaperSelector.effectsOpen = !wallpaperSelector.effectsOpen; if (!wallpaperSelector.effectsOpen) wallpaperSelector._focusActiveList() }
       onWallhavenToggled: { wallpaperSelector.settingsOpen = false; wallpaperSelector.steamWorkshopBrowserOpen = false; wallpaperSelector.wallhavenBrowserOpen = !wallpaperSelector.wallhavenBrowserOpen }
       onSteamWorkshopToggled: { wallpaperSelector.settingsOpen = false; wallpaperSelector.wallhavenBrowserOpen = false; wallpaperSelector.steamWorkshopBrowserOpen = !wallpaperSelector.steamWorkshopBrowserOpen }
       onTagCloudToggled: {
@@ -570,6 +588,20 @@ Scope {
             DaemonClient.retheme(scheme, mode, (typeof colorIndex === "number") ? colorIndex : Config.matugenColorIndex)
           }
           onOpenThemePicker: wallpaperSelector.openThemePicker()
+        }
+      }
+    }
+    Loader {
+      id: effectsLoader
+      active: wallpaperSelector.effectsOpen
+      anchors.centerIn: parent
+      z: 999
+      sourceComponent: Component {
+        EffectsPanel {
+          colors: wallpaperSelector.colors
+          effectsOpen: wallpaperSelector.effectsOpen
+          selectedPath: wallpaperSelector._currentSelectedPath
+          onCloseRequested: { wallpaperSelector.effectsOpen = false; wallpaperSelector._focusActiveList() }
         }
       }
     }

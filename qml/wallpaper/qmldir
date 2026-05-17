@@ -17,6 +17,8 @@ SettingsToggle 1.0 SettingsToggle.qml
 SettingsCombo 1.0 SettingsCombo.qml
 SettingsSlider 1.0 SettingsSlider.qml
 SettingsPanel 1.0 SettingsPanel.qml
+EffectsPanel 1.0 EffectsPanel.qml
+BlurFramePreview 1.0 BlurFramePreview.qml
 ShaderPicker 1.0 ShaderPicker.qml
 SliceDelegate 1.0 SliceDelegate.qml
 TagCloud 1.0 TagCloud.qml

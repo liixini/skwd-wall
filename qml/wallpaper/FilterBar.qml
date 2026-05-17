@@ -10,6 +10,7 @@ Item {
     property var colors
     property var service
     property bool settingsOpen: false
+    property bool effectsOpen: false
     property bool ollamaActive: false
     property bool wallhavenBrowserOpen: false
     property bool steamWorkshopBrowserOpen: false
@@ -33,6 +34,7 @@ Item {
     property bool weatherFilterActive: false
 
     signal settingsToggled()
+    signal effectsToggled()
     signal wallhavenToggled()
     signal steamWorkshopToggled()
     signal tagCloudToggled()
@@ -605,6 +607,14 @@ Item {
             tooltip: "Settings"
             isActive: filterBar.settingsOpen
             onClicked: filterBar.settingsToggled()
+        }
+
+        FilterButton {
+            colors: filterBar.colors
+            icon: "\u{f0a0e}"
+            tooltip: "Effects"
+            isActive: filterBar.effectsOpen
+            onClicked: filterBar.effectsToggled()
         }
 
         Item {
