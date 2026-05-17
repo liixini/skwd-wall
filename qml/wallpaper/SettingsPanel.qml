@@ -83,7 +83,7 @@ Item {
   }
 
   z: 102
-  width: (settingsPanel.activeTab === "performance" ? 920 : settingsPanel.activeTab === "general" ? 780 : 580) * Config.uiScale
+  width: (settingsPanel.activeTab === "performance" || settingsPanel.activeTab === "ollama" ? 920 : settingsPanel.activeTab === "general" ? 780 : 580) * Config.uiScale
   Behavior on width { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutCubic } }
   height: tabRow.height + contentLoader.height + 36
 
