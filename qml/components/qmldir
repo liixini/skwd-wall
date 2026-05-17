@@ -1,1 +1,17 @@
 DimOverlay 1.0 DimOverlay.qml
+SectionTitle 1.0 SectionTitle.qml
+SettingsCard 1.0 SettingsCard.qml
+SettingsRow 1.0 SettingsRow.qml
+SettingsDropdown 1.0 SettingsDropdown.qml
+SettingsSlider 1.0 SettingsSlider.qml
+SettingsTextInput 1.0 SettingsTextInput.qml
+SettingsToggle 1.0 SettingsToggle.qml
+SettingsInput 1.0 SettingsInput.qml
+RowToggle 1.0 RowToggle.qml
+RowInput 1.0 RowInput.qml
+RowTextInput 1.0 RowTextInput.qml
+RowDropdown 1.0 RowDropdown.qml
+RowAction 1.0 RowAction.qml
+ColorWheel 1.0 ColorWheel.qml
+RowColor 1.0 RowColor.qml
+IntegrationEditorRow 1.0 IntegrationEditorRow.qml

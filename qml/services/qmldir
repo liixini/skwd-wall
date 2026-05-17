@@ -5,5 +5,6 @@ singleton WallpaperAnalysisService 1.0 WallpaperAnalysisService.qml
 singleton WatcherService 1.0 WatcherService.qml
 singleton VideoConvertService 1.0 VideoConvertService.qml
 singleton ImageOptimizeService 1.0 ImageOptimizeService.qml
+singleton EffectsService 1.0 EffectsService.qml
 singleton DaemonClient 1.0 DaemonClient.qml
 singleton FileMetadataService 1.0 FileMetadataService.qml
