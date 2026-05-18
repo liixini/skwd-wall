@@ -220,7 +220,7 @@ QtObject {
         call("wall.update_analysis", params, callback)
     }
     function retagOne(key, callback) {
-        call("wall.analysis.retag_one", {key: key}, callback)
+        call("analysis.retag_one", {key: key}, callback)
     }
     function recomputeColors(callback) {
         call("wall.recompute_colors", {}, callback)

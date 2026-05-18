@@ -658,6 +658,9 @@ Item {
                                 model: backTagsSection.currentTags
 
                                 Rectangle {
+                                    id: backTagPill
+                                    required property int index
+                                    required property var modelData
                                     property bool hovered: tagRemoveArea.containsMouse
                                     width: tagLabelText.implicitWidth + 28
                                     height: 26
@@ -671,6 +674,18 @@ Item {
                                         : (delegateItem.colors ? Qt.rgba(delegateItem.colors.outline.r, delegateItem.colors.outline.g, delegateItem.colors.outline.b, 0.5) : Qt.rgba(1, 1, 1, 0.15))
                                     Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
                                     Behavior on border.color { ColorAnimation { duration: Style.animVeryFast } }
+
+                                    opacity: 0
+                                    scale: 0.85
+                                    Component.onCompleted: backTagPillEnter.start()
+                                    SequentialAnimation {
+                                        id: backTagPillEnter
+                                        PauseAnimation { duration: Math.min(backTagPill.index * 25, 600) }
+                                        ParallelAnimation {
+                                            NumberAnimation { target: backTagPill; property: "opacity"; to: 1; duration: 220; easing.type: Easing.OutCubic }
+                                            NumberAnimation { target: backTagPill; property: "scale"; to: 1.0; duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.4 }
+                                        }
+                                    }
 
                                     transform: Matrix4x4 {
                                         matrix: Qt.matrix4x4(

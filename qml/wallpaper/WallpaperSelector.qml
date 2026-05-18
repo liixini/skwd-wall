@@ -56,8 +56,6 @@ Scope {
   }
 
   function resetScroll() {
-    wallpaperSelector.lastContentX = 0
-    wallpaperSelector.lastIndex = 0
     sliceListView.currentIndex = 0
     if (service.filteredModel.count > 0)
       sliceListView.positionViewAtIndex(0, ListView.Center)
@@ -92,8 +90,6 @@ Scope {
         var idx = 0
         if (wallpaperSelector._restorePending) {
           wallpaperSelector._restorePending = false
-          if (Config.reopenAtLastSelection)
-            idx = Math.min(wallpaperSelector.lastIndex, service.filteredModel.count - 1)
         } else if (wallpaperSelector.showing && wallpaperSelector._preCommitIndex >= 0) {
           idx = Math.min(wallpaperSelector._preCommitIndex, service.filteredModel.count - 1)
         }
@@ -117,54 +113,12 @@ Scope {
     if (showing) {
       _filterBarManuallyShown = Config.filterBarAlwaysVisible
       tagCloudVisible = Config.searchBarAlwaysVisible
-      if (Config.reopenAtLastSelection) {
-        _restorePending = true
-        DaemonClient.stateGet("ui.lastPosition", function(result) {
-          if (result && result.value) {
-            try {
-              var pos = JSON.parse(result.value)
-              wallpaperSelector.lastIndex = pos.sliceIndex ?? 0
-              wallpaperSelector.lastHexCol = pos.hexCol ?? -1
-              wallpaperSelector.lastHexRow = pos.hexRow ?? 0
-              wallpaperSelector.lastGridIndex = pos.gridIndex ?? 0
-              if (pos.colorFilter !== undefined) service.selectedColorFilter = pos.colorFilter
-              if (pos.typeFilter !== undefined) service.selectedTypeFilter = pos.typeFilter
-              if (pos.sortMode !== undefined) service.sortMode = pos.sortMode
-              if (pos.tags !== undefined) service.selectedTags = pos.tags
-              if (pos.weatherFilter !== undefined) service.weatherFilterActive = pos.weatherFilter
-              if (pos.favouriteFilter !== undefined) service.favouriteFilterActive = pos.favouriteFilter
-            } catch(e) {}
-          }
-          _bindActiveViewModel()
-          service.startCacheCheck()
-          cardShowTimer.restart()
-        })
-      } else {
-        _restorePending = true
-        _bindActiveViewModel()
-        service.startCacheCheck()
-        cardShowTimer.restart()
-      }
+      _restorePending = true
+      _bindActiveViewModel()
+      service.startCacheCheck()
+      cardShowTimer.restart()
     } else {
       cardShowTimer.stop()
-      if (Config.reopenAtLastSelection) {
-        lastIndex = sliceListView.currentIndex
-        lastHexCol = hexListView._selectedCol
-        lastHexRow = hexListView._selectedRow
-        lastGridIndex = thumbGridView.hoveredIdx
-        DaemonClient.stateSet("ui.lastPosition", JSON.stringify({
-          sliceIndex: lastIndex,
-          hexCol: lastHexCol,
-          hexRow: lastHexRow,
-          gridIndex: lastGridIndex,
-          colorFilter: service.selectedColorFilter,
-          typeFilter: service.selectedTypeFilter,
-          sortMode: service.sortMode,
-          tags: service.selectedTags,
-          weatherFilter: service.weatherFilterActive,
-          favouriteFilter: service.favouriteFilterActive
-        }))
-      }
       cardVisible = false
       settingsOpen = false
       if (gridBackOverlay.overlayOpen) { gridBackOverlay.overlayOpen = false; gridBackOverlay.visible = false; gridBackOverlay.overlayItemKey = "" }
@@ -382,11 +336,6 @@ Scope {
     return base
   }
   Behavior on _settingsShift { NumberAnimation { duration: 500; easing.type: Easing.OutBack; easing.overshoot: 1.2 } }
-  property real lastContentX: 0
-  property int lastIndex: 0
-  property int lastHexCol: -1
-  property int lastHexRow: 0
-  property int lastGridIndex: 0
   property bool _restorePending: false
   property int _preCommitIndex: -1
   property bool cardVisible: false
@@ -426,9 +375,10 @@ Scope {
 
     Rectangle {
       anchors.fill: parent
-      color: Qt.rgba(0, 0, 0, 0.5)
+      color: Qt.rgba(0, 0, 0, Config.selectorBackdropOpacity / 100)
       opacity: wallpaperSelector.cardVisible ? 1 : 0
       Behavior on opacity { NumberAnimation { duration: Style.animMedium } }
+      Behavior on color { ColorAnimation { duration: Style.animMedium } }
     }
     MouseArea {
       anchors.fill: parent
@@ -727,13 +677,8 @@ Scope {
       Connections {
         target: wallpaperSelector
         function onShowingChanged() {
-          if (!wallpaperSelector.showing) {
-            wallpaperSelector.lastContentX = sliceListView.contentX
-            wallpaperSelector.lastIndex = sliceListView.currentIndex
-          } else {
-          if (!wallpaperSelector.tagCloudVisible)
-              wallpaperSelector._focusActiveList()
-          }
+          if (wallpaperSelector.showing && !wallpaperSelector.tagCloudVisible)
+            wallpaperSelector._focusActiveList()
         }
       }
       onCountChanged: {
@@ -891,15 +836,8 @@ Scope {
           _initialSnap = true
           _restored = false
           highlightMoveDuration = 0
-          var startCol
-          if (Config.reopenAtLastSelection && wallpaperSelector.lastHexCol >= 0) {
-            startCol = Math.min(wallpaperSelector.lastHexCol, count - 1)
-            if (startCol >= 0) { currentIndex = startCol; _selectedCol = startCol; _selectedRow = wallpaperSelector.lastHexRow }
-            _restored = true
-          } else {
-            startCol = Math.min(Math.floor(wallpaperSelector.hexCols / 2), count - 1)
-            if (startCol >= 0) { currentIndex = startCol; _selectedCol = startCol; _selectedRow = 0 }
-          }
+          var startCol = Math.min(Math.floor(wallpaperSelector.hexCols / 2), count - 1)
+          if (startCol >= 0) { currentIndex = startCol; _selectedCol = startCol; _selectedRow = 0 }
           positionViewAtIndex(currentIndex, ListView.Center)
           _snapRestoreTimer.restart()
         } else {
@@ -1156,10 +1094,6 @@ Scope {
       focus: wallpaperSelector.showing && wallpaperSelector.isGridMode && !wallpaperSelector.tagCloudVisible
       onVisibleChanged: {
         if (visible && !wallpaperSelector.tagCloudVisible) forceActiveFocus()
-        if (visible && Config.reopenAtLastSelection && wallpaperSelector.lastGridIndex > 0) {
-          hoveredIdx = Math.min(wallpaperSelector.lastGridIndex, count - 1)
-          positionViewAtIndex(hoveredIdx, GridView.Visible)
-        }
       }
 
       Keys.onEscapePressed: {
@@ -1912,6 +1846,9 @@ Scope {
                     Repeater {
                       model: gridTagsSection.currentTags
                       Rectangle {
+                        id: gridTagPill
+                        required property int index
+                        required property var modelData
                         property bool hovered: _gridTagMa.containsMouse
                         width: _gridTagTxt.implicitWidth + 30; height: 28; radius: 4
                         color: hovered ? (wallpaperSelector.colors ? Qt.rgba(wallpaperSelector.colors.surfaceVariant.r, wallpaperSelector.colors.surfaceVariant.g, wallpaperSelector.colors.surfaceVariant.b, 0.5) : Qt.rgba(1,1,1,0.15)) : "transparent"
@@ -1922,6 +1859,18 @@ Scope {
                         Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
                         Behavior on border.color { ColorAnimation { duration: Style.animVeryFast } }
                         transform: Matrix4x4 { matrix: Qt.matrix4x4(1, -0.08, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) }
+
+                        opacity: 0
+                        scale: 0.85
+                        Component.onCompleted: gridTagPillEnter.start()
+                        SequentialAnimation {
+                          id: gridTagPillEnter
+                          PauseAnimation { duration: Math.min(gridTagPill.index * 25, 600) }
+                          ParallelAnimation {
+                            NumberAnimation { target: gridTagPill; property: "opacity"; to: 1; duration: 220; easing.type: Easing.OutCubic }
+                            NumberAnimation { target: gridTagPill; property: "scale"; to: 1.0; duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.4 }
+                          }
+                        }
                         Text {
                           id: _gridTagTxt; anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
                           text: modelData.toUpperCase(); color: wallpaperSelector.colors ? wallpaperSelector.colors.tertiary : "#8bceff"

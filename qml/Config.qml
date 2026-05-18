@@ -80,12 +80,12 @@ QtObject {
     readonly property string mainMonitor: _data.monitor ?? ""
     readonly property string ollamaUrl: Quickshell.env("SKWD_OLLAMA_URL") || (_data.ollama?.url ?? "")
     readonly property string ollamaModel: _data.ollama?.model ?? ""
+    readonly property string ollamaPrompt: _data.ollama?.prompt ?? ""
     readonly property string ollamaConsolidationModel: _data.ollama?.consolidationModel ?? ""
     readonly property bool ollamaConsolidateEnabled: _data.ollama?.consolidateEnabled !== false
 
     readonly property string locale: _data.general?.locale ?? ""
     readonly property bool closeOnSelection: _data.general?.closeOnSelection === true
-    readonly property bool reopenAtLastSelection: _data.general?.reopenAtLastSelection === true
     readonly property bool filterBarAlwaysVisible: _data.general?.filterBarAlwaysVisible !== false
     readonly property bool searchBarAlwaysVisible: _data.general?.searchBarAlwaysVisible === true
     readonly property int randomInterval: _data.general?.randomInterval ?? 300
@@ -94,6 +94,7 @@ QtObject {
     readonly property bool randomIncludeWE: _data.general?.randomIncludeWE !== false
     readonly property bool randomIncludeFavourites: _data.general?.randomIncludeFavourites !== false
     readonly property bool wallpaperPerMonitor: _data.general?.wallpaperPerMonitor === true
+    readonly property int selectorBackdropOpacity: Math.max(0, Math.min(100, _data.general?.selectorBackdropOpacity ?? 0))
     readonly property bool notifyOnWallpaperChange: _data.general?.notifyOnWallpaperChange !== false
     readonly property string notificationsBuiltIn: _data.notifications?.builtIn ?? "never"
     readonly property real uiScale: Math.max(1.0, Math.min(2.0, _data.general?.uiScale ?? 1.0))

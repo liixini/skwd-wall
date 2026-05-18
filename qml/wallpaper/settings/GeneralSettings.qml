@@ -135,20 +135,21 @@ Flow {
             onToggle: function(v) { if (root.saveConfigKey) root.saveConfigKey("general.wallpaperPerMonitor", v) }
         }
 
+        RowInput {
+            colors: root.colors
+            title: "Selector backdrop dim (%)"
+            description: "How dark to make the area behind the wallpaper selector card. 0 disables the dim entirely."
+            value: Config.selectorBackdropOpacity
+            min: 0; max: 100
+            onCommit: function(v) { if (root.saveConfigKey) root.saveConfigKey("general.selectorBackdropOpacity", v) }
+        }
+
         RowToggle {
             colors: root.colors
             title: "Close on selection"
             description: "Hide the selector immediately after applying a wallpaper."
             checked: Config.closeOnSelection
             onToggle: function(v) { if (root.saveConfigKey) root.saveConfigKey("general.closeOnSelection", v) }
-        }
-
-        RowToggle {
-            colors: root.colors
-            title: "Reopen at last selection"
-            description: "When opening the selector, jump to the wallpaper you last touched."
-            checked: Config.reopenAtLastSelection
-            onToggle: function(v) { if (root.saveConfigKey) root.saveConfigKey("general.reopenAtLastSelection", v) }
         }
 
         RowToggle {
