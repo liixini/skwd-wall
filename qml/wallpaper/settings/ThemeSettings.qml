@@ -7,7 +7,6 @@ Column {
     property var colors
     property var saveConfigKey
     property var notifyThemeChanged
-    property var openThemePicker
 
     width: parent ? parent.width : 0
     spacing: 8
@@ -71,13 +70,6 @@ Column {
                 if (root.saveConfigKey) root.saveConfigKey("matugen.colorIndex", idx)
                 if (root.notifyThemeChanged) root.notifyThemeChanged(Config.matugenScheme, Config.matugenMode, idx)
             }
-        }
-
-        RowAction {
-            colors: root.colors
-            title: "Open theme picker"
-            description: "Pick a custom colour scheme for the active wallpaper."
-            onClicked: if (root.openThemePicker) root.openThemePicker()
         }
     }
 }

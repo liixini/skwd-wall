@@ -18,6 +18,23 @@ QtObject {
     signal progressUpdated()
     signal itemAnalyzed(string key, var tags, var colors, var weather)
 
+    function refresh() {
+        DaemonClient.call("analysis.status", {}, function(result, err) {
+            if (err || !result) return
+            service.running = result.running || false
+            service.progress = result.progress || 0
+            service.total = result.total || 0
+            service.taggedCount = result.taggedCount || 0
+            service.coloredCount = result.coloredCount || 0
+            service.totalThumbs = result.totalThumbs || 0
+            service.lastLog = result.lastLog || ""
+            service.eta = result.eta || ""
+            service.progressUpdated()
+        })
+    }
+
+    Component.onCompleted: service.refresh()
+
     function start() {
         DaemonClient.call("analysis.start", {})
     }

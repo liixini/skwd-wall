@@ -46,13 +46,6 @@ Scope {
     if (item.type === "we") service.applyWE(item.weId, outputs, audioMap, volumeMap)
     else if (item.type === "video") service.applyVideo(item.path, outputs, audioMap, volumeMap)
     else service.applyStatic(item.path, outputs)
-    if (Config.themePickerOnApply) {
-      Qt.callLater(function() { _themePicker.open() })
-    }
-  }
-
-  function openThemePicker() {
-    _themePicker.open()
   }
 
   function resetScroll() {
@@ -537,7 +530,6 @@ Scope {
             console.log("WallpaperSelector: themeChanged scheme=" + scheme + " mode=" + mode + " colorIndex=" + colorIndex)
             DaemonClient.retheme(scheme, mode, (typeof colorIndex === "number") ? colorIndex : Config.matugenColorIndex)
           }
-          onOpenThemePicker: wallpaperSelector.openThemePicker()
         }
       }
     }
@@ -2519,20 +2511,13 @@ Scope {
   MonitorPickerPopup {
     id: _monitorPicker
     anchors.fill: parent
-    z: 300
+    z: 1100
     colors: wallpaperSelector.colors
     wallpaperService: service
     onAccepted: function(item, outputs, audioMap, volumeMap) {
       wallpaperSelector._doApply(item, outputs, audioMap, volumeMap)
     }
-  }
-
-  ThemePickerPopup {
-    id: _themePicker
-    anchors.fill: parent
-    z: 310
-    colors: wallpaperSelector.colors
-    onApplied: function(scheme, mode, colorIndex) {
+    onThemeApplied: function(scheme, mode, colorIndex) {
       Config.saveKey("matugen.schemeType", scheme)
       Config.saveKey("matugen.mode", mode)
       Config.saveKey("matugen.colorIndex", colorIndex)

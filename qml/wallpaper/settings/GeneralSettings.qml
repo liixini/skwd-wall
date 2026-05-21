@@ -191,14 +191,6 @@ Flow {
             checked: Config.restoreOnStartup
             onToggle: function(v) { if (root.saveConfigKey) root.saveConfigKey("restoreOnStartup", v) }
         }
-
-        RowToggle {
-            colors: root.colors
-            title: "Show theme picker after apply"
-            description: "Pop up the theme picker every time you apply a wallpaper."
-            checked: Config.themePickerOnApply
-            onToggle: function(v) { if (root.saveConfigKey) root.saveConfigKey("matugen.pickerOnApply", v) }
-        }
     }
 
     SettingsCard {

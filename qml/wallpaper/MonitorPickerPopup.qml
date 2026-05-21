@@ -24,6 +24,32 @@ Rectangle {
   property var wallpaperService: null
   signal accepted(var item, var outputs, var audioMap, var volumeMap)
   signal cancelled()
+  signal themeApplied(string scheme, string mode, int colorIndex)
+
+  property var _palettes: ({})
+  property string _themeMode: Config.matugenMode
+
+  readonly property var _schemes: [
+    "scheme-fidelity", "scheme-vibrant", "scheme-content", "scheme-expressive",
+    "scheme-fruit-salad", "scheme-monochrome", "scheme-neutral", "scheme-rainbow", "scheme-tonal-spot"
+  ]
+
+  function _schemeKey(scheme, idx) { return scheme + "|" + idx }
+
+  function _refreshThemes() {
+    var modeAtRequest = _themeMode
+    for (var s = 0; s < _schemes.length; s++) {
+      (function(scheme) {
+        DaemonClient.themePreview(scheme, modeAtRequest, Config.matugenColorIndex, function(result, err) {
+          if (monitorPicker._themeMode !== modeAtRequest) return
+          var copy = {}
+          for (var k in monitorPicker._palettes) copy[k] = monitorPicker._palettes[k]
+          copy[monitorPicker._schemeKey(scheme, Config.matugenColorIndex)] = (err || !result) ? { _missing: true } : result
+          monitorPicker._palettes = copy
+        })
+      })(_schemes[s])
+    }
+  }
 
   readonly property bool _hasAudio: _pendingItem
                                     && (_pendingItem.type === "video" || _pendingItem.type === "we")
@@ -75,6 +101,9 @@ Rectangle {
         })
       }
       monitorPicker._selectedOutputs = initial
+      monitorPicker._themeMode = Config.matugenMode
+      monitorPicker._palettes = ({})
+      monitorPicker._refreshThemes()
       monitorPicker.visible = true
       monitorPicker.forceActiveFocus()
     })
@@ -131,8 +160,11 @@ Rectangle {
 
     Item { width: 1; height: 4 }
 
-    Column {
+    Row {
       anchors.horizontalCenter: parent.horizontalCenter
+      spacing: 16
+
+    Column {
       spacing: 6
 
       Repeater {
@@ -502,6 +534,148 @@ Rectangle {
           }
         }
       }
+    }
+
+    Rectangle {
+      width: 1
+      height: themePane.height
+      color: monitorPicker.colors ? Qt.rgba(monitorPicker.colors.outline.r, monitorPicker.colors.outline.g, monitorPicker.colors.outline.b, 0.3) : Qt.rgba(1,1,1,0.1)
+    }
+
+    Column {
+      id: themePane
+      spacing: 6
+      width: 220
+
+      Item {
+        width: parent.width
+        height: 22
+
+        Text {
+          anchors.left: parent.left
+          anchors.verticalCenter: parent.verticalCenter
+          text: "THEME"
+          font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 1.4
+          color: monitorPicker.colors ? monitorPicker.colors.surfaceText : "#fff"
+        }
+
+        Row {
+          anchors.right: parent.right
+          anchors.verticalCenter: parent.verticalCenter
+          spacing: 3
+
+          Repeater {
+            model: ["dark", "light"]
+            Rectangle {
+              required property string modelData
+              width: 38; height: 18; radius: 3
+              color: monitorPicker._themeMode === modelData
+                ? (monitorPicker.colors ? monitorPicker.colors.primary : "#7986cb")
+                : Qt.rgba(0, 0, 0, 0.25)
+              border.width: 1
+              border.color: monitorPicker._themeMode === modelData
+                ? (monitorPicker.colors ? monitorPicker.colors.primary : "#7986cb")
+                : Qt.rgba(1, 1, 1, 0.12)
+
+              Text {
+                anchors.centerIn: parent
+                text: modelData.toUpperCase()
+                font.family: Style.fontFamily; font.pixelSize: 8; font.weight: Font.Bold; font.letterSpacing: 0.6
+                color: monitorPicker._themeMode === modelData
+                  ? (monitorPicker.colors ? monitorPicker.colors.primaryText : "#fff")
+                  : Qt.rgba(1, 1, 1, 0.6)
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  monitorPicker._themeMode = modelData
+                  monitorPicker._palettes = ({})
+                  monitorPicker._refreshThemes()
+                }
+              }
+            }
+          }
+        }
+      }
+
+      Repeater {
+        model: monitorPicker._schemes
+
+        Rectangle {
+          required property string modelData
+          readonly property string _scheme: modelData
+          readonly property var _entry: monitorPicker._palettes[monitorPicker._schemeKey(_scheme, Config.matugenColorIndex)] || null
+          readonly property bool _ready: _entry && _entry.primary && _entry.primary.length > 0
+          readonly property bool _missing: _entry && _entry._missing === true
+          readonly property bool _isCurrent: _scheme === Config.matugenScheme
+                                            && monitorPicker._themeMode === Config.matugenMode
+
+          width: parent ? parent.width : 220
+          height: 26
+          radius: 4
+          color: _isCurrent
+            ? (monitorPicker.colors ? Qt.rgba(monitorPicker.colors.primary.r, monitorPicker.colors.primary.g, monitorPicker.colors.primary.b, 0.18) : Qt.rgba(0.4, 0.5, 0.7, 0.18))
+            : (schemeMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.04) : "transparent")
+          border.width: _isCurrent ? 1 : 0
+          border.color: _isCurrent ? (monitorPicker.colors ? monitorPicker.colors.primary : "#7986cb") : "transparent"
+          opacity: _missing ? 0.3 : 1.0
+
+          Text {
+            anchors.left: parent.left
+            anchors.leftMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            text: parent._scheme.replace("scheme-", "").replace("-", " ")
+            font.family: Style.fontFamily; font.pixelSize: 10; font.weight: Font.Medium
+            color: monitorPicker.colors ? monitorPicker.colors.surfaceText : "#fff"
+          }
+
+          Row {
+            anchors.right: parent.right
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: -4
+            visible: parent._ready
+
+            Repeater {
+              model: parent.parent._ready ? [parent.parent._entry.primary, parent.parent._entry.secondary, parent.parent._entry.tertiary] : []
+              Rectangle {
+                required property string modelData
+                required property int index
+                width: 14; height: 14; radius: 7
+                color: modelData && modelData.length > 0 ? modelData : Qt.rgba(1,1,1,0.08)
+                border.width: 1
+                border.color: Qt.rgba(0, 0, 0, 0.3)
+                z: 10 - index
+              }
+            }
+          }
+
+          Text {
+            anchors.right: parent.right
+            anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            text: parent._missing ? "-" : "…"
+            font.family: Style.fontFamilyCode; font.pixelSize: 10
+            color: Qt.rgba(1, 1, 1, 0.4)
+            visible: !parent._ready
+          }
+
+          MouseArea {
+            id: schemeMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            enabled: parent._ready
+            cursorShape: parent._ready ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: {
+              monitorPicker.themeApplied(parent._scheme, monitorPicker._themeMode, Config.matugenColorIndex)
+            }
+          }
+        }
+      }
+    }
+
     }
 
     Item { width: 1; height: 2 }

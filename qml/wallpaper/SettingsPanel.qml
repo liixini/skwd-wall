@@ -22,7 +22,6 @@ Item {
   property string _lastOptimizeResult: ""
 
   signal themeChanged(string scheme, string mode, var colorIndex)
-  signal openThemePicker()
 
   function _s(v) { return v * Config.uiScale }
 
@@ -403,7 +402,6 @@ Item {
         item.colors = Qt.binding(function() { return settingsPanel.colors })
         item.saveConfigKey = function(k, v) { settingsPanel._saveConfigKey(k, v) }
         item.notifyThemeChanged = function(s, m, ci) { settingsPanel.themeChanged(s, m, ci) }
-        item.openThemePicker = function() { settingsPanel.openThemePicker() }
       }
     }
 
