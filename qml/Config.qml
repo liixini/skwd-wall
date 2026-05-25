@@ -283,5 +283,13 @@ QtObject {
         return desktop.indexOf("kde") >= 0 || desktop.indexOf("plasma") >= 0
     }
 
+    readonly property bool isNiri: {
+        var desktop = (Quickshell.env("XDG_CURRENT_DESKTOP") || "").toLowerCase()
+        return desktop.indexOf("niri") >= 0
+    }
+
+    readonly property bool niriOverviewBackdrop: _data.niri?.overviewBackdrop === true
+    readonly property int niriOverviewBackdropBlur: Math.max(1, Math.min(200, _data.niri?.overviewBackdropBlur ?? 30))
+
     readonly property string kdeVideoPlugin: "luisbocanegra.smart.video.wallpaper.reborn"
 }

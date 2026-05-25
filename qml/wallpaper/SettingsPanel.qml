@@ -222,6 +222,7 @@ Item {
         if (Config.steamEnabled) tabs.push({ key: "steam", label: "STEAM" })
         if (Config.ollamaEnabled) tabs.push({ key: "ollama", label: "OLLAMA" })
         if (Config.matugenEnabled) tabs.push({ key: "matugen", label: "MATUGEN" })
+        if (Config.isNiri) tabs.push({ key: "niri", label: "NIRI" })
         return tabs
       }
 
@@ -256,6 +257,7 @@ Item {
       if (settingsPanel.activeTab === "theme") return themeContent.implicitHeight
       if (settingsPanel.activeTab === "matugen") return Math.min(matugenContent.implicitHeight, 360)
       if (settingsPanel.activeTab === "keybinds") return keybindsContent.implicitHeight
+      if (settingsPanel.activeTab === "niri") return niriContent.implicitHeight
       return 0
     }
     Behavior on height { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutCubic } }
@@ -329,6 +331,19 @@ Item {
       active: settingsPanel.activeTab === "paths"
       visible: active
       source: "settings/PathsSettings.qml"
+      onLoaded: {
+        item.colors = Qt.binding(function() { return settingsPanel.colors })
+        item.saveConfigKey = function(k, v) { settingsPanel._saveConfigKey(k, v) }
+      }
+    }
+
+    Loader {
+      id: niriContent
+      anchors.left: parent.left
+      anchors.right: parent.right
+      active: settingsPanel.activeTab === "niri"
+      visible: active
+      source: "settings/NiriSettings.qml"
       onLoaded: {
         item.colors = Qt.binding(function() { return settingsPanel.colors })
         item.saveConfigKey = function(k, v) { settingsPanel._saveConfigKey(k, v) }
