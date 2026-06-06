@@ -327,7 +327,7 @@ Item {
             title: "Effects"
             subtitle: panel._sourcePath.length > 0
                 ? ((panel._sourceFromSelection ? "Selected: " : "Active: ") + panel._sourceName)
-                : "Powered by gowall."
+                : "Choose an effect to preview."
 
             titleAction: Rectangle {
                 width: _s(24); height: _s(24); radius: _s(12)
@@ -348,6 +348,20 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: panel._cancel()
                 }
+            }
+
+            Text {
+                id: gowallAttribution
+                width: parent.width
+                textFormat: Text.RichText
+                wrapMode: Text.WordWrap
+                text: "An implementation of <a href=\"https://github.com/Achno/gowall\">gowall</a> by Achno."
+                font.family: Style.fontFamily
+                font.pixelSize: _s(12)
+                color: panel.colors ? Qt.rgba(panel.colors.surfaceText.r, panel.colors.surfaceText.g, panel.colors.surfaceText.b, 0.65) : Qt.rgba(1, 1, 1, 0.5)
+                linkColor: panel.colors ? panel.colors.primary : Qt.rgba(0.5, 0.7, 1.0, 1.0)
+                onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
             }
 
             RowDropdown {

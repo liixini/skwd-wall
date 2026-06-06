@@ -86,12 +86,12 @@ Item {
   Behavior on width { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutCubic } }
   height: tabRow.height + contentLoader.height + 36
 
-  visible: settingsOpen
+  visible: settingsOpen || opacity > 0.01
   opacity: settingsOpen ? 1 : 0
-  scale: settingsOpen ? 1 : 0.9
+  scale: settingsOpen ? 1 : 0.95
   transformOrigin: openDownward ? Item.Top : Item.Bottom
-  Behavior on opacity { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutCubic } }
-  Behavior on scale { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutCubic } }
+  Behavior on opacity { NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutCubic } }
+  Behavior on scale { NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutCubic } }
 
   signal closeRequested()
 
@@ -220,6 +220,7 @@ Item {
         ]
         if (Config.wallhavenEnabled) tabs.push({ key: "wallhaven", label: "WALLHAVEN" })
         if (Config.steamEnabled) tabs.push({ key: "steam", label: "STEAM" })
+        if (Config.steamEnabled) tabs.push({ key: "wallpaper-engine", label: "WALLPAPER ENGINE" })
         if (Config.ollamaEnabled) tabs.push({ key: "ollama", label: "OLLAMA" })
         if (Config.matugenEnabled) tabs.push({ key: "matugen", label: "MATUGEN" })
         if (Config.isNiri) tabs.push({ key: "niri", label: "NIRI" })
@@ -252,6 +253,7 @@ Item {
       if (settingsPanel.activeTab === "paths") return pathsContent.implicitHeight
       if (settingsPanel.activeTab === "wallhaven") return wallhavenContent.implicitHeight
       if (settingsPanel.activeTab === "steam") return steamContent.implicitHeight
+      if (settingsPanel.activeTab === "wallpaper-engine") return wallpaperEngineContent.implicitHeight
       if (settingsPanel.activeTab === "performance") return performanceContent.implicitHeight
       if (settingsPanel.activeTab === "postprocessing") return Math.min(postprocessingContent.implicitHeight, 360)
       if (settingsPanel.activeTab === "theme") return themeContent.implicitHeight
@@ -262,6 +264,19 @@ Item {
     }
     Behavior on height { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutCubic } }
 
+    property real _slide: 0
+    transform: Translate { y: contentLoader._slide }
+
+    ParallelAnimation {
+      id: _tabFade
+      NumberAnimation { target: contentLoader; property: "opacity"; from: 0; to: 1; duration: Style.animEnter; easing.type: Easing.OutCubic }
+      NumberAnimation { target: contentLoader; property: "_slide"; from: 10; to: 0; duration: Style.animEnter; easing.type: Easing.OutCubic }
+    }
+
+    Connections {
+      target: settingsPanel
+      function onActiveTabChanged() { _tabFade.restart() }
+    }
 
     Loader {
       id: selectorContent
@@ -374,6 +389,19 @@ Item {
       onLoaded: {
         item.colors = Qt.binding(function() { return settingsPanel.colors })
         item.saveField = function(k, v) { settingsPanel._saveField(k, v) }
+        item.saveConfigKey = function(k, v) { settingsPanel._saveConfigKey(k, v) }
+      }
+    }
+
+    Loader {
+      id: wallpaperEngineContent
+      anchors.left: parent.left
+      anchors.right: parent.right
+      active: settingsPanel.activeTab === "wallpaper-engine"
+      visible: active
+      source: "settings/WallpaperEngineSettings.qml"
+      onLoaded: {
+        item.colors = Qt.binding(function() { return settingsPanel.colors })
         item.saveConfigKey = function(k, v) { settingsPanel._saveConfigKey(k, v) }
       }
     }

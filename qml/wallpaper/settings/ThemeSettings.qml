@@ -71,5 +71,20 @@ Column {
                 if (root.notifyThemeChanged) root.notifyThemeChanged(Config.matugenScheme, Config.matugenMode, idx)
             }
         }
+
+        RowTextInput {
+            colors: root.colors
+            title: "Contrast"
+            description: "Matugen contrast. Range -1.0 to 1.0 (0 = standard, higher = more contrast)."
+            value: Config.matugenContrast.toFixed(2)
+            placeholder: "0.00"
+            onCommit: function(v) {
+                var n = parseFloat(v)
+                if (isNaN(n)) n = 0
+                n = Math.max(-1, Math.min(1, n))
+                if (root.saveConfigKey) root.saveConfigKey("matugen.contrast", n)
+                if (root.notifyThemeChanged) root.notifyThemeChanged(Config.matugenScheme, Config.matugenMode, Config.matugenColorIndex)
+            }
+        }
     }
 }

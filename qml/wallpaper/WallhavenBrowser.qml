@@ -313,6 +313,8 @@ Item {
       easing.type: Easing.OutCubic
     }
 
+    property real _wheelAccum: 0
+
     function _snapScroll(delta) {
       if (!_gridScrollAnim.running) _scrollTarget = contentY
       var step = cellHeight
@@ -325,14 +327,27 @@ Item {
       _gridScrollAnim.start()
     }
 
+    function _onWheelDelta(dy) {
+      if (dy === 0) return
+      if ((_wheelAccum > 0) !== (dy > 0)) _wheelAccum = 0
+      _wheelAccum += dy
+      if (Math.abs(_wheelAccum) >= 120) {
+        _snapScroll(_wheelAccum)
+        _wheelAccum = 0
+      }
+    }
+
+    Keys.onUpPressed: resultsGrid._snapScroll(1)
+    Keys.onDownPressed: resultsGrid._snapScroll(-1)
+
     MouseArea {
       anchors.fill: parent
       propagateComposedEvents: true
       onWheel: function(wheel) {
-        resultsGrid._snapScroll(wheel.angleDelta.y)
+        resultsGrid._onWheelDelta(wheel.angleDelta.y)
         resultsGrid.forceActiveFocus()
       }
-      onPressed: function(mouse) { mouse.accepted = false }
+      onPressed: function(mouse) { resultsGrid.forceActiveFocus(); mouse.accepted = false }
       onReleased: function(mouse) { mouse.accepted = false }
       onClicked: function(mouse) { mouse.accepted = false }
     }

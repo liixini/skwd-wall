@@ -97,7 +97,7 @@ QtObject {
     readonly property int selectorBackdropOpacity: Math.max(0, Math.min(100, _data.general?.selectorBackdropOpacity ?? 0))
     readonly property bool notifyOnWallpaperChange: _data.general?.notifyOnWallpaperChange !== false
     readonly property string notificationsBuiltIn: _data.notifications?.builtIn ?? "never"
-    readonly property real uiScale: Math.max(1.0, Math.min(2.0, _data.general?.uiScale ?? 1.0))
+    readonly property real uiScale: Math.max(0.5, Math.min(2.0, _data.general?.uiScale ?? 1.0))
 
     readonly property bool matugenEnabled: _data.features?.matugen !== false
     readonly property bool ollamaEnabled: _data.features?.ollama !== false
@@ -182,10 +182,11 @@ QtObject {
 
     readonly property string matugenConfig: cacheDir + "/matugen-config.toml"
     readonly property string defaultMatugenConfig: _resolve(_data.defaultMatugenConfig ?? "~/.config/matugen/config.toml")
-    readonly property string externalMatugenCommand: _data.externalMatugenCommand ?? "matugen -c %config% image %path%"
+    readonly property string externalMatugenCommand: _data.externalMatugenCommand ?? "matugen -c %config% image %path% -t %scheme% -m %mode% --source-color-index %index%"
     readonly property string matugenScheme: (_data.matugen && _data.matugen.schemeType) ? _data.matugen.schemeType : "scheme-fidelity"
     readonly property string matugenMode: (_data.matugen && _data.matugen.mode) ? _data.matugen.mode : "dark"
     readonly property int matugenColorIndex: (_data.matugen && typeof _data.matugen.colorIndex === "number") ? Math.max(0, Math.min(3, _data.matugen.colorIndex | 0)) : 0
+    readonly property real matugenContrast: (_data.matugen && typeof _data.matugen.contrast === "number") ? Math.max(-1, Math.min(1, _data.matugen.contrast)) : 0
 
     readonly property var integrations: _data.integrations ?? []
     onIntegrationsChanged: _generateMatugenConfig()
@@ -238,6 +239,10 @@ QtObject {
     readonly property int wallpaperSkewOffset: _wallpaperSelector.skewOffset ?? (_isSmallScreen ? 25 : 35)
     readonly property bool wallpaperSliceRoundCorners: _wallpaperSelector.roundCorners === true
     readonly property int wallpaperSliceCornerRadius: wallpaperSliceRoundCorners ? (_wallpaperSelector.cornerRadius ?? 16) : 0
+    readonly property int wallpaperSliceCornerTL: !wallpaperSliceRoundCorners ? 0 : Math.max(0, (typeof _wallpaperSelector.cornerTL === "number") ? _wallpaperSelector.cornerTL : (_wallpaperSelector.cornerRadius ?? 16))
+    readonly property int wallpaperSliceCornerTR: !wallpaperSliceRoundCorners ? 0 : Math.max(0, (typeof _wallpaperSelector.cornerTR === "number") ? _wallpaperSelector.cornerTR : (_wallpaperSelector.cornerRadius ?? 16))
+    readonly property int wallpaperSliceCornerBR: !wallpaperSliceRoundCorners ? 0 : Math.max(0, (typeof _wallpaperSelector.cornerBR === "number") ? _wallpaperSelector.cornerBR : (_wallpaperSelector.cornerRadius ?? 16))
+    readonly property int wallpaperSliceCornerBL: !wallpaperSliceRoundCorners ? 0 : Math.max(0, (typeof _wallpaperSelector.cornerBL === "number") ? _wallpaperSelector.cornerBL : (_wallpaperSelector.cornerRadius ?? 16))
     readonly property var wallpaperCustomPresets: _wallpaperSelector.customPresets ?? {}
 
     readonly property string displayMode: _wallpaperSelector.displayMode ?? "slices"
@@ -271,6 +276,18 @@ QtObject {
     readonly property int steamThumbHeight: _wallpaperSelector.steamThumbHeight ?? (_isSmallScreen ? 124 : 169)
     readonly property string steamApiKey: Quickshell.env("STEAM_API_KEY") || (_data.steam?.apiKey ?? "")
     readonly property string steamUsername: _data.steam?.username ?? ""
+    readonly property string steamBackend: _data.steam?.backend ?? "steam"
+
+    readonly property int weRenderFps: _data.weRender?.fps ?? 30
+    readonly property bool weRenderNoFullscreenPause: _data.weRender?.noFullscreenPause !== false
+    readonly property bool weRenderFullscreenPauseOnlyActive: _data.weRender?.fullscreenPauseOnlyActive === true
+    readonly property bool weRenderNoautomute: _data.weRender?.noautomute !== false
+    readonly property bool weRenderNoAudioProcessing: _data.weRender?.noAudioProcessing === true
+    readonly property bool weRenderDisableParticles: _data.weRender?.disableParticles === true
+    readonly property bool weRenderDisableMouse: _data.weRender?.disableMouse === true
+    readonly property bool weRenderDisableParallax: _data.weRender?.disableParallax === true
+    readonly property string weRenderScaling: _data.weRender?.scaling ?? "fill"
+    readonly property string weRenderClamp: _data.weRender?.clamp ?? "border"
 
     readonly property var postProcessing: _data.postProcessing ?? []
     readonly property bool postProcessOnRestore: _data.postProcessOnRestore === true

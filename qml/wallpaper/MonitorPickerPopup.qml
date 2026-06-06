@@ -54,6 +54,7 @@ Rectangle {
   readonly property bool _hasAudio: _pendingItem
                                     && (_pendingItem.type === "video" || _pendingItem.type === "we")
 
+
   function _thumbForEntry(entry) {
     if (!entry || !wallpaperService) return ""
     var matchPath = entry.path || ""

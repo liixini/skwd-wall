@@ -78,21 +78,34 @@ Item {
     readonly property real _flatW: Math.max(0.001, _topRight - _topLeft)
     property real animatedCornerRadius: Config.wallpaperSliceCornerRadius
     Behavior on animatedCornerRadius { NumberAnimation { duration: Style.animExpand; easing.type: Easing.OutCubic } }
-    readonly property real _rEff: Math.max(0, Math.min(animatedCornerRadius, _flatW / 2 - 1, _slantLen / 2 - 1))
-    readonly property real _rUx: _rEff * _slantSx / _slantLen
-    readonly property real _rUy: _rEff * height / _slantLen
-    readonly property real _tlInX: _topLeft + _rUx
-    readonly property real _tlInY: _rUy
-    readonly property real _tlOutX: _topLeft + _rEff
-    readonly property real _trInX: _topRight - _rEff
-    readonly property real _trOutX: _topRight + _rUx
-    readonly property real _trOutY: _rUy
-    readonly property real _brInX: _botRight - _rUx
-    readonly property real _brInY: height - _rUy
-    readonly property real _brOutX: _botRight - _rEff
-    readonly property real _blInX: _botLeft + _rEff
-    readonly property real _blOutX: _botLeft - _rUx
-    readonly property real _blOutY: height - _rUy
+    property real animatedRTL: Config.wallpaperSliceCornerTL
+    property real animatedRTR: Config.wallpaperSliceCornerTR
+    property real animatedRBR: Config.wallpaperSliceCornerBR
+    property real animatedRBL: Config.wallpaperSliceCornerBL
+    Behavior on animatedRTL { NumberAnimation { duration: Style.animExpand; easing.type: Easing.OutCubic } }
+    Behavior on animatedRTR { NumberAnimation { duration: Style.animExpand; easing.type: Easing.OutCubic } }
+    Behavior on animatedRBR { NumberAnimation { duration: Style.animExpand; easing.type: Easing.OutCubic } }
+    Behavior on animatedRBL { NumberAnimation { duration: Style.animExpand; easing.type: Easing.OutCubic } }
+
+    readonly property real _rcMax: Math.min(_flatW / 2 - 1, _slantLen / 2 - 1)
+    readonly property real _rTL: Math.max(0, Math.min(animatedRTL, _rcMax))
+    readonly property real _rTR: Math.max(0, Math.min(animatedRTR, _rcMax))
+    readonly property real _rBR: Math.max(0, Math.min(animatedRBR, _rcMax))
+    readonly property real _rBL: Math.max(0, Math.min(animatedRBL, _rcMax))
+    readonly property real _slf: _slantSx / _slantLen
+    readonly property real _hf: height / _slantLen
+    readonly property real _tlInX: _topLeft + _rTL * _slf
+    readonly property real _tlInY: _rTL * _hf
+    readonly property real _tlOutX: _topLeft + _rTL
+    readonly property real _trInX: _topRight - _rTR
+    readonly property real _trOutX: _topRight + _rTR * _slf
+    readonly property real _trOutY: _rTR * _hf
+    readonly property real _brInX: _botRight - _rBR * _slf
+    readonly property real _brInY: height - _rBR * _hf
+    readonly property real _brOutX: _botRight - _rBR
+    readonly property real _blInX: _botLeft + _rBL
+    readonly property real _blOutX: _botLeft - _rBL * _slf
+    readonly property real _blOutY: height - _rBL * _hf
 
     property bool suppressWidthAnim: false
     property string videoPath: delegateItem.model.videoFile ? delegateItem.model.videoFile : ""

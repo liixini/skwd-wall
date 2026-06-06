@@ -59,7 +59,7 @@ QtObject {
   }
 
   function search(page) {
-    if (loading) { console.log("[WH] search() skipped — already loading"); return }
+    if (loading) { console.log("[WH] search() skipped - already loading"); return }
     currentPage = page || 1
     if (currentPage === 1) results = []
     loading = true

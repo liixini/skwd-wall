@@ -516,7 +516,8 @@ Scope {
 
     Loader {
       id: settingsLoader
-      active: wallpaperSelector.settingsOpen
+      active: true
+      asynchronous: true
       anchors.horizontalCenter: parent.horizontalCenter
       y: Math.max(8, cardContainer.y + filterBarBg.y - height - 8)
       z: 999

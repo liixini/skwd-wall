@@ -28,9 +28,9 @@ Column {
         RowTextInput {
             colors: root.colors
             title: "Command"
-            description: "Shell command to invoke. %config% = config path, %path% = wallpaper. Matugen v4: add --source-color-index 0."
+            description: "Shell command to invoke. %config% = config path, %path% = wallpaper, %scheme% = scheme, %mode% = light/dark, %index% = source color index."
             value: Config.externalMatugenCommand
-            placeholder: "matugen --config %config% image %path%"
+            placeholder: "matugen -c %config% image %path% -t %scheme% -m %mode% --source-color-index %index%"
             onCommit: function(v) { if (root.saveConfigKey) root.saveConfigKey("externalMatugenCommand", v) }
         }
     }

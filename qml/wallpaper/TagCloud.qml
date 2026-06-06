@@ -189,12 +189,15 @@ Rectangle {
         for (var tagName in tagCounts) {
             if (result.length >= maxVisible + selected.length) break
             var isSelected = selected.indexOf(tagName) !== -1
+            var isExcluded = selected.indexOf("-" + tagName) !== -1
             var matchesSearch = !query || _fuzzyMatch(tagName, query)
-            if (matchesSearch || isSelected)
-                result.push({ tag: tagName, count: tagCounts[tagName], selected: isSelected })
+            if (matchesSearch || isSelected || isExcluded)
+                result.push({ tag: tagName, count: tagCounts[tagName], selected: isSelected, excluded: isExcluded })
         }
         result.sort(function(a, b) {
-            if (a.selected !== b.selected) return a.selected ? -1 : 1
+            var aActive = a.selected || a.excluded
+            var bActive = b.selected || b.excluded
+            if (aActive !== bActive) return aActive ? -1 : 1
             return b.count - a.count
         })
         console.log("[TagCloud] _recomputeTags result: " + result.length + " tags to display")
@@ -244,7 +247,7 @@ Rectangle {
 
         Rectangle {
             id: tagSearchBox
-            width: parent.width - 30 * Config.uiScale
+            width: parent.width - 30 * Config.uiScale - matchModeToggle.width - parent.spacing
             height: 26 * Config.uiScale
             radius: 13 * Config.uiScale
             color: tagCloud.colors ? Qt.rgba(tagCloud.colors.surface.r, tagCloud.colors.surface.g, tagCloud.colors.surface.b, 0.5) : Qt.rgba(0, 0, 0, 0.3)
@@ -399,6 +402,60 @@ Rectangle {
                 }
             }
         }
+
+        Rectangle {
+            id: matchModeToggle
+            width: matchModeText.implicitWidth + 18 * Config.uiScale
+            height: 22 * Config.uiScale
+            radius: 11 * Config.uiScale
+            anchors.verticalCenter: parent.verticalCenter
+            property bool any: tagCloud.service ? tagCloud.service.tagsMatchAny === true : false
+            color: any
+                ? (tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.85) : Qt.rgba(0.5, 0.7, 1.0, 0.85))
+                : (tagCloud.colors ? Qt.rgba(tagCloud.colors.surface.r, tagCloud.colors.surface.g, tagCloud.colors.surface.b, 0.5) : Qt.rgba(0, 0, 0, 0.3))
+            border.width: 1
+            border.color: any
+                ? (tagCloud.colors ? tagCloud.colors.primary : Style.fallbackAccent)
+                : (tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.25) : Qt.rgba(1, 1, 1, 0.15))
+            Behavior on color { ColorAnimation { duration: Style.animFast } }
+            Behavior on border.color { ColorAnimation { duration: Style.animFast } }
+
+            Text {
+                id: matchModeText
+                anchors.centerIn: parent
+                text: matchModeToggle.any ? "ANY" : "ALL"
+                font.family: Style.fontFamily
+                font.pixelSize: 9 * Config.uiScale
+                font.weight: Font.Bold
+                font.letterSpacing: 1.0
+                color: matchModeToggle.any
+                    ? (tagCloud.colors ? tagCloud.colors.primaryText : "#000")
+                    : (tagCloud.colors ? Qt.rgba(tagCloud.colors.surfaceText.r, tagCloud.colors.surfaceText.g, tagCloud.colors.surfaceText.b, 0.7) : Qt.rgba(1, 1, 1, 0.6))
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    if (!tagCloud.service) return
+                    tagCloud.service.tagsMatchAny = !tagCloud.service.tagsMatchAny
+                }
+            }
+
+            StyledToolTip {
+                visible: matchModeMouse.containsMouse
+                text: matchModeToggle.any
+                    ? "Match ANY of the selected tags. Click to switch to ALL."
+                    : "Match ALL of the selected tags. Click to switch to ANY."
+            }
+            MouseArea {
+                id: matchModeMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+                propagateComposedEvents: true
+            }
+        }
     }
 
     SequentialAnimation {
@@ -433,11 +490,12 @@ Rectangle {
                 Item {
                     id: tagParaChip
                     property bool isSelected: modelData.selected
+                    property bool isExcluded: modelData.excluded === true
                     property bool isHovered: tagParaMouse.containsMouse
                     property int skew: 10 * Config.uiScale
                     width: tagParaText.implicitWidth + 24 * Config.uiScale + skew
                     height: 24 * Config.uiScale
-                    z: isSelected ? 10 : (isHovered ? 5 : 1)
+                    z: (isSelected || isExcluded) ? 10 : (isHovered ? 5 : 1)
 
                     property real _animProgress: 1
                     opacity: _animProgress
@@ -461,18 +519,23 @@ Rectangle {
                     }
 
                     readonly property color _resolvedActiveColor: tagCloud.colors ? tagCloud.colors.primary : Style.fallbackAccent
+                    readonly property color _resolvedExcludeColor: tagCloud.colors ? tagCloud.colors.error : Qt.rgba(0.9, 0.3, 0.3, 1.0)
 
                     Canvas {
                         id: tagCanvas
                         anchors.fill: parent
-                        property color fillColor: tagParaChip.isSelected
-                            ? tagParaChip._resolvedActiveColor
-                            : (tagParaChip.isHovered
-                                ? (tagCloud.colors ? Qt.rgba(tagCloud.colors.surfaceVariant.r, tagCloud.colors.surfaceVariant.g, tagCloud.colors.surfaceVariant.b, 0.6) : Qt.rgba(1, 1, 1, 0.15))
-                                : (tagCloud.colors ? Qt.rgba(tagCloud.colors.surfaceContainer.r, tagCloud.colors.surfaceContainer.g, tagCloud.colors.surfaceContainer.b, 0.85) : Qt.rgba(0.1, 0.12, 0.18, 0.85)))
-                        property color strokeColor: tagParaChip.isSelected
-                            ? Qt.rgba(tagParaChip._resolvedActiveColor.r, tagParaChip._resolvedActiveColor.g, tagParaChip._resolvedActiveColor.b, 0.6)
-                            : (tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.15) : Qt.rgba(1, 1, 1, 0.08))
+                        property color fillColor: tagParaChip.isExcluded
+                            ? Qt.rgba(tagParaChip._resolvedExcludeColor.r, tagParaChip._resolvedExcludeColor.g, tagParaChip._resolvedExcludeColor.b, 0.18)
+                            : (tagParaChip.isSelected
+                                ? tagParaChip._resolvedActiveColor
+                                : (tagParaChip.isHovered
+                                    ? (tagCloud.colors ? Qt.rgba(tagCloud.colors.surfaceVariant.r, tagCloud.colors.surfaceVariant.g, tagCloud.colors.surfaceVariant.b, 0.6) : Qt.rgba(1, 1, 1, 0.15))
+                                    : (tagCloud.colors ? Qt.rgba(tagCloud.colors.surfaceContainer.r, tagCloud.colors.surfaceContainer.g, tagCloud.colors.surfaceContainer.b, 0.85) : Qt.rgba(0.1, 0.12, 0.18, 0.85))))
+                        property color strokeColor: tagParaChip.isExcluded
+                            ? tagParaChip._resolvedExcludeColor
+                            : (tagParaChip.isSelected
+                                ? Qt.rgba(tagParaChip._resolvedActiveColor.r, tagParaChip._resolvedActiveColor.g, tagParaChip._resolvedActiveColor.b, 0.6)
+                                : (tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.15) : Qt.rgba(1, 1, 1, 0.08)))
                         onFillColorChanged: requestPaint()
                         onStrokeColorChanged: requestPaint()
                         onWidthChanged: requestPaint()
@@ -497,46 +560,64 @@ Rectangle {
                     Text {
                         id: tagParaText
                         anchors.centerIn: parent
-                        text: modelData.tag.toUpperCase()
-                        color: tagParaChip.isSelected
-                            ? (tagCloud.colors ? tagCloud.colors.primaryText : "#000")
-                            : (tagCloud.colors ? tagCloud.colors.tertiary : "#8bceff")
+                        text: (tagParaChip.isExcluded ? "− " : "") + modelData.tag.toUpperCase()
+                        color: tagParaChip.isExcluded
+                            ? tagParaChip._resolvedExcludeColor
+                            : (tagParaChip.isSelected
+                                ? (tagCloud.colors ? tagCloud.colors.primaryText : "#000")
+                                : (tagCloud.colors ? tagCloud.colors.tertiary : "#8bceff"))
                         font.family: Style.fontFamily
                         font.pixelSize: 10 * Config.uiScale
-                        font.weight: tagParaChip.isSelected ? Font.Bold : Font.Bold
+                        font.weight: Font.Bold
                         font.letterSpacing: 0.5
+                        font.strikeout: tagParaChip.isExcluded
                     }
 
                     MouseArea {
                         id: tagParaMouse
                         anchors.fill: parent
                         hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
+                        onClicked: function(mouse) {
                             var svc = tagCloudFlow._service
                             if (!svc) return
                             var tag = modelData.tag
                             var tags = svc.selectedTags.slice()
                             var idx = tags.indexOf(tag)
                             var negIdx = tags.indexOf("-" + tag)
-                            var removing = idx !== -1
-                            
+
                             if (negIdx !== -1) tags.splice(negIdx, 1)
-                            if (idx !== -1) tags.splice(idx > negIdx ? idx - 1 : idx, 1)
-                            if (!removing) tags.push(tag)
+                            if (idx !== -1) tags.splice((negIdx !== -1 && idx > negIdx) ? idx - 1 : idx, 1)
+
+                            var nextToken = ""
+                            if (mouse.button === Qt.RightButton) {
+                                if (negIdx !== -1) {
+                                    nextToken = ""
+                                } else {
+                                    tags.push("-" + tag)
+                                    nextToken = "-" + tag
+                                }
+                            } else {
+                                if (idx !== -1) {
+                                    nextToken = ""
+                                } else {
+                                    tags.push(tag)
+                                    nextToken = tag
+                                }
+                            }
+
                             svc.selectedTags = tags
                             svc.updateFilteredModel(true)
 
                             tagCloud._syncingText = true
-                            
-                            
                             var stripRe = new RegExp('(^|\\s)-?' + tag + '\\b\\s*', 'gi')
                             var cleared = tagSearchInput.text.replace(stripRe, '$1').replace(/^\s+/, '')
-                            if (removing) {
+                            if (nextToken === "") {
                                 tagSearchInput.text = cleared
                             } else {
                                 var suffix = (cleared.length > 0 && cleared[cleared.length - 1] !== ' ') ? ' ' : ''
-                                tagSearchInput.text = cleared + suffix + tag + ' '
+                                tagSearchInput.text = cleared + suffix + nextToken + ' '
                             }
                             tagCloud._syncingText = false
                             tagCloud._recomputeTags()

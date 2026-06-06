@@ -16,6 +16,7 @@ Thumbs.db
 
 build/
 dist/
+/ttf-material-design-icons-extended/
 
 # makepkg build artifacts
 packaging/aur/pkg/

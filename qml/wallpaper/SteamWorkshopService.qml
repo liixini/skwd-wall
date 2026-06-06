@@ -25,6 +25,7 @@ QtObject {
   property bool loading: false
   property string errorText: ""
   property bool hasMore: currentPage < lastPage
+  property bool daemonBrowserAvailable: false
 
   property var downloadStatus: ({})
   property var downloadProgress: ({})
@@ -142,17 +143,77 @@ QtObject {
     }
   }
 
+  Component.onCompleted: {
+    DaemonClient.call("steam.browser_status", {}, function(result, err) {
+      if (!err && result && result.available === true) {
+        swService.daemonBrowserAvailable = true
+      }
+    })
+  }
+
   function search(page) {
     if (loading) return
-    if (!apiKey) {
-      errorText = "Steam API key required. Set steam.apiKey in config.json"
-      resultsUpdated()
-      return
-    }
     currentPage = page || 1
     if (currentPage === 1) results = []
     loading = true
     errorText = ""
+
+    if (Config.steamBackend === "steam") {
+      var sortKey = sorting === "trend" ? "trend"
+                  : sorting === "new" ? "recent"
+                  : sorting === "toprated" ? "votes"
+                  : sorting === "popular" ? "subs"
+                  : sorting === "favorited" ? "favorites"
+                  : "trend"
+
+      var required = []
+      if (requiredType) required.push(requiredType)
+      if (requiredTag) required.push(requiredTag)
+      if (requiredResolution) required.push(requiredResolution)
+
+      var params = {
+        page: currentPage,
+        query: query,
+        sort: sortKey,
+        required_tags: required,
+        excluded_tags: excludedTags,
+        match_any_required: false
+      }
+      if (sortKey === "trend") params.trend_days = trendDays
+
+      DaemonClient.call("steam.search", params, function(result, err) {
+        swService.loading = false
+        if (err || !result || !result.items) {
+          swService.errorText = (err && err.message) ? ("Workshop browse failed: " + err.message) : "Workshop browse failed"
+          swService.resultsUpdated()
+          return
+        }
+        var mapped = result.items.map(function(it) {
+          return {
+            id: it.id || "",
+            title: it.title || "Untitled",
+            description: (it.description || "").substring(0, 120),
+            previewUrl: it.preview_url || "",
+            subscriptions: it.subscriptions || 0,
+            favorited: it.favorites || 0,
+            fileSize: it.file_size || 0,
+            tags: it.tags || [],
+            creator: it.creator || ""
+          }
+        })
+        swService.results = swService.results.concat(mapped)
+        swService.lastPage = mapped.length >= swService.numPerPage ? currentPage + 1 : currentPage
+        swService.resultsUpdated()
+      })
+      return
+    }
+
+    if (!apiKey) {
+      loading = false
+      errorText = "Workshop browsing needs Steam to be running, OR a Steam API key. Open Steam, OR set a key in Settings → Steam → API key. (Downloads work without either if you already have a Workshop ID.)"
+      resultsUpdated()
+      return
+    }
     _searchOutput = ""
     _searchProcess.command = ["curl", "-sSL", "--globoff", _buildUrl()]
     _searchProcess.running = true

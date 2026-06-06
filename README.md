@@ -300,7 +300,11 @@ Skwd-wall supports two optional features - Wallpaper Engine wallpapers through [
 As far as I am aware to use Wallpaper Engine on Linux you have to own the Steam application.
 Swkd-wall finds Wallpaper Engine wallpapers automatically and sorts them based on type (video or Wallpaper Engine Scene). You can use the Steam application to manage your Steam Engine wallpaper collection.
 
-However if you don't want to use the default Wallpaper Engine browser you can use Skwd-wall's internal one, which uses [Steamcmd](https://developer.valvesoftware.com/wiki/SteamCMD) which is Valve's Command Line Interface for Steam to search the Workshop behind the scenes.
+However if you don't want to use the default Wallpaper Engine browser you can use Skwd-wall's internal one, which uses [Steamcmd](https://developer.valvesoftware.com/wiki/SteamCMD) or we can use your already installed Steam Client and pretend we're Wallpaper Engine. E.g. if you want it to just work with the caveat of opening Steam - use option 2. If you want a robust option that works simply by opening Skwd-wall but requires you acquiring a Steam Web API key, use option 1. Mind you the Steam Client integration is still work in progress when it comes to compatibility - I'm mainly including it so that people who aren't that comfortable with API keys have an easy way use the feature.
+
+**API key + steamcmd (recommended):** add a Steam Web API key and set the backend to steamcmd. Browsing and downloads both work, no running Steam needed.
+
+**Steam Client:** leave defaults and keep Steam running. Native client support on NixOS and Flatpak Steam is WIP - use the API key + steamcmd setup there.
 
 You won't have to interact with Steamcmd more than logging in once so that Skwd-wall can use your logged in Steamcmd to browse the Workshop and download Wallpaper Engine workshop items (wallpapers) for you and Skwd-wall will warn you if your token has expired or needs refreshing (read: you need to log into Steam again).
 

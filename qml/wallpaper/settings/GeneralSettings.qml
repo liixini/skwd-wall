@@ -49,13 +49,13 @@ Flow {
         RowTextInput {
             colors: root.colors
             title: "UI scale"
-            description: "Scale the entire selector UI. Range 1.0–2.0."
+            description: "Scale the entire selector UI. Range 0.5–2.0 (below 1.0 shrinks it to fit small screens)."
             value: Config.uiScale.toFixed(2)
             placeholder: "1.00"
             onCommit: function(v) {
                 var n = parseFloat(v)
                 if (isNaN(n)) n = 1.0
-                n = Math.max(1.0, Math.min(2.0, n))
+                n = Math.max(0.5, Math.min(2.0, n))
                 if (root.saveConfigKey) root.saveConfigKey("general.uiScale", n)
             }
         }
@@ -109,11 +109,14 @@ Flow {
             }
         }
 
-        SettingsSlider {
+        RowInput {
             colors: root.colors
-            label: "Wallpaper volume"
+            title: "Wallpaper volume"
+            description: "Playback volume for video and Wallpaper Engine audio (0–100%). Has no effect while audio is muted."
             value: Config.wallpaperVolume
-            min: 0; max: 100
+            min: 0
+            max: 100
+            suffix: "%"
             enabled: !Config.wallpaperMute
             onCommit: function(v) {
                 if (root.saveConfigKey) root.saveConfigKey("wallpaperVolume", v)

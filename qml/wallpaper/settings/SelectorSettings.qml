@@ -169,11 +169,41 @@ Flow {
         RowInput {
             visible: Config.wallpaperSliceRoundCorners
             colors: root.colors
-            title: "Radius"
-            description: "Corner radius in pixels."
-            value: Config.wallpaperSliceCornerRadius
-            min: 0; max: 80
-            onCommit: function(v) { if (root.saveField) root.saveField("cornerRadius", v) }
+            title: "Top-left"
+            description: "Top-left corner radius (px). 0 = square."
+            value: Config.wallpaperSliceCornerTL
+            min: 0; max: 80; suffix: "px"
+            onCommit: function(v) { if (root.saveField) root.saveField("cornerTL", v) }
+        }
+
+        RowInput {
+            visible: Config.wallpaperSliceRoundCorners
+            colors: root.colors
+            title: "Top-right"
+            description: "Top-right corner radius (px). 0 = square."
+            value: Config.wallpaperSliceCornerTR
+            min: 0; max: 80; suffix: "px"
+            onCommit: function(v) { if (root.saveField) root.saveField("cornerTR", v) }
+        }
+
+        RowInput {
+            visible: Config.wallpaperSliceRoundCorners
+            colors: root.colors
+            title: "Bottom-right"
+            description: "Bottom-right corner radius (px). 0 = square."
+            value: Config.wallpaperSliceCornerBR
+            min: 0; max: 80; suffix: "px"
+            onCommit: function(v) { if (root.saveField) root.saveField("cornerBR", v) }
+        }
+
+        RowInput {
+            visible: Config.wallpaperSliceRoundCorners
+            colors: root.colors
+            title: "Bottom-left"
+            description: "Bottom-left corner radius (px). 0 = square."
+            value: Config.wallpaperSliceCornerBL
+            min: 0; max: 80; suffix: "px"
+            onCommit: function(v) { if (root.saveField) root.saveField("cornerBL", v) }
         }
     }
 

@@ -15,3 +15,4 @@ RowAction 1.0 RowAction.qml
 ColorWheel 1.0 ColorWheel.qml
 RowColor 1.0 RowColor.qml
 IntegrationEditorRow 1.0 IntegrationEditorRow.qml
+WeProperty 1.0 WeProperty.qml

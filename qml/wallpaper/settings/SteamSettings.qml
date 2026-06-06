@@ -61,25 +61,41 @@ Flow {
 
     SettingsCard {
         colors: root.colors
-        title: "API"
+        title: "Download backend"
         width: parent.width
 
-        RowTextInput {
+        RowDropdown {
             colors: root.colors
-            title: "API key"
-            description: "Steam Web API key."
-            value: Config.steamApiKey
-            placeholder: "Steam API key"
-            onCommit: function(v) { if (root.saveConfigKey) root.saveConfigKey("steam.apiKey", v) }
+            title: "Backend"
+            description: "Two ways to set up Steam Workshop:\n- API key + steamcmd (recommended): add a Steam Web API key and set the backend to steamcmd. Browsing and downloads both work, no running Steam needed.\n- Steam Client: leave defaults and keep Steam running. Native client support on NixOS and Flatpak Steam is WIP - use the API key + steamcmd setup there.\n\nSwitching backend takes effect after the daemon restarts."
+            value: Config.steamBackend
+            model: [
+                { mode: "steamcmd", label: "steamcmd + API key (recommended)" },
+                { mode: "steam",    label: "Steam Client" }
+            ]
+            onSelect: function(v) { if (root.saveConfigKey) root.saveConfigKey("steam.backend", v) }
         }
 
         RowTextInput {
             colors: root.colors
             title: "Username"
-            description: "Used by steamcmd for Workshop downloads."
+            description: "Only used by the steamcmd backend."
             value: Config.steamUsername
             placeholder: "Steam username (for steamcmd)"
+            enabled: Config.steamBackend === "steamcmd"
+            opacity: enabled ? 1.0 : 0.5
             onCommit: function(v) { if (root.saveConfigKey) root.saveConfigKey("steam.username", v) }
+        }
+
+        RowTextInput {
+            colors: root.colors
+            title: "API key"
+            description: "Only used by the steamcmd backend, for browsing the Workshop catalogue inside skwd-wall. The Steam Client backend gets browse access for free from the running Steam session."
+            value: Config.steamApiKey
+            placeholder: "Steam API key"
+            enabled: Config.steamBackend === "steamcmd"
+            opacity: enabled ? 1.0 : 0.5
+            onCommit: function(v) { if (root.saveConfigKey) root.saveConfigKey("steam.apiKey", v) }
         }
     }
 }

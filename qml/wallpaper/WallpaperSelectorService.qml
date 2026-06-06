@@ -32,6 +32,7 @@ QtObject {
   property var selectedTags: []
   property int selectedTagIndex: -1
   property var popularTags: []
+  property bool tagsMatchAny: false
   property bool weatherFilterActive: false
   property var currentWeather: []
   property string weatherLocale: ""
@@ -185,10 +186,13 @@ QtObject {
       var lookupKey = weId || name
       if (_wallpaperDataKeys[lookupKey]) return
 
+      var path = type === "static" ? service.wallpaperDir + "/" + name
+               : type === "video" ? (videoFile || (service.videoDir + "/" + name))
+               : ""
+
       var item = {
         name: name, type: type, thumb: thumb,
-        path: type === "static" ? service.wallpaperDir + "/" + name
-            : (type === "video" ? service.videoDir + "/" + name : ""),
+        path: path,
         weId: weId, videoFile: videoFile,
         mtime: mtime, hue: hue, saturation: sat, richness: richness, applyCount: applyCount,
         placeholder: false
@@ -435,25 +439,34 @@ QtObject {
       if (favouriteFilterActive && !isFavourite(item.name, item.weId)) continue
 
       if (selectedTags.length > 0) {
-        
-        
         var wallpaperTags = tagsDb[lookupKey] || []
         var hasPositive = false
-        var allTagsMatch = true
+        var anyPositiveMatched = false
+        var allPositiveMatched = true
+        var anyNegativeHit = false
         for (var t = 0; t < selectedTags.length; t++) {
           var raw = selectedTags[t]
           if (raw && raw.charAt(0) === "-") {
             var excluded = raw.substring(1)
-            if (excluded && wallpaperTags.indexOf(excluded) !== -1) { allTagsMatch = false; break }
+            if (excluded && wallpaperTags.indexOf(excluded) !== -1) { anyNegativeHit = true; break }
           } else {
             hasPositive = true
-            if (wallpaperTags.indexOf(raw) === -1) { allTagsMatch = false; break }
+            if (wallpaperTags.indexOf(raw) !== -1) {
+              anyPositiveMatched = true
+            } else {
+              allPositiveMatched = false
+            }
           }
         }
-        if (!allTagsMatch) continue
-        
-        
-        if (hasPositive && wallpaperTags.length === 0) continue
+        if (anyNegativeHit) continue
+        if (hasPositive) {
+          if (wallpaperTags.length === 0) continue
+          if (tagsMatchAny) {
+            if (!anyPositiveMatched) continue
+          } else {
+            if (!allPositiveMatched) continue
+          }
+        }
       }
 
       if (weatherFilterActive && currentWeather.length > 0) {
@@ -485,22 +498,16 @@ QtObject {
         return popB - popA
       })
     } else if (sortMode === "richness") {
-      
-      
       items.sort(function(a, b) {
         if (a.richness !== b.richness) return b.richness - a.richness
         return b.saturation - a.saturation
       })
     } else if (sortMode === "minimalist") {
-      
-      
       items.sort(function(a, b) {
         if (a.richness !== b.richness) return a.richness - b.richness
         return b.saturation - a.saturation
       })
     } else if (sortMode === "applied") {
-      
-      
       items.sort(function(a, b) {
         if (a.applyCount !== b.applyCount) return b.applyCount - a.applyCount
         return b.mtime - a.mtime
@@ -532,6 +539,7 @@ QtObject {
 
   onSelectedColorFilterChanged: updateFilteredModel()
   onSelectedTypeFilterChanged: updateFilteredModel()
+  onTagsMatchAnyChanged: { if (selectedTags.length > 0) _debouncedUpdate.restart() }
 
   function _collectNeighbors(path) {
     var n = filteredModel.count
