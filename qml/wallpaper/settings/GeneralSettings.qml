@@ -7,9 +7,26 @@ Flow {
     id: root
     property var colors
     property var saveConfigKey
+    property var _recolorThemes: []
 
     width: parent ? parent.width : 0
     spacing: 12
+
+    Component.onCompleted: {
+        DaemonClient.call("effects.list", {}, function(result, err) {
+            if (err || !result || !result.effects) return
+            for (var i = 0; i < result.effects.length; i++) {
+                var eff = result.effects[i]
+                if (eff.id !== "theme" || !eff.params) continue
+                for (var j = 0; j < eff.params.length; j++) {
+                    if (eff.params[j].id === "theme") {
+                        root._recolorThemes = eff.params[j].options || []
+                        return
+                    }
+                }
+            }
+        })
+    }
 
     SettingsCard {
         colors: root.colors
@@ -122,6 +139,25 @@ Flow {
                 if (root.saveConfigKey) root.saveConfigKey("wallpaperVolume", v)
                 DaemonClient.setAudio(Config.wallpaperMute, v)
             }
+        }
+
+        RowToggle {
+            colors: root.colors
+            title: "Auto-recolour new wallpapers"
+            description: "When a new wallpaper is added, save a gowall theme-recoloured copy alongside it."
+            checked: Config.autoRecolorEnabled
+            onToggle: function(v) { if (root.saveConfigKey) root.saveConfigKey("effects.autoRecolor", v) }
+        }
+
+        RowDropdown {
+            colors: root.colors
+            title: "Recolour theme"
+            description: "Palette used when auto-recolouring new wallpapers."
+            value: Config.autoRecolorTheme
+            model: root._recolorThemes
+            enabled: Config.autoRecolorEnabled
+            opacity: enabled ? 1.0 : 0.5
+            onSelect: function(v) { if (root.saveConfigKey) root.saveConfigKey("effects.autoTheme", v) }
         }
     }
 

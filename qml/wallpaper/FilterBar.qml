@@ -97,6 +97,12 @@ Item {
             }
         }
 
+        FolderFilter {
+            anchors.verticalCenter: parent.verticalCenter
+            colors: filterBar.colors
+            service: filterBar.service
+        }
+
         Repeater {
             model: [
                 { mode: "date",       icon: "󰃰", label: "Newest" },

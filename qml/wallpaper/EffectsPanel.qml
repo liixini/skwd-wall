@@ -18,12 +18,14 @@ Item {
     property string _previewPath: ""
     property string _statusText: ""
 
-    readonly property string _sourcePath: selectedPath.length > 0 ? selectedPath : _appliedPath
+    property string _lockedPath: ""
+
+    readonly property string _sourcePath: _lockedPath.length > 0 ? _lockedPath : _appliedPath
     readonly property string _sourceName: {
         var p = _sourcePath
         return p.length > 0 ? p.substring(p.lastIndexOf("/") + 1) : ""
     }
-    readonly property bool _sourceFromSelection: selectedPath.length > 0
+    readonly property bool _sourceFromSelection: _lockedPath.length > 0
     readonly property string _displayPath: _previewPath.length > 0 ? _previewPath : _sourcePath
 
     readonly property var _selectedEffect: {
@@ -66,11 +68,20 @@ Item {
         _schedulePreview()
     }
 
+    readonly property var _categoryOrder: ["Colour", "Tone", "Stylize", "Distort", "Adjust", "Transform"]
+
     function _effectModel() {
         var out = []
         for (var i = 0; i < _effects.length; i++) {
-            out.push({ mode: _effects[i].id, label: _effects[i].label })
+            out.push({ mode: _effects[i].id, label: _effects[i].label, category: _effects[i].category || "", _i: i })
         }
+        var order = _categoryOrder
+        out.sort(function(a, b) {
+            var ca = order.indexOf(a.category); if (ca < 0) ca = 999
+            var cb = order.indexOf(b.category); if (cb < 0) cb = 999
+            if (ca !== cb) return ca - cb
+            return a._i - b._i
+        })
         return out
     }
 
@@ -176,6 +187,7 @@ Item {
     }
 
     Component.onCompleted: {
+        panel._lockedPath = panel.selectedPath
         DaemonClient.call("effects.list", {}, function(result, err) {
             if (!err && result && result.effects) {
                 panel._effects = result.effects
@@ -207,7 +219,7 @@ Item {
             width: parent.width
             height: _s(240)
             radius: _s(8)
-            color: panel.colors ? Qt.rgba(panel.colors.surfaceContainer.r, panel.colors.surfaceContainer.g, panel.colors.surfaceContainer.b, 0.6) : Qt.rgba(0.1, 0.12, 0.18, 0.6)
+            color: panel.colors ? Qt.rgba(panel.colors.surfaceContainer.r, panel.colors.surfaceContainer.g, panel.colors.surfaceContainer.b, 0.97) : Qt.rgba(0.1, 0.12, 0.18, 0.97)
             border.width: 1
             border.color: panel._previewPath.length > 0
                 ? (panel.colors ? Qt.rgba(panel.colors.primary.r, panel.colors.primary.g, panel.colors.primary.b, 0.5) : Qt.rgba(0.5, 0.7, 1.0, 0.5))
@@ -315,7 +327,7 @@ Item {
             Text {
                 visible: !panel._sourcePath
                 anchors.centerIn: parent
-                text: "Hover or focus a wallpaper, or apply one as the active wallpaper."
+                text: "Select a wallpaper before opening Effects, or apply one as the active wallpaper."
                 font.family: Style.fontFamily
                 font.pixelSize: _s(11)
                 color: panel.colors ? Qt.rgba(panel.colors.surfaceText.r, panel.colors.surfaceText.g, panel.colors.surfaceText.b, 0.45) : Qt.rgba(1, 1, 1, 0.35)
@@ -355,7 +367,7 @@ Item {
                 width: parent.width
                 textFormat: Text.RichText
                 wrapMode: Text.WordWrap
-                text: "An implementation of <a href=\"https://github.com/Achno/gowall\">gowall</a> by Achno."
+                text: "The theme changing is a Rust implementation of <a href=\"https://github.com/Achno/gowall\">gowall</a> by Achno."
                 font.family: Style.fontFamily
                 font.pixelSize: _s(12)
                 color: panel.colors ? Qt.rgba(panel.colors.surfaceText.r, panel.colors.surfaceText.g, panel.colors.surfaceText.b, 0.65) : Qt.rgba(1, 1, 1, 0.5)

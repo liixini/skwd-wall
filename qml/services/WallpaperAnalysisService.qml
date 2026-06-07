@@ -17,6 +17,7 @@ QtObject {
     signal analysisComplete()
     signal progressUpdated()
     signal itemAnalyzed(string key, var tags, var colors, var weather)
+    signal itemFailed(string key, string error)
 
     function refresh() {
         DaemonClient.call("analysis.status", {}, function(result, err) {
@@ -69,6 +70,8 @@ QtObject {
                 var colors = { hue: data.hue || 99, saturation: data.sat || 0 }
                 var weather = data.weather || []
                 service.itemAnalyzed(data.key || "", tags, colors, weather)
+            } else if (event === "skwd.wall.analysis.item_failed") {
+                service.itemFailed(data.key || "", data.error || "")
             } else if (event === "skwd.wall.analysis.complete") {
                 service.running = false
                 service.eta = ""

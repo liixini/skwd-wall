@@ -167,6 +167,21 @@ ShellRoot {
     check("steam", sw._buildUrl().indexOf("requiredtags[0]=Video") !== -1, "requiredType tag")
   }
 
+  function testTagPillFlow(tf) {
+    if (!tf) return
+    tf.retagging = false
+    tf.tags = ["a", "b"]
+    check("tagflow", eq(tf._displayed, ["a", "b"]), "non-retag change swaps immediately got " + JSON.stringify(tf._displayed))
+    tf.retagging = true
+    tf.tags = ["c", "d"]
+    check("tagflow", tf.tagsExiting === true, "retag change starts exit transition")
+    check("tagflow", eq(tf._displayed, ["a", "b"]), "retag keeps old tags until swap got " + JSON.stringify(tf._displayed))
+    tf.tagsExiting = false
+    tf.retagging = false
+    tf.tags = ["x"]
+    check("tagflow", eq(tf._displayed, ["x"]), "manual change after retag swaps immediately got " + JSON.stringify(tf._displayed))
+  }
+
   function mkItem(o) {
     return {
       name: o.name !== undefined ? o.name : "",
@@ -184,7 +199,7 @@ ShellRoot {
     }
   }
 
-  function testSelector(svc) {
+  function testSelector(svc, analysis) {
     if (!svc) return
 
     function namesOf() {
@@ -291,6 +306,24 @@ ShellRoot {
     check("selector", eq(colorOut, ["green"]), "color filter hue4 got " + JSON.stringify(colorOut))
     svc.selectedColorFilter = -1
 
+    svc.sortMode = "date"
+    var folderItems = [
+      mkItem({ name: "root1.webp", mtime: 6 }),
+      mkItem({ name: "effects/root1-invert.webp", mtime: 5 }),
+      mkItem({ name: "nature/forest.webp", mtime: 4 }),
+      mkItem({ name: "root2.webp", mtime: 3 }),
+      mkItem({ name: "Zero Two/002 [Darling]", type: "we", weId: "zt", mtime: 2 }),
+      mkItem({ name: "Winter / anime 4K", type: "video", videoFile: "/v/w.mp4", mtime: 1 })
+    ]
+    svc.selectedFolder = ""
+    check("selector", eq(applyFilter(folderItems), ["root1.webp", "root2.webp", "Zero Two/002 [Darling]", "Winter / anime 4K"]), "folder default root-only; WE/video titles with slash stay in Main got " + JSON.stringify(namesOf()))
+    check("selector", eq(svc.availableFolders, ["effects", "nature"]), "availableFolders only from static subfolders got " + JSON.stringify(svc.availableFolders))
+    svc.selectedFolder = "effects"
+    check("selector", eq(applyFilter(folderItems), ["effects/root1-invert.webp"]), "folder effects-only excludes WE/video got " + JSON.stringify(namesOf()))
+    svc.selectedFolder = "*"
+    check("selector", applyFilter(folderItems).length === 6, "folder all shows everything got " + JSON.stringify(namesOf()))
+    svc.selectedFolder = ""
+
     svc.favouriteFilterActive = true
     svc.favouritesDb = ({ "favone": true })
     var favOut = applyFilter([
@@ -389,15 +422,23 @@ ShellRoot {
     resetCache("color")
     cache({ name: "a", thumb: "ka.webp", hue: 0, sat: 50, mtime: 1 })
     svc.tagsDb = ({})
+    if (analysis) analysis.running = true
     svc._analysisConn.onItemAnalyzed("ka", ["freshtag"], { hue: 0, saturation: 50 }, [])
     check("selector", eq(svc.tagsDb["ka"], ["freshtag"]), "onItemAnalyzed stores tags got " + JSON.stringify(svc.tagsDb["ka"]))
-    check("selector", svc._analysisItemsDirty === true, "onItemAnalyzed marks dirty")
+    check("selector", svc._analysisItemsDirty === true, "full-scan onItemAnalyzed batches (stays dirty)")
     svc._analysisConn.onAnalysisComplete()
     check("selector", svc._analysisItemsDirty === false, "onAnalysisComplete clears dirty")
     var hasFresh = false
     for (var ai = 0; ai < svc.popularTags.length; ai++)
       if (svc.popularTags[ai].tag === "freshtag") hasFresh = true
     check("selector", hasFresh, "onAnalysisComplete rebuilds popular tags with new tag")
+    svc.tagsDb = ({})
+
+    if (analysis) analysis.running = false
+    svc._analysisItemsDirty = false
+    svc._analysisConn.onItemAnalyzed("kb", ["instant"], { hue: 0, saturation: 0 }, [])
+    check("selector", eq(svc.tagsDb["kb"], ["instant"]), "single retag stores tags got " + JSON.stringify(svc.tagsDb["kb"]))
+    check("selector", svc._analysisItemsDirty === false, "single retag applies immediately (reassigns, no pending dirty)")
     svc.tagsDb = ({})
   }
 
@@ -417,6 +458,7 @@ ShellRoot {
       '  property var image: ImageService\n' +
       '  property var meta: FileMetadataService\n' +
       '  property var watch: WatcherService\n' +
+      '  property var analysis: WallpaperAnalysisService\n' +
       '}',
       root, "file://" + qmlDir + "/__singletons.qml")
 
@@ -434,12 +476,13 @@ ShellRoot {
     testMeta(S ? S.meta : null)
     testWatcher(S ? S.watch : null)
     testTagCloud(comp("wallpaper/TagCloud.qml", {}))
+    testTagPillFlow(comp("wallpaper/TagPillFlow.qml", {}))
     testWallhaven(comp("wallpaper/WallhavenService.qml", { wallpaperDir: "/tmp/wp" }))
     testSteam(comp("wallpaper/SteamWorkshopService.qml", { weDir: "/tmp/we" }))
     testSelector(comp("wallpaper/WallpaperSelectorService.qml", {
       scriptsDir: "/tmp", homeDir: "/tmp", wallpaperDir: "/tmp/wp", videoDir: "/tmp/vid",
       cacheBaseDir: "/tmp/cache", weDir: "/tmp/we", weAssetsDir: "/tmp/wea", showing: false
-    }))
+    }), S ? S.analysis : null)
 
     if (root.fails.length > 0) {
       console.error("QMLTEST FAIL (" + root.fails.length + " of " + root.checks + " checks):")

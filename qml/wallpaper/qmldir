@@ -6,11 +6,13 @@ ColorFilterStrip 1.0 ColorFilterStrip.qml
 FilterBar 1.0 FilterBar.qml
 FilterButton 1.0 FilterButton.qml
 FilterDropdown 1.0 FilterDropdown.qml
+FolderFilter 1.0 FolderFilter.qml
 HexDelegate 1.0 HexDelegate.qml
 MonitorPickerPopup 1.0 MonitorPickerPopup.qml
 MosaicCell 1.0 MosaicCell.qml
 MosaicView 1.0 MosaicView.qml
 OllamaStatusIndicator 1.0 OllamaStatusIndicator.qml
+RetagButton 1.0 RetagButton.qml
 SettingsInput 1.0 SettingsInput.qml
 SettingsTextInput 1.0 SettingsTextInput.qml
 SettingsToggle 1.0 SettingsToggle.qml
@@ -22,6 +24,7 @@ BlurFramePreview 1.0 BlurFramePreview.qml
 ShaderPicker 1.0 ShaderPicker.qml
 SliceDelegate 1.0 SliceDelegate.qml
 TagCloud 1.0 TagCloud.qml
+TagPillFlow 1.0 TagPillFlow.qml
 WallhavenBrowser 1.0 WallhavenBrowser.qml
 WallhavenDownloadProc 1.0 WallhavenDownloadProc.qml
 WallhavenService 1.0 WallhavenService.qml

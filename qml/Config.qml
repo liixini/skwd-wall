@@ -104,6 +104,7 @@ QtObject {
     readonly property bool steamEnabled: _data.features?.steam !== false
     readonly property bool wallhavenEnabled: _data.features?.wallhaven !== false
     readonly property bool videoPreviewEnabled: _data.features?.videoPreview !== false
+    readonly property bool videoPreviewInstant: _data.features?.videoPreviewInstant === true
     readonly property bool videoAutoScale: _data.features?.videoAutoScale === true
 
     readonly property string wallpaperEngine: {
@@ -278,6 +279,9 @@ QtObject {
     readonly property string steamUsername: _data.steam?.username ?? ""
     readonly property string steamBackend: _data.steam?.backend ?? "steam"
 
+    readonly property bool autoRecolorEnabled: _data.effects?.autoRecolor === true
+    readonly property string autoRecolorTheme: _data.effects?.autoTheme ?? "Catppuccin"
+
     readonly property int weRenderFps: _data.weRender?.fps ?? 30
     readonly property bool weRenderNoFullscreenPause: _data.weRender?.noFullscreenPause !== false
     readonly property bool weRenderFullscreenPauseOnlyActive: _data.weRender?.fullscreenPauseOnlyActive === true
@@ -306,7 +310,13 @@ QtObject {
     }
 
     readonly property bool niriOverviewBackdrop: _data.niri?.overviewBackdrop === true
+    readonly property string niriBackdrop: _data.niri?.backdrop ?? ""
+    readonly property bool niriBackdropFollowWallpaper: _data.niri?.backdropFollowWallpaper === true
+    readonly property bool niriBackdropAutoTheme: _data.niri?.backdropAutoTheme === true
+    readonly property string niriBackdropTheme: _data.niri?.backdropTheme ?? "Catppuccin"
+    readonly property int niriBackdropDim: Math.max(0, Math.min(100, _data.niri?.backdropDim ?? 0))
     readonly property int niriOverviewBackdropBlur: Math.max(1, Math.min(200, _data.niri?.overviewBackdropBlur ?? 30))
+    readonly property bool niriOverviewBackdropBlurEnabled: _data.niri?.overviewBackdropBlurEnabled !== false
 
     readonly property string kdeVideoPlugin: "luisbocanegra.smart.video.wallpaper.reborn"
 }

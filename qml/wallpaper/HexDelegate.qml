@@ -16,6 +16,7 @@ Item {
     property bool isSelected: false
     property bool isHovered: hexMouse.containsMouse
     property bool pulledOut: false
+    property bool viewMoving: false
 
     property real parallaxX: 0
     property real parallaxY: 0
@@ -25,21 +26,22 @@ Item {
 
     property string videoPath: itemData && itemData.videoFile ? itemData.videoFile : ""
     property bool hasVideo: videoPath.length > 0 && Config.videoPreviewEnabled
-    property bool videoActive: false
+    property bool _previewArmed: false
+    readonly property bool videoActive: _previewArmed && isSelected && hasVideo && !viewMoving
 
     onIsSelectedChanged: {
         if (isSelected && hasVideo) {
             _videoDelayTimer.restart()
         } else {
             _videoDelayTimer.stop()
-            videoActive = false
+            _previewArmed = false
         }
     }
 
     Timer {
         id: _videoDelayTimer
-        interval: 300
-        onTriggered: hexItem.videoActive = true
+        interval: Config.videoPreviewInstant ? 100 : 300
+        onTriggered: hexItem._previewArmed = true
     }
 
     width: hexRadius * 2

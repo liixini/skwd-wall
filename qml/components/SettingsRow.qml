@@ -82,7 +82,7 @@ Item {
     Text {
       width: parent.width
       text: root.title
-      elide: Text.ElideRight
+      wrapMode: Text.WordWrap
       font.family: Style.fontFamily
       font.pixelSize: 12 * Config.uiScale
       font.weight: Font.Medium

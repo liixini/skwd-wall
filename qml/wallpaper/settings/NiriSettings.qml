@@ -11,6 +11,24 @@ Flow {
     width: parent ? parent.width : 0
     spacing: 12
 
+    property var _backdropThemes: []
+
+    Component.onCompleted: {
+        DaemonClient.call("effects.list", {}, function(result, err) {
+            if (err || !result || !result.effects) return
+            for (var i = 0; i < result.effects.length; i++) {
+                var eff = result.effects[i]
+                if (eff.id !== "theme" || !eff.params) continue
+                for (var j = 0; j < eff.params.length; j++) {
+                    if (eff.params[j].id === "theme") {
+                        root._backdropThemes = eff.params[j].options || []
+                        return
+                    }
+                }
+            }
+        })
+    }
+
     readonly property string _layerRuleSnippet:
         "layer-rule {\n" +
         "    match namespace=\"^skwd-paper-backdrop$\"\n" +
@@ -20,15 +38,24 @@ Flow {
     SettingsCard {
         colors: root.colors
         title: "Overview backdrop"
-        subtitle: "Render a blurred copy of the current wallpaper as the backdrop visible in niri's overview (Mod+O)."
+        subtitle: "Render the current wallpaper (optionally blurred) as the backdrop visible in niri's overview (Mod+O)."
         width: parent.width
 
         RowToggle {
             colors: root.colors
-            title: "Show blurred wallpaper in overview"
-            description: "On every wallpaper apply, regenerate a blurred copy and serve it as a layer-shell surface that niri places in the overview backdrop."
+            title: "Show wallpaper in overview"
+            description: "Serve a copy of the wallpaper as a layer-shell surface that niri places in the overview backdrop."
             checked: Config.niriOverviewBackdrop
             onToggle: function(v) { if (root.saveConfigKey) root.saveConfigKey("niri.overviewBackdrop", v) }
+        }
+
+        RowToggle {
+            colors: root.colors
+            title: "Blur the backdrop"
+            description: "Apply a Gaussian blur to the overview backdrop. Turn off for a sharp backdrop."
+            checked: Config.niriOverviewBackdropBlurEnabled
+            enabled: Config.niriOverviewBackdrop
+            onToggle: function(v) { if (root.saveConfigKey) root.saveConfigKey("niri.overviewBackdropBlurEnabled", v) }
         }
 
         RowInput {
@@ -37,8 +64,47 @@ Flow {
             description: "Gaussian blur radius applied to the copy. Higher is softer."
             value: Config.niriOverviewBackdropBlur
             min: 1; max: 200
-            enabled: Config.niriOverviewBackdrop
+            enabled: Config.niriOverviewBackdrop && Config.niriOverviewBackdropBlurEnabled
             onCommit: function(v) { if (root.saveConfigKey) root.saveConfigKey("niri.overviewBackdropBlur", v) }
+        }
+
+        RowToggle {
+            colors: root.colors
+            title: "Always use the current wallpaper"
+            description: "Force the backdrop to track whatever wallpaper is applied, overriding any per-card backdrop you've set."
+            checked: Config.niriBackdropFollowWallpaper
+            enabled: Config.niriOverviewBackdrop
+            onToggle: function(v) { if (root.saveConfigKey) root.saveConfigKey("niri.backdropFollowWallpaper", v) }
+        }
+
+        RowToggle {
+            colors: root.colors
+            title: "Auto-theme the backdrop"
+            description: "Recolour the backdrop with a gowall theme palette."
+            checked: Config.niriBackdropAutoTheme
+            enabled: Config.niriOverviewBackdrop
+            onToggle: function(v) { if (root.saveConfigKey) root.saveConfigKey("niri.backdropAutoTheme", v) }
+        }
+
+        RowDropdown {
+            colors: root.colors
+            title: "Backdrop theme"
+            description: "Palette used when auto-theming the backdrop."
+            value: Config.niriBackdropTheme
+            model: root._backdropThemes
+            enabled: Config.niriOverviewBackdrop && Config.niriBackdropAutoTheme
+            opacity: enabled ? 1.0 : 0.5
+            onSelect: function(v) { if (root.saveConfigKey) root.saveConfigKey("niri.backdropTheme", v) }
+        }
+
+        RowInput {
+            colors: root.colors
+            title: "Backdrop dimming"
+            description: "Darken the overview backdrop. 0 = none, 100 = black."
+            value: Config.niriBackdropDim
+            min: 0; max: 100; suffix: "%"
+            enabled: Config.niriOverviewBackdrop
+            onCommit: function(v) { if (root.saveConfigKey) root.saveConfigKey("niri.backdropDim", v) }
         }
 
         SettingsRow {

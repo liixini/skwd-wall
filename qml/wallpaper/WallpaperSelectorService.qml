@@ -28,6 +28,8 @@ QtObject {
 
   property int selectedColorFilter: -1
   property string selectedTypeFilter: ""
+  property string selectedFolder: ""
+  property var availableFolders: []
   property string sortMode: "color"
   property var selectedTags: []
   property int selectedTagIndex: -1
@@ -422,8 +424,26 @@ QtObject {
   signal modelUpdated()
   signal wallpaperApplied()
 
+  function _folderOf(item) {
+    if (!item || item.type !== "static") return ""
+    var name = item.name
+    var slash = name ? name.indexOf("/") : -1
+    return slash > 0 ? name.substring(0, slash) : ""
+  }
+
+  function _rebuildFolders() {
+    var seen = ({}), out = []
+    for (var i = 0; i < _wallpaperData.length; i++) {
+      var f = _folderOf(_wallpaperData[i])
+      if (f !== "" && seen[f] === undefined) { seen[f] = true; out.push(f) }
+    }
+    out.sort()
+    if (out.join(" ") !== availableFolders.join(" ")) availableFolders = out
+  }
+
   function updateFilteredModel(skipCrossfade) {
     _skipCrossfade = !!skipCrossfade
+    _rebuildFolders()
 
     var items = []
     for (var i = 0; i < _wallpaperData.length; i++) {
@@ -434,6 +454,7 @@ QtObject {
       var hue = useOllama ? ollamaColor.hue : item.hue
       var saturation = useOllama ? (ollamaColor.saturation || 0) : (item.saturation || 0)
       var effectiveType = (item.type === "we" && item.videoFile) ? "video" : item.type
+      if (selectedFolder !== "*" && _folderOf(item) !== selectedFolder) continue
       if (selectedTypeFilter !== "" && effectiveType !== selectedTypeFilter) continue
       if (selectedColorFilter !== -1 && hue !== selectedColorFilter) continue
       if (favouriteFilterActive && !isFavourite(item.name, item.weId)) continue
@@ -539,6 +560,7 @@ QtObject {
 
   onSelectedColorFilterChanged: updateFilteredModel()
   onSelectedTypeFilterChanged: updateFilteredModel()
+  onSelectedFolderChanged: updateFilteredModel()
   onTagsMatchAnyChanged: { if (selectedTags.length > 0) _debouncedUpdate.restart() }
 
   function _collectNeighbors(path) {
@@ -573,6 +595,13 @@ QtObject {
     DaemonClient.applyStatic(path, outputs, neighbors, screens)
     service.wallpaperApplied()
   }
+
+  function applyBackdrop(path) {
+    var p = path || ""
+    Config.saveKey("niri.backdrop", p)
+    DaemonClient.call("wall.backdrop", { "path": p }, function() {})
+  }
+
 
   function applyWE(id, outputs, audioMap, volumeMap) {
     var screens = (outputs && outputs.length > 0)
@@ -651,6 +680,16 @@ QtObject {
       service.colorsDb[key] = colors
       if (weather && weather.length > 0) service.weatherDb[key] = weather
       service._analysisItemsDirty = true
+      if (!WallpaperAnalysisService.running) {
+        service._analysisItemsDirty = false
+        var tcopy = {}
+        for (var tk in service.tagsDb) tcopy[tk] = service.tagsDb[tk]
+        service.tagsDb = tcopy
+        var ccopy = {}
+        for (var ck in service.colorsDb) ccopy[ck] = service.colorsDb[ck]
+        service.colorsDb = ccopy
+        service._rebuildPopularTags()
+      }
     }
     function onAnalysisComplete() {
       service.ollamaTaggingActive = false

@@ -537,14 +537,28 @@ Scope {
     Loader {
       id: effectsLoader
       active: wallpaperSelector.effectsOpen
-      anchors.centerIn: parent
+      anchors.fill: parent
       z: 999
       sourceComponent: Component {
-        EffectsPanel {
-          colors: wallpaperSelector.colors
-          effectsOpen: wallpaperSelector.effectsOpen
-          selectedPath: wallpaperSelector._currentSelectedPath
-          onCloseRequested: { wallpaperSelector.effectsOpen = false; wallpaperSelector._focusActiveList() }
+        Item {
+          anchors.fill: parent
+
+          Rectangle {
+            anchors.fill: parent
+            color: Qt.rgba(0, 0, 0, 0.55)
+            MouseArea {
+              anchors.fill: parent
+              onClicked: { wallpaperSelector.effectsOpen = false; wallpaperSelector._focusActiveList() }
+            }
+          }
+
+          EffectsPanel {
+            anchors.centerIn: parent
+            colors: wallpaperSelector.colors
+            effectsOpen: wallpaperSelector.effectsOpen
+            selectedPath: wallpaperSelector._currentSelectedPath
+            onCloseRequested: { wallpaperSelector.effectsOpen = false; wallpaperSelector._focusActiveList() }
+          }
         }
       }
     }
@@ -631,6 +645,10 @@ Scope {
       property bool keyboardNavActive: false
       property real lastMouseX: -1
       property real lastMouseY: -1
+
+      property bool contentMoving: false
+      onContentXChanged: { sliceListView.contentMoving = true; _sliceScrollStop.restart() }
+      Timer { id: _sliceScrollStop; interval: 90; onTriggered: sliceListView.contentMoving = false }
 
       highlightFollowsCurrentItem: true
       highlightMoveDuration: Style.animExpand
@@ -804,6 +822,11 @@ Scope {
 
       orientation: ListView.Horizontal
       clip: true
+
+      property bool contentMoving: false
+      onContentXChanged: { hexListView.contentMoving = true; _hexScrollStop.restart() }
+      Timer { id: _hexScrollStop; interval: 90; onTriggered: hexListView.contentMoving = false }
+
       property int _rows: wallpaperSelector.hexRows
       property real _r: wallpaperSelector.hexRadius
       property real _gridSpacing: 6
@@ -998,6 +1021,7 @@ Scope {
             service: wallpaperSelector.selectorService
             itemData: service.filteredModel.get(flatIdx)
             isSelected: hexCol.colIdx === hexListView._selectedCol && rowIdx === hexListView._selectedRow
+            viewMoving: hexListView.contentMoving
             applyRequest: function(item, forcePicker) { wallpaperSelector._applyItem(item, forcePicker) }
 
             x: 0
@@ -1045,8 +1069,13 @@ Scope {
       boundsBehavior: Flickable.StopAtBounds
       interactive: false
 
+      property bool contentMoving: false
+      Timer { id: _gridScrollStop; interval: 90; onTriggered: thumbGridView.contentMoving = false }
+
       property real _scrollTarget: 0
       onContentYChanged: {
+        thumbGridView.contentMoving = true
+        _gridScrollStop.restart()
         if (!_gridScrollAnim.running) _scrollTarget = contentY
       }
 
@@ -1214,10 +1243,11 @@ Scope {
 
         property string videoPath: model.videoFile ? model.videoFile : ""
         property bool hasVideo: videoPath.length > 0 && Config.videoPreviewEnabled
-        property bool videoActive: false
+        property bool _previewArmed: false
+        readonly property bool videoActive: _previewArmed && hasVideo && thumbGridView.hoveredIdx === index && !thumbGridView.contentMoving
 
         onVisibleChanged: {
-            if (!visible) { _gridVideoDelay.stop(); videoActive = false }
+            if (!visible) { _gridVideoDelay.stop(); _previewArmed = false }
         }
 
         Connections {
@@ -1227,15 +1257,15 @@ Scope {
                     _gridVideoDelay.restart()
                 } else {
                     _gridVideoDelay.stop()
-                    gridThumbDelegate.videoActive = false
+                    gridThumbDelegate._previewArmed = false
                 }
             }
         }
 
         Timer {
             id: _gridVideoDelay
-            interval: 600
-            onTriggered: gridThumbDelegate.videoActive = true
+            interval: Config.videoPreviewInstant ? 100 : 600
+            onTriggered: gridThumbDelegate._previewArmed = true
         }
 
         property real _entryOpacity: 0.8
@@ -1757,6 +1787,46 @@ Scope {
               Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
 
               Item {
+                width: parent.width; height: 26
+                visible: Config.isNiri && Config.niriOverviewBackdrop && gridBackOverlay.overlayData && gridBackOverlay.overlayData.type === "static"
+                property bool _isBackdrop: !!(gridBackOverlay.overlayData && Config.niriBackdrop === gridBackOverlay.overlayData.path)
+                Text {
+                  anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                  text: "OVERVIEW BACKDROP"
+                  color: wallpaperSelector.colors ? wallpaperSelector.colors.tertiary : "#8bceff"
+                  font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Medium; font.letterSpacing: 0.5
+                }
+                Rectangle {
+                  id: gridBdBtn
+                  anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                  height: 22; width: gridBdLbl.implicitWidth + 18; radius: 4
+                  color: gridBdBtn.parent._isBackdrop
+                    ? (wallpaperSelector.colors ? wallpaperSelector.colors.primary : Style.fallbackAccent)
+                    : Qt.rgba(1, 1, 1, 0.12)
+                  Behavior on color { ColorAnimation { duration: 140 } }
+                  Text {
+                    id: gridBdLbl
+                    anchors.centerIn: parent
+                    text: gridBdBtn.parent._isBackdrop ? "Current ✓" : "Set"
+                    color: gridBdBtn.parent._isBackdrop
+                      ? (wallpaperSelector.colors ? wallpaperSelector.colors.primaryText : "#000")
+                      : (wallpaperSelector.colors ? wallpaperSelector.colors.surfaceText : "#fff")
+                    font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium
+                  }
+                  MouseArea {
+                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                      if (!gridBackOverlay.overlayData) return
+                      if (gridBdBtn.parent._isBackdrop) wallpaperSelector.selectorService.applyBackdrop("")
+                      else wallpaperSelector.selectorService.applyBackdrop(gridBackOverlay.overlayData.path)
+                    }
+                  }
+                }
+              }
+
+              Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+
+              Item {
                 width: parent.width; height: 24
                 Rectangle {
                   anchors.fill: parent
@@ -1817,12 +1887,13 @@ Scope {
               Item {
                 id: gridTagsSection
                 width: parent.width
-                height: Math.min(Math.max(30, gridTagsFlow.implicitHeight + 10), gridBackOverlay.bigH * 0.3)
+                height: Math.min(Math.max(30, gridTagFlow.contentHeight + 10), gridBackOverlay.bigH * 0.3)
                 clip: true
 
                 property string wpName: gridBackOverlay.overlayData ? gridBackOverlay.overlayData.name : ""
                 property string wpWeId: gridBackOverlay.overlayData ? (gridBackOverlay.overlayData.weId || "") : ""
                 property string wpThumb: gridBackOverlay.overlayData ? (gridBackOverlay.overlayData.thumb || "") : ""
+                property bool _retagging: false
                 property var currentTags: {
                   if (!gridBackOverlay.overlayOpen) return []
                   var db = wallpaperSelector.selectorService ? wallpaperSelector.selectorService.tagsDb : null
@@ -1831,60 +1902,18 @@ Scope {
                   return db[key] || []
                 }
 
-                Flickable {
-                  anchors.fill: parent; contentHeight: gridTagsFlow.implicitHeight
-                  clip: true; flickableDirection: Flickable.VerticalFlick; boundsBehavior: Flickable.StopAtBounds
-                  Flow {
-                    id: gridTagsFlow; width: parent.width; spacing: 5
-                    Repeater {
-                      model: gridTagsSection.currentTags
-                      Rectangle {
-                        id: gridTagPill
-                        required property int index
-                        required property var modelData
-                        property bool hovered: _gridTagMa.containsMouse
-                        width: _gridTagTxt.implicitWidth + 30; height: 28; radius: 4
-                        color: hovered ? (wallpaperSelector.colors ? Qt.rgba(wallpaperSelector.colors.surfaceVariant.r, wallpaperSelector.colors.surfaceVariant.g, wallpaperSelector.colors.surfaceVariant.b, 0.5) : Qt.rgba(1,1,1,0.15)) : "transparent"
-                        border.width: 1
-                        border.color: hovered
-                          ? (wallpaperSelector.colors ? Qt.rgba(wallpaperSelector.colors.primary.r, wallpaperSelector.colors.primary.g, wallpaperSelector.colors.primary.b, 0.7) : Qt.rgba(1,1,1,0.3))
-                          : (wallpaperSelector.colors ? Qt.rgba(wallpaperSelector.colors.outline.r, wallpaperSelector.colors.outline.g, wallpaperSelector.colors.outline.b, 0.5) : Qt.rgba(1,1,1,0.15))
-                        Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
-                        Behavior on border.color { ColorAnimation { duration: Style.animVeryFast } }
-                        transform: Matrix4x4 { matrix: Qt.matrix4x4(1, -0.08, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) }
-
-                        opacity: 0
-                        scale: 0.85
-                        Component.onCompleted: gridTagPillEnter.start()
-                        SequentialAnimation {
-                          id: gridTagPillEnter
-                          PauseAnimation { duration: Math.min(gridTagPill.index * 25, 600) }
-                          ParallelAnimation {
-                            NumberAnimation { target: gridTagPill; property: "opacity"; to: 1; duration: 220; easing.type: Easing.OutCubic }
-                            NumberAnimation { target: gridTagPill; property: "scale"; to: 1.0; duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.4 }
-                          }
-                        }
-                        Text {
-                          id: _gridTagTxt; anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
-                          text: modelData.toUpperCase(); color: wallpaperSelector.colors ? wallpaperSelector.colors.tertiary : "#8bceff"
-                          font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Medium; font.letterSpacing: 0.5
-                        }
-                        Text {
-                          anchors.right: parent.right; anchors.rightMargin: 6; anchors.verticalCenter: parent.verticalCenter
-                          text: "\u{f0156}"; font.family: Style.fontFamilyNerdIcons; font.pixelSize: 11
-                          color: parent.hovered ? (wallpaperSelector.colors ? wallpaperSelector.colors.primary : "#ff6b6b") : Qt.rgba(1,1,1,0.25)
-                          Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
-                        }
-                        MouseArea {
-                          id: _gridTagMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                          onClicked: {
-                            var tags = wallpaperSelector.selectorService.getWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId, gridTagsSection.wpThumb).slice()
-                            var idx = tags.indexOf(modelData); if (idx !== -1) tags.splice(idx, 1)
-                            wallpaperSelector.selectorService.setWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId, tags, gridTagsSection.wpThumb)
-                          }
-                        }
-                      }
-                    }
+                TagPillFlow {
+                  id: gridTagFlow
+                  anchors.fill: parent
+                  colors: wallpaperSelector.colors
+                  tags: gridTagsSection.currentTags
+                  retagging: gridTagsSection._retagging
+                  pillHeight: 28; pillFontSize: 12; pillSpacing: 5; pillPadding: 30
+                  onTransitionDone: gridTagsSection._retagging = false
+                  onRemoveRequested: function(tag) {
+                    var tags = wallpaperSelector.selectorService.getWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId, gridTagsSection.wpThumb).slice()
+                    var idx = tags.indexOf(tag); if (idx !== -1) tags.splice(idx, 1)
+                    wallpaperSelector.selectorService.setWallpaperTags(gridTagsSection.wpName, gridTagsSection.wpWeId, tags, gridTagsSection.wpThumb)
                   }
                 }
                 Text {
@@ -1907,26 +1936,14 @@ Scope {
                   onClicked: { if (!gridBackOverlay.overlayData) return; var p = gridBackOverlay.overlayData.path; Qt.openUrlExternally(ImageService.fileUrl(p.substring(0, p.lastIndexOf("/")))); gridBackOverlay.hide() }
                 }
 
-                ActionButton {
+                RetagButton {
                   width: gridActionRow._slotWidth
                   colors: wallpaperSelector.colors
-                  icon: "\u{f0450}"; label: retagInFlight ? "TAGGING…" : "RETAG"
-                  property bool retagInFlight: false
-                  enabled: !retagInFlight && Config.ollamaEnabled && gridBackOverlay.overlayData
-                  onClicked: {
-                    if (!gridBackOverlay.overlayData) return
-                    var key = (gridBackOverlay.overlayData.weId || "")
-                      ? gridBackOverlay.overlayData.weId
-                      : ImageService.thumbKey(gridBackOverlay.overlayData.thumb || "", gridBackOverlay.overlayData.name || "")
-                    if (!key) return
-                    retagInFlight = true
-                    DaemonClient.retagOne(key, function(_r, _e) { _gridRetagResetTimer.restart() })
-                  }
-                  Timer {
-                    id: _gridRetagResetTimer
-                    interval: 8000
-                    onTriggered: parent.retagInFlight = false
-                  }
+                  wpKey: !gridBackOverlay.overlayData ? "" : ((gridBackOverlay.overlayData.weId || "")
+                    ? gridBackOverlay.overlayData.weId
+                    : ImageService.thumbKey(gridBackOverlay.overlayData.thumb || "", gridBackOverlay.overlayData.name || ""))
+                  hasTags: gridTagsSection.currentTags.length > 0
+                  onRetagStarted: gridTagsSection._retagging = true
                 }
 
                 ActionButton {
@@ -2310,6 +2327,46 @@ Scope {
               Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
 
               Item {
+                width: parent.width; height: 26
+                visible: Config.isNiri && Config.niriOverviewBackdrop && hexBackOverlay.overlayData && hexBackOverlay.overlayData.type === "static"
+                property bool _isBackdrop: !!(hexBackOverlay.overlayData && Config.niriBackdrop === hexBackOverlay.overlayData.path)
+                Text {
+                  anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                  text: "OVERVIEW BACKDROP"
+                  color: wallpaperSelector.colors ? wallpaperSelector.colors.tertiary : "#8bceff"
+                  font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Medium; font.letterSpacing: 0.5
+                }
+                Rectangle {
+                  id: hexBdBtn
+                  anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                  height: 22; width: hexBdLbl.implicitWidth + 18; radius: 4
+                  color: hexBdBtn.parent._isBackdrop
+                    ? (wallpaperSelector.colors ? wallpaperSelector.colors.primary : Style.fallbackAccent)
+                    : Qt.rgba(1, 1, 1, 0.12)
+                  Behavior on color { ColorAnimation { duration: 140 } }
+                  Text {
+                    id: hexBdLbl
+                    anchors.centerIn: parent
+                    text: hexBdBtn.parent._isBackdrop ? "Current ✓" : "Set"
+                    color: hexBdBtn.parent._isBackdrop
+                      ? (wallpaperSelector.colors ? wallpaperSelector.colors.primaryText : "#000")
+                      : (wallpaperSelector.colors ? wallpaperSelector.colors.surfaceText : "#fff")
+                    font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium
+                  }
+                  MouseArea {
+                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                      if (!hexBackOverlay.overlayData) return
+                      if (hexBdBtn.parent._isBackdrop) wallpaperSelector.selectorService.applyBackdrop("")
+                      else wallpaperSelector.selectorService.applyBackdrop(hexBackOverlay.overlayData.path)
+                    }
+                  }
+                }
+              }
+
+              Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+
+              Item {
                 width: parent.width; height: 24
                 Rectangle {
                   anchors.fill: parent
@@ -2370,12 +2427,13 @@ Scope {
               Item {
                 id: overlayTagsSection
                 width: parent.width
-                height: Math.min(Math.max(30, overlayTagsFlow.implicitHeight + 10), hexBackOverlay.bigR * 0.5)
+                height: Math.min(Math.max(30, hexTagFlow.contentHeight + 10), hexBackOverlay.bigR * 0.5)
                 clip: true
 
                 property string wpName: hexBackOverlay.overlayData ? hexBackOverlay.overlayData.name : ""
                 property string wpWeId: hexBackOverlay.overlayData ? (hexBackOverlay.overlayData.weId || "") : ""
                 property string wpThumb: hexBackOverlay.overlayData ? (hexBackOverlay.overlayData.thumb || "") : ""
+                property bool _retagging: false
                 property var currentTags: {
                   if (!hexBackOverlay.overlayOpen) return []
                   var db = wallpaperSelector.selectorService ? wallpaperSelector.selectorService.tagsDb : null
@@ -2384,45 +2442,18 @@ Scope {
                   return db[key] || []
                 }
 
-                Flickable {
-                  anchors.fill: parent; contentHeight: overlayTagsFlow.implicitHeight
-                  clip: true; flickableDirection: Flickable.VerticalFlick; boundsBehavior: Flickable.StopAtBounds
-                  Flow {
-                    id: overlayTagsFlow; width: parent.width; spacing: 5
-                    Repeater {
-                      model: overlayTagsSection.currentTags
-                      Rectangle {
-                        property bool hovered: _tagMa.containsMouse
-                        width: _tagTxt.implicitWidth + 30; height: 28; radius: 4
-                        color: hovered ? (wallpaperSelector.colors ? Qt.rgba(wallpaperSelector.colors.surfaceVariant.r, wallpaperSelector.colors.surfaceVariant.g, wallpaperSelector.colors.surfaceVariant.b, 0.5) : Qt.rgba(1,1,1,0.15)) : "transparent"
-                        border.width: 1
-                        border.color: hovered
-                          ? (wallpaperSelector.colors ? Qt.rgba(wallpaperSelector.colors.primary.r, wallpaperSelector.colors.primary.g, wallpaperSelector.colors.primary.b, 0.7) : Qt.rgba(1,1,1,0.3))
-                          : (wallpaperSelector.colors ? Qt.rgba(wallpaperSelector.colors.outline.r, wallpaperSelector.colors.outline.g, wallpaperSelector.colors.outline.b, 0.5) : Qt.rgba(1,1,1,0.15))
-                        Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
-                        Behavior on border.color { ColorAnimation { duration: Style.animVeryFast } }
-                        transform: Matrix4x4 { matrix: Qt.matrix4x4(1, -0.08, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) }
-                        Text {
-                          id: _tagTxt; anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
-                          text: modelData.toUpperCase(); color: wallpaperSelector.colors ? wallpaperSelector.colors.tertiary : "#8bceff"
-                          font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Medium; font.letterSpacing: 0.5
-                        }
-                        Text {
-                          anchors.right: parent.right; anchors.rightMargin: 6; anchors.verticalCenter: parent.verticalCenter
-                          text: "\u{f0156}"; font.family: Style.fontFamilyNerdIcons; font.pixelSize: 11
-                          color: parent.hovered ? (wallpaperSelector.colors ? wallpaperSelector.colors.primary : "#ff6b6b") : Qt.rgba(1,1,1,0.25)
-                          Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
-                        }
-                        MouseArea {
-                          id: _tagMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                          onClicked: {
-                            var tags = wallpaperSelector.selectorService.getWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId, overlayTagsSection.wpThumb).slice()
-                            var idx = tags.indexOf(modelData); if (idx !== -1) tags.splice(idx, 1)
-                            wallpaperSelector.selectorService.setWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId, tags, overlayTagsSection.wpThumb)
-                          }
-                        }
-                      }
-                    }
+                TagPillFlow {
+                  id: hexTagFlow
+                  anchors.fill: parent
+                  colors: wallpaperSelector.colors
+                  tags: overlayTagsSection.currentTags
+                  retagging: overlayTagsSection._retagging
+                  pillHeight: 28; pillFontSize: 12; pillSpacing: 5; pillPadding: 30
+                  onTransitionDone: overlayTagsSection._retagging = false
+                  onRemoveRequested: function(tag) {
+                    var tags = wallpaperSelector.selectorService.getWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId, overlayTagsSection.wpThumb).slice()
+                    var idx = tags.indexOf(tag); if (idx !== -1) tags.splice(idx, 1)
+                    wallpaperSelector.selectorService.setWallpaperTags(overlayTagsSection.wpName, overlayTagsSection.wpWeId, tags, overlayTagsSection.wpThumb)
                   }
                 }
                 Text {
@@ -2445,26 +2476,14 @@ Scope {
                   onClicked: { if (!hexBackOverlay.overlayData) return; var p = hexBackOverlay.overlayData.path; Qt.openUrlExternally(ImageService.fileUrl(p.substring(0, p.lastIndexOf("/")))); hexBackOverlay.hide() }
                 }
 
-                ActionButton {
+                RetagButton {
                   width: overlayActionRow._slotWidth
                   colors: wallpaperSelector.colors
-                  icon: "\u{f0450}"; label: retagInFlight ? "TAGGING…" : "RETAG"
-                  property bool retagInFlight: false
-                  enabled: !retagInFlight && Config.ollamaEnabled && hexBackOverlay.overlayData
-                  onClicked: {
-                    if (!hexBackOverlay.overlayData) return
-                    var key = (hexBackOverlay.overlayData.weId || "")
-                      ? hexBackOverlay.overlayData.weId
-                      : ImageService.thumbKey(hexBackOverlay.overlayData.thumb || "", hexBackOverlay.overlayData.name || "")
-                    if (!key) return
-                    retagInFlight = true
-                    DaemonClient.retagOne(key, function(_r, _e) { _hexRetagResetTimer.restart() })
-                  }
-                  Timer {
-                    id: _hexRetagResetTimer
-                    interval: 8000
-                    onTriggered: parent.retagInFlight = false
-                  }
+                  wpKey: !hexBackOverlay.overlayData ? "" : ((hexBackOverlay.overlayData.weId || "")
+                    ? hexBackOverlay.overlayData.weId
+                    : ImageService.thumbKey(hexBackOverlay.overlayData.thumb || "", hexBackOverlay.overlayData.name || ""))
+                  hasTags: overlayTagsSection.currentTags.length > 0
+                  onRetagStarted: overlayTagsSection._retagging = true
                 }
 
                 ActionButton {

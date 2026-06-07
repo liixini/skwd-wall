@@ -110,7 +110,8 @@ Item {
     property bool suppressWidthAnim: false
     property string videoPath: delegateItem.model.videoFile ? delegateItem.model.videoFile : ""
     property bool hasVideo: videoPath.length > 0 && Config.videoPreviewEnabled
-    property bool videoActive: false
+    property bool _previewArmed: false
+    readonly property bool videoActive: _previewArmed && isCurrent && hasVideo && !(_listView && _listView.contentMoving)
 
     width: isCurrent ? expandedWidth : sliceWidth
     height: _listView ? _listView.height : 0
@@ -121,7 +122,7 @@ Item {
             videoDelayTimer.restart()
         } else {
             videoDelayTimer.stop()
-            videoActive = false
+            _previewArmed = false
         }
         if (isCurrent) _preheatTimer.restart()
         else _preheatTimer.stop()
@@ -129,8 +130,8 @@ Item {
 
     Timer {
         id: videoDelayTimer
-        interval: 300
-        onTriggered: delegateItem.videoActive = true
+        interval: Config.videoPreviewInstant ? 100 : 300
+        onTriggered: delegateItem._previewArmed = true
     }
 
     z: isCurrent ? 100 : (isHovered ? 90 : 50 - Math.min(Math.abs(index - (_listView ? _listView.currentIndex : 0)), 50))
@@ -567,6 +568,48 @@ Item {
                     }
                 }
 
+                Item {
+                    width: parent.width; height: 28
+                    visible: Config.isNiri && Config.niriOverviewBackdrop && delegateItem.model.type === "static"
+                    property bool _isBackdrop: Config.niriBackdrop === delegateItem.model.path
+
+                    Text {
+                        anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                        text: "OVERVIEW BACKDROP"
+                        color: delegateItem.colors ? delegateItem.colors.tertiary : "#8bceff"
+                        font.family: Style.fontFamily; font.pixelSize: 11
+                        font.weight: Font.Medium; font.letterSpacing: 0.5
+                    }
+
+                    Rectangle {
+                        id: bdBtn
+                        anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                        height: 24; width: bdBtnLbl.implicitWidth + 20; radius: 4
+                        color: bdBtn.parent._isBackdrop
+                            ? (delegateItem.colors ? delegateItem.colors.primary : Style.fallbackAccent)
+                            : Qt.rgba(1, 1, 1, 0.12)
+                        Behavior on color { ColorAnimation { duration: 140 } }
+
+                        Text {
+                            id: bdBtnLbl
+                            anchors.centerIn: parent
+                            text: bdBtn.parent._isBackdrop ? "Current ✓" : "Set"
+                            color: bdBtn.parent._isBackdrop
+                                ? (delegateItem.colors ? delegateItem.colors.primaryText : "#000")
+                                : (delegateItem.colors ? delegateItem.colors.surfaceText : "#fff")
+                            font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Medium
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (bdBtn.parent._isBackdrop) delegateItem.service.applyBackdrop("")
+                                else delegateItem.service.applyBackdrop(delegateItem.model.path)
+                            }
+                        }
+                    }
+                }
+
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
 
                 Item {
@@ -645,6 +688,7 @@ Item {
                     property string wpName: delegateItem.model.name
                     property string wpWeId: delegateItem.model.weId || ""
                     property string wpThumb: delegateItem.model.thumb || ""
+                    property bool _retagging: false
                     property var currentTags: {
                         if (!delegateItem.flipped) return []
                         var db = delegateItem.service ? delegateItem.service.tagsDb : null
@@ -655,90 +699,18 @@ Item {
                         return db[key] || []
                     }
 
-                    Flickable {
+                    TagPillFlow {
                         anchors.fill: parent
-                        contentHeight: backTagsFlowInner.implicitHeight
-                        clip: true
-                        flickableDirection: Flickable.VerticalFlick
-                        boundsBehavior: Flickable.StopAtBounds
-
-                        Flow {
-                            id: backTagsFlowInner
-                            width: parent.width
-                            spacing: 6
-
-                            Repeater {
-                                model: backTagsSection.currentTags
-
-                                Rectangle {
-                                    id: backTagPill
-                                    required property int index
-                                    required property var modelData
-                                    property bool hovered: tagRemoveArea.containsMouse
-                                    width: tagLabelText.implicitWidth + 28
-                                    height: 26
-                                    radius: 4
-                                    color: hovered
-                                        ? (delegateItem.colors ? Qt.rgba(delegateItem.colors.surfaceVariant.r, delegateItem.colors.surfaceVariant.g, delegateItem.colors.surfaceVariant.b, 0.5) : Qt.rgba(1, 1, 1, 0.15))
-                                        : "transparent"
-                                    border.width: 1
-                                    border.color: hovered
-                                        ? (delegateItem.colors ? Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.7) : Qt.rgba(1, 1, 1, 0.3))
-                                        : (delegateItem.colors ? Qt.rgba(delegateItem.colors.outline.r, delegateItem.colors.outline.g, delegateItem.colors.outline.b, 0.5) : Qt.rgba(1, 1, 1, 0.15))
-                                    Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
-                                    Behavior on border.color { ColorAnimation { duration: Style.animVeryFast } }
-
-                                    opacity: 0
-                                    scale: 0.85
-                                    Component.onCompleted: backTagPillEnter.start()
-                                    SequentialAnimation {
-                                        id: backTagPillEnter
-                                        PauseAnimation { duration: Math.min(backTagPill.index * 25, 600) }
-                                        ParallelAnimation {
-                                            NumberAnimation { target: backTagPill; property: "opacity"; to: 1; duration: 220; easing.type: Easing.OutCubic }
-                                            NumberAnimation { target: backTagPill; property: "scale"; to: 1.0; duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.4 }
-                                        }
-                                    }
-
-                                    transform: Matrix4x4 {
-                                        matrix: Qt.matrix4x4(
-                                            1, -0.08, 0, 0,
-                                            0, 1,     0, 0,
-                                            0, 0,     1, 0,
-                                            0, 0,     0, 1)
-                                    }
-
-                                    Text {
-                                        id: tagLabelText
-                                        anchors.left: parent.left; anchors.leftMargin: 8
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        text: modelData.toUpperCase()
-                                        color: delegateItem.colors ? delegateItem.colors.tertiary : "#8bceff"
-                                        font.family: Style.fontFamily; font.pixelSize: 11
-                                        font.weight: Font.Medium; font.letterSpacing: 0.5
-                                    }
-
-                                    Text {
-                                        anchors.right: parent.right; anchors.rightMargin: 6
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        text: "\u{f0156}"
-                                        font.family: Style.fontFamilyNerdIcons; font.pixelSize: 10
-                                        color: parent.hovered ? (delegateItem.colors ? delegateItem.colors.primary : "#ff6b6b") : Qt.rgba(1, 1, 1, 0.25)
-                                        Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
-                                    }
-
-                                    MouseArea {
-                                        id: tagRemoveArea
-                                        anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            var tags = delegateItem.service.getWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId, backTagsSection.wpThumb).slice()
-                                            var idx = tags.indexOf(modelData)
-                                            if (idx !== -1) tags.splice(idx, 1)
-                                            delegateItem.service.setWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId, tags, backTagsSection.wpThumb)
-                                        }
-                                    }
-                                }
-                            }
+                        colors: delegateItem.colors
+                        tags: backTagsSection.currentTags
+                        retagging: backTagsSection._retagging
+                        pillHeight: 26; pillFontSize: 11; pillSpacing: 6; pillPadding: 28
+                        onTransitionDone: backTagsSection._retagging = false
+                        onRemoveRequested: function(tag) {
+                            var tags = delegateItem.service.getWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId, backTagsSection.wpThumb).slice()
+                            var idx = tags.indexOf(tag)
+                            if (idx !== -1) tags.splice(idx, 1)
+                            delegateItem.service.setWallpaperTags(backTagsSection.wpName, backTagsSection.wpWeId, tags, backTagsSection.wpThumb)
                         }
                     }
 
@@ -772,30 +744,15 @@ Item {
                         }
                     }
 
-                    ActionButton {
+                    RetagButton {
                         width: backActionRow._slotWidth
                         colors: delegateItem.colors
-                        icon: "\u{f0450}"; label: retagInFlight ? "TAGGING…" : "RETAG"
                         skew: Math.abs(delegateItem.skewOffset) * 0.4
-                        property bool retagInFlight: false
-                        enabled: !retagInFlight && Config.ollamaEnabled
-                        onClicked: {
-                            var key = backTagsSection.wpWeId
-                                ? backTagsSection.wpWeId
-                                : ImageService.thumbKey(backTagsSection.wpThumb, backTagsSection.wpName)
-                            if (!key) return
-                            retagInFlight = true
-                            DaemonClient.retagOne(key, function(_result, _error) {
-                                
-                                
-                                _retagResetTimer.restart()
-                            })
-                        }
-                        Timer {
-                            id: _retagResetTimer
-                            interval: 8000
-                            onTriggered: parent.retagInFlight = false
-                        }
+                        wpKey: backTagsSection.wpWeId
+                            ? backTagsSection.wpWeId
+                            : ImageService.thumbKey(backTagsSection.wpThumb, backTagsSection.wpName)
+                        hasTags: backTagsSection.currentTags.length > 0
+                        onRetagStarted: backTagsSection._retagging = true
                     }
 
                     ActionButton {
