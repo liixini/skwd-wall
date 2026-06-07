@@ -145,16 +145,6 @@ Item {
         onSelected: function(key) { browser.whService.topRange = key; browser.whService.search(1) }
       }
 
-      Item { width: 8; height: 1 }
-
-      Text {
-        visible: browser.whService ? browser.whService.loading : false
-        text: "󰔟"
-        font.family: Style.fontFamilyNerdIcons; font.pixelSize: 16 * Config.uiScale
-        color: browser.colors ? browser.colors.primary : Style.fallbackAccent
-        anchors.verticalCenter: parent.verticalCenter
-        RotationAnimation on rotation { from: 0; to: 360; duration: Style.animSpin; loops: Animation.Infinite; running: parent.visible }
-      }
     }
 
     Row {
@@ -938,7 +928,7 @@ Item {
 
   function _applyLocalWallhaven(whId) {
     var safeId = whId.replace(/[^a-zA-Z0-9]/g, "")
-    _applyLookupProc.command = ["find", Config.wallpaperDir, "-maxdepth", "1", "-name", "wallhaven-" + safeId + ".*", "-print", "-quit"]
+    _applyLookupProc.command = ["find", Config.wallpaperDir, "-maxdepth", "1", "-name", "wallhaven-" + safeId + ".*", "-not", "-name", "*.tmp", "-print", "-quit"]
     _applyLookupProc.running = true
   }
 
@@ -956,7 +946,7 @@ Item {
 
   function _deleteWallhaven(whId) {
     var safeId = whId.replace(/[^a-zA-Z0-9]/g, "")
-    _deleteLookupProc.command = ["find", Config.wallpaperDir, "-maxdepth", "1", "-name", "wallhaven-" + safeId + ".*", "-print", "-quit"]
+    _deleteLookupProc.command = ["find", Config.wallpaperDir, "-maxdepth", "1", "-name", "wallhaven-" + safeId + ".*", "-not", "-name", "*.tmp", "-print", "-quit"]
     _deleteLookupProc._whId = safeId
     _deleteLookupProc.running = true
   }

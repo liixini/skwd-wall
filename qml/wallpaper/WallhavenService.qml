@@ -41,7 +41,7 @@ QtObject {
 
   property string _localScanOutput: ""
   property var _localScanProc: Process {
-    command: ["find", whService.wallpaperDir, "-maxdepth", "1", "-name", "wallhaven-*", "-printf", "%f\n"]
+    command: ["find", whService.wallpaperDir, "-maxdepth", "1", "-name", "wallhaven-*", "-not", "-name", "*.tmp", "-printf", "%f\n"]
     stdout: SplitParser {
       onRead: data => { whService._localScanOutput += data + "\n" }
     }
