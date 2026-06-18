@@ -85,6 +85,14 @@ Flow {
 
         RowAction {
             colors: root.colors
+            title: "Re-tag all wallpapers"
+            description: "Re-run Ollama on every wallpaper, including ones already tagged. Use after switching models. A normal scan only tags untagged items, regardless of which model tagged them."
+            enabled: Config.ollamaEnabled && !WallpaperAnalysisService.running
+            onClicked: WallpaperAnalysisService.rescanAll()
+        }
+
+        RowAction {
+            colors: root.colors
             title: "Consolidate tags now"
             description: "Send all existing tags to Ollama to merge synonyms into canonical forms. Requires consolidation toggled on."
             onClicked: WallpaperAnalysisService.consolidate()

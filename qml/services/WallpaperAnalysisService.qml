@@ -40,6 +40,10 @@ QtObject {
         DaemonClient.call("analysis.start", {})
     }
 
+    function rescanAll() {
+        DaemonClient.call("analysis.start", { force: true })
+    }
+
     function stop() {
         DaemonClient.call("analysis.stop", {})
     }
