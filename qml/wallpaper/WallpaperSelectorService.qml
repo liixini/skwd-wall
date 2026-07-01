@@ -425,7 +425,9 @@ QtObject {
   signal wallpaperApplied()
 
   function _folderOf(item) {
-    if (!item || item.type !== "static") return ""
+    if (!item) return ""
+    if (item.type === "we") return "Wallpaper Engine"
+    if (item.type !== "static") return ""
     var name = item.name
     var slash = name ? name.indexOf("/") : -1
     return slash > 0 ? name.substring(0, slash) : ""

@@ -316,8 +316,10 @@ ShellRoot {
       mkItem({ name: "Winter / anime 4K", type: "video", videoFile: "/v/w.mp4", mtime: 1 })
     ]
     svc.selectedFolder = ""
-    check("selector", eq(applyFilter(folderItems), ["root1.webp", "root2.webp", "Zero Two/002 [Darling]", "Winter / anime 4K"]), "folder default root-only; WE/video titles with slash stay in Main got " + JSON.stringify(namesOf()))
-    check("selector", eq(svc.availableFolders, ["effects", "nature"]), "availableFolders only from static subfolders got " + JSON.stringify(svc.availableFolders))
+    check("selector", eq(applyFilter(folderItems), ["root1.webp", "root2.webp", "Winter / anime 4K"]), "folder default Main: root statics + video, WE bucketed out got " + JSON.stringify(namesOf()))
+    check("selector", eq(svc.availableFolders, ["Wallpaper Engine", "effects", "nature"]), "availableFolders: WE bucket + static subfolders got " + JSON.stringify(svc.availableFolders))
+    svc.selectedFolder = "Wallpaper Engine"
+    check("selector", eq(applyFilter(folderItems), ["Zero Two/002 [Darling]"]), "Wallpaper Engine folder shows WE got " + JSON.stringify(namesOf()))
     svc.selectedFolder = "effects"
     check("selector", eq(applyFilter(folderItems), ["effects/root1-invert.webp"]), "folder effects-only excludes WE/video got " + JSON.stringify(namesOf()))
     svc.selectedFolder = "*"
