@@ -106,7 +106,7 @@ The base wallpaper path is ~/Pictures/Wallpapers so that's where you put your pi
 Mod+T hotkey-overlay-title="Skwd-wall" { spawn "skwd wall toggle"; }
 
 # Hyprland
-bind = SUPER+T, exec, skwd wall toggle
+hl.bind("SUPER + W", hl.dsp.exec_cmd("skwd wall toggle"))
 
 # KDE Plasma - Use the shortcut app
 skwd wall toggle
