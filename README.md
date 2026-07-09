@@ -1,8 +1,12 @@
 # Skwd-wall
 
 > [!CAUTION]
-> Skwd-wall now uses my own Skwd-paper wallpaper software for image and video wallpapers. It has been flawless in testing, but please report if something isn't working as expected.
-> Awww is still supported and now has new fancy settings under the Paper tab, but mpvpaper has been completely removed in favour of Skwd-paper.
+> Skwd-wall is currently undergoing a complete rewrite to Rust.
+> Progress is well underway and currently I am in the testing phase correcting issues and bugs.
+> As I have fully abandoned Quickshell I am also targeting deployment to Debian-based systems as long as they're running Wayland.
+>
+> Some perks of the Rust re-write: Animated wallpapers using ~110 MB of RAM. Static wallpapers using ~6 MB of RAM.
+> Completely hardware accelerated meaning extremely fluid animations no matter the hardware.
 
 ![Stars](https://img.shields.io/github/stars/liixini/skwd-wall?style=for-the-badge)
 ![License](https://img.shields.io/github/license/liixini/skwd-wall?style=for-the-badge)
