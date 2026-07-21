@@ -3,7 +3,7 @@
 > [!CAUTION]
 > Skwd-wall is currently undergoing a complete rewrite to Rust.
 >
-> If you recently saw a video of Skwd-wall with particles flowing forming and eroding hero cards - this is not that software. This is V1, that is V2. I expect to have V2 released ~23/07/2026 or earlier.
+> If you recently saw a video of Skwd-wall with particles flowing forming and eroding hero cards - this is not that software. This is V1, that is V2. I expect to have V2 released ~30/07/2026 or earlier.
 > 
 > Progress is well underway and currently I am in the testing phase correcting issues, bugs and polishing things.
 > As I have fully abandoned Quickshell I am also targeting deployment to Debian-based systems as long as they're running Wayland.
