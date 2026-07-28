@@ -5,7 +5,7 @@
 >
 > If you recently saw a video of Skwd-wall with particles flowing forming and eroding hero cards - this is not that software. This is V1, that is V2.
 >
-> Some perks of the Rust re-write: Animated wallpapers using ~110 MB of RAM. Static wallpapers using ~6 MB of RAM. Automated blazing fast tagging with low cost on-device software. Just general support for all your crazy requirements like special wallpapers on your anniversary, but only if it is not a Thursday.
+> Some perks of the Rust re-write: Animated wallpapers using ~110 MB of RAM. Static wallpapers using ~6 MB of RAM. Automated blazing fast tagging with very low requirements on-device software. Just general support for all your crazy requirements like special wallpapers on your anniversary, but only if it is not a Thursday.
 > 
 > The current state of Skwd-wall v2 as of 28/07/2026 you can see here. Mind you this is running live with a script driving the motion, so this is the actual speed of Skwd-wall v2 :) As you can see I am very close to finish the rewrite but there's a lot of room for bugs in a software that does as much as Skwd-wall v2 does and I would rather find them before you do!
 
