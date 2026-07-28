@@ -1,15 +1,15 @@
 # Skwd-wall
 
 > [!CAUTION]
-> Skwd-wall is currently undergoing a complete rewrite to Rust.
+> Skwd-wall is currently undergoing a complete rewrite to Rust. I was expecting a release date of 30/07/2026 but then Palworld happened, I know you understand.
 >
-> If you recently saw a video of Skwd-wall with particles flowing forming and eroding hero cards - this is not that software. This is V1, that is V2. I expect to have V2 released ~30/07/2026 or earlier.
+> If you recently saw a video of Skwd-wall with particles flowing forming and eroding hero cards - this is not that software. This is V1, that is V2.
+>
+> Some perks of the Rust re-write: Animated wallpapers using ~110 MB of RAM. Static wallpapers using ~6 MB of RAM. Automated blazing fast tagging with low cost on-device software. Just general support for all your crazy requirements like special wallpapers on your anniversary, but only if it is not a Thursday.
 > 
-> Progress is well underway and currently I am in the testing phase correcting issues, bugs and polishing things.
-> As I have fully abandoned Quickshell I am also targeting deployment to Debian-based systems as long as they're running Wayland.
->
-> Some perks of the Rust re-write: Animated wallpapers using ~110 MB of RAM. Static wallpapers using ~6 MB of RAM.
-> Completely hardware accelerated meaning extremely fluid animations no matter the hardware.
+> The current state of Skwd-wall v2 as of 28/07/2026 you can see here. Mind you this is running live with a script driving the motion, so this is the actual speed of Skwd-wall v2 :) As you can see I am very close to finish the rewrite but there's a lot of room for bugs in a software that does as much as Skwd-wall v2 does and I would rather find them before you do!
+
+https://github.com/user-attachments/assets/4b764fe1-5f83-4328-9bdf-e809e73e417d
 
 ![Stars](https://img.shields.io/github/stars/liixini/skwd-wall?style=for-the-badge)
 ![License](https://img.shields.io/github/license/liixini/skwd-wall?style=for-the-badge)
