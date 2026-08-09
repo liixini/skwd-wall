@@ -1,13 +1,15 @@
 # Skwd-wall
 
 > [!CAUTION]
-> Skwd-wall is currently undergoing a complete rewrite to Rust. I was expecting a release date of 30/07/2026 but then Palworld happened, I know you understand.
+> Skwd-wall is currently undergoing a complete rewrite to Rust. I was expecting a release date of 30/07/2026 but then Palworld and life happened, I know you understand.
 >
 > If you recently saw a video of Skwd-wall with particles flowing forming and eroding hero cards - this is not that software. This is V1, that is V2.
 >
-> Some perks of the Rust re-write: Animated wallpapers using ~110 MB of RAM. Static wallpapers using ~6 MB of RAM. Automated blazing fast tagging with very low requirements on-device software. Just general support for all your crazy requirements like special wallpapers on your anniversary, but only if it is not a Thursday.
+> Some perks of the Rust re-write: Animated wallpapers using ~110 MB of RAM. Static wallpapers using ~6 MB of RAM. Automated sub-second tagging with very low requirements on-device software. Just general support for all your crazy requirements like special wallpapers on your anniversary, but only if it is not a Thursday.
 > 
-> The current state of Skwd-wall v2 as of 28/07/2026 you can see here. Mind you this is running live with a script driving the motion, so this is the actual speed of Skwd-wall v2 :) As you can see I am very close to finish the rewrite but there's a lot of room for bugs in a software that does as much as Skwd-wall v2 does and I would rather find them before you do!
+> My goal is to have this released to beta by 23/08/2026.
+>
+> The current state of Skwd-wall v2 as of 28/07/2026 you can see here. Mind you this is running live with a script driving the motion, so this is the actual speed of Skwd-wall v2 :)
 
 https://github.com/user-attachments/assets/4b764fe1-5f83-4328-9bdf-e809e73e417d
 
@@ -262,13 +264,13 @@ skwd wall toggle
 ### Hyprland
 <Details>
 <Summary>Hyprland fixes and tweaks</Summary>
-In testing I experienced issues with NixOS + systemctl service autostart on Hyprland.
+Add this to `~/.config/hypr/hyprland.lua`:
 
-This was resolved by adding a basic exec once to `hyprland.conf`, e.g.
-  
-`exec-once = systemctl --user start skwd-daemon`
-
-I am sure there's a much more graceful way to solve this, but I am not a Hyprland user and this works.
+```lua
+hl.on("hyprland.start", function()
+    hl.exec_cmd("setpriv --ambient-caps -all /usr/bin/skwd-daemon")
+end)
+```
 </Details>
 
 ### KDE Plasma
