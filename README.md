@@ -9,9 +9,9 @@
 > 
 > My goal is to have this released to beta by 23/08/2026.
 >
-> The current state of Skwd-wall v2 as of 28/07/2026 you can see here. Mind you this is running live with a script driving the motion, so this is the actual speed of Skwd-wall v2 :)
+> The current state of Skwd-wall v2 as of 10/08/2026 you can see here. This is a screen recording of my desktop, so this is the actual Skwd-wall v2, no trickery involved just a script walking through various things and options.
 
-https://github.com/user-attachments/assets/4b764fe1-5f83-4328-9bdf-e809e73e417d
+https://github.com/user-attachments/assets/00ba2e56-2d00-4ef0-adfd-9727e802429f
 
 ![Stars](https://img.shields.io/github/stars/liixini/skwd-wall?style=for-the-badge)
 ![License](https://img.shields.io/github/license/liixini/skwd-wall?style=for-the-badge)
