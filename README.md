@@ -1,4 +1,5 @@
-# Skwd-wall
+<img width="2800" height="1640" alt="Skwd2" src="https://github.com/user-attachments/assets/5bfe467f-6152-41fb-bfdb-ae76a479aa9d" />
+
 
 > [!CAUTION]
 > Skwd-wall is currently undergoing a complete rewrite to Rust. I was expecting a release date of 30/07/2026 but then Palworld and life happened, I know you understand.
