@@ -421,6 +421,19 @@ ShellRoot {
     svc._daemonConn.onWallpaperApplied("static", "nomatch.jpg", "/p", "", "")
     check("selector", svc._wallpaperData[0].applyCount === 3, "applyCount unchanged for non-match")
 
+    var appliedSignals = 0
+    var failedSignals = 0
+    svc.wallpaperApplied.connect(function() { appliedSignals++ })
+    svc.wallpaperApplyFailed.connect(function() { failedSignals++ })
+    svc._handleApplyResult({ applied: "photo.jpg" }, null)
+    check("selector", appliedSignals === 1, "successful RPC emits wallpaperApplied")
+    check("selector", failedSignals === 0, "successful RPC does not emit wallpaperApplyFailed")
+    check("selector", svc.lastApplyError === "", "successful RPC clears apply error")
+    svc._handleApplyResult(null, { code: 4, message: "qdbus missing" })
+    check("selector", appliedSignals === 1, "failed RPC does not emit wallpaperApplied")
+    check("selector", failedSignals === 1, "failed RPC emits wallpaperApplyFailed")
+    check("selector", svc.lastApplyError === "qdbus missing", "failed RPC preserves daemon error")
+
     resetCache("color")
     cache({ name: "a", thumb: "ka.webp", hue: 0, sat: 50, mtime: 1 })
     svc.tagsDb = ({})

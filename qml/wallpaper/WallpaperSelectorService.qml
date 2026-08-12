@@ -420,9 +420,23 @@ QtObject {
   property var _wallpaperData: []
   property var _wallpaperDataKeys: ({})
   property var filteredModel: ListModel {}
+  property string lastApplyError: ""
 
   signal modelUpdated()
   signal wallpaperApplied()
+  signal wallpaperApplyFailed(string message)
+
+  function _handleApplyResult(result, error) {
+    if (error) {
+      var message = error.message || ("wallpaper apply failed (code " + (error.code ?? "unknown") + ")")
+      lastApplyError = message
+      console.warn("[WSS] wallpaper apply failed:", message)
+      wallpaperApplyFailed(message)
+      return
+    }
+    lastApplyError = ""
+    wallpaperApplied()
+  }
 
   function _folderOf(item) {
     if (!item) return ""
@@ -594,8 +608,9 @@ QtObject {
   function applyStatic(path, outputs) {
     var neighbors = _collectNeighbors(path)
     var screens = Quickshell.screens.map(function(s) { return s.name })
-    DaemonClient.applyStatic(path, outputs, neighbors, screens)
-    service.wallpaperApplied()
+    DaemonClient.applyStatic(path, outputs, neighbors, screens, function(result, error) {
+      service._handleApplyResult(result, error)
+    })
   }
 
   function applyBackdrop(path) {
@@ -609,13 +624,17 @@ QtObject {
     var screens = (outputs && outputs.length > 0)
       ? outputs
       : Quickshell.screens.map(function(s) { return s.name })
-    DaemonClient.applyWE(id, screens, audioMap, volumeMap)
+    DaemonClient.applyWE(id, screens, audioMap, volumeMap, function(result, error) {
+      service._handleApplyResult(result, error)
+    })
   }
 
   function applyVideo(path, outputs, audioMap, volumeMap) {
     var neighbors = _collectNeighbors(path)
     var screens = Quickshell.screens.map(function(s) { return s.name })
-    DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)
+    DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap, function(result, error) {
+      service._handleApplyResult(result, error)
+    })
   }
 
   function deleteWallpaperItem(type, name, weId) {

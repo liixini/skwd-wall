@@ -100,6 +100,9 @@ Scope {
       if (Config.closeOnSelection)
         wallpaperSelector.showing = false
     }
+    onWallpaperApplyFailed: function(message) {
+      console.warn("WallpaperSelector: keeping selector open after apply failure:", message)
+    }
   }
 
   onShowingChanged: {
