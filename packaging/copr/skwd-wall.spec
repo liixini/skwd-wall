@@ -2,7 +2,7 @@
 
 Name:           skwd-wall
 Version:        0.1.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Quickshell-based wallpaper selector with color sorting and Matugen integration
 
 License:        MIT
