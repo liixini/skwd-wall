@@ -8,7 +8,7 @@
 >
 > Some perks of the Rust re-write: Animated wallpapers using ~110 MB of RAM. Static wallpapers using ~6 MB of RAM. Automated sub-second tagging with very low requirements on-device software. Just general support for all your crazy requirements like special wallpapers on your anniversary, but only if it is not a Thursday.
 > 
-> My goal is to have this released to beta by 23/08/2026.
+> My goal is to have this released to beta by ~~23/08/2026~~ 30/08/2026 (just got my hands on an AMD GPU laptop and well, there's definitely room for improvement on that side!).
 >
 > The current state of Skwd-wall v2 as of 10/08/2026 you can see here. This is a screen recording of my desktop, so this is the actual Skwd-wall v2, no trickery involved just a script walking through various things and options.
 
