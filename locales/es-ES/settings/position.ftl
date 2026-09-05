@@ -1,0 +1,9 @@
+settings-position-picker-card-desc = Posiciona este estilo del selector y su barra de filtros y panel de búsqueda sin afectar a los demás.
+settings-position-slices-card = Selector Slices
+settings-position-hex-card = Selector Geometric
+settings-position-wall-card = Selector Wall
+settings-position-sandy-card = Selector Sandy
+settings-position-horizontal-label = Desplazamiento horizontal
+settings-position-horizontal-desc = Mueve el selector a izquierda o derecha en porcentaje de la mitad del ancho de pantalla. Valores positivos lo mueven a la derecha.
+settings-position-vertical-label = Desplazamiento vertical
+settings-position-vertical-desc = Mueve el selector arriba o abajo en porcentaje de la mitad del alto de pantalla. Valores positivos lo mueven hacia abajo.

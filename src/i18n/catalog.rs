@@ -13,13 +13,55 @@ pub struct Catalog {
 
 impl Catalog {
     fn selected() -> Self {
-        let locale = std::env::var("SKWD_WALL_LOCALE").unwrap_or_else(|_| String::from("en-US"));
+        let locale = Self::detect_locale();
         Self::for_locale(&locale)
+    }
+
+    fn detect_locale() -> String {
+        // 1) Explicit override always wins (for debugging / testing)
+        if let Ok(val) = std::env::var("SKWD_WALL_LOCALE") {
+            if !val.trim().is_empty() {
+                return val;
+            }
+        }
+        // 2) Auto-detect from system locale (LANG, LC_ALL, LC_MESSAGES, LANGUAGE)
+        for key in ["LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"] {
+            if let Ok(val) = std::env::var(key) {
+                if let Some(detected) = Self::normalize_system_locale(&val) {
+                    return detected;
+                }
+            }
+        }
+        // 3) Fallback
+        String::from("en-US")
+    }
+
+    fn normalize_system_locale(raw: &str) -> Option<String> {
+        // Handles values like "es_ES.UTF-8", "es-ES", "es", "sv_SE", "en_US:en", "C", "POSIX"
+        let first = raw.split(':').next().unwrap_or(raw).trim();
+        if first.is_empty() || first == "C" || first == "POSIX" {
+            return None;
+        }
+        // Strip encoding (.UTF-8) and modifier (@euro)
+        let without_encoding = first.split('.').next().unwrap_or(first);
+        let without_modifier = without_encoding.split('@').next().unwrap_or(without_encoding);
+        let normalized = without_modifier.replace('_', "-");
+        let lower = normalized.to_ascii_lowercase();
+        if lower.starts_with("es") {
+            Some(String::from("es-ES"))
+        } else if lower.starts_with("sv") {
+            Some(String::from("sv-SE"))
+        } else if lower.starts_with("en") {
+            Some(String::from("en-US"))
+        } else {
+            None
+        }
     }
 
     pub(crate) fn for_locale(requested: &str) -> Self {
         let (locale, override_resources) = match requested.replace('_', "-").as_str() {
             "sv" | "sv-SE" => ("sv-SE", SV_SE_RESOURCES),
+            "es" | "es-ES" => ("es-ES", ES_ES_RESOURCES),
             _ => ("en-US", &[][..]),
         };
         let locale = locale.parse().expect("embedded locale identifier must be valid");

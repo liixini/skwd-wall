@@ -1,0 +1,16 @@
+settings-wallpaper-engine-rendering-card = Renderizado
+settings-wallpaper-engine-rendering-card-desc = Establece los valores por defecto usados cuando el renderizador Vulkan integrado muestra una escena Workshop.
+settings-wallpaper-engine-fps-label = Límite de FPS
+settings-wallpaper-engine-fps-desc = Máximo de fotogramas por segundo. Valores más bajos reducen carga de CPU/GPU.
+settings-wallpaper-engine-scaling-label = Escalado por defecto
+settings-wallpaper-engine-scaling-desc = Cómo las escenas Workshop se ajustan a cada monitor. Por defecto sigue el modo de relleno global.
+settings-wallpaper-engine-scaling-default = Predeterminado global
+settings-wallpaper-engine-scaling-fill = Rellenar
+settings-wallpaper-engine-scaling-fit = Ajustar
+settings-wallpaper-engine-scaling-stretch = Estirar
+settings-wallpaper-engine-scaling-center = Centrar
+settings-wallpaper-engine-scaling-tile = Mosaico
+settings-wallpaper-engine-scaling-span = Expandir
+settings-wallpaper-engine-effects-card = Efectos
+settings-wallpaper-engine-particles-label = Desactivar partículas
+settings-wallpaper-engine-particles-desc = Omite capas de partículas en escenas que las usan. Puede reducir trabajo de GPU, pero esas escenas perderán parte de su animación.

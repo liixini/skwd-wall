@@ -1,0 +1,26 @@
+settings-niri-backdrop-card = Niri
+settings-niri-backdrop-card-desc = Integración opcional de fondo para el compositor niri. Deja estos ajustes desactivados si no usas niri.
+settings-niri-show-label = Mostrar fondo en la vista general
+settings-niri-show-desc = Inicia el fondo de layer-shell mostrado tras la vista general de niri. Desactívalo para eliminarlo por completo.
+settings-niri-blur-label = Desenfocar el fondo
+settings-niri-blur-desc = Desenfoca la copia de la vista general manteniendo nítido el fondo del escritorio.
+settings-niri-blur-radius-label = Radio de desenfoque
+settings-niri-blur-radius-desc = Radio de desenfoque gaussiano aplicado a la copia. Más alto es más suave.
+settings-niri-follow-label = Usar siempre el fondo actual
+settings-niri-follow-desc = Sigue cualquier fondo que se aplique. Desactívalo para fijar una imagen separada para la vista general.
+settings-niri-image-label = Imagen de vista general
+settings-niri-image-desc = Imagen fija para el fondo de la vista general, usada cuando el interruptor anterior está desactivado. Dejar vacío usa el último fondo.
+settings-niri-auto-theme-label = Tematizar automáticamente el fondo
+settings-niri-auto-theme-desc = Recolorea el fondo con una paleta de tema gowall.
+settings-niri-theme-label = Tema del fondo
+settings-niri-theme-desc = Paleta usada al tematizar automáticamente el fondo.
+settings-niri-dim-label = Oscurecimiento del fondo
+settings-niri-dim-desc = Oscurece el fondo de la vista general. 0 = nada, 100 = negro.
+settings-niri-rule-label = Regla de capa requerida para niri
+settings-niri-rule-desc = Pega esto en tu ~/.config/niri/config.kdl y luego recarga niri.
+settings-niri-refresh-label = Regenerar fondo ahora
+settings-niri-refresh-desc = Vuelve a desenfocar el fondo actual y reinicia el renderizador de fondo.
+settings-niri-refresh-action = Regenerar
+settings-niri-copy-label = Copiar regla de capa al portapapeles
+settings-niri-copy-desc = Copia el fragmento anterior para la configuración de niri.
+settings-niri-copy-action = Copiar

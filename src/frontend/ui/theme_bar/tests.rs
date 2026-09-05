@@ -20,7 +20,7 @@ fn theme_labels_all_locales() {
         &PYWAL_SATURATIONS,
         &NOCTALIA_SCHEMES,
     ];
-    for locale in ["en-US", "sv-SE"] {
+    for locale in ["en-US", "sv-SE", "es-ES"] {
         let catalog = Catalog::for_locale(locale);
         for table in tables {
             for (key, label_key) in table {
