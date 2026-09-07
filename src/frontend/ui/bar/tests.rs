@@ -1047,3 +1047,42 @@ fn dropdown_chip_glyph_budget() {
     assert_eq!((icon, name, arrow), ("\u{f024b}", "ANIME", super::DROP_ARROW));
     assert!((folder.w - super::super::misc::text_width(name, 10.0, false) - 44.0) / glyph == 2.0);
 }
+
+#[test]
+fn skewed_bar_canvas_contains_every_item_tip() {
+    for scale in [0.5, 1.0, 1.65, 2.0] {
+        for max_width in [0.0, 320.0 * scale, 1600.0 * scale] {
+            let model = build_bar_with_tasks(
+                &Filters::default(),
+                &[],
+                false,
+                0,
+                0,
+                scale,
+                true,
+                true,
+                false,
+                &BarShow::all(),
+                max_width,
+                false,
+                false,
+                None,
+                &[],
+            );
+            for item in &model.items {
+                assert!(
+                    item.x + item.w <= model.width + 0.01,
+                    "item {} ends at {}, outside {} at scale {scale}, max width {max_width}",
+                    item.label,
+                    item.x + item.w,
+                    model.width
+                );
+            }
+            if max_width == 0.0 {
+                let last = model.items.last().unwrap();
+                assert!(last.skew > 0.0);
+                assert!((model.width - last.x - last.w).abs() < 0.01);
+            }
+        }
+    }
+}

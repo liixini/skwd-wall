@@ -81,7 +81,7 @@ I develop Skwd-wall because I feel most wallpaper selectors are very boring trad
 Note that **I use AI tooling** in my development just like I do in my professional life, however most of the (non-test, ain't no way I'm writing the 1000+ unit, integration and e2e tests that Skwd-wall v2 has manually) code is mine including the stupid decisions.
 
 ### Base wallpaper path
-The base wallpaper path is ~/Pictures/Wallpapers so that's where you put your pictures and videos unless you want to customise and put them elsewhere.
+The default is a `Wallpapers` folder inside your desktop's Pictures directory, including localized names such as `Imágenes`. Existing `~/Pictures/Wallpapers` libraries keep their location. You can choose another folder in settings; spaces and non-English names work, and settings open even before you add a wallpaper.
 
 ### Compositor-specific examples on how to launch
 Skwd-wall-v2 comes with a .desktop file so you can launch it through your launcher. But should you wish to keybind it, this is how you do that.

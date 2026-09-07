@@ -77,16 +77,6 @@ impl IpcHandle {
     }
 }
 
-fn walld_log() -> Option<std::process::Stdio> {
-    let path = skwd_log::prepare("skwd-walld")?;
-    std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)
-        .ok()
-        .map(std::process::Stdio::from)
-}
-
 fn spawn_walld() {
     let Some(bin) = executable::discover(&["skwd-walld"]) else {
         warn!("executable skwd-walld not found beside Wall or on PATH; start Deck manually");
@@ -97,14 +87,7 @@ fn spawn_walld() {
     if crate::infrastructure::runtime::debug() {
         cmd.arg("--debug");
     }
-    match (walld_log(), walld_log()) {
-        (Some(out), Some(err)) => {
-            cmd.stdout(out).stderr(err);
-        }
-        _ => {
-            cmd.stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null());
-        }
-    }
+    cmd.stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null());
     match cmd.spawn() {
         Ok(_) => info!("spawned resident {}", bin.display()),
         Err(err) => warn!("failed to spawn skwd-walld: {err}"),

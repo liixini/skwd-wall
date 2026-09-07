@@ -1,0 +1,10 @@
+settings-tab-language = Language
+settings-tab-note-language = Choose the language used by the picker and settings.
+settings-language-card = Interface language
+settings-language-card-desc = Changes apply immediately and are saved for the next launch.
+settings-language-choice-label = Language
+settings-language-choice-desc = System default follows your desktop language. Wallpaper names and tags stay as they are.
+settings-language-system = System default
+settings-language-english = English
+settings-language-swedish = Svenska
+settings-language-spanish = Español

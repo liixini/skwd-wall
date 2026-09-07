@@ -66,3 +66,8 @@ settings-performance-doctor-action = Run
 settings-performance-bug-report-label = Generate bug report
 settings-performance-bug-report-desc = Bundle version, environment, diagnostics, and recent logs into one file to attach to an issue.
 settings-performance-bug-report-action = Generate
+
+settings-performance-device-label = Wallpaper GPU
+settings-performance-device-desc = Choose the GPU for native wallpaper rendering. An unavailable card falls back to Automatic. Plasma shared images use Plasma's own GPU.
+settings-performance-device-auto = Automatic
+settings-performance-device-unavailable = Saved GPU unavailable (using Automatic)

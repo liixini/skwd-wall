@@ -36,7 +36,7 @@ pub(super) fn append_line(path: &std::path::Path, message: &str) {
     let full = format!(
         "{epoch_ms} wallpaper-selector timing: {message} (rss: {rss_mb:.1} MB, pss: {pss_mb:.1} MB, vss: {vss_mb:.1} MB) [rust]\n"
     );
-    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+    if let Ok(mut file) = skwd_log::RotatingWriter::new(path) {
         let _ = file.write_all(full.as_bytes());
     }
 }

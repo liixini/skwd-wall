@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use super::{Catalog, EN_US_RESOURCES, SV_SE_RESOURCES, tr};
+use super::{Catalog, EN_US_RESOURCES, ES_ES_RESOURCES, SV_SE_RESOURCES};
 
 fn resource_keys(resources: &[&str]) -> BTreeSet<String> {
     let mut keys = BTreeSet::new();
@@ -78,9 +78,9 @@ fn plural_variants_differ(block: &str) -> bool {
 
 #[test]
 fn static_text_interned() {
-    let first = tr("tags-filter-title");
-    let second = tr("tags-filter-title");
-    assert_eq!(first, "Tag filter");
+    let first = super::tr("tags-filter-title");
+    let second = super::tr("tags-filter-title");
+    assert_eq!(first, super::catalog().format("tags-filter-title", None));
     assert_eq!(first.as_ptr(), second.as_ptr());
 }
 
@@ -100,8 +100,15 @@ fn tr_args_wrong_variable() {
 
 #[test]
 fn padded_counts_verbatim() {
-    assert_eq!(super::playlists_state_ready(1), "01 wallpaper ready");
-    assert_eq!(super::playlists_state_ready(24), "24 wallpapers ready");
+    let catalog = Catalog::for_locale("en-US");
+    let mut args = fluent::FluentArgs::new();
+    args.set("count", 1);
+    args.set("padded", "01");
+    assert_eq!(catalog.format("playlists-state-ready", Some(&args)), "01 wallpaper ready");
+    let mut args2 = fluent::FluentArgs::new();
+    args2.set("count", 24);
+    args2.set("padded", "24");
+    assert_eq!(catalog.format("playlists-state-ready", Some(&args2)), "24 wallpapers ready");
 }
 
 #[test]
@@ -119,9 +126,11 @@ fn swedish_overrides_english() {
 fn saved_names_both_locales() {
     let mut args = fluent::FluentArgs::new();
     args.set("number", "1234");
-    for (locale, playlist, style) in
-        [("en-US", "Playlist 1234", "Style 1234"), ("sv-SE", "Spellista 1234", "Stil 1234")]
-    {
+    for (locale, playlist, style) in [
+        ("en-US", "Playlist 1234", "Style 1234"),
+        ("sv-SE", "Spellista 1234", "Stil 1234"),
+        ("es-ES", "Lista 1234", "Estilo 1234"),
+    ] {
         let catalog = Catalog::for_locale(locale);
         assert_eq!(catalog.format("playlists-generated-name", Some(&args)), playlist);
         assert_eq!(catalog.format("settings-selector-preset-generated-name", Some(&args)), style);
@@ -132,12 +141,14 @@ fn saved_names_both_locales() {
 fn locale_keys_match() {
     let english = resource_keys(EN_US_RESOURCES);
     let swedish = resource_keys(SV_SE_RESOURCES);
+    let spanish = resource_keys(ES_ES_RESOURCES);
     assert_eq!(english, swedish);
+    assert_eq!(english, spanish);
 }
 
 #[test]
 fn retired_brand_name_absent() {
-    for resources in [EN_US_RESOURCES, SV_SE_RESOURCES] {
+    for resources in [EN_US_RESOURCES, SV_SE_RESOURCES, ES_ES_RESOURCES] {
         for (key, block) in message_blocks(resources) {
             assert!(!block.to_ascii_lowercase().contains("folio"), "{key}");
         }
@@ -148,7 +159,7 @@ fn retired_brand_name_absent() {
 fn messages_format_both_locales() {
     let keys = resource_keys(EN_US_RESOURCES);
     let mut names = BTreeSet::new();
-    for resources in [EN_US_RESOURCES, SV_SE_RESOURCES] {
+    for resources in [EN_US_RESOURCES, SV_SE_RESOURCES, ES_ES_RESOURCES] {
         for (_, block) in message_blocks(resources) {
             names.extend(placeable_variables(&block).0);
         }
@@ -158,7 +169,7 @@ fn messages_format_both_locales() {
     for name in &names {
         args.set(name.as_str(), 2);
     }
-    for locale in ["en-US", "sv-SE"] {
+    for locale in ["en-US", "sv-SE", "es-ES"] {
         let catalog = Catalog::for_locale(locale);
         for key in &keys {
             assert!(!catalog.format(key, Some(&args)).is_empty(), "{locale} {key}");
@@ -168,7 +179,9 @@ fn messages_format_both_locales() {
 
 #[test]
 fn count_selector_singular() {
-    for (locale, resources) in [("en-US", EN_US_RESOURCES), ("sv-SE", SV_SE_RESOURCES)] {
+    for (locale, resources) in
+        [("en-US", EN_US_RESOURCES), ("sv-SE", SV_SE_RESOURCES), ("es-ES", ES_ES_RESOURCES)]
+    {
         let catalog = Catalog::for_locale(locale);
         let mut selector_keys = 0;
         for (key, block) in message_blocks(resources) {
@@ -358,4 +371,63 @@ fn catalog_has_no_orphaned_keys() {
     let orphaned: Vec<&String> =
         english.iter().filter(|key| !corpus.contains(&format!("\"{key}\""))).collect();
     assert!(orphaned.is_empty(), "{orphaned:#?}");
+}
+
+#[test]
+fn locale_environment_respects_overrides_and_message_priority() {
+    let cases = [
+        ([None, None, None, None, None], "en-US"),
+        ([None, None, None, Some("es_ES.UTF-8"), None], "es-ES"),
+        ([None, Some("C"), None, Some("es_ES.UTF-8"), Some("es")], "en-US"),
+        ([None, Some("C.UTF-8"), None, Some("es"), Some("es")], "en-US"),
+        ([None, Some("POSIX"), None, Some("es"), None], "en-US"),
+        ([None, Some("de_DE.UTF-8"), Some("es"), Some("sv"), None], "en-US"),
+        ([None, None, Some("sv_SE.UTF-8"), Some("es"), None], "sv-SE"),
+        ([None, None, None, Some("en_US.UTF-8"), Some("fr:es_MX:sv")], "es-ES"),
+        ([None, None, None, Some("es_ES.UTF-8"), Some("C:sv")], "en-US"),
+        ([Some("sv-SE"), Some("C"), None, Some("es"), None], "sv-SE"),
+        ([Some(" ES_mx.UTF-8 "), Some("C"), None, None, None], "es-ES"),
+        ([Some("de"), None, None, Some("es"), None], "en-US"),
+        ([Some(" "), Some(""), None, Some("es"), None], "es-ES"),
+        ([None, None, None, Some("estonian"), None], "en-US"),
+    ];
+    for (values, expected) in cases {
+        assert_eq!(super::selected_locale(values), expected, "{values:?}");
+    }
+}
+
+#[test]
+fn spanish_overrides_english_and_accepts_regional_locales() {
+    for locale in ["es", "es-ES", "es_MX.UTF-8", "ES_ar"] {
+        let catalog = Catalog::for_locale(locale);
+        assert_eq!(catalog.format("browser-apply", None), "Aplicar");
+        assert_eq!(catalog.format("settings-performance-device-label", None), "GPU del fondo");
+    }
+}
+
+#[test]
+fn static_text_is_cached_per_language() {
+    for (locale, expected) in [("en-US", "Done"), ("sv-SE", "Klar"), ("es-ES", "Hecho")] {
+        let catalog = Catalog::for_locale(locale);
+        let first = catalog.text("tags-done");
+        assert_eq!(first, expected);
+        for _ in 0..20 {
+            assert_eq!(catalog.text("tags-done").as_ptr(), first.as_ptr());
+        }
+        assert_eq!(catalog.static_text.lock().unwrap().len(), 1);
+    }
+}
+
+#[test]
+fn saved_language_choices_normalize_to_supported_options() {
+    for (requested, expected) in [
+        ("auto", "auto"),
+        ("", "auto"),
+        ("de-DE", "auto"),
+        ("en", "en-US"),
+        ("sv_SE.UTF-8", "sv-SE"),
+        (" ES_mx ", "es-ES"),
+    ] {
+        assert_eq!(super::language_choice(requested), expected);
+    }
 }

@@ -1,0 +1,10 @@
+settings-tab-language = Språk
+settings-tab-note-language = Välj språk för väljaren och inställningarna.
+settings-language-card = Gränssnittsspråk
+settings-language-card-desc = Ändringar gäller direkt och sparas till nästa start.
+settings-language-choice-label = Språk
+settings-language-choice-desc = Systemstandard följer skrivbordets språk. Bakgrundsbildernas namn och taggar ändras inte.
+settings-language-system = Systemstandard
+settings-language-english = English
+settings-language-swedish = Svenska
+settings-language-spanish = Español

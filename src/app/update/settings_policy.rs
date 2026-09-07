@@ -105,6 +105,11 @@ fn sync_audio(app: &mut App, path: &str, value: &Value) {
 }
 
 fn sync_picker_runtime(app: &mut App, path: &str) {
+    if path == skwd_config::keys::general::LANGUAGE {
+        crate::i18n::set_language(&app.config.str_path(path));
+        app.panels.settings.search_results.clear();
+        app.retick();
+    }
     if path.starts_with("videoPreview.")
         || path == skwd_config::keys::general::MAX_FPS
         || path == skwd_config::keys::performance::BATTERY_SAVER

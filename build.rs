@@ -57,12 +57,15 @@ fn generate_embedded_locales() {
 
     let en_us = fluent_files(&locales.join("en-US")).expect("failed to scan en-US Fluent files");
     let sv_se = fluent_files(&locales.join("sv-SE")).expect("failed to scan sv-SE Fluent files");
+    let es_es = fluent_files(&locales.join("es-ES")).expect("failed to scan es-ES Fluent files");
 
     let source = format!(
         "pub const EN_US_RESOURCES: &[&str] = &{};\n\
-         pub const SV_SE_RESOURCES: &[&str] = &{};\n",
+         pub const SV_SE_RESOURCES: &[&str] = &{};\n\
+         pub const ES_ES_RESOURCES: &[&str] = &{};\n",
         include_array(&en_us),
         include_array(&sv_se),
+        include_array(&es_es),
     );
     fs::write(generated, source).expect("failed to generate embedded Fluent resource list");
 }

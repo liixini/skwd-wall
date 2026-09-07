@@ -1,12 +1,11 @@
-use std::fs::OpenOptions;
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::prelude::*;
 
-struct FileMaker(Arc<Mutex<std::fs::File>>);
-struct FileSink(Arc<Mutex<std::fs::File>>);
+struct FileMaker(Arc<Mutex<skwd_log::RotatingWriter>>);
+struct FileSink(Arc<Mutex<skwd_log::RotatingWriter>>);
 
 impl Write for FileSink {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
@@ -51,17 +50,9 @@ fn log_path() -> Option<std::path::PathBuf> {
     skwd_log::log_path("skwd-wall")
 }
 
-fn open_log_arc() -> Option<Arc<Mutex<std::fs::File>>> {
+fn open_log_arc() -> Option<Arc<Mutex<skwd_log::RotatingWriter>>> {
     let path = log_path()?;
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
-    }
-    OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)
-        .ok()
-        .map(|file| Arc::new(Mutex::new(file)))
+    skwd_log::RotatingWriter::new(path).ok().map(|file| Arc::new(Mutex::new(file)))
 }
 
 pub fn init_tracing(debug: bool) {

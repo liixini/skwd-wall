@@ -1,7 +1,7 @@
 use crate::contracts::settings::{SettingsSource, transitions, wallpaper_kind};
 use crate::i18n::tr;
 
-pub const TABS: [&str; 13] = [
+pub const TABS: [&str; 14] = [
     "picker",
     "filter",
     "position",
@@ -15,6 +15,7 @@ pub const TABS: [&str; 13] = [
     "automation",
     "theme",
     "integrations",
+    "language",
 ];
 
 pub(super) const MOTION_SPEEDS: [&str; 3] = ["fast", "standard", "slow"];
@@ -37,6 +38,7 @@ fn tab_label_key(tab: &str) -> &'static str {
         "automation" => "settings-tab-automation",
         "theme" => "settings-tab-theme",
         "integrations" => "settings-tab-integrations",
+        "language" => "settings-tab-language",
         _ => "settings-tab-picker",
     }
 }

@@ -1,0 +1,10 @@
+settings-tab-language = Idioma
+settings-tab-note-language = Elige el idioma del selector y los ajustes.
+settings-language-card = Idioma de la interfaz
+settings-language-card-desc = Los cambios se aplican al instante y se guardan para el próximo inicio.
+settings-language-choice-label = Idioma
+settings-language-choice-desc = La opción del sistema sigue el idioma del escritorio. Los nombres y etiquetas de los fondos no cambian.
+settings-language-system = Idioma del sistema
+settings-language-english = English
+settings-language-swedish = Svenska
+settings-language-spanish = Español

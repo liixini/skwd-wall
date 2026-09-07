@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{LazyLock, Mutex};
 
 use fluent::{FluentArgs, FluentResource};
@@ -9,17 +10,14 @@ include!(concat!(env!("OUT_DIR"), "/embedded_locales.rs"));
 
 pub struct Catalog {
     bundle: Bundle,
+    static_text: Mutex<HashMap<&'static str, &'static str>>,
 }
 
 impl Catalog {
-    fn selected() -> Self {
-        let locale = std::env::var("SKWD_WALL_LOCALE").unwrap_or_else(|_| String::from("en-US"));
-        Self::for_locale(&locale)
-    }
-
     pub(crate) fn for_locale(requested: &str) -> Self {
-        let (locale, override_resources) = match requested.replace('_', "-").as_str() {
-            "sv" | "sv-SE" => ("sv-SE", SV_SE_RESOURCES),
+        let (locale, override_resources) = match normalized_locale(requested).unwrap_or("en-US") {
+            "sv-SE" => ("sv-SE", SV_SE_RESOURCES),
+            "es-ES" => ("es-ES", ES_ES_RESOURCES),
             _ => ("en-US", &[][..]),
         };
         let locale = locale.parse().expect("embedded locale identifier must be valid");
@@ -41,12 +39,50 @@ impl Catalog {
                 });
             bundle.add_resource_overriding(resource);
         }
-        Self { bundle }
+        Self { bundle, static_text: Mutex::new(HashMap::new()) }
     }
 
     pub fn format(&self, key: &str, args: Option<&FluentArgs<'_>>) -> String {
         format_message(&self.bundle, key, args)
     }
+
+    fn text(&self, key: &'static str) -> &'static str {
+        let mut cache = self.static_text.lock().expect("translation cache poisoned");
+        if let Some(value) = cache.get(key) {
+            return value;
+        }
+        let value = Box::leak(self.format(key, None).into_boxed_str());
+        cache.insert(key, value);
+        value
+    }
+}
+
+fn normalized_locale(raw: &str) -> Option<&'static str> {
+    let base = raw.trim().split(['.', '@']).next().unwrap_or_default();
+    let language = base.split(['-', '_']).next().unwrap_or_default();
+    match language.to_ascii_lowercase().as_str() {
+        "es" => Some("es-ES"),
+        "sv" => Some("sv-SE"),
+        "en" | "c" | "posix" => Some("en-US"),
+        _ => None,
+    }
+}
+
+fn selected_locale(values: [Option<&str>; 5]) -> &'static str {
+    let [explicit, all, messages, lang, languages] =
+        values.map(|value| value.map(str::trim).filter(|value| !value.is_empty()));
+    if let Some(explicit) = explicit {
+        return normalized_locale(explicit).unwrap_or("en-US");
+    }
+    let system = all.or(messages).or(lang).unwrap_or("C");
+    let base = system.split(['.', '@']).next().unwrap_or_default();
+    if base.eq_ignore_ascii_case("C") || base.eq_ignore_ascii_case("POSIX") {
+        return "en-US";
+    }
+    languages
+        .and_then(|list| list.split(':').find_map(normalized_locale))
+        .or_else(|| normalized_locale(system))
+        .unwrap_or("en-US")
 }
 
 fn format_message(bundle: &Bundle, key: &str, args: Option<&FluentArgs<'_>>) -> String {
@@ -58,12 +94,40 @@ fn format_message(bundle: &Bundle, key: &str, args: Option<&FluentArgs<'_>>) -> 
     value.into_owned()
 }
 
-static SELECTED: LazyLock<Catalog> = LazyLock::new(Catalog::selected);
-static STATIC_TEXT: LazyLock<Mutex<HashMap<&'static str, &'static str>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+static SELECTED: AtomicU8 = AtomicU8::new(0);
+static AUTOMATIC: LazyLock<u8> = LazyLock::new(|| {
+    let vars = ["SKWD_WALL_LOCALE", "LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"]
+        .map(|key| std::env::var(key).ok());
+    language_index(selected_locale(vars.each_ref().map(|value| value.as_deref())))
+});
+static ENGLISH: LazyLock<Catalog> = LazyLock::new(|| Catalog::for_locale("en-US"));
+static SWEDISH: LazyLock<Catalog> = LazyLock::new(|| Catalog::for_locale("sv-SE"));
+static SPANISH: LazyLock<Catalog> = LazyLock::new(|| Catalog::for_locale("es-ES"));
+
+pub fn language_choice(requested: &str) -> &'static str {
+    normalized_locale(requested).unwrap_or("auto")
+}
+
+fn language_index(requested: &str) -> u8 {
+    match language_choice(requested) {
+        "en-US" => 1,
+        "sv-SE" => 2,
+        "es-ES" => 3,
+        _ => 0,
+    }
+}
+
+pub fn set_language(requested: &str) {
+    SELECTED.store(language_index(requested), Ordering::Relaxed);
+}
 
 pub fn catalog() -> &'static Catalog {
-    &SELECTED
+    let selected = SELECTED.load(Ordering::Relaxed);
+    match if selected == 0 { *AUTOMATIC } else { selected } {
+        2 => &SWEDISH,
+        3 => &SPANISH,
+        _ => &ENGLISH,
+    }
 }
 
 pub fn format(key: &str, args: &FluentArgs<'_>) -> String {
@@ -71,13 +135,7 @@ pub fn format(key: &str, args: &FluentArgs<'_>) -> String {
 }
 
 pub fn tr(key: &'static str) -> &'static str {
-    let mut cache = STATIC_TEXT.lock().expect("translation cache poisoned");
-    if let Some(value) = cache.get(key) {
-        return value;
-    }
-    let value = Box::leak(catalog().format(key, None).into_boxed_str());
-    cache.insert(key, value);
-    value
+    catalog().text(key)
 }
 
 pub fn settings_keybind_conflict(first: &str, second: &str, binding: &str) -> String {

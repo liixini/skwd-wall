@@ -2,7 +2,7 @@
 resolver = "3"
 
 [workspace.package]
-version = "1.0.0-beta.9"
+version = "1.0.0-beta.10"
 edition = "2024"
 license = "GPL-3.0-or-later"
 authors = ["liixini"]
@@ -34,6 +34,7 @@ workspace = true
 iced = { version = "0.14", default-features = false, features = ["wgpu-bare", "advanced", "canvas", "image-without-codecs", "thread-pool", "wayland", "x11"] }
 iced_runtime = "0.14"
 iced_wgpu = { version = "0.14", default-features = false, features = ["texture-compression-bc"] }
+ash = { version = "0.38", default-features = false }
 wgpu = { version = "27", default-features = false, features = ["std", "parking_lot", "vulkan", "wgsl"] }
 bytemuck = { version = "1", features = ["derive"] }
 bit-set = { version = "0.8", features = ["std"] }

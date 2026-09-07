@@ -11,7 +11,8 @@ use super::motion_tab::tab_motion;
 use super::position_tab::tab_position;
 use super::selector_tab::{tab_filter, tab_selector};
 use super::system_tabs::{
-    tab_general, tab_keybinds, tab_paths, tab_performance, tab_postprocessing, tab_schedule,
+    tab_general, tab_keybinds, tab_language, tab_paths, tab_performance, tab_postprocessing,
+    tab_schedule,
 };
 use super::theme_tabs::{tab_integrations, tab_matugen, tab_niri, tab_theme};
 use super::transition_tab::tab_transitions;
@@ -117,6 +118,7 @@ pub(crate) fn build_tab_with_runtime_status(
         "automation" => compose_automation(cfg, themes, folders, outputs),
         "theme" => compose_theme(cfg, backends),
         "integrations" => compose_integrations(cfg, themes),
+        "language" => collect(cfg, tab_language),
         _ => Vec::new(),
     }
 }

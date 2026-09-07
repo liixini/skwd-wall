@@ -66,3 +66,8 @@ settings-performance-doctor-action = Kör
 settings-performance-bug-report-label = Skapa felrapport
 settings-performance-bug-report-desc = Packa version, miljö, diagnostik och de senaste loggarna i en fil att bifoga till ett ärende.
 settings-performance-bug-report-action = Skapa
+
+settings-performance-device-label = Bakgrundens GPU
+settings-performance-device-desc = Välj GPU för bakgrunder som renderas direkt. Ett kort som saknas ersätts med ett automatiskt val. Delade bilder i Plasma använder Plasmas egen GPU.
+settings-performance-device-auto = Automatiskt
+settings-performance-device-unavailable = Sparad GPU saknas (använder automatiskt val)

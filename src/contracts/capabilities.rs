@@ -36,6 +36,15 @@ pub struct GraphicsCard {
     pub tier: GraphicsTier,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GraphicsDevice {
+    pub id: String,
+    pub name: String,
+}
+
 pub trait GraphicsProbe {
+    fn devices(&self) -> Vec<GraphicsDevice> {
+        Vec::new()
+    }
     fn probe(&self) -> GraphicsCard;
 }

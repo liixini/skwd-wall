@@ -118,7 +118,7 @@ pub fn build_bar_with_tasks(
     task_items(&mut items, &mut x, scale, tasks);
 
     let gap = 6.0 * scale;
-    let content_w = x;
+    let content_w = items.iter().map(|item| item.x + item.w).fold(0.0, f32::max);
     let mut width;
     let mut rows_h = bar_h;
     if max_width > 0.0 && content_w > max_width && items.len() > 1 {

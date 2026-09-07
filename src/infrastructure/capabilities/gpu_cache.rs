@@ -6,6 +6,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::contracts::capabilities::{GraphicsCard, GraphicsProbe};
 
+static GRAPHICS_DEVICES: OnceLock<Vec<crate::contracts::capabilities::GraphicsDevice>> =
+    OnceLock::new();
+
+pub fn graphics_devices(
+    probe: &impl GraphicsProbe,
+) -> &[crate::contracts::capabilities::GraphicsDevice] {
+    GRAPHICS_DEVICES.get_or_init(|| probe.devices())
+}
+
 static GRAPHICS_CARD: OnceLock<GraphicsCard> = OnceLock::new();
 
 pub fn graphics_card(probe: &impl GraphicsProbe) -> &'static GraphicsCard {

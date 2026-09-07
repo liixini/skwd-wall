@@ -26,6 +26,7 @@ pub trait SettingsSource {
     fn palette_presets(&self) -> Vec<(String, String)>;
     fn bindings(&self) -> InputMap;
     fn graphics_card(&self) -> GraphicsCard;
+    fn graphics_devices(&self) -> Vec<crate::contracts::capabilities::GraphicsDevice>;
     fn is_niri(&self) -> bool;
     fn on_battery_power(&self) -> bool;
 }

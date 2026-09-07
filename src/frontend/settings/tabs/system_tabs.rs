@@ -178,6 +178,34 @@ pub(super) fn tab_performance(builder: &mut Builder<'_>) {
     };
     builder.card(tr("settings-performance-power-card"), tr("settings-performance-power-card-desc"));
     builder.info(tr("settings-performance-power-source-label"), power_source);
+    let devices = builder.cfg.graphics_devices();
+    let mut device_options =
+        vec![(String::from("auto"), tr("settings-performance-device-auto").to_string())];
+    for device in &devices {
+        let name = if devices.iter().filter(|candidate| candidate.name == device.name).count() > 1 {
+            format!("{} ({})", device.name, device.id)
+        } else {
+            device.name.clone()
+        };
+        device_options.push((device.id.clone(), name));
+    }
+    let current = builder.cfg.text(keys::performance::GPU_DEVICE);
+    if !current.is_empty()
+        && current != "auto"
+        && !devices.iter().any(|device| device.id == current)
+    {
+        device_options.push((current, tr("settings-performance-device-unavailable").to_string()));
+    }
+    let options = device_options
+        .iter()
+        .map(|(value, label)| (value.as_str(), label.as_str()))
+        .collect::<Vec<_>>();
+    builder.dropdown(
+        tr("settings-performance-device-label"),
+        tr("settings-performance-device-desc"),
+        keys::performance::GPU_DEVICE,
+        &options,
+    );
     builder.toggle(
         tr("settings-performance-battery-saver-label"),
         tr("settings-performance-battery-saver-desc"),
@@ -417,5 +445,22 @@ pub(super) fn tab_keybinds(builder: &mut Builder<'_>) {
         tr("settings-keybinds-reset-desc"),
         ActionId::ResetKeybinds,
         tr("settings-keybinds-reset-action"),
+    );
+}
+
+pub(super) fn tab_language(builder: &mut Builder<'_>) {
+    builder.card(tr("settings-language-card"), tr("settings-language-card-desc"));
+    let current = crate::i18n::language_choice(&builder.cfg.text(keys::general::LANGUAGE));
+    builder.dropdown_cur(
+        tr("settings-language-choice-label"),
+        tr("settings-language-choice-desc"),
+        keys::general::LANGUAGE,
+        &[
+            ("auto", tr("settings-language-system")),
+            ("en-US", tr("settings-language-english")),
+            ("sv-SE", tr("settings-language-swedish")),
+            ("es-ES", tr("settings-language-spanish")),
+        ],
+        current.to_string(),
     );
 }

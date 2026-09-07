@@ -1,0 +1,12 @@
+settings-launch-launch-card = Inicio
+settings-launch-launch-card-desc = El selector arranca en unos 150 ms y se cierra por completo al cerrarlo. Estos ajustes solo cambian cómo aparece durante el inicio.
+settings-launch-animation-label = Animación
+settings-launch-animation-desc = Ninguna muestra el selector en cuanto existe y es la más rápida. Fundido solo cambia opacidad; Elevación y Zoom añaden movimiento.
+settings-launch-animation-none = Ninguna
+settings-launch-animation-fade = Fundido
+settings-launch-animation-rise = Elevación
+settings-launch-animation-zoom = Zoom
+settings-launch-motion-label = Movimiento
+settings-launch-motion-desc = El ritmo compartido de la interfaz del selector. Cambia los pesos Rápido, Estándar y Lento en los ajustes de Movimiento.
+settings-launch-fade-from-label = Fundido desde
+settings-launch-fade-from-desc = Opacidad desde la que empieza la entrada, en porcentaje. 0 aparece desde totalmente transparente.

@@ -1069,3 +1069,60 @@ fn controls_no_ghosts() {
     );
     assert!(rows.iter().any(|row| matches!(row.control, Control::ActionBtn { .. })));
 }
+
+#[test]
+fn performance_lists_detected_devices_and_retains_unavailable_selection() {
+    let devices = vec![
+        crate::contracts::capabilities::GraphicsDevice {
+            id: "uuid:11111111111111111111111111111111".into(),
+            name: "Integrated GPU".into(),
+        },
+        crate::contracts::capabilities::GraphicsDevice {
+            id: "uuid:22222222222222222222222222222222".into(),
+            name: "Discrete GPU".into(),
+        },
+    ];
+    let cfg = FakeSettingsSource::default()
+        .with_devices(devices.clone())
+        .with_text(keys::performance::GPU_DEVICE, &devices[1].id);
+    let cards = build_tab("performance", &cfg, &[], &[], "", &[]);
+    let row = cards.iter().flat_map(|(_, rows)| rows).find(|row| matches!(&row.control, Control::Dropdown { path, .. } if path == keys::performance::GPU_DEVICE)).unwrap();
+    let Control::Dropdown { options, current, .. } = &row.control else { unreachable!() };
+    assert_eq!(current, &devices[1].id);
+    assert_eq!(
+        options,
+        &vec![
+            ("auto".into(), "Automatic".into()),
+            (devices[0].id.clone(), devices[0].name.clone()),
+            (devices[1].id.clone(), devices[1].name.clone())
+        ]
+    );
+    let cfg =
+        FakeSettingsSource::default().with_text(keys::performance::GPU_DEVICE, &devices[1].id);
+    let cards = build_tab("performance", &cfg, &[], &[], "", &[]);
+    assert!(cards.iter().flat_map(|(_, rows)| rows).any(|row| matches!(&row.control, Control::Dropdown { path, options, current } if path == keys::performance::GPU_DEVICE && current == &devices[1].id && options.iter().any(|(id, label)| id == current && label.contains("unavailable")))));
+}
+
+#[test]
+fn language_tab_lists_supported_languages_and_system_default() {
+    for (saved, expected) in [("auto", "auto"), ("sv", "sv-SE"), ("es-ES", "es-ES")] {
+        let cfg = cfg().with_text(keys::general::LANGUAGE, saved);
+        assert!(
+            crate::frontend::settings::visible_tabs(&cfg).iter().any(|(id, _)| *id == "language")
+        );
+        let cards = build_tab("language", &cfg, &[], &[], "", &[]);
+        assert_eq!(cards.len(), 1);
+        let Control::Dropdown { path, options, current } = &cards[0].1[0].control else {
+            panic!("language choice missing");
+        };
+        assert_eq!(path, keys::general::LANGUAGE);
+        assert_eq!(current, expected);
+        assert_eq!(
+            options.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>(),
+            ["auto", "en-US", "sv-SE", "es-ES"]
+        );
+        assert_eq!(options[1].1, "English");
+        assert_eq!(options[2].1, "Svenska");
+        assert_eq!(options[3].1, "Español");
+    }
+}

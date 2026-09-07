@@ -50,6 +50,7 @@ impl App {
         config: Config,
         start_daemon: impl FnOnce(UnboundedSender<Wake>) -> DaemonClient,
     ) -> Self {
+        crate::i18n::set_language(&config.str_path(skwd_config::keys::general::LANGUAGE));
         let (tx, rx) = unbounded::<Wake>();
         let stale_rx = WAKE_RX
             .get_or_init(|| Mutex::new(None))

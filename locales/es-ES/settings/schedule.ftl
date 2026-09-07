@@ -1,0 +1,15 @@
+settings-schedule-schedule-card = Programación
+settings-schedule-schedule-card-desc = Las reglas eligen el fondo y el tema según condiciones como hora, día de la semana, clima, energía y pantallas. La primera regla coincidente gana.
+settings-schedule-enable-label = Activar programación
+settings-schedule-enable-desc = Activa o desactiva todas las reglas de programación sin eliminarlas.
+settings-schedule-apply-on-start-label = Aplicar al iniciar
+settings-schedule-apply-on-start-desc = Aplica la primera regla coincidente cuando se inicia el servicio. Un fondo elegido manualmente en esta sesión sigue teniendo prioridad.
+settings-schedule-editor-label = Editor de programación
+settings-schedule-editor-desc = Construye reglas a partir de bloques de condición y arrastra para establecer prioridad; la primera coincidencia gana. Los ajustes heredados de día y noche se convierten en dos reglas al abrir por primera vez.
+settings-schedule-editor-action = Abrir
+settings-schedule-location-card = Ubicación
+settings-schedule-location-card-desc = Usada para horas de amanecer/atardecer y condiciones climáticas.
+settings-schedule-latitude-label = Latitud
+settings-schedule-latitude-desc = Grados decimales, norte positivo (ej. 40.41).
+settings-schedule-longitude-label = Longitud
+settings-schedule-longitude-desc = Grados decimales, este positivo (ej. -3.70).

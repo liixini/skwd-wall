@@ -1,0 +1,10 @@
+settings-displays-card = Fondos actuales
+settings-displays-card-desc = Estos son los fondos que actualmente informa el servicio de fondos. Los cambios aquí se aplican a una pantalla a la vez.
+settings-displays-monitor-desc = { $width } × { $height } · { $kind }
+settings-displays-monitor-offline-desc = Desconectada · { $width } × { $height }
+settings-displays-placement-label = Colocación
+settings-displays-placement-desc = Elige si el fondo rellena, se ajusta, estira, centra, repite en mosaico o se expande en la pantalla.
+settings-displays-lock-label = Bloquear
+settings-displays-lock-desc = Actualizar el fondo de este monitor solo desde el selector múltiple.
+settings-displays-empty-label = Detectando pantallas
+settings-displays-empty-desc = Los fondos actuales aparecerán cuando el servicio informe de sus pantallas.

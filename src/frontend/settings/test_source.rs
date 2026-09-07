@@ -14,6 +14,7 @@ pub(crate) struct FakeSettingsSource {
     saved_themes: Vec<String>,
     palette_presets: Vec<(String, String)>,
     graphics: GraphicsCard,
+    devices: Vec<crate::contracts::capabilities::GraphicsDevice>,
     niri: bool,
     on_battery: bool,
 }
@@ -32,6 +33,7 @@ impl Default for FakeSettingsSource {
                 (String::from("dracula"), String::from("Dracula")),
             ],
             graphics: GraphicsCard { name: String::from("Test GPU"), tier: GraphicsTier::Other },
+            devices: Vec::new(),
             niri: false,
             on_battery: false,
         }
@@ -46,6 +48,14 @@ impl FakeSettingsSource {
 
     pub(crate) fn with_on_battery(mut self, on_battery: bool) -> Self {
         self.on_battery = on_battery;
+        self
+    }
+
+    pub(crate) fn with_devices(
+        mut self,
+        devices: Vec<crate::contracts::capabilities::GraphicsDevice>,
+    ) -> Self {
+        self.devices = devices;
         self
     }
 
@@ -175,6 +185,10 @@ impl SettingsSource for FakeSettingsSource {
 
     fn bindings(&self) -> InputMap {
         InputMap::default()
+    }
+
+    fn graphics_devices(&self) -> Vec<crate::contracts::capabilities::GraphicsDevice> {
+        self.devices.clone()
     }
 
     fn graphics_card(&self) -> GraphicsCard {

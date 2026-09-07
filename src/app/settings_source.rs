@@ -94,6 +94,13 @@ impl SettingsSource for Config {
         .clone()
     }
 
+    fn graphics_devices(&self) -> Vec<crate::contracts::capabilities::GraphicsDevice> {
+        crate::infrastructure::capabilities::graphics_devices(
+            &crate::rendering::capabilities::WgpuGraphicsProbe,
+        )
+        .to_vec()
+    }
+
     fn is_niri(&self) -> bool {
         crate::infrastructure::runtime::is_niri()
     }

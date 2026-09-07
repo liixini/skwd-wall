@@ -1,0 +1,9 @@
+help-shortcuts = Atajos
+help-keyboard = Teclado
+help-mouse = Ratón
+help-key-esc = Esc
+help-mouse-wheel = Rueda
+help-mouse-hover = Pasar por encima
+help-close-back-quit = Cerrar / atrás / salir
+help-wheel = Navegar / desplazar
+help-hover = Previsualizar vídeos

@@ -131,6 +131,7 @@ impl App {
         if !self.config.reload() {
             return false;
         }
+        crate::i18n::set_language(&self.config.str_path(skwd_config::keys::general::LANGUAGE));
         let semantic_after = (
             self.config.str_path(skwd_config::keys::semantic::MANIFEST),
             self.config.str_path(skwd_config::keys::semantic::INDEX_PROFILE),

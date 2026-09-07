@@ -43,6 +43,7 @@ fn category_note(tab: &str) -> &'static str {
         "automation" => "settings-tab-note-automation",
         "theme" => "settings-tab-note-theme",
         "integrations" => "settings-tab-note-integrations",
+        "language" => "settings-tab-note-language",
         _ => "settings-tab-note-default",
     })
 }
@@ -203,7 +204,7 @@ pub fn settings_workbench<'a>(input: WorkbenchInput<'a>) -> Element<'a, Message>
         focus,
     );
     let atmosphere: Element<'a, Message> = if preview_path.is_empty() {
-        container(text("")).into()
+        iced::widget::Space::new().width(Length::Fill).height(Length::Fill).into()
     } else {
         image(image::Handle::from_path(preview_path))
             .width(Length::Fill)

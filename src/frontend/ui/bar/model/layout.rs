@@ -23,8 +23,8 @@ pub(super) fn wrap_items(
         }
         items[index].x = current_x;
         items[index].y = y0 + row as f32 * (bar_height + gap);
+        widest = widest.max(current_x + width);
         current_x += advance;
-        widest = widest.max(current_x);
     }
     (row, widest, current_x)
 }
