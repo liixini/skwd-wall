@@ -3,7 +3,19 @@
 
 > [!IMPORTANT]
 > Skwd-wall v2 beta is here!
+> Join us on [Discord](https://discord.gg/cgxy8EEVmz) if you want to be part of the steering the direction of the beta, report bugs or just chat :)
+> 
 > Skwd-wall v2 is the most ambitious software I've ever written, and as such I am expecting at least one bug, maybe two. Please don't hesitate to create a GitHub issue for any issues you encounter or suggestions you may have.
+> 
+> Current known issues / WIP:
+> 
+> WIP: Wallpaper Engine inconsistencies / bugs in comparison to Linux Wallpaper Engine. This part of the application is still Work in Progress and does not have perfect coverage yet.
+> 
+> WIP: Some parts of the program does not have keyboard navigation options.
+> 
+> WIP: Debian, Bazzite & NixOS versions
+>
+> WIP: Skwd-paper being able to be ran completely standalone without Skwd-deck organising smart features like hotplugging & restore on boot.
 
 ![Stars](https://img.shields.io/github/stars/liixini/skwd-wall?style=for-the-badge)
 ![License](https://img.shields.io/github/license/liixini/skwd-wall?style=for-the-badge)
