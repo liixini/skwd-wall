@@ -59,6 +59,7 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.0-beta.11" date="2026-09-09"/>
     <release version="1.0.0-beta.10" date="2026-09-07"/>
     <release version="1.0.0-beta.9" date="2026-09-06"/>
     <release version="1.0.0-beta.8" date="2026-09-05"/>

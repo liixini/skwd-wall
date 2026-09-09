@@ -1,9 +1,14 @@
 #[derive(Debug, Clone)]
 pub enum ThemeMsg {
+    LoadCurrent,
+    SaveWallpaper,
+    ToggleWallpaper(bool),
+    Variant(bool),
     BackendMenu,
     Option(&'static str, &'static str),
     DesignClose,
     RoleSelect(u8),
+    RoleFilter(String),
     Hue(f32),
     SV(f32, f32),
     DragEnd,
@@ -14,6 +19,7 @@ pub enum ThemeMsg {
     SeedGen,
     NameInput(String),
     Reset,
+    ResetColour,
     SaveTheme,
     SaveApply,
     LoadSaved(String),

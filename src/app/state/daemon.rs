@@ -9,6 +9,8 @@ use super::TaskUiState;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Pending {
+    PlaybackProcesses,
+    CurrentTheme { load: bool },
     List,
     ThemeBackends,
     EffectThemes,
@@ -30,6 +32,7 @@ pub(crate) enum Pending {
     Outputs,
     DemoOutputs,
     AudioOutputs,
+    AudioPause,
     ThemePreview { card: usize, backend: String },
     ThemePreviews { backend: String },
     TaskList,
@@ -39,6 +42,7 @@ pub(crate) enum Pending {
 }
 
 pub(crate) struct DaemonState {
+    pub(crate) playback: crate::contracts::daemon::PlaybackStatus,
     pub(crate) client: DaemonClient,
     pub(crate) pending: HashMap<u64, Pending>,
     pub(crate) connected: bool,
@@ -59,6 +63,7 @@ pub(crate) struct DaemonState {
 impl DaemonState {
     pub(crate) fn new(client: DaemonClient) -> Self {
         Self {
+            playback: crate::contracts::daemon::PlaybackStatus::default(),
             client,
             pending: HashMap::new(),
             connected: false,

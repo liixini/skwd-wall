@@ -207,14 +207,23 @@ fn swatch_backend_label(backend: &str) -> &'static str {
 
 pub(crate) fn swatch_overlay(app: &App) -> Option<Element<'_, Message>> {
     use iced::widget::{column, row, text};
-    if app.theme.swatch.is_empty() || app.config.theme_backend() == "off" {
+    if app.config.theme_backend() == "off" {
         return None;
     }
     let scale = app.config.ui_scale();
     let sw = 22.0 * scale;
-    let cells: Vec<Element<'_, Message>> = app
-        .theme
-        .swatch
+    let base = app.theme.base_palette;
+    let fallback = [
+        base.primary,
+        base.tertiary,
+        base.surface_variant,
+        base.surface_container,
+        base.surface,
+        base.outline,
+    ];
+    let colors =
+        if app.theme.swatch.is_empty() { fallback.as_slice() } else { app.theme.swatch.as_slice() };
+    let cells: Vec<Element<'_, Message>> = colors
         .iter()
         .map(|cell| {
             let col = *cell;

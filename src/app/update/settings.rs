@@ -388,6 +388,7 @@ fn settings_cards(
         &app.daemon.output_statuses,
         &app.daemon.output_wallpaper_art,
         app.daemon.library_watch.as_ref(),
+        Some(&app.daemon.playback),
     )
 }
 
@@ -712,7 +713,7 @@ fn activate_settings_control(app: &mut App) -> Task<Message> {
             begin_settings_input_edit(app, key);
             iced::widget::operation::focus(crate::frontend::settings::workbench_input_id(key))
         }
-        Control::Dropdown { path, options, current } => {
+        Control::Dropdown { path, options, current, .. } => {
             let Some(choice) = app.panels.settings.focused_choice else {
                 app.panels.settings.focused_choice =
                     Some(options.iter().position(|(key, _)| key == &current).unwrap_or(0));
@@ -884,6 +885,7 @@ pub(super) fn settings_commit(app: &mut App) -> Task<Message> {
 }
 
 pub(super) fn set_settings_tab(app: &mut App, tab: String) -> Task<Message> {
+    let tab = crate::frontend::settings::canonical_category(tab);
     commit_settings_input_edit(app);
     close_settings_search(app);
     let changed = app.panels.settings.tab != tab;
@@ -910,6 +912,25 @@ pub(super) fn set_settings_tab(app: &mut App, tab: String) -> Task<Message> {
 }
 
 pub(super) fn settings_pick(app: &mut App, path: &str, value: &str) -> Task<Message> {
+    if path == "playback.addProcess" {
+        let mut processes = app
+            .config
+            .str_path(skwd_config::keys::playback::PROCESSES)
+            .split(',')
+            .map(str::trim)
+            .filter(|name| !name.is_empty())
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        if !processes.iter().any(|name| name == value) {
+            processes.push(value.to_string());
+        }
+        app.config.save_key(skwd_config::keys::playback::PROCESSES, json!(processes.join(", ")));
+        app.daemon.playback.available_processes.clear();
+        app.init_settings_inputs();
+        app.retick();
+        return Task::none();
+    }
+
     if path == crate::frontend::settings::SHADER_FAMILY_KEY {
         let current = app.config.str_path(skwd_config::keys::transition::SHADER);
         let shader = crate::frontend::settings::family_default(&current, value);
@@ -1087,6 +1108,9 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
         }
         ActionId::OpenScheduleEditor => {
             crate::app::helpers::sched_open(app);
+        }
+        ActionId::ChooseRunningProcess => {
+            app.call_tracked("playback.processes", json!({}), Pending::PlaybackProcesses);
         }
         ActionId::OpenThemeDesigner => {
             crate::app::helpers::theme_designer_open(app);

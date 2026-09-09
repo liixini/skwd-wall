@@ -1901,6 +1901,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "material-colors"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e226ffda362d5bc26bb8f730d637a0851eedfb05e35d92108c9d8b48d2e47941"
+dependencies = [
+ "ahash",
+ "indexmap",
+ "serde",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2959,7 +2970,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-config"
-version = "1.0.0-beta.10"
+version = "1.0.0-beta.11"
 dependencies = [
  "dirs",
  "serde_json",
@@ -2967,7 +2978,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-lens-proto"
-version = "1.0.0-beta.10"
+version = "1.0.0-beta.11"
 dependencies = [
  "serde",
  "serde_json",
@@ -2975,7 +2986,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-log"
-version = "1.0.0-beta.10"
+version = "1.0.0-beta.11"
 dependencies = [
  "libc",
  "log",
@@ -2983,14 +2994,15 @@ dependencies = [
 
 [[package]]
 name = "skwd-palette"
-version = "1.0.0-beta.10"
+version = "1.0.0-beta.11"
 dependencies = [
+ "material-colors",
  "serde_json",
 ]
 
 [[package]]
 name = "skwd-wall"
-version = "1.0.0-beta.10"
+version = "1.0.0-beta.11"
 dependencies = [
  "ash",
  "bit-set",
@@ -3669,7 +3681,7 @@ dependencies = [
 
 [[package]]
 name = "wall-proto"
-version = "1.0.0-beta.10"
+version = "1.0.0-beta.11"
 dependencies = [
  "libc",
  "serde",

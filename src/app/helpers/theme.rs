@@ -35,6 +35,11 @@ pub(crate) fn theme_designer_open(app: &mut App) {
         )
     };
     app.panels.theme_designer = Some(designer);
+    app.call_tracked(
+        "theme.current",
+        json!({}),
+        Pending::CurrentTheme { load: app.config.theme_backend() != "static" },
+    );
     app.retick();
 }
 
@@ -58,6 +63,10 @@ pub(crate) fn theme_designer_save(app: &mut App, apply: bool) -> bool {
     if apply {
         app.config.set_key(skwd_config::keys::theme::POLICY, json!("fixed"));
         app.config.set_key(skwd_config::keys::theme::STATIC_THEME, json!(name));
+        app.config.set_key(
+            skwd_config::keys::theme::MODE,
+            json!(if candidate.dark { "dark" } else { "light" }),
+        );
     }
     app.config.persist();
     if apply {

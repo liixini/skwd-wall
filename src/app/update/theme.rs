@@ -8,6 +8,20 @@ use crate::frontend::theme_designer::ThemeMsg;
 
 pub(super) fn update(app: &mut App, msg: ThemeMsg) -> Task<Message> {
     match msg {
+        ThemeMsg::LoadCurrent => {
+            app.call_tracked("theme.current", json!({}), Pending::CurrentTheme { load: true });
+            Task::none()
+        }
+        ThemeMsg::SaveWallpaper => {
+            save_wallpaper_profile(app, None);
+            Task::none()
+        }
+        ThemeMsg::ToggleWallpaper(enabled) => {
+            save_wallpaper_profile(app, Some(enabled));
+            Task::none()
+        }
+        ThemeMsg::Variant(dark) => tdes_mutate(app, |designer| designer.set_variant(dark)),
+        ThemeMsg::RoleFilter(filter) => tdes_mutate(app, |designer| designer.role_filter = filter),
         ThemeMsg::BackendMenu => {
             super::panels::toggle_bar_menu(app, crate::frontend::ui::MenuKind::Backends)
         }
@@ -37,11 +51,16 @@ pub(super) fn update(app: &mut App, msg: ThemeMsg) -> Task<Message> {
         }),
         ThemeMsg::SeedGen => tdes_mutate(app, |des| {
             let seed = des.candidate.colors[des.selected].clone();
-            if let Some(cand) = crate::domain::theme::Candidate::from_seed(&seed, true) {
+            if let Some(cand) =
+                crate::domain::theme::Candidate::from_seed(&seed, des.candidate.dark)
+            {
                 des.start_from(cand);
             }
         }),
         ThemeMsg::NameInput(text) => tdes_mutate(app, |des| des.set_name(text)),
+        ThemeMsg::ResetColour => {
+            tdes_mutate(app, crate::frontend::theme_designer::ThemeDesigner::reset_colour)
+        }
         ThemeMsg::Reset => tdes_mutate(app, crate::frontend::theme_designer::ThemeDesigner::reset),
         ThemeMsg::SaveTheme => {
             if crate::app::helpers::theme_designer_save(app, false) {
@@ -231,4 +250,38 @@ fn tdes_mutate(
         app.retick();
     }
     Task::none()
+}
+
+fn save_wallpaper_profile(app: &mut App, enabled: Option<bool>) {
+    let Some(designer) = app.panels.theme_designer.as_mut() else {
+        return;
+    };
+    let Some(wallpaper) = &designer.wallpaper else {
+        return;
+    };
+    let mut profiles = app.config.array_values(skwd_config::keys::theme::WALLPAPER_PROFILES);
+    let index = profiles
+        .iter()
+        .position(|profile| profile["key"].as_str() == Some(&wallpaper.key))
+        .unwrap_or_else(|| {
+            profiles.push(json!({"key": wallpaper.key, "name": wallpaper.name}));
+            profiles.len() - 1
+        });
+    let profile = &mut profiles[index];
+    if enabled.is_none() {
+        for dark in [true, false] {
+            let mut candidate = designer.candidate.clone();
+            candidate.set_dark(dark);
+            profile[if dark { "dark" } else { "light" }] =
+                crate::infrastructure::theme::encode_candidate(&candidate, true);
+        }
+    }
+    profile["enabled"] = json!(enabled.unwrap_or(true));
+    designer.profile_enabled = enabled.unwrap_or(true);
+    designer.error = None;
+    app.config.save_key(skwd_config::keys::theme::WALLPAPER_PROFILES, json!(profiles));
+    app.theme.cache.clear();
+    app.invalidate_swatch();
+    app.daemon.client.call("wall.retheme", json!({}));
+    app.retick();
 }

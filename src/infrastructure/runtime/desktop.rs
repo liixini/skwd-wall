@@ -7,6 +7,14 @@ pub fn is_niri() -> bool {
     })
 }
 
+pub fn startup_panel() -> Option<String> {
+    if std::env::args().skip(1).any(|argument| argument == "--mixer") {
+        Some("mixer".to_string())
+    } else {
+        std::env::var("SKWD_WALL_START").ok()
+    }
+}
+
 fn desktop_is_niri(desktop: &str) -> bool {
     desktop.to_lowercase().contains("niri")
 }

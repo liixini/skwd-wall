@@ -23,6 +23,7 @@ pub trait SettingsSource {
     fn motion_slow_ms(&self) -> f32;
 
     fn saved_theme_names(&self) -> Vec<String>;
+    fn palette_colors(&self) -> Vec<(String, Vec<String>)>;
     fn palette_presets(&self) -> Vec<(String, String)>;
     fn bindings(&self) -> InputMap;
     fn graphics_card(&self) -> GraphicsCard;

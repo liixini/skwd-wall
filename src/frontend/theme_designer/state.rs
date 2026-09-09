@@ -1,8 +1,13 @@
 use crate::domain::theme::{Candidate, THEME_ROLE_COUNT, hex_to_hsv, hsv_to_hex};
 
 pub struct ThemeDesigner {
+    pub wallpaper: Option<crate::contracts::daemon::CurrentTheme>,
+    pub profile_enabled: bool,
+    pub role_filter: String,
+    pub error: Option<String>,
     pub candidate: Candidate,
     pub initial: Candidate,
+    loaded: Candidate,
     pub initial_name: String,
     pub selected: usize,
     pub hsv: (f32, f32, f32),
@@ -25,7 +30,12 @@ impl ThemeDesigner {
             .tween(0.0, crate::frontend::animation::MotionTier::Fast);
         open.retarget(1.0);
         Self {
+            wallpaper: None,
+            profile_enabled: false,
+            role_filter: String::new(),
+            error: None,
             initial: candidate.clone(),
+            loaded: candidate.clone(),
             initial_name: name.clone(),
             candidate,
             selected: 0,
@@ -83,14 +93,38 @@ impl ThemeDesigner {
     }
 
     pub fn dirty(&self) -> bool {
-        self.candidate != self.initial || self.name_buf != self.initial_name
+        !self.candidate.same_colors(&self.initial) || self.name_buf != self.initial_name
     }
 
     pub fn reset(&mut self) {
         self.candidate = self.initial.clone();
+        self.loaded.clone_from(&self.initial);
         self.name_buf.clone_from(&self.initial_name);
         self.selected_preset.clone_from(&self.initial_preset);
         self.saved_identity = (!self.initial_name.is_empty()).then(|| self.initial_name.clone());
+        self.select_role(self.selected);
+    }
+
+    pub fn loaded_colour(&self) -> &str {
+        if self.candidate.dark == self.loaded.dark {
+            &self.loaded.colors[self.selected]
+        } else {
+            &self.loaded.alternate[self.selected]
+        }
+    }
+
+    pub fn colour_changed(&self) -> bool {
+        self.candidate.colors[self.selected] != self.loaded_colour()
+            || self.hex_buf != self.loaded_colour()
+    }
+
+    pub fn reset_colour(&mut self) {
+        self.candidate.colors[self.selected] = self.loaded_colour().to_string();
+        self.select_role(self.selected);
+    }
+
+    pub fn set_variant(&mut self, dark: bool) {
+        self.candidate.set_dark(dark);
         self.select_role(self.selected);
     }
 
@@ -143,6 +177,7 @@ impl ThemeDesigner {
 
     pub fn start_from(&mut self, candidate: Candidate) {
         self.detach_saved_identity();
+        self.loaded.clone_from(&candidate);
         self.candidate = candidate;
         self.selected_preset = None;
         self.select_role(self.selected);
@@ -150,12 +185,14 @@ impl ThemeDesigner {
 
     pub fn start_from_preset(&mut self, preset: String, candidate: Candidate) {
         self.detach_saved_identity();
+        self.loaded.clone_from(&candidate);
         self.candidate = candidate;
         self.selected_preset = Some(preset);
         self.select_role(self.selected);
     }
 
     pub fn load_saved(&mut self, name: String, candidate: Candidate) {
+        self.loaded.clone_from(&candidate);
         self.candidate = candidate;
         self.name_buf.clone_from(&name);
         self.saved_identity = Some(name);

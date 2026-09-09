@@ -105,6 +105,21 @@ impl Effects {
         if audio != TileAudio::None {
             body = body.push(self.audio_row(monitor, audio == TileAudio::PreApply, scale, palette));
         }
+        if monitor.connected
+            && matches!(
+                monitor.kind,
+                crate::domain::library::catalog::WallpaperKind::Video
+                    | crate::domain::library::catalog::WallpaperKind::We
+            )
+        {
+            body = body.push(crate::frontend::audio_panel::playback_control(
+                &monitor.target,
+                monitor.paused,
+                monitor.manual_paused,
+                scale,
+                palette,
+            ));
+        }
         container(body)
             .width(Length::Fill)
             .padding(Padding {

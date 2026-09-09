@@ -111,3 +111,23 @@ fn folder_prefixes_sorted() {
         ["anime", "anime/seasonal", "anime/seasonal/2024", "photos"]
     );
 }
+
+#[test]
+fn backdrop_preserves_animated_sources() {
+    let video = Wallpaper {
+        kind: WallpaperKind::Video,
+        path: "/wall/clip.mp4".into(),
+        thumb: "/cache/frame.png".into(),
+        ..Default::default()
+    };
+    assert_eq!(video.backdrop_source(), "/wall/clip.mp4");
+    let mut scene = Wallpaper {
+        kind: WallpaperKind::We,
+        key: "we:3260370312".into(),
+        thumb: "/cache/scene.png".into(),
+        ..Default::default()
+    };
+    assert_eq!(scene.backdrop_source(), "we:3260370312");
+    scene.we_id = "123456".into();
+    assert_eq!(scene.backdrop_source(), "we:123456");
+}

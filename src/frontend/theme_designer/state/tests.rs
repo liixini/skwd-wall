@@ -196,3 +196,71 @@ fn entrance_settles() {
     assert!(!designer.animating());
     assert!((designer.ease() - 1.0).abs() < 0.001);
 }
+
+#[test]
+fn switching_variants_keeps_unsaved_extended_role_edits() {
+    let mut designer = designer();
+    designer.set_variant(false);
+    assert!(!designer.dirty());
+    designer.select_role(49);
+    designer.hex_buf = "#abcdef".to_string();
+    assert!(designer.apply_hex());
+    designer.set_variant(true);
+    designer.hex_buf = "#123456".to_string();
+    assert!(designer.apply_hex());
+    designer.set_variant(false);
+    assert_eq!(designer.hex_buf, "#abcdef");
+    designer.set_variant(true);
+    assert_eq!(designer.hex_buf, "#123456");
+    assert!(designer.dirty());
+    designer.reset();
+    assert!(!designer.dirty());
+    assert_eq!(designer.candidate, designer.initial);
+}
+
+#[test]
+fn reset_colour_restores_only_the_selected_role_and_variant() {
+    let mut designer = designer();
+    let loaded = designer.candidate.clone();
+    designer.select_role(49);
+    designer.pick_recent("#123456");
+    designer.set_variant(false);
+    designer.pick_recent("#abcdef");
+    designer.select_role(12);
+    designer.pick_recent("#654321");
+    designer.select_role(49);
+    assert!(designer.colour_changed());
+    designer.reset_colour();
+    assert!(!designer.colour_changed());
+    assert_eq!(designer.candidate.colors[49], loaded.alternate[49]);
+    assert_eq!(designer.candidate.colors[12], "#654321");
+    assert_eq!(designer.hsv, hex_to_hsv(&designer.hex_buf).unwrap());
+    designer.set_variant(true);
+    assert_eq!(designer.candidate.colors[49], "#123456");
+    designer.reset_colour();
+    assert_eq!(designer.candidate.colors[49], loaded.colors[49]);
+}
+
+#[test]
+fn reset_colour_uses_the_last_load_even_after_saving() {
+    let mut designer = designer();
+    for load in 0..3 {
+        let mut candidate = Candidate::from_seed("#abcdef", false).unwrap();
+        candidate.colors[0] = format!("#12345{load}");
+        match load {
+            0 => designer.start_from(candidate.clone()),
+            1 => designer.start_from_preset("fixture".into(), candidate.clone()),
+            _ => designer.load_saved("Saved".into(), candidate.clone()),
+        }
+        designer.select_role(0);
+        designer.pick_recent("#aabbcc");
+        designer.mark_saved("Saved".into());
+        designer.reset_colour();
+        assert_eq!(designer.candidate.colors[0], candidate.colors[0]);
+        designer.hex_buf = "unfinished".into();
+        assert!(designer.colour_changed());
+        designer.reset_colour();
+        assert_eq!(designer.hex_buf, candidate.colors[0]);
+        assert!(!designer.colour_changed());
+    }
+}

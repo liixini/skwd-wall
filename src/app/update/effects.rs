@@ -115,6 +115,14 @@ pub(super) fn audio_update(
 ) -> Task<Message> {
     use crate::frontend::audio_panel::AudioMsg;
     match msg {
+        AudioMsg::MonPause(output, paused) => {
+            app.call_tracked(
+                "wall.set_paused",
+                json!({"output": output, "paused": paused}),
+                Pending::AudioPause,
+            );
+            Task::none()
+        }
         AudioMsg::VolumeStep(delta) => audio_volume_step(app, delta),
         AudioMsg::MonMute(output, mute) => audio_mon_mute(app, &output, mute),
         AudioMsg::MonVolume(output, vol) => audio_mon_volume(app, &output, vol),

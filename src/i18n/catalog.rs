@@ -212,13 +212,6 @@ pub fn theme_designer_custom_count(count: usize) -> String {
     catalog().format("theme-designer-custom-count", Some(&args))
 }
 
-pub fn theme_designer_stats(roles: usize, saved: usize) -> String {
-    let mut args = FluentArgs::new();
-    args.set("roles", roles);
-    args.set("saved", saved);
-    catalog().format("theme-designer-stats", Some(&args))
-}
-
 pub fn browser_downloading_count(count: usize) -> String {
     let mut args = FluentArgs::new();
     args.set("count", count.to_string());

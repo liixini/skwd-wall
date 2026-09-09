@@ -76,6 +76,24 @@ impl SettingsSource for Config {
         )
     }
 
+    fn palette_colors(&self) -> Vec<(String, Vec<String>)> {
+        let mut palettes: Vec<_> = skwd_palette::PRESETS
+            .iter()
+            .filter_map(|(key, _)| {
+                crate::domain::theme::Candidate::from_preset(key)
+                    .map(|palette| (key.to_string(), palette.colors.to_vec()))
+            })
+            .collect();
+        palettes.extend(
+            crate::infrastructure::theme::saved_palettes(
+                &self.array_values(skwd_config::keys::theme::SAVED_THEMES),
+            )
+            .into_iter()
+            .map(|(name, palette)| (name, palette.colors.to_vec())),
+        );
+        palettes
+    }
+
     fn palette_presets(&self) -> Vec<(String, String)> {
         skwd_palette::PRESETS
             .iter()

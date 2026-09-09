@@ -1,3 +1,12 @@
+#[derive(Debug, Clone)]
+pub struct CurrentTheme {
+    pub key: String,
+    pub name: String,
+    pub thumb: String,
+    pub palette: crate::domain::theme::Candidate,
+    pub dark: bool,
+}
+
 use crate::contracts::media::MediaKind;
 use crate::contracts::picker::PaletteSpec;
 use crate::contracts::playlists::{Playlist, PlaylistAssignment, PlaylistMember};
@@ -86,6 +95,8 @@ pub struct OutputStatus {
     pub volume: u32,
     pub fill: String,
     pub audio_shared: bool,
+    pub paused: bool,
+    pub manual_paused: bool,
 }
 
 impl Default for OutputStatus {
@@ -106,6 +117,8 @@ impl Default for OutputStatus {
             volume: 100,
             fill: String::new(),
             audio_shared: false,
+            paused: false,
+            manual_paused: false,
         }
     }
 }
@@ -206,6 +219,7 @@ impl LibraryWatchMode {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct StatusResult {
+    pub playback: Option<PlaybackStatus>,
     pub version: String,
     pub protocol: Option<ProtocolStatus>,
     pub capabilities: Vec<String>,
@@ -303,4 +317,21 @@ pub struct TaskListResult {
 pub struct ScenePropertiesResult {
     pub we_id: String,
     pub rows: Vec<SceneProperty>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Deserialize)]
+#[serde(default)]
+pub struct PlaybackStatus {
+    pub fullscreen_supported: bool,
+    pub maximized_supported: bool,
+    pub maximized_paused: bool,
+    pub full_width_supported: bool,
+    pub full_width_paused: bool,
+    pub overview_paused: bool,
+    pub processes: Vec<String>,
+    pub outputs: Vec<String>,
+    pub all_displays: bool,
+    pub automatic_paused: bool,
+    pub resume_pending: bool,
+    pub available_processes: Vec<String>,
 }

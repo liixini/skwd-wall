@@ -2,19 +2,63 @@ use super::ActionId;
 
 #[derive(Debug, Clone)]
 pub enum Control {
-    Toggle { path: String, value: bool },
-    Number { key: String, path: String, unit: &'static str },
-    TextField { key: String, path: String, placeholder: &'static str },
-    KeyBinding { key: String, path: String, default: &'static str },
-    Dropdown { path: String, options: Vec<(String, String)>, current: String },
-    Chips { path: String, options: Vec<(String, String)>, current: String, disabled: Vec<String> },
-    MotionWeights { weights: Vec<(String, String, ActionId)> },
-    ActionBtn { id: ActionId, label: String },
-    Presets { mode: String, items: Vec<(String, bool)> },
-    Details { id: String, summary: String, rows: Vec<Row> },
-    StackBar { id: String, summary: String, preview: Option<String>, rows: Vec<Row> },
+    Toggle {
+        path: String,
+        value: bool,
+    },
+    Number {
+        key: String,
+        path: String,
+        unit: &'static str,
+    },
+    TextField {
+        key: String,
+        path: String,
+        placeholder: &'static str,
+    },
+    KeyBinding {
+        key: String,
+        path: String,
+        default: &'static str,
+    },
+    Dropdown {
+        path: String,
+        options: Vec<(String, String)>,
+        current: String,
+        palettes: Vec<(String, Vec<String>)>,
+    },
+    Chips {
+        path: String,
+        options: Vec<(String, String)>,
+        current: String,
+        disabled: Vec<String>,
+    },
+    MotionWeights {
+        weights: Vec<(String, String, ActionId)>,
+    },
+    ActionBtn {
+        id: ActionId,
+        label: String,
+    },
+    Presets {
+        mode: String,
+        items: Vec<(String, bool)>,
+    },
+    Details {
+        id: String,
+        summary: String,
+        rows: Vec<Row>,
+    },
+    StackBar {
+        id: String,
+        summary: String,
+        preview: Option<String>,
+        rows: Vec<Row>,
+    },
     Static,
-    Code { snippet: &'static str },
+    Code {
+        snippet: &'static str,
+    },
     Preview,
 }
 

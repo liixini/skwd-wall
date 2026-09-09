@@ -44,6 +44,8 @@ fn mon(name: &str, current: Option<&str>) -> MonitorInfo {
         volume: 100,
         fill: String::new(),
         locked: false,
+        paused: false,
+        manual_paused: false,
         current: String::new(),
         we_id: String::new(),
     }
@@ -88,6 +90,8 @@ fn audible_mon(
         volume,
         fill: String::new(),
         locked: false,
+        paused: false,
+        manual_paused: false,
         current,
         we_id,
     }

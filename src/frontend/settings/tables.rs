@@ -1,7 +1,7 @@
 use crate::contracts::settings::{SettingsSource, transitions, wallpaper_kind};
 use crate::i18n::tr;
 
-pub const TABS: [&str; 14] = [
+pub const TABS: [&str; 13] = [
     "picker",
     "filter",
     "position",
@@ -11,7 +11,6 @@ pub const TABS: [&str; 14] = [
     "performance",
     "library",
     "sources",
-    "search",
     "automation",
     "theme",
     "integrations",
@@ -19,6 +18,13 @@ pub const TABS: [&str; 14] = [
 ];
 
 pub(super) const MOTION_SPEEDS: [&str; 3] = ["fast", "standard", "slow"];
+
+pub fn canonical_category(tab: String) -> String {
+    match tab.as_str() {
+        "search" => String::from("filter"),
+        _ => tab,
+    }
+}
 
 pub fn visible_tabs(_cfg: &dyn SettingsSource) -> Vec<(&'static str, &'static str)> {
     TABS.iter().map(|key| (*key, tr(tab_label_key(key)))).collect()
@@ -34,7 +40,6 @@ fn tab_label_key(tab: &str) -> &'static str {
         "performance" => "settings-tab-performance",
         "library" => "settings-tab-library",
         "sources" => "settings-tab-sources",
-        "search" => "settings-tab-search",
         "automation" => "settings-tab-automation",
         "theme" => "settings-tab-theme",
         "integrations" => "settings-tab-integrations",

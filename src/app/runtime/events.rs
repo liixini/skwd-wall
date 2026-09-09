@@ -17,6 +17,22 @@ use super::apply_error_message;
 impl App {
     pub(in crate::app) fn on_event(&mut self, name: &str, data: &Value) {
         match name {
+            ev::PLAYBACK => {
+                if let Ok(mut status) =
+                    serde_json::from_value::<crate::contracts::daemon::PlaybackStatus>(data.clone())
+                {
+                    status.available_processes =
+                        std::mem::take(&mut self.daemon.playback.available_processes);
+                    self.daemon.playback = status;
+                    if self.panels.audio.is_some() {
+                        self.call_tracked("wall.outputs", json!({}), Pending::AudioOutputs);
+                    }
+                    if self.panels.effects.is_some() {
+                        self.call_tracked("wall.outputs", json!({}), Pending::Outputs);
+                    }
+                    self.retick();
+                }
+            }
             ev::REMOTE_THUMB => self.on_remote_thumb(data),
             ev::PREVIEW_READY => {
                 let Ok(payload) = ev::PreviewReady::deserialize(data) else { return };
@@ -120,6 +136,9 @@ impl App {
             }
             ev::OUTPUTS_CHANGED => {
                 self.call_tracked("wall.outputs", json!({}), Pending::Outputs);
+                if self.panels.audio.is_some() {
+                    self.call_tracked("wall.outputs", json!({}), Pending::AudioOutputs);
+                }
             }
             ev::POWER_CHANGED => {
                 let Ok(payload) = ev::PowerChanged::deserialize(data) else { return };

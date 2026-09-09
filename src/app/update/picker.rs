@@ -262,8 +262,7 @@ fn back_panel_click(app: &mut App, fi: usize, x: f32, y: f32) -> Task<Message> {
 
 fn set_overview_backdrop(app: &mut App, si: u32) {
     let item = &app.library_session.library.catalog().items[si as usize];
-    let img =
-        if item.kind == WallpaperKind::Static { item.path.clone() } else { item.thumb.clone() };
+    let img = item.backdrop_source();
     if !img.is_empty() {
         app.config.save_key(skwd_config::keys::niri::BACKDROP, json!(img));
         app.config.save_key(skwd_config::keys::niri::BACKDROP_FOLLOW_WALLPAPER, json!(false));

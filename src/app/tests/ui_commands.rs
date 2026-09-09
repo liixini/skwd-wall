@@ -102,6 +102,8 @@ fn demo_audio_volume_drives_the_open_mixer_without_unmuting() {
             mute,
             volume,
             shared: false,
+            paused: false,
+            manual_paused: false,
         };
 
     command(&mut app, "demo begin");
@@ -961,6 +963,8 @@ fn display_commands_drive_picker() {
                 volume: 0,
                 fill: String::from("fill"),
                 locked: false,
+                paused: false,
+                manual_paused: false,
                 current: String::from("/old.png"),
                 we_id: String::new(),
             })
@@ -1074,6 +1078,8 @@ fn demo_display_staging() {
                 volume: 0,
                 fill: String::from("fill"),
                 locked: false,
+                paused: false,
+                manual_paused: false,
                 current: String::from("/old.png"),
                 we_id: String::new(),
             })

@@ -39,5 +39,20 @@ fn role_indices_stable() {
     for (index, role) in ThemeRole::ALL.into_iter().enumerate() {
         assert_eq!(role.index(), index);
     }
-    assert_eq!(THEME_ROLE_COUNT, 9);
+    assert_eq!(THEME_ROLE_COUNT, 50);
+}
+
+#[test]
+fn light_presets_open_their_original_colours_in_the_light_variant() {
+    for name in ["catppuccin-latte", "rose-pine-dawn", "solarized-light", "github-light"] {
+        let mut candidate = Candidate::from_preset(name).unwrap();
+        let preset = skwd_palette::preset(name).unwrap();
+        assert!(!candidate.dark, "{name}");
+        assert_eq!(candidate.colors[ThemeRole::Primary.index()], preset.primary.hex());
+        assert_eq!(candidate.colors[ThemeRole::Background.index()], preset.background.hex());
+        candidate.set_dark(true);
+        assert_ne!(candidate.colors[ThemeRole::Background.index()], preset.background.hex());
+        candidate.set_dark(false);
+        assert_eq!(candidate.colors[ThemeRole::Background.index()], preset.background.hex());
+    }
 }

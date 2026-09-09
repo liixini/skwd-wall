@@ -54,6 +54,8 @@ pub struct MonitorInfo {
     pub volume: u32,
     pub fill: String,
     pub locked: bool,
+    pub paused: bool,
+    pub manual_paused: bool,
     pub current: String,
     pub we_id: String,
 }

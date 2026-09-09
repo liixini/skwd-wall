@@ -87,7 +87,7 @@ pub(crate) fn build_tab_with_output_statuses(
     previews: &std::collections::HashMap<String, String>,
 ) -> Vec<(Card, Vec<Row>)> {
     build_tab_with_runtime_status(
-        tab, cfg, themes, folders, analysis, backends, outputs, statuses, previews, None,
+        tab, cfg, themes, folders, analysis, backends, outputs, statuses, previews, None, None,
     )
 }
 
@@ -103,18 +103,18 @@ pub(crate) fn build_tab_with_runtime_status(
     statuses: &[crate::contracts::daemon::OutputStatus],
     previews: &std::collections::HashMap<String, String>,
     library_watch: Option<&crate::contracts::daemon::LibraryWatchStatus>,
+    playback: Option<&crate::contracts::daemon::PlaybackStatus>,
 ) -> Vec<(Card, Vec<Row>)> {
     match tab {
         "picker" => compose_picker(cfg, themes, outputs),
-        "filter" => compose_filter_bar(cfg, folders),
+        "filter" => compose_filter_search(cfg, folders, analysis),
         "position" => compose_position(cfg),
         "displays" => compose_displays(cfg, statuses, previews),
         "motion" => compose_motion(cfg),
-        "playback" => compose_playback(cfg, themes, outputs),
+        "playback" => compose_playback(cfg, themes, outputs, playback),
         "performance" => compose_performance(cfg),
         "library" => compose_library(cfg, themes, outputs, library_watch),
         "sources" => compose_sources(cfg, themes, outputs),
-        "search" => compose_search(cfg, analysis),
         "automation" => compose_automation(cfg, themes, folders, outputs),
         "theme" => compose_theme(cfg, backends),
         "integrations" => compose_integrations(cfg, themes),
@@ -277,13 +277,13 @@ fn compose_picker(
     let mut keys = collect(cfg, tab_keybinds);
 
     let mut general_rows = take_card(&mut general, tr("settings-general-general-card"));
+    let mut layout = take_card(&mut selector, tr("settings-selector-layout-card"));
     general_rows.extend(take_rows(
         &mut take_card(&mut general, tr("settings-general-behaviour-card")),
         &[tr("settings-general-close-on-selection-label")],
     ));
     section(&mut out, tr("settings-section-general"), "", general_rows);
 
-    let mut layout = take_card(&mut selector, tr("settings-selector-layout-card"));
     let _filter_motion = take_rows(&mut layout, &[tr("settings-selector-filter-motion-label")]);
     layout.extend(take_card(&mut selector, tr("settings-selector-presets-card")));
     for title in [
@@ -332,7 +332,11 @@ fn compose_picker(
     out
 }
 
-fn compose_filter_bar(cfg: &dyn SettingsSource, folders: &[String]) -> Vec<(Card, Vec<Row>)> {
+fn compose_filter_search(
+    cfg: &dyn SettingsSource,
+    folders: &[String],
+    analysis: &str,
+) -> Vec<(Card, Vec<Row>)> {
     let mut out = Vec::new();
     let mut filter = collect(cfg, |builder| tab_filter(builder, folders));
 
@@ -369,6 +373,41 @@ fn compose_filter_bar(cfg: &dyn SettingsSource, folders: &[String]) -> Vec<(Card
         tr("settings-section-visibility"),
         tr("settings-filter-visibility-card-desc"),
         take_card(&mut filter, tr("settings-filter-visibility-card")),
+    );
+    let mut search = collect(cfg, tab_search);
+    let search_summary = match cfg.text(keys::tagging::DEFAULT_SEARCH_MODE).as_str() {
+        "describe" => tr("settings-tagging-mode-describe"),
+        _ => tr("settings-tagging-mode-tags"),
+    };
+    let rows = vec![details(
+        tr("settings-tagging-search-card"),
+        tr("settings-tagging-search-card-desc"),
+        "search.discovery",
+        search_summary,
+        take_card(&mut search, tr("settings-tagging-search-card")),
+    )];
+    section(
+        &mut out,
+        tr("settings-section-search-tagging"),
+        tr("settings-tagging-overview-desc"),
+        rows,
+    );
+    let mut model_rows = take_card(&mut search, tr("settings-tagging-models-card"));
+    if !analysis.trim().is_empty() {
+        model_rows.insert(
+            0,
+            Row {
+                title: tr("settings-tagging-model-import-status-label").to_string(),
+                desc: analysis.to_string(),
+                control: Control::Static,
+            },
+        );
+    }
+    section(
+        &mut out,
+        tr("settings-section-semantic-models"),
+        tr("settings-tagging-models-card-desc"),
+        model_rows,
     );
     out
 }
@@ -462,6 +501,7 @@ fn compose_playback(
     cfg: &dyn SettingsSource,
     themes: &[String],
     outputs: &[String],
+    playback: Option<&crate::contracts::daemon::PlaybackStatus>,
 ) -> Vec<(Card, Vec<Row>)> {
     let mut out = Vec::new();
     let mut paper = collect(cfg, tab_paper);
@@ -503,6 +543,70 @@ fn compose_playback(
             rendering,
         );
     }
+    let mut pause = take_card(&mut paper, tr("settings-playback-pause-title"));
+    if let Some(status) = playback {
+        let detection = if !(cfg.flag(keys::playback::FULLSCREEN)
+            || cfg.flag(keys::playback::MAXIMIZED)
+            || cfg.is_niri() && cfg.flag(keys::niri::FULL_WIDTH_PAUSE))
+        {
+            tr("settings-playback-detection-off")
+        } else if (!cfg.flag(keys::playback::FULLSCREEN) || status.fullscreen_supported)
+            && (!cfg.flag(keys::playback::MAXIMIZED) || status.maximized_supported)
+            && (!(cfg.is_niri() && cfg.flag(keys::niri::FULL_WIDTH_PAUSE))
+                || status.full_width_supported)
+        {
+            tr("settings-playback-detection-ready")
+        } else {
+            tr("settings-playback-detection-unavailable")
+        };
+        pause.push(Row {
+            title: detection.to_string(),
+            desc: String::new(),
+            control: Control::Static,
+        });
+        let reason = if !status.processes.is_empty() {
+            crate::i18n::tr_args!("settings-playback-paused-process", names => status.processes.join(", "))
+        } else if status.overview_paused {
+            tr("settings-playback-paused-overview").to_string()
+        } else if status.resume_pending {
+            tr("settings-playback-resuming").to_string()
+        } else if status.full_width_paused {
+            tr("settings-playback-paused-full-width").to_string()
+        } else if status.maximized_paused {
+            tr("settings-playback-paused-maximized").to_string()
+        } else if status.automatic_paused {
+            tr("settings-playback-paused-fullscreen").to_string()
+        } else {
+            tr("settings-playback-no-rule").to_string()
+        };
+        pause.push(Row {
+            title: reason,
+            desc: status.outputs.join(", "),
+            control: Control::Static,
+        });
+        if !status.available_processes.is_empty() {
+            pause.push(Row {
+                title: tr("settings-playback-choose-process").to_string(),
+                desc: String::new(),
+                control: Control::Dropdown {
+                    path: "playback.addProcess".to_string(),
+                    current: String::new(),
+                    palettes: Vec::new(),
+                    options: status
+                        .available_processes
+                        .iter()
+                        .map(|name| (name.clone(), name.clone()))
+                        .collect(),
+                },
+            });
+        }
+    }
+    section(
+        &mut out,
+        tr("settings-playback-pause-title"),
+        tr("settings-playback-pause-desc"),
+        pause,
+    );
     out
 }
 
@@ -769,46 +873,6 @@ fn compose_sources(
     out
 }
 
-fn compose_search(cfg: &dyn SettingsSource, analysis: &str) -> Vec<(Card, Vec<Row>)> {
-    let mut out = Vec::new();
-    let mut search = collect(cfg, tab_search);
-    let search_summary = match cfg.text(keys::tagging::DEFAULT_SEARCH_MODE).as_str() {
-        "describe" => tr("settings-tagging-mode-describe"),
-        _ => tr("settings-tagging-mode-tags"),
-    };
-    let rows = vec![details(
-        tr("settings-tagging-search-card"),
-        tr("settings-tagging-search-card-desc"),
-        "search.discovery",
-        search_summary,
-        take_card(&mut search, tr("settings-tagging-search-card")),
-    )];
-    section(
-        &mut out,
-        tr("settings-section-search-tagging"),
-        tr("settings-tagging-overview-desc"),
-        rows,
-    );
-    let mut model_rows = take_card(&mut search, tr("settings-tagging-models-card"));
-    if !analysis.trim().is_empty() {
-        model_rows.insert(
-            0,
-            Row {
-                title: tr("settings-tagging-model-import-status-label").to_string(),
-                desc: analysis.to_string(),
-                control: Control::Static,
-            },
-        );
-    }
-    section(
-        &mut out,
-        tr("settings-section-semantic-models"),
-        tr("settings-tagging-models-card-desc"),
-        model_rows,
-    );
-    out
-}
-
 fn compose_automation(
     cfg: &dyn SettingsSource,
     themes: &[String],
@@ -893,6 +957,12 @@ fn compose_theme(cfg: &dyn SettingsSource, backends: &[String]) -> Vec<(Card, Ve
         tr("settings-section-palette"),
         tr("settings-theme-fixed-card-desc"),
         take_card(&mut theme, tr("settings-theme-fixed-card")),
+    );
+    section(
+        &mut out,
+        tr("settings-theme-designer-label"),
+        tr("settings-theme-profile-desc"),
+        take_card(&mut theme, tr("settings-theme-designer-label")),
     );
     section(
         &mut out,

@@ -1,6 +1,6 @@
 audio-masthead = Audio / mixer
 audio-index-title = Audio
-audio-index-desc = Control wallpaper audio by display. Displays showing the same source stay linked, so changing one changes all of them.
+audio-index-desc = Pause wallpapers by display. Displays showing the same source share volume and mute settings.
 audio-detecting-outputs = Detecting outputs
 audio-state-sound = Sound
 audio-state-muted = Muted
@@ -21,7 +21,7 @@ audio-channel-label = Audio
 audio-no-channel = This wallpaper does not expose an audio channel.
 audio-outputs-kicker = Audio / displays
 audio-mixer-heading = Wallpaper mixer
-audio-mixer-desc = Each row controls one display. Rows with the same wallpaper move together.
+audio-mixer-desc = Pause each display independently. Volume and mute stay linked for shared wallpapers.
 audio-outputs-summary =
     { $total } { $total ->
         [one] output
@@ -39,3 +39,11 @@ audio-source-video = Video
 audio-source-wallpaper-engine = Wallpaper Engine
 audio-source-we-id = Wallpaper Engine ({ $id })
 audio-source-static-image = Static image
+audio-wallpaper-label = Wallpaper
+audio-pause-wallpaper = Pause wallpaper
+audio-resume-wallpaper = Resume wallpaper
+audio-wallpaper-paused = Paused manually
+audio-wallpaper-held = Paused by another rule
+audio-wallpaper-playing = Playing
+audio-state-paused = Paused
+audio-playback-error = Could not change wallpaper playback: { $error }

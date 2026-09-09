@@ -21,7 +21,9 @@ pub use model::{Card, Control, Row};
 pub use search::{SettingsSearchResult, search_settings};
 pub(crate) use tables::SHADERS;
 pub(crate) use tables::is_transition_preview_section;
-pub use tables::{SHADER_FAMILY_KEY, family_default, is_picker_layout_section, visible_tabs};
+pub use tables::{
+    SHADER_FAMILY_KEY, canonical_category, family_default, is_picker_layout_section, visible_tabs,
+};
 pub use tabs::build_tab;
 pub(crate) use tabs::build_tab_with_runtime_status;
 

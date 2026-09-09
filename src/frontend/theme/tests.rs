@@ -71,7 +71,7 @@ fn noctalia_snake_keys() {
 #[test]
 fn role_descriptor_order() {
     for (index, descriptor) in ROLES.into_iter().enumerate() {
-        assert_eq!(descriptor.role.index(), index);
+        assert_eq!(descriptor.index, index);
         assert!(!descriptor.name.is_empty());
         assert!(!descriptor.description.is_empty());
     }

@@ -41,6 +41,9 @@ impl App {
         if self.source_browser.browser.is_some() {
             self.run_browser_search(false);
         }
+        if self.panels.audio.is_some() {
+            self.call_tracked("wall.outputs", json!({}), Pending::AudioOutputs);
+        }
         if self.theme.audition_open {
             self.request_theme_previews();
         }

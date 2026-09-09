@@ -253,16 +253,19 @@ pub(super) fn run_ui_command(app: &mut App, cmd: &str) -> Task<Message> {
             };
             super::settings::set_view_mode(app, mode.as_key())
         }
-        "tab"
-            if crate::frontend::settings::visible_tabs(&app.config)
+        "tab" => {
+            let tab = crate::frontend::settings::canonical_category(arg);
+            if !crate::frontend::settings::visible_tabs(&app.config)
                 .iter()
-                .any(|(key, _)| *key == arg) =>
-        {
+                .any(|(key, _)| *key == tab)
+            {
+                return Task::none();
+            }
             if app.panels.settings.open {
-                return super::update_inner(app, Message::SetSettingsTab(arg));
+                return super::update_inner(app, Message::SetSettingsTab(tab));
             }
             let open = super::update_inner(app, Message::ToggleSettings);
-            Task::batch([open, super::update_inner(app, Message::SetSettingsTab(arg))])
+            Task::batch([open, super::update_inner(app, Message::SetSettingsTab(tab))])
         }
         "section" => match arg.parse::<usize>() {
             Ok(section) if app.panels.settings.open => super::update_inner(
@@ -637,6 +640,7 @@ fn ui_open(app: &mut App, arg: &str) -> Task<Message> {
             }
             Task::none()
         }
+        "mixer" if app.panels.audio.is_some() => Task::none(),
         "mixer" => super::update_inner(app, Message::ToggleAudioPanel),
         "downloads" => super::update_inner(app, Message::OpenSourceBrowser),
         "tags" => super::update_inner(app, Message::OpenTagCloud),

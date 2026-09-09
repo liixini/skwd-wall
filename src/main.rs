@@ -77,8 +77,9 @@ fn main() {
     if args.help {
         println!("skwd-wall-v2 {}", env!("CARGO_PKG_VERSION"));
         println!(
-            "usage: skwd-wall-v2 [--debug] [--version | -V]  (no arguments launches the picker)"
+            "usage: skwd-wall-v2 [--mixer] [--debug] [--version | -V]  (no arguments launches the picker)"
         );
+        println!("  --mixer  Open the wallpaper mixer directly, including in a running instance.");
         println!("control commands delegate to skwd-helm:\n");
         let _ = std::io::Write::flush(&mut std::io::stdout());
     }

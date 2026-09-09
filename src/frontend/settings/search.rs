@@ -144,7 +144,7 @@ fn control_search_text(control: &Control) -> String {
         Control::KeyBinding { key, path, default } => {
             format!("{key} {path} {default} {}", tr("settings-search-control-text"))
         }
-        Control::Dropdown { path, options, current } => format!(
+        Control::Dropdown { path, options, current, .. } => format!(
             "{path} {current} {} {}",
             options
                 .iter()

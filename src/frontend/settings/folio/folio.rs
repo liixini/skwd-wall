@@ -39,7 +39,6 @@ fn category_note(tab: &str) -> &'static str {
         "performance" => "settings-tab-note-performance",
         "library" => "settings-tab-note-library",
         "sources" => "settings-tab-note-sources",
-        "search" => "settings-tab-note-search",
         "automation" => "settings-tab-note-automation",
         "theme" => "settings-tab-note-theme",
         "integrations" => "settings-tab-note-integrations",
@@ -58,6 +57,7 @@ pub struct SourceCtx<'a> {
     pub output_statuses: &'a [crate::contracts::daemon::OutputStatus],
     pub output_previews: &'a HashMap<String, String>,
     pub library_watch: Option<&'a crate::contracts::daemon::LibraryWatchStatus>,
+    pub playback: Option<&'a crate::contracts::daemon::PlaybackStatus>,
     pub analysis: String,
 }
 
@@ -82,6 +82,7 @@ impl SourceCtx<'_> {
             self.output_statuses,
             self.output_previews,
             self.library_watch,
+            self.playback,
         )
     }
 }

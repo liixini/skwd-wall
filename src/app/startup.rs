@@ -133,7 +133,13 @@ impl App {
             app.source_browser.entrance.run(0.0, 1.0);
             app.source_browser.wall.begin_session();
         }
-        if std::env::var("SKWD_WALL_START").as_deref() == Ok("theme-audition") {
+        let startup = crate::infrastructure::runtime::startup_panel();
+        if startup.as_deref() == Some("mixer") {
+            app.panels.audio = Some(crate::frontend::audio_panel::AudioPanel::new_with_motion(
+                app.motion_profile(),
+            ));
+        }
+        if startup.as_deref() == Some("theme-audition") {
             app.theme.audition_open = true;
             app.theme.audition_focused = true;
         }

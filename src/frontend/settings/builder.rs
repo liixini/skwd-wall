@@ -118,6 +118,7 @@ impl Builder<'_> {
             title,
             desc,
             Control::Dropdown {
+                palettes: Vec::new(),
                 path: path.to_string(),
                 options: options
                     .iter()
@@ -136,7 +137,11 @@ impl Builder<'_> {
         options: Vec<(String, String)>,
     ) {
         let current = self.cfg.text(path);
-        self.row(title, desc, Control::Dropdown { path: path.to_string(), options, current });
+        self.row(
+            title,
+            desc,
+            Control::Dropdown { palettes: Vec::new(), path: path.to_string(), options, current },
+        );
     }
 
     pub(super) fn theme_dropdown(
@@ -152,7 +157,11 @@ impl Builder<'_> {
         } else {
             themes.iter().map(|theme| (theme.clone(), theme.clone())).collect()
         };
-        self.row(title, desc, Control::Dropdown { path: path.to_string(), options, current });
+        self.row(
+            title,
+            desc,
+            Control::Dropdown { palettes: Vec::new(), path: path.to_string(), options, current },
+        );
     }
 
     pub(super) fn chips(&mut self, title: &str, desc: &str, path: &str, options: &[(&str, &str)]) {

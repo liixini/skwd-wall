@@ -10,7 +10,7 @@ pub use catalog::{
     playlists_state_ready, schedule_group_all_detail, schedule_group_any_detail,
     schedule_group_summary, set_language, settings_keybind_conflict, settings_sand_meter_detail,
     status_diagnostics_issues, status_diagnostics_passed, tags_selected_count, tags_wall_count,
-    theme_designer_custom_count, theme_designer_index_subtitle, theme_designer_stats, tr,
+    theme_designer_custom_count, theme_designer_index_subtitle, tr,
 };
 
 macro_rules! tr_args {

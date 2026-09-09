@@ -183,6 +183,15 @@ pub(super) fn tab_theme(builder: &mut Builder<'_>, backends: &[String]) {
             ],
         );
     }
+    if policy == "wallpaper" {
+        builder.card(tr("settings-theme-designer-label"), tr("settings-theme-profile-desc"));
+        builder.action(
+            tr("settings-theme-designer-label"),
+            tr("settings-theme-designer-desc"),
+            ActionId::OpenThemeDesigner,
+            tr("settings-theme-designer-action"),
+        );
+    }
     match (policy.as_str(), authority.as_str(), engine.as_str()) {
         ("fixed", _, _) => {
             builder.card(tr("settings-theme-fixed-card"), tr("settings-theme-fixed-card-desc"));
@@ -199,7 +208,12 @@ pub(super) fn tab_theme(builder: &mut Builder<'_>, backends: &[String]) {
             builder.row(
                 tr("settings-theme-static-theme-label"),
                 tr("settings-theme-static-theme-desc"),
-                Control::Dropdown { path: keys::theme::STATIC_THEME.to_string(), options, current },
+                Control::Dropdown {
+                    palettes: cfg.palette_colors(),
+                    path: keys::theme::STATIC_THEME.to_string(),
+                    options,
+                    current,
+                },
             );
             builder.action(
                 tr("settings-theme-designer-label"),

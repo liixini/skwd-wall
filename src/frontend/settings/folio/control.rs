@@ -256,6 +256,7 @@ fn choice_buttons<'a>(
     options: Vec<(String, String)>,
     current: &str,
     disabled: &[String],
+    palettes: &[(String, Vec<String>)],
     keyboard_focused: bool,
     focused_choice: Option<usize>,
     available_width: f32,
@@ -271,6 +272,8 @@ fn choice_buttons<'a>(
             let width = button_width(&label, scale);
             let enabled = !disabled.contains(&key);
             let active = key == current;
+            let colors =
+                palettes.iter().rev().find(|(name, _)| name == &key).map(|(_, colors)| colors);
             let message =
                 enabled.then(|| Message::Settings(SettingsMsg::Pick(path.to_owned(), key)));
             let item = fixed_button(
@@ -285,6 +288,24 @@ fn choice_buttons<'a>(
                 width,
                 motion,
             );
+            let item = if let Some(colors) = colors {
+                let mut strip = row![].width(Length::Fixed(width));
+                for color in colors {
+                    let color =
+                        crate::frontend::theme::parse_hex(color).unwrap_or(Color::TRANSPARENT);
+                    strip = strip.push(
+                        container(text(""))
+                            .width(Length::Fill)
+                            .height(Length::Fixed(10.0 * scale))
+                            .style(move |_| {
+                                crate::frontend::ui::bg_style(iced::Background::Color(color))
+                            }),
+                    );
+                }
+                column![item, strip].into()
+            } else {
+                item
+            };
             (width, item)
         })
         .collect();
@@ -427,11 +448,12 @@ pub(super) fn widget<'a>(
             }
             input.into()
         }
-        Control::Dropdown { path, options, current } => choice_buttons(
+        Control::Dropdown { path, options, current, palettes } => choice_buttons(
             &path,
             options,
             &current,
             &[],
+            &palettes,
             keyboard_focused,
             focused_choice,
             available_width,
@@ -445,6 +467,7 @@ pub(super) fn widget<'a>(
             options,
             &current,
             &disabled,
+            &[],
             keyboard_focused,
             focused_choice,
             available_width,

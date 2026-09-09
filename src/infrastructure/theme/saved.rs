@@ -2,7 +2,7 @@ use serde_json::{Value, json};
 
 use crate::domain::theme::{Candidate, ThemeRole};
 
-const ROLE_KEYS: [(&str, ThemeRole); 9] = [
+const ROLE_KEYS: [(&str, ThemeRole); ThemeRole::ALL.len()] = [
     ("primary", ThemeRole::Primary),
     ("primaryText", ThemeRole::PrimaryText),
     ("tertiary", ThemeRole::Tertiary),
@@ -15,13 +15,29 @@ const ROLE_KEYS: [(&str, ThemeRole); 9] = [
 ];
 
 pub fn decode_candidate(value: &Value) -> Candidate {
-    let mut candidate = Candidate::default();
-    for (key, role) in ROLE_KEYS {
-        if let Some(color) = value.get(key).and_then(Value::as_str) {
-            candidate.colors[role.index()] = color.to_string();
-        }
+    let dark = value
+        .get("_scheme")
+        .and_then(|scheme| scheme.get("is_dark_mode"))
+        .and_then(Value::as_bool)
+        .unwrap_or_else(|| {
+            value
+                .get("background")
+                .and_then(Value::as_str)
+                .and_then(skwd_palette::parse_hex)
+                .is_none_or(|color| color.lum() < 128.0)
+        });
+    decode_candidate_variant(value, dark)
+}
+
+pub fn decode_candidate_variant(value: &Value, dark: bool) -> Candidate {
+    let Some(doc) = skwd_palette::material::from_palette(value, dark, "tonal-spot") else {
+        return Candidate::default();
+    };
+    Candidate {
+        colors: skwd_palette::material::colors(&doc, dark),
+        alternate: skwd_palette::material::colors(&doc, !dark),
+        dark,
     }
-    candidate
 }
 
 pub fn encode_candidate(candidate: &Candidate, include_aliases: bool) -> Value {
@@ -39,6 +55,16 @@ pub fn encode_candidate(candidate: &Candidate, include_aliases: bool) -> Value {
             json!(candidate.colors[ThemeRole::SurfaceText.index()]),
         );
     }
+    let (dark, light) = if candidate.dark {
+        (&candidate.colors, &candidate.alternate)
+    } else {
+        (&candidate.alternate, &candidate.colors)
+    };
+    map.insert(
+        "_scheme".to_string(),
+        skwd_palette::material::from_colors(dark, light, candidate.dark),
+    );
+    map.insert("_schemeVersion".to_string(), json!(1));
     Value::Object(map)
 }
 

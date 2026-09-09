@@ -12,6 +12,8 @@ fn panel() -> AudioPanel {
         mute: true,
         volume: 80,
         shared: false,
+        paused: false,
+        manual_paused: false,
     }];
     out
 }

@@ -530,6 +530,7 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
         tr("settings-selector-flip-effect-label"),
         tr("settings-selector-flip-effect-desc"),
         Control::Dropdown {
+            palettes: Vec::new(),
             path: keys::selector::FLIP_EFFECT.to_string(),
             options: flip_opts,
             current: flip_cur,

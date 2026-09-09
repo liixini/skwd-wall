@@ -41,6 +41,20 @@ pub struct Wallpaper {
 }
 
 impl Wallpaper {
+    pub fn backdrop_source(&self) -> String {
+        if self.kind == WallpaperKind::We {
+            let id = if self.we_id.is_empty() {
+                self.key.strip_prefix("we:").unwrap_or("")
+            } else {
+                &self.we_id
+            };
+            if !id.is_empty() {
+                return format!("we:{id}");
+            }
+        }
+        self.path.clone()
+    }
+
     pub fn effective_kind(&self) -> WallpaperKind {
         if self.kind == WallpaperKind::We && !self.video_file.is_empty() {
             WallpaperKind::Video

@@ -46,6 +46,11 @@ impl FakeSettingsSource {
         self
     }
 
+    pub(crate) fn with_niri(mut self, niri: bool) -> Self {
+        self.niri = niri;
+        self
+    }
+
     pub(crate) fn with_on_battery(mut self, on_battery: bool) -> Self {
         self.on_battery = on_battery;
         self
@@ -177,6 +182,10 @@ impl SettingsSource for FakeSettingsSource {
 
     fn saved_theme_names(&self) -> Vec<String> {
         self.saved_themes.clone()
+    }
+
+    fn palette_colors(&self) -> Vec<(String, Vec<String>)> {
+        Vec::new()
     }
 
     fn palette_presets(&self) -> Vec<(String, String)> {

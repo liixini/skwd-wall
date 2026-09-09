@@ -21,6 +21,14 @@ pub fn decode_status(value: &Value) -> DecodeResult<StatusResult> {
         )),
     };
     Ok(StatusResult {
+        playback: object
+            .get("playback")
+            .filter(|value| !value.is_null())
+            .map(|value| {
+                serde_json::from_value(value.clone())
+                    .map_err(|_| invalid("status", "playback", "playback status"))
+            })
+            .transpose()?,
         version: string("status", object, "version")?.unwrap_or_default(),
         protocol: decode_protocol(object)?,
         capabilities: array("status", object, "capabilities")?.map_or_else(Vec::new, strings),

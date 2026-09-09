@@ -7,6 +7,16 @@ use crate::app::*;
 impl App {
     pub(in crate::app) fn rpc_error(&mut self, kind: Pending, err: String) {
         match kind {
+            Pending::AudioPause => {
+                self.show_toast(crate::i18n::tr_args!("audio-playback-error", error => err));
+                self.retick();
+            }
+            Pending::CurrentTheme { .. } => {
+                if let Some(designer) = self.panels.theme_designer.as_mut() {
+                    designer.error = Some(err);
+                }
+                self.retick();
+            }
             Pending::EffectsPreview { source, .. } => {
                 if let Some(eff) =
                     self.panels.effects.as_mut().filter(|effects| effects.source_path() == source)
@@ -90,6 +100,60 @@ impl App {
             };
         }
         match kind {
+            Pending::PlaybackProcesses => {
+                self.daemon.playback.available_processes = decoded!(
+                    "playback.processes",
+                    result,
+                    crate::infrastructure::rpc_results::decode_running_processes
+                );
+                self.retick();
+            }
+            Pending::CurrentTheme { load } => {
+                match crate::infrastructure::rpc_results::decode_current_theme(result) {
+                    Ok(current) => {
+                        if let Some(designer) = self.panels.theme_designer.as_mut() {
+                            if load {
+                                let mut candidate = current.palette.clone();
+                                if let Some(profile) = self
+                                    .config
+                                    .array_values(skwd_config::keys::theme::WALLPAPER_PROFILES)
+                                    .iter()
+                                    .find(|profile| {
+                                        profile["key"].as_str() == Some(&current.key)
+                                            && profile["enabled"].as_bool() == Some(true)
+                                    })
+                                {
+                                    let dark = !current.dark;
+                                    if let Some(saved) =
+                                        profile.get(if dark { "dark" } else { "light" })
+                                    {
+                                        let variant =
+                                            crate::infrastructure::theme::decode_candidate_variant(
+                                                saved, dark,
+                                            );
+                                        candidate.set_dark(dark);
+                                        candidate.colors = variant.colors;
+                                    }
+                                }
+                                candidate.set_dark(current.dark);
+                                designer.start_from(candidate);
+                            }
+                            designer.profile_enabled = self
+                                .config
+                                .array_values(skwd_config::keys::theme::WALLPAPER_PROFILES)
+                                .iter()
+                                .any(|profile| {
+                                    profile["key"].as_str() == Some(&current.key)
+                                        && profile["enabled"].as_bool() == Some(true)
+                                });
+                            designer.wallpaper = Some(current);
+                            designer.error = None;
+                        }
+                    }
+                    Err(error) => self.rpc_error(Pending::CurrentTheme { load }, error.to_string()),
+                }
+                self.retick();
+            }
             Pending::List => {
                 let paths = crate::infrastructure::library::LibraryPaths::new(
                     &self.library_session.wallpaper_dir,
@@ -144,6 +208,12 @@ impl App {
                 result,
                 crate::infrastructure::rpc_results::decode_theme_backends,
             )),
+            Pending::AudioPause => {
+                self.call_tracked("wall.outputs", serde_json::json!({}), Pending::AudioOutputs);
+                if self.panels.effects.is_some() {
+                    self.call_tracked("wall.outputs", serde_json::json!({}), Pending::Outputs);
+                }
+            }
             Pending::AudioOutputs => self.on_audio_outputs(decoded!(
                 "audio.outputs",
                 result,

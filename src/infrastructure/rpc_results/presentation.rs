@@ -100,5 +100,44 @@ fn map_output(output: wall_proto::OutputStatus) -> OutputStatus {
         volume: output.volume,
         fill: output.fill,
         audio_shared: output.audio_shared,
+        paused: output.paused,
+        manual_paused: output.manual_paused,
     }
+}
+
+pub fn decode_current_theme(
+    value: &serde_json::Value,
+) -> super::common::DecodeResult<crate::contracts::daemon::CurrentTheme> {
+    #[derive(serde::Deserialize)]
+    struct Current {
+        key: String,
+        name: String,
+        thumb: String,
+        palette: serde_json::Value,
+        scheme: Option<serde_json::Value>,
+        dark: bool,
+    }
+    let mut current: Current = serde_json::from_value(value.clone())
+        .map_err(|_| super::common::invalid("theme.current", "result", "current palette"))?;
+    if let Some(scheme) = current.scheme {
+        current.palette["_scheme"] = scheme;
+        current.palette["_schemeVersion"] = serde_json::json!(1);
+    }
+    let palette =
+        crate::infrastructure::theme::decode_candidate_variant(&current.palette, current.dark);
+    Ok(crate::contracts::daemon::CurrentTheme {
+        key: current.key,
+        name: current.name,
+        thumb: current.thumb,
+        palette,
+        dark: current.dark,
+    })
+}
+
+pub fn decode_running_processes(
+    value: &serde_json::Value,
+) -> super::common::DecodeResult<Vec<String>> {
+    let object = super::common::envelope("playback.processes", value)?;
+    Ok(super::common::array("playback.processes", object, "processes")?
+        .map_or_else(Vec::new, super::common::strings))
 }

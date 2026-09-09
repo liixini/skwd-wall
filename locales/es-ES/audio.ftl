@@ -39,3 +39,19 @@ audio-source-video = Vídeo
 audio-source-wallpaper-engine = Wallpaper Engine
 audio-source-we-id = Wallpaper Engine ({ $id })
 audio-source-static-image = Imagen estática
+
+audio-wallpaper-held = Pausado por otra regla
+
+audio-playback-error = No se pudo cambiar la reproducción del fondo: { $error }
+
+audio-state-paused = En pausa
+
+audio-wallpaper-playing = Reproduciendo
+
+audio-resume-wallpaper = Reanudar fondo
+
+audio-wallpaper-paused = Pausado manualmente
+
+audio-pause-wallpaper = Pausar fondo
+
+audio-wallpaper-label = Fondo

@@ -30,16 +30,22 @@ impl ThemeRole {
     }
 }
 
-pub const THEME_ROLE_COUNT: usize = ThemeRole::ALL.len();
+pub const THEME_ROLE_COUNT: usize = skwd_palette::material::ROLE_KEYS.len();
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Candidate {
     pub colors: [String; THEME_ROLE_COUNT],
+    pub alternate: [String; THEME_ROLE_COUNT],
+    pub dark: bool,
 }
 
 impl Default for Candidate {
     fn default() -> Self {
-        Self { colors: std::array::from_fn(|_| "#808080".to_string()) }
+        Self {
+            colors: std::array::from_fn(|_| "#808080".to_string()),
+            alternate: std::array::from_fn(|_| "#808080".to_string()),
+            dark: true,
+        }
     }
 }
 
@@ -49,13 +55,30 @@ impl Candidate {
     }
 
     pub fn from_seed(hex: &str, dark: bool) -> Option<Self> {
-        let (red, green, blue) = parse_rgb(hex)?;
-        let seed = skwd_palette::Rgb(red, green, blue);
-        Some(Self::from_palette(skwd_palette::derive(&[seed], dark)))
+        let (colors, alternate) = skwd_palette::material::generate_colors(hex)?;
+        let mut candidate = Self { colors, alternate, dark: true };
+        candidate.set_dark(dark);
+        Some(candidate)
+    }
+
+    pub fn set_dark(&mut self, dark: bool) {
+        if self.dark != dark {
+            std::mem::swap(&mut self.colors, &mut self.alternate);
+            self.dark = dark;
+        }
+    }
+
+    pub fn same_colors(&self, other: &Self) -> bool {
+        if self.dark == other.dark {
+            self.colors == other.colors && self.alternate == other.alternate
+        } else {
+            self.colors == other.alternate && self.alternate == other.colors
+        }
     }
 
     fn from_palette(palette: skwd_palette::ThemePalette) -> Self {
-        let mut candidate = Self::default();
+        let dark = palette.background.lum() < 128.0;
+        let mut candidate = Self::from_seed(&palette.primary.hex(), dark).unwrap_or_default();
         candidate.colors[ThemeRole::Primary.index()] = palette.primary.hex();
         candidate.colors[ThemeRole::PrimaryText.index()] = palette.on_primary.hex();
         candidate.colors[ThemeRole::Tertiary.index()] = palette.tertiary.hex();

@@ -48,7 +48,7 @@ The stats:
 - Runs absurdly specific schedules using time, date, sunrise, sunset, weather, battery, power and connected displays, combined with full conditional logic using ANY, ALL or OR and nestled groups.
 - Pins wallpapers to individual Niri, Hyprland and KWin workspaces. Configuration only for now so WIP!
 - Derives desktop colours from the wallpaper using Iris, Matugen, Wallust, Pywal, Caelestia, Noctalia, DMS or end-4... yeah um, I went a bit crazy.
-- Includes a proper theme designer, saved palettes and live colour previews while hovering over wallpapers.
+- Includes a theme designer with all 50 Material colour roles, separate dark and light variants, saved palettes and wallpaper profiles. Saved colours carry through to app templates. Wallpaper hover previews are also available.
 - Renders Wallpaper Engine scenes through Vulkan and exposes their switches, sliders and other editable properties.
 - Provides a per-display wallpaper audio mixer for videos and scenes, because wallpapers having audio is important to some people (or so they told me in the github issues) and has a decision engine so that only 1 audio from several identical sources plays at once no matter which you mute or raise the volume on.
 - Shares Vulkan devices and video decoders across displays, pauses idle playback and applies automatic battery limits.
@@ -169,7 +169,28 @@ Debian-based is currently WIP. Most is set up, but I haven't tested a full end-t
 
 </Details>
 
+Open the wallpaper mixer directly from a launcher or keybinding:
+
+```sh
+skwd-wall-v2 --mixer
+```
+
+This starts Wall on the mixer screen, or opens the mixer in the running instance.
+
 ## Compositor-specific tweaks
+
+### Niri overview wallpaper
+
+In **Settings > Playback > Video**, set **Wallpaper layer** to **Background**, then add this to your Niri configuration:
+
+```kdl
+layer-rule {
+    match namespace="^skwd-wall-vk$"
+    place-within-backdrop true
+}
+```
+
+Enable **Animate only in Niri overview** to pause the active wallpaper while the overview is closed. Manual, process, and fullscreen pause rules still apply when it opens. The separate `overviewBackdrop` option keeps its existing behaviour.
 
 ### KDE Plasma
 <Details>

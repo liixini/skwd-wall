@@ -51,6 +51,7 @@ impl App {
             &self.daemon.output_statuses,
             &self.daemon.output_wallpaper_art,
             self.daemon.library_watch.as_ref(),
+            Some(&self.daemon.playback),
         );
         for (_, rows) in &cards {
             for row in rows {

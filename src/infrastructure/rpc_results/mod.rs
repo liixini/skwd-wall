@@ -18,8 +18,8 @@ pub use playlists::{
     decode_playlist_members, decode_playlist_outputs,
 };
 pub use presentation::{
-    decode_audio_outputs, decode_outputs, decode_theme_backends, decode_theme_preview,
-    decode_theme_previews,
+    decode_audio_outputs, decode_current_theme, decode_outputs, decode_running_processes,
+    decode_theme_backends, decode_theme_preview, decode_theme_previews,
 };
 pub use status::{
     decode_library_watch, decode_scene_properties, decode_status, decode_task_list,

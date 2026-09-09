@@ -105,7 +105,12 @@ pub(super) fn tab_transitions(builder: &mut Builder<'_>) {
         builder.row(
             tr("settings-transitions-shader-label"),
             &tr_args!("settings-transitions-shader-count-desc", count => count),
-            Control::Dropdown { path: keys::transition::SHADER.to_string(), options, current },
+            Control::Dropdown {
+                palettes: Vec::new(),
+                path: keys::transition::SHADER.to_string(),
+                options,
+                current,
+            },
         );
     }
 

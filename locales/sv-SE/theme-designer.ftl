@@ -1,10 +1,9 @@
-theme-designer-masthead = Tema  /  Designer  /  { $role }
 theme-designer-index-title = Palettindex
 theme-designer-index-subtitle =
     { $count } { $count ->
-        [one] roll utgör
-       *[other] roller utgör
-    } arbetsspråket för varje yta i skwd-wall.
+        [one] färg
+       *[other] färger
+    } för Wall och appintegrationer.
 theme-designer-role-accent = Accent
 theme-designer-role-accent-desc = markeringsramar, aktiva chips, skjutreglage, framhävningar
 theme-designer-role-accent-text = Accenttext
@@ -48,7 +47,6 @@ theme-designer-proof-roles = 9 roller
 theme-designer-proof-eyebrow = INSTÄLLNINGAR  /  TEMA
 theme-designer-proof-title = Gränssnittsprov
 theme-designer-editing-role = Redigerar { $role }
-theme-designer-proof-crumb = Tema / Designer
 theme-designer-proof-section-title = Inställningsprov
 theme-designer-proof-section-desc = Navigering, kontroller, fält, kort och statusytor renderade med alla nio roller.
 theme-designer-preset-placeholder = Välj en startpalett
@@ -59,9 +57,9 @@ theme-designer-reset = Återställ ändringar
 theme-designer-start-title = Startpalett
 theme-designer-derive = Härled från färg
 theme-designer-publish-title = Publicera
-theme-designer-publish-desc = Namnge kandidaten och behåll den eller använd den direkt.
+theme-designer-publish-desc = Ge paletten ett namn för att spara båda varianterna. Spara + använd väljer varianten ovan.
 theme-designer-saved-title = Sparade paletter
-theme-designer-saved-desc = Öppna en sparad design eller jämför dess kompletta niofärgssignatur.
+theme-designer-saved-desc = Öppna en sparad palett för att redigera dess fullständiga mörka och ljusa färgscheman.
 theme-designer-saved-empty = Inga egna paletter än. Namnge kandidaten och spara den för att starta biblioteket.
 theme-designer-custom-count =
     { $count } { $count ->
@@ -69,13 +67,102 @@ theme-designer-custom-count =
        *[other] egna
     }
 theme-designer-confirm = Bekräfta
-theme-designer-eyebrow = TEMA  /  DESIGNER
-theme-designer-paint-role = Måla { $role }
-theme-designer-stats =
-    { $roles } { $roles ->
-        [one] roll
-       *[other] roller
-    }  ·  { $saved } { $saved ->
-        [one] sparad
-       *[other] sparade
-    }  ·  komplett live-prov
+theme-designer-title = Temadesigner
+theme-designer-description = Redigera hela färgschemat, förhandsvisa Wall och spara båda varianterna.
+theme-designer-start-desc = Öppna en förinställning eller skapa en palett från färgen vald ovan.
+theme-designer-wallpaper-title = Aktuell bakgrundsbild
+theme-designer-wallpaper-desc = Spara både mörka och ljusa varianter för bakgrundsbilden som ger skrivbordet dess tema.
+theme-designer-wallpaper-empty = Ingen bakgrundspalett är tillgänglig ännu.
+
+theme-designer-role-search = Sök färger
+theme-designer-group-wall = Wall-gränssnitt
+theme-designer-group-accents = Primära och sekundära färger
+theme-designer-group-tertiary = Tertiära färger
+theme-designer-group-surfaces = Ytor och konturer
+theme-designer-group-error = Fel
+theme-designer-group-effects = Källa och effekter
+theme-designer-role-error = Fel
+theme-designer-role-error-desc = Felindikatorer och destruktiva åtgärder
+theme-designer-role-error-container = Felfält
+theme-designer-role-error-container-desc = Bakgrund för felmeddelanden
+theme-designer-role-inverse-on-surface = Inverterad yttext
+theme-designer-role-inverse-on-surface-desc = Text på inverterade ytor
+theme-designer-role-inverse-primary = Inverterad primärfärg
+theme-designer-role-inverse-primary-desc = Accent på inverterade ytor
+theme-designer-role-inverse-surface = Inverterad yta
+theme-designer-role-inverse-surface-desc = Ytor med motsatt ljushet
+theme-designer-role-on-background = Bakgrundstext
+theme-designer-role-on-background-desc = Text direkt på bakgrunden
+theme-designer-role-on-error = Feltext
+theme-designer-role-on-error-desc = Text på felfärgade kontroller
+theme-designer-role-on-error-container = Text i felfält
+theme-designer-role-on-error-container-desc = Text i felmeddelanden
+theme-designer-role-on-primary-container = Text i primärfält
+theme-designer-role-on-primary-container-desc = Text på primärfältet
+theme-designer-role-on-primary-fixed = Fast primärtext
+theme-designer-role-on-primary-fixed-desc = Text på den fasta primärfärgen
+theme-designer-role-on-primary-fixed-variant = Alternativ fast primärtext
+theme-designer-role-on-primary-fixed-variant-desc = Sekundär text på den fasta primärfärgen
+theme-designer-role-on-secondary = Sekundärtext
+theme-designer-role-on-secondary-desc = Text på sekundära kontroller
+theme-designer-role-on-secondary-container = Text i sekundärfält
+theme-designer-role-on-secondary-container-desc = Text på sekundärfältet
+theme-designer-role-on-secondary-fixed = Fast sekundärtext
+theme-designer-role-on-secondary-fixed-desc = Text på den fasta sekundärfärgen
+theme-designer-role-on-secondary-fixed-variant = Alternativ fast sekundärtext
+theme-designer-role-on-secondary-fixed-variant-desc = Sekundär text på den fasta sekundärfärgen
+theme-designer-role-on-surface-variant = Alternativ yttext
+theme-designer-role-on-surface-variant-desc = Sekundär text på ytor
+theme-designer-role-on-tertiary = Tertiärtext
+theme-designer-role-on-tertiary-desc = Text på tertiära kontroller
+theme-designer-role-on-tertiary-container = Text i tertiärfält
+theme-designer-role-on-tertiary-container-desc = Text på tertiärfältet
+theme-designer-role-on-tertiary-fixed = Fast tertiärtext
+theme-designer-role-on-tertiary-fixed-desc = Text på den fasta tertiärfärgen
+theme-designer-role-on-tertiary-fixed-variant = Alternativ fast tertiärtext
+theme-designer-role-on-tertiary-fixed-variant-desc = Sekundär text på den fasta tertiärfärgen
+theme-designer-role-outline-variant = Alternativ kontur
+theme-designer-role-outline-variant-desc = Diskreta kanter och avdelare
+theme-designer-role-primary-container = Primärfält
+theme-designer-role-primary-container-desc = Bakgrund för primärt innehåll
+theme-designer-role-primary-fixed = Fast primärfärg
+theme-designer-role-primary-fixed-desc = Primäraccent som normalt delas av mörka och ljusa teman
+theme-designer-role-primary-fixed-dim = Dämpad fast primärfärg
+theme-designer-role-primary-fixed-dim-desc = Dämpad version av den fasta primäraccenten
+theme-designer-role-scrim = Överlägg
+theme-designer-role-scrim-desc = Färg bakom modala överlägg
+theme-designer-role-secondary = Sekundärfärg
+theme-designer-role-secondary-desc = Stödjande accent som används av integrationer
+theme-designer-role-secondary-container = Sekundärfält
+theme-designer-role-secondary-container-desc = Bakgrund för sekundärt innehåll
+theme-designer-role-secondary-fixed = Fast sekundärfärg
+theme-designer-role-secondary-fixed-desc = Sekundäraccent som normalt delas av mörka och ljusa teman
+theme-designer-role-secondary-fixed-dim = Dämpad fast sekundärfärg
+theme-designer-role-secondary-fixed-dim-desc = Dämpad version av den fasta sekundäraccenten
+theme-designer-role-shadow = Skugga
+theme-designer-role-shadow-desc = Färg som används för skuggor
+theme-designer-role-surface-bright = Ljus yta
+theme-designer-role-surface-bright-desc = Ljusaste allmänna ytan
+theme-designer-role-surface-container-high = Högt fält
+theme-designer-role-surface-container-high-desc = Yta för framträdande fält
+theme-designer-role-surface-container-highest = Högsta fältet
+theme-designer-role-surface-container-highest-desc = Yta för de mest framträdande fälten
+theme-designer-role-surface-container-low = Lågt fält
+theme-designer-role-surface-container-low-desc = Yta för nedsänkta fält
+theme-designer-role-surface-container-lowest = Lägsta fältet
+theme-designer-role-surface-container-lowest-desc = Yta för de mest nedsänkta fälten
+theme-designer-role-surface-dim = Dämpad yta
+theme-designer-role-surface-dim-desc = Mörkaste allmänna ytan
+theme-designer-role-surface-tint = Yttoning
+theme-designer-role-surface-tint-desc = Accenttoning för upphöjda ytor
+theme-designer-role-tertiary-container = Tertiärfält
+theme-designer-role-tertiary-container-desc = Bakgrund för tertiärt innehåll
+theme-designer-role-tertiary-fixed = Fast tertiärfärg
+theme-designer-role-tertiary-fixed-desc = Tertiäraccent som normalt delas av mörka och ljusa teman
+theme-designer-role-tertiary-fixed-dim = Dämpad fast tertiärfärg
+theme-designer-role-tertiary-fixed-dim-desc = Dämpad version av den fasta tertiäraccenten
+theme-designer-role-source-color = Källfärg
+theme-designer-role-source-color-desc = Källfärg för mallar. Använd Härled från färg för att skapa färgschemat på nytt.
+
+theme-designer-reset-colour = Återställ färg
+theme-designer-loaded-colour = Senast inläst

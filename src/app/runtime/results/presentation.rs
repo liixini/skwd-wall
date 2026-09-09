@@ -186,6 +186,8 @@ impl App {
                     volume: out.volume,
                     fill: out.fill,
                     locked: self.config.flag_default_config(&lock_path),
+                    paused: out.paused,
+                    manual_paused: out.manual_paused,
                     current: out.current,
                     we_id: out.we_id,
                 }
@@ -241,6 +243,8 @@ impl App {
                 mute: out.mute,
                 volume: out.volume,
                 shared: out.audio_shared,
+                paused: out.paused,
+                manual_paused: out.manual_paused,
             })
             .collect();
         crate::frontend::audio_panel::align_shared_audio(&mut mons);

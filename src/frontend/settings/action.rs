@@ -16,6 +16,7 @@ pub enum ActionId {
     RemoveResolutionPreset(u16),
     OpenScheduleEditor,
     OpenThemeDesigner,
+    ChooseRunningProcess,
     RunDoctor,
     GenerateBugReport,
     ResetMotionFast,

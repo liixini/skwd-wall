@@ -11,6 +11,8 @@ fn linked_sources_stay_rows() {
             mute,
             volume,
             shared: false,
+            paused: false,
+            manual_paused: false,
         }
     };
     let mut monitors = vec![
@@ -70,6 +72,8 @@ fn zero_volume_restores_mute() {
         mute: false,
         volume: 45,
         shared: false,
+        paused: false,
+        manual_paused: false,
     });
     app.panels.audio = Some(audio);
     let _ = drain_calls(&app);
@@ -117,6 +121,8 @@ fn selector_audio_groups() {
             volume,
             fill: String::new(),
             locked: false,
+            paused: false,
+            manual_paused: false,
             current,
             we_id,
         }
@@ -177,4 +183,55 @@ fn selector_audio_groups() {
         calls.iter().find(|(method, _)| method == "wall.set_audio").expect("set_audio sent");
     assert_eq!(params["outputs"], json!(["DP-1", "DP-2"]));
     assert_eq!(params["mute"], true);
+}
+
+#[test]
+fn monitor_pause_targets_only_one_linked_wallpaper() {
+    use crate::frontend::audio_panel::{AudioMon, AudioMsg, AudioPanel};
+    let mut app = test_app();
+    let mut panel = AudioPanel::new();
+    panel.mons = ["DP-1", "DP-2"]
+        .into_iter()
+        .map(|name| AudioMon {
+            name: name.into(),
+            label: "video".into(),
+            source: "/same.mp4".into(),
+            wtype: crate::contracts::media::MediaKind::Video,
+            mute: false,
+            volume: 35,
+            shared: true,
+            paused: false,
+            manual_paused: false,
+        })
+        .collect();
+    app.panels.audio = Some(panel);
+    drain_calls(&app);
+    let _ = update(&mut app, Message::Audio(AudioMsg::MonPause("DP-1".into(), true)));
+    let calls = drain_calls(&app);
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0], ("wall.set_paused".to_string(), json!({"output":"DP-1","paused":true})));
+    assert!(!app.panels.audio.as_ref().unwrap().mons[1].paused);
+    app.on_result(Pending::AudioOutputs, &json!({"outputs":[
+        {"name":"DP-1","type":"video","path":"/same.mp4","paused":true,"manual_paused":true,"mute":false,"volume":35},
+        {"name":"DP-2","type":"video","path":"/same.mp4","paused":false,"manual_paused":false,"mute":false,"volume":35}
+    ]}));
+    let panel = app.panels.audio.as_ref().unwrap();
+    assert!(!panel.mons[0].playing());
+    assert!(panel.mons[1].playing());
+    assert!(panel.mons[0].manual_paused);
+}
+
+#[test]
+fn open_mixer_keeps_existing_panel() {
+    let mut app = test_app();
+    let _ = update(
+        &mut app,
+        Message::Daemon(crate::infrastructure::runtime::Wake::Command("open mixer".into())),
+    );
+    assert!(app.panels.audio.is_some());
+    let _ = update(
+        &mut app,
+        Message::Daemon(crate::infrastructure::runtime::Wake::Command("open mixer".into())),
+    );
+    assert!(app.panels.audio.is_some());
 }

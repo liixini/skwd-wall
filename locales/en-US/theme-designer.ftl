@@ -1,10 +1,9 @@
-theme-designer-masthead = Theme  /  Designer  /  { $role }
 theme-designer-index-title = Palette index
 theme-designer-index-subtitle =
     { $count } { $count ->
-        [one] colour controls
-       *[other] colours control
-    } the entire Wall interface.
+        [one] colour
+       *[other] colours
+    } for Wall and app integrations.
 theme-designer-role-accent = Accent
 theme-designer-role-accent-desc = Selection borders, active chips, sliders, and highlights
 theme-designer-role-accent-text = Accent text
@@ -48,7 +47,6 @@ theme-designer-proof-roles = 9 roles
 theme-designer-proof-eyebrow = Settings / theme
 theme-designer-proof-title = Interface preview
 theme-designer-editing-role = Editing { $role }
-theme-designer-proof-crumb = Theme / Designer
 theme-designer-proof-section-title = Settings preview
 theme-designer-proof-section-desc = This preview uses all nine colours across navigation, controls, fields, cards, and status messages.
 theme-designer-preset-placeholder = Choose a starting palette
@@ -59,16 +57,108 @@ theme-designer-reset = Reset changes
 theme-designer-start-title = Starting palette
 theme-designer-derive = Derive from colour
 theme-designer-publish-title = Save palette
-theme-designer-publish-desc = Give this palette a name, then save it or save and apply it immediately.
+theme-designer-publish-desc = Name this palette to save both variants. Save + apply uses the variant selected above.
 theme-designer-saved-title = Saved palettes
-theme-designer-saved-desc = Open a saved palette to edit it or compare all nine of its colours.
+theme-designer-saved-desc = Open a saved palette to edit its full dark and light schemes.
 theme-designer-saved-empty = No custom palettes yet. Name the current palette and save it to add the first one.
 theme-designer-custom-count = { $count } custom
 theme-designer-confirm = Confirm
-theme-designer-eyebrow = Theme / designer
-theme-designer-paint-role = Edit { $role }
-theme-designer-stats =
-    { $roles } { $roles ->
-        [one] role
-       *[other] roles
-    } · { $saved } saved · preview uses every role
+theme-designer-title = Theme designer
+theme-designer-description = Edit the full colour scheme, preview the Wall interface, and save both variants.
+theme-designer-start-desc = Open a preset, or build a palette from the colour selected above.
+theme-designer-wallpaper-title = Current wallpaper
+theme-designer-wallpaper-desc = Save both dark and light variants for the wallpaper supplying your desktop theme.
+theme-designer-wallpaper-empty = No wallpaper palette is available yet.
+
+theme-designer-role-search = Search colours
+theme-designer-group-wall = Wall interface
+theme-designer-group-accents = Primary and secondary
+theme-designer-group-tertiary = Tertiary
+theme-designer-group-surfaces = Surfaces and outlines
+theme-designer-group-error = Errors
+theme-designer-group-effects = Source and effects
+theme-designer-role-error = Error
+theme-designer-role-error-desc = Error indicators and destructive actions
+theme-designer-role-error-container = Error container
+theme-designer-role-error-container-desc = Background behind error messages
+theme-designer-role-inverse-on-surface = Inverse surface text
+theme-designer-role-inverse-on-surface-desc = Text on inverse surfaces
+theme-designer-role-inverse-primary = Inverse primary
+theme-designer-role-inverse-primary-desc = Accent on inverse surfaces
+theme-designer-role-inverse-surface = Inverse surface
+theme-designer-role-inverse-surface-desc = Surfaces with the opposite lightness
+theme-designer-role-on-background = Background text
+theme-designer-role-on-background-desc = Text directly on the background
+theme-designer-role-on-error = Error text
+theme-designer-role-on-error-desc = Text on error-coloured controls
+theme-designer-role-on-error-container = Error container text
+theme-designer-role-on-error-container-desc = Text inside error messages
+theme-designer-role-on-primary-container = Primary container text
+theme-designer-role-on-primary-container-desc = Text on the primary container
+theme-designer-role-on-primary-fixed = Fixed primary text
+theme-designer-role-on-primary-fixed-desc = Text on the fixed primary colour
+theme-designer-role-on-primary-fixed-variant = Fixed primary text alt
+theme-designer-role-on-primary-fixed-variant-desc = Secondary text on the fixed primary colour
+theme-designer-role-on-secondary = Secondary text
+theme-designer-role-on-secondary-desc = Text on secondary controls
+theme-designer-role-on-secondary-container = Secondary container text
+theme-designer-role-on-secondary-container-desc = Text on the secondary container
+theme-designer-role-on-secondary-fixed = Fixed secondary text
+theme-designer-role-on-secondary-fixed-desc = Text on the fixed secondary colour
+theme-designer-role-on-secondary-fixed-variant = Fixed secondary text alt
+theme-designer-role-on-secondary-fixed-variant-desc = Secondary text on the fixed secondary colour
+theme-designer-role-on-surface-variant = Surface variant text
+theme-designer-role-on-surface-variant-desc = Secondary text on surfaces
+theme-designer-role-on-tertiary = Tertiary text
+theme-designer-role-on-tertiary-desc = Text on tertiary controls
+theme-designer-role-on-tertiary-container = Tertiary container text
+theme-designer-role-on-tertiary-container-desc = Text on the tertiary container
+theme-designer-role-on-tertiary-fixed = Fixed tertiary text
+theme-designer-role-on-tertiary-fixed-desc = Text on the fixed tertiary colour
+theme-designer-role-on-tertiary-fixed-variant = Fixed tertiary text alt
+theme-designer-role-on-tertiary-fixed-variant-desc = Secondary text on the fixed tertiary colour
+theme-designer-role-outline-variant = Outline variant
+theme-designer-role-outline-variant-desc = Subtle borders and dividers
+theme-designer-role-primary-container = Primary container
+theme-designer-role-primary-container-desc = Background for primary content
+theme-designer-role-primary-fixed = Fixed primary
+theme-designer-role-primary-fixed-desc = Primary accent normally shared by dark and light themes
+theme-designer-role-primary-fixed-dim = Fixed primary dim
+theme-designer-role-primary-fixed-dim-desc = Dimmer version of the fixed primary accent
+theme-designer-role-scrim = Scrim
+theme-designer-role-scrim-desc = Colour behind modal overlays
+theme-designer-role-secondary = Secondary
+theme-designer-role-secondary-desc = Supporting accent used by integrations
+theme-designer-role-secondary-container = Secondary container
+theme-designer-role-secondary-container-desc = Background for secondary content
+theme-designer-role-secondary-fixed = Fixed secondary
+theme-designer-role-secondary-fixed-desc = Secondary accent normally shared by dark and light themes
+theme-designer-role-secondary-fixed-dim = Fixed secondary dim
+theme-designer-role-secondary-fixed-dim-desc = Dimmer version of the fixed secondary accent
+theme-designer-role-shadow = Shadow
+theme-designer-role-shadow-desc = Colour used for shadows
+theme-designer-role-surface-bright = Bright surface
+theme-designer-role-surface-bright-desc = Brightest general surface
+theme-designer-role-surface-container-high = High container
+theme-designer-role-surface-container-high-desc = Surface for prominent containers
+theme-designer-role-surface-container-highest = Highest container
+theme-designer-role-surface-container-highest-desc = Surface for the most prominent containers
+theme-designer-role-surface-container-low = Low container
+theme-designer-role-surface-container-low-desc = Surface for recessed containers
+theme-designer-role-surface-container-lowest = Lowest container
+theme-designer-role-surface-container-lowest-desc = Surface for the most recessed containers
+theme-designer-role-surface-dim = Dim surface
+theme-designer-role-surface-dim-desc = Dimmest general surface
+theme-designer-role-surface-tint = Surface tint
+theme-designer-role-surface-tint-desc = Accent tint used for elevated surfaces
+theme-designer-role-tertiary-container = Tertiary container
+theme-designer-role-tertiary-container-desc = Background for tertiary content
+theme-designer-role-tertiary-fixed = Fixed tertiary
+theme-designer-role-tertiary-fixed-desc = Tertiary accent normally shared by dark and light themes
+theme-designer-role-tertiary-fixed-dim = Fixed tertiary dim
+theme-designer-role-tertiary-fixed-dim-desc = Dimmer version of the fixed tertiary accent
+theme-designer-role-source-color = Source colour
+theme-designer-role-source-color-desc = Source supplied to templates. Use Derive from colour to rebuild the scheme.
+
+theme-designer-reset-colour = Reset colour
+theme-designer-loaded-colour = Last loaded

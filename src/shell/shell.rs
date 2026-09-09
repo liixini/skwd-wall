@@ -184,7 +184,7 @@ pub fn acquire_single_instance() {
                 .ok();
         }
         Err(err) if err.kind() == ErrorKind::AddrInUse => {
-            let startup = std::env::var("SKWD_WALL_START").ok();
+            let startup = crate::infrastructure::runtime::startup_panel();
             if let Ok(mut stream) = UnixStream::connect_addr(&addr)
                 && let Some(command) = startup_control_command(startup.as_deref())
             {
@@ -232,7 +232,11 @@ pub(super) fn parse_control_command(raw: &str) -> crate::infrastructure::runtime
 }
 
 pub(super) fn startup_control_command(start: Option<&str>) -> Option<&'static str> {
-    (start == Some("theme-audition")).then_some("open theme-audition\n")
+    match start {
+        Some("mixer") => Some("open mixer\n"),
+        Some("theme-audition") => Some("open theme-audition\n"),
+        _ => None,
+    }
 }
 
 #[cfg(target_os = "linux")]

@@ -1,12 +1,13 @@
 #![cfg(test)]
 
+use super::saved::decode_candidate;
 use serde_json::json;
 
 use crate::contracts::picker::PaletteSpec;
 
 use super::{
-    decode_candidate, decode_palette, encode_candidate, find_saved, load_palette, remove_saved,
-    saved_names, saved_palettes, upsert_saved,
+    decode_palette, encode_candidate, find_saved, load_palette, remove_saved, saved_names,
+    saved_palettes, upsert_saved,
 };
 
 #[test]
@@ -62,4 +63,30 @@ fn saved_theme_storage() {
     let remaining = remove_saved(&two, "Mine");
     assert_eq!(saved_names(&remaining), vec!["Other"]);
     assert_eq!(find_saved(&remaining, "missing"), None);
+}
+
+#[test]
+fn full_scheme_round_trip_keeps_every_role_in_both_variants() {
+    let mut candidate = crate::domain::theme::Candidate::from_seed("#84d1ce", true).unwrap();
+    for index in 0..crate::domain::theme::THEME_ROLE_COUNT {
+        candidate.colors[index] = format!("#{:06x}", 0x0012_3400 + index);
+        candidate.alternate[index] = format!("#{:06x}", 0x00ab_cd00 + index);
+    }
+    for dark in [true, false] {
+        candidate.set_dark(dark);
+        let saved = upsert_saved(&[], "Full scheme", &candidate);
+        assert_eq!(find_saved(&saved, "Full scheme"), Some(candidate.clone()));
+        assert_eq!(saved[0]["_scheme"]["colors"].as_object().unwrap().len(), 50);
+    }
+}
+
+#[test]
+fn legacy_light_profile_keeps_its_original_colours() {
+    let value = json!({"primary": "#112233", "surface": "#fafafa", "primaryText": "#445566"});
+    let candidate = super::decode_candidate_variant(&value, false);
+    assert!(!candidate.dark);
+    assert_eq!(candidate.colors[0], "#112233");
+    assert_eq!(candidate.colors[1], "#445566");
+    assert_eq!(candidate.colors[3], "#fafafa");
+    assert!(candidate.colors.iter().all(|hex| crate::domain::theme::hex_to_hsv(hex).is_some()));
 }

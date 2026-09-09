@@ -11,6 +11,7 @@ use crate::i18n::tr;
 pub enum AudioMsg {
     VolumeStep(i32),
     MonMute(String, bool),
+    MonPause(String, bool),
     MonVolume(String, u32),
     MonVolumeRelease(String),
 }
@@ -24,6 +25,8 @@ pub struct AudioMon {
     pub mute: bool,
     pub volume: u32,
     pub shared: bool,
+    pub paused: bool,
+    pub manual_paused: bool,
 }
 
 impl AudioMon {
@@ -32,7 +35,7 @@ impl AudioMon {
     }
 
     pub fn playing(&self) -> bool {
-        self.has_audio_controls() && !self.mute && self.volume > 0
+        self.has_audio_controls() && !self.paused && !self.mute && self.volume > 0
     }
 
     fn same_source(&self, other: &Self) -> bool {
@@ -69,6 +72,42 @@ pub fn align_shared_audio(mons: &mut [AudioMon]) {
             visited.insert(mons[member].name.clone());
         }
     }
+}
+
+pub fn playback_control<'a>(
+    output: &str,
+    paused: bool,
+    manual: bool,
+    scale: f32,
+    palette: &'a Palette,
+) -> Element<'a, Message> {
+    row![
+        label(tr("audio-wallpaper-label"), 9.0, scale, with_alpha(palette.surface_text, 0.46))
+            .width(Length::Fixed(72.0 * scale)),
+        crate::frontend::ui::folio_action(
+            tr(if manual { "audio-resume-wallpaper" } else { "audio-pause-wallpaper" }),
+            manual,
+            Some(Message::Audio(AudioMsg::MonPause(output.to_string(), !manual))),
+            Length::Fixed(132.0 * scale),
+            scale * 0.9,
+            palette,
+        ),
+        label(
+            tr(if manual {
+                "audio-wallpaper-paused"
+            } else if paused {
+                "audio-wallpaper-held"
+            } else {
+                "audio-wallpaper-playing"
+            }),
+            9.0,
+            scale,
+            with_alpha(palette.surface_text, 0.56)
+        ),
+    ]
+    .spacing(7.0 * scale)
+    .align_y(Alignment::Center)
+    .into()
 }
 
 pub struct AudioPanel {
@@ -154,7 +193,9 @@ impl AudioPanel {
         } else {
             for (index, mon) in self.mons.iter().enumerate() {
                 let available = mon.has_audio_controls();
-                let state = if mon.playing() {
+                let state = if mon.paused {
+                    tr("audio-state-paused")
+                } else if mon.playing() {
                     tr("audio-state-sound")
                 } else if available {
                     tr("audio-state-muted")
@@ -257,7 +298,9 @@ impl AudioPanel {
             MediaKind::Other(_) => tr("audio-kind-none"),
         };
         let playing = mon.playing();
-        let state = if playing {
+        let state = if mon.paused {
+            tr("audio-state-paused")
+        } else if playing {
             tr("audio-row-sound")
         } else if mon.has_audio_controls() {
             tr("audio-row-muted")
@@ -336,8 +379,8 @@ impl AudioPanel {
                 )
                 .width(Length::Fixed(72.0 * scale)),
                 crate::frontend::ui::folio_action(
-                    if playing { tr("audio-state-sound") } else { tr("audio-state-muted") },
-                    playing,
+                    if mon.mute { tr("audio-state-muted") } else { tr("audio-state-sound") },
+                    !mon.mute,
                     Some(Message::Audio(AudioMsg::MonMute(mon.name.clone(), !mon.mute))),
                     Length::Fixed(76.0 * scale),
                     scale * 0.9,
@@ -380,7 +423,17 @@ impl AudioPanel {
             .into()
         };
 
-        container(column![summary, controls].spacing(7.0 * scale))
+        let mut body = column![summary, controls].spacing(7.0 * scale);
+        if mon.has_audio_controls() {
+            body = body.push(playback_control(
+                &mon.name,
+                mon.paused,
+                mon.manual_paused,
+                scale,
+                palette,
+            ));
+        }
+        container(body)
             .width(Length::Fill)
             .padding(Padding {
                 top: 3.0 * scale,

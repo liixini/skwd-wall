@@ -2,7 +2,7 @@
 resolver = "3"
 
 [workspace.package]
-version = "1.0.0-beta.10"
+version = "1.0.0-beta.11"
 edition = "2024"
 license = "GPL-3.0-or-later"
 authors = ["liixini"]
@@ -52,7 +52,7 @@ fluent = "0.17"
 wall-proto = { path = "../skwd-deck/crates/wall-proto" }
 skwd-config = { path = "../skwd-deck/crates/skwd-config" }
 skwd-log = { path = "../skwd-deck/crates/skwd-log", features = ["facade"] }
-skwd-palette = { path = "../skwd-deck/crates/skwd-palette" }
+skwd-palette = { path = "../skwd-deck/crates/skwd-palette", features = ["material"] }
 skwd-lens-proto = { path = "../skwd-lens/crates/skwd-lens-proto" }
 profiling = { workspace = true, optional = true }
 tracy-client = { workspace = true, optional = true }

@@ -1,6 +1,6 @@
 audio-masthead = Ljud  /  Mixer
 audio-index-title = Ljudindex
-audio-index-desc = En gemensam livemix för varje bakgrundsyta. Utgångar som delar källa hålls länkade.
+audio-index-desc = Pausa bakgrunder per skärm. Skärmar med samma bakgrund delar volym och ljudavstängning.
 audio-detecting-outputs = Identifierar utgångar
 audio-state-sound = Ljud
 audio-state-muted = Tystad
@@ -25,7 +25,7 @@ audio-channel-label = Ljud
 audio-no-channel = Denna bakgrundsbild exponerar ingen ljudkanal.
 audio-outputs-kicker = LJUD  /  UTGÅNGAR
 audio-mixer-heading = Bakgrundsmixer
-audio-mixer-desc = Nuvarande bakgrundsljud, ordnat efter skärm och delad källa.
+audio-mixer-desc = Pausa varje skärm separat. Volym och ljudavstängning följs åt för samma bakgrund.
 audio-outputs-summary =
     { $total } { $total ->
         [one] utgång
@@ -46,3 +46,11 @@ audio-source-video = Video
 audio-source-wallpaper-engine = Wallpaper Engine
 audio-source-we-id = Wallpaper Engine ({ $id })
 audio-source-static-image = Statisk bild
+audio-wallpaper-label = Bakgrund
+audio-pause-wallpaper = Pausa bakgrund
+audio-resume-wallpaper = Återuppta bakgrund
+audio-wallpaper-paused = Manuellt pausad
+audio-wallpaper-held = Pausad av en annan regel
+audio-wallpaper-playing = Spelar
+audio-state-paused = Pausad
+audio-playback-error = Kunde inte ändra bakgrundens uppspelning: { $error }

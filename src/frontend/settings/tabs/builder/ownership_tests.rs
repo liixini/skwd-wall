@@ -231,7 +231,7 @@ fn selectable_current_value() {
         for tab in TABS {
             for (_, rows) in build_tab_with_outputs(tab, cfg, &[], &[], "", &[], &[]) {
                 for row in flattened_rows(rows) {
-                    let (Control::Dropdown { path, options, current }
+                    let (Control::Dropdown { path, options, current, .. }
                     | Control::Chips { path, options, current, .. }) = row.control
                     else {
                         continue;

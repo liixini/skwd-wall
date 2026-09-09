@@ -46,6 +46,22 @@ pub(super) fn tab_paper(builder: &mut Builder<'_>) {
         &video_engines,
         &["tinier"],
     );
+    builder.dropdown(
+        tr("settings-paper-layer-label"),
+        tr("settings-paper-layer-desc"),
+        keys::paper::WALLPAPER_LAYER,
+        &[
+            ("bottom", tr("settings-paper-layer-bottom")),
+            ("background", tr("settings-paper-layer-background")),
+            ("top", tr("settings-paper-layer-top")),
+            ("overlay", tr("settings-paper-layer-overlay")),
+        ],
+    );
+    builder.toggle(
+        tr("settings-paper-overview-only-label"),
+        tr("settings-paper-overview-only-desc"),
+        keys::niri::OVERVIEW_ONLY_PLAYBACK,
+    );
     builder.card(tr("settings-paper-performance-card"), tr("settings-paper-performance-card-desc"));
     builder.toggle(
         tr("settings-paper-multi-process-label"),
@@ -56,6 +72,53 @@ pub(super) fn tab_paper(builder: &mut Builder<'_>) {
         tr("settings-paper-performance-mode-label"),
         tr("settings-paper-performance-mode-desc"),
         keys::paper::PERFORMANCE_MODE,
+    );
+    builder.card(tr("settings-playback-pause-title"), tr("settings-playback-pause-desc"));
+    builder.toggle(
+        tr("settings-playback-process-enabled"),
+        tr("settings-playback-process-desc"),
+        keys::playback::PROCESS_ENABLED,
+    );
+    builder.text_field(
+        tr("settings-playback-processes"),
+        tr("settings-playback-processes-desc"),
+        keys::playback::PROCESSES,
+        "Overwatch.exe, mpv",
+    );
+    builder.action(
+        tr("settings-playback-choose-process"),
+        "",
+        ActionId::ChooseRunningProcess,
+        tr("settings-playback-choose-process"),
+    );
+    builder.toggle(
+        tr("settings-playback-fullscreen"),
+        tr("settings-playback-fullscreen-desc"),
+        keys::playback::FULLSCREEN,
+    );
+    builder.toggle(
+        tr("settings-playback-maximized"),
+        tr("settings-playback-maximized-desc"),
+        keys::playback::MAXIMIZED,
+    );
+    if cfg.is_niri() {
+        builder.toggle(
+            tr("settings-playback-full-width"),
+            tr("settings-playback-full-width-desc"),
+            keys::niri::FULL_WIDTH_PAUSE,
+        );
+    }
+    builder.dropdown(
+        tr("settings-playback-scope"),
+        tr("settings-playback-scope-desc"),
+        keys::playback::FULLSCREEN_SCOPE,
+        &[("all", tr("settings-playback-all")), ("display", tr("settings-playback-display"))],
+    );
+    builder.num(
+        tr("settings-playback-resume"),
+        tr("settings-playback-resume-desc"),
+        keys::playback::RESUME_DELAY,
+        "s",
     );
     builder.num(
         tr("settings-paper-idle-pause-label"),

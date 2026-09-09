@@ -293,6 +293,7 @@ fn library_watching_surfaces_polling_state_and_controls() {
         &[],
         &std::collections::HashMap::new(),
         Some(&status),
+        None,
     );
     let rows = &cards
         .iter()
@@ -346,6 +347,7 @@ fn library_watching_explains_recovery_and_unavailable_states() {
             &[],
             &std::collections::HashMap::new(),
             Some(&status),
+            None,
         );
         let status_row = &cards
             .iter()
@@ -566,19 +568,27 @@ fn slices_expose_live_edge_tilt() {
 }
 
 #[test]
-fn filter_bar_top_level() {
+fn filter_search_top_level() {
     let picker = build_tab("picker", &cfg(), &[], &[], "", &[]);
     assert!(picker.iter().all(|(card, _)| card.title != "Filter bar"));
 
     let filter = build_tab("filter", &cfg(), &[], &[], "", &[]);
     assert_eq!(
         filter.iter().map(|(card, _)| card.title).collect::<Vec<_>>(),
-        ["Appearance", "Buttons", "Resolution presets", "Defaults", "Visibility"]
+        [
+            "Appearance",
+            "Buttons",
+            "Resolution presets",
+            "Defaults",
+            "Visibility",
+            "Search",
+            "Semantic models"
+        ]
     );
     assert!(filter.iter().flat_map(|(_, rows)| rows).any(|row| {
         matches!(
             &row.control,
-            Control::Dropdown { path, options, current }
+            Control::Dropdown { path, options, current, .. }
                 if path == keys::filter_bar::VISUAL_STYLE
                     && current == "match"
                     && options.iter().map(|(key, _)| key.as_str()).collect::<Vec<_>>()
@@ -780,7 +790,7 @@ fn performance_power_controls() {
     assert!(rows.iter().any(|row| {
         matches!(
             &row.control,
-            Control::Dropdown { path, options, current }
+            Control::Dropdown { path, options, current, .. }
                 if path == keys::performance::GPU_PREFERENCE
                     && current == "auto"
                     && options.iter().map(|(key, _)| key.as_str()).collect::<Vec<_>>()
@@ -948,10 +958,11 @@ fn search_single_index() {
     assert!(
         crate::frontend::settings::visible_tabs(&cfg)
             .iter()
-            .any(|(key, label)| *key == "search" && *label == "Search and tags")
+            .any(|(key, label)| *key == "filter" && *label == "Filter & Search")
     );
-    let cards = build_tab("search", &cfg, &[], &[], "Tagging 3/10", &[]);
-    assert_eq!(cards.len(), 2);
+    let cards = build_tab("filter", &cfg, &[], &[], "Tagging 3/10", &[]);
+    assert_eq!(cards.len(), 7);
+    let cards = &cards[5..];
     assert_eq!(cards[0].0.title, "Search");
     assert_eq!(cards[1].0.title, "Semantic models");
 
@@ -981,7 +992,7 @@ fn search_single_index() {
     assert!(nested.iter().any(|row| {
         matches!(
             &row.control,
-            Control::Dropdown { path, options, current }
+            Control::Dropdown { path, options, current, .. }
                 if path == skwd_config::keys::tagging::DEFAULT_SEARCH_MODE
                     && options.iter().map(|(key, _)| key.as_str()).collect::<Vec<_>>()
                         == ["tags", "describe"]
@@ -999,15 +1010,15 @@ fn model_shelf_packs() {
         .with_text("semantic.models.0.manifest", manifest)
         .with_text(keys::semantic::MANIFEST, manifest)
         .with_text(keys::semantic::INDEX_PROFILE, "multiview");
-    let cards = build_tab("search", &cfg, &[], &[], "", &[]);
-    let rows = &cards[1].1;
+    let cards = build_tab("filter", &cfg, &[], &[], "", &[]);
+    let rows = &cards.iter().find(|(card, _)| card.title == "Semantic models").unwrap().1;
     assert!(rows.iter().any(|row| {
         matches!(row.control, Control::ActionBtn { id: ActionId::ImportSemanticModel, .. })
     }));
     assert!(rows.iter().any(|row| {
         matches!(
             &row.control,
-            Control::Dropdown { path, options, current }
+            Control::Dropdown { path, options, current, .. }
                 if path == keys::semantic::MANIFEST
                     && current == manifest
                     && options.iter().any(|(value, label)| value == manifest && label == "PE-Core L14 336")
@@ -1032,12 +1043,14 @@ fn model_shelf_packs() {
 #[test]
 fn model_import_progress() {
     let cards =
-        build_tab("search", &FakeSettingsSource::default(), &[], &[], "Validating pack", &[]);
-    assert!(cards[1].1.iter().any(|row| {
-        row.title == "Model-pack import"
-            && row.desc == "Validating pack"
-            && matches!(row.control, Control::Static)
-    }));
+        build_tab("filter", &FakeSettingsSource::default(), &[], &[], "Validating pack", &[]);
+    assert!(cards.iter().find(|(card, _)| card.title == "Semantic models").unwrap().1.iter().any(
+        |row| {
+            row.title == "Model-pack import"
+                && row.desc == "Validating pack"
+                && matches!(row.control, Control::Static)
+        }
+    ));
 }
 
 #[test]
@@ -1100,7 +1113,7 @@ fn performance_lists_detected_devices_and_retains_unavailable_selection() {
     let cfg =
         FakeSettingsSource::default().with_text(keys::performance::GPU_DEVICE, &devices[1].id);
     let cards = build_tab("performance", &cfg, &[], &[], "", &[]);
-    assert!(cards.iter().flat_map(|(_, rows)| rows).any(|row| matches!(&row.control, Control::Dropdown { path, options, current } if path == keys::performance::GPU_DEVICE && current == &devices[1].id && options.iter().any(|(id, label)| id == current && label.contains("unavailable")))));
+    assert!(cards.iter().flat_map(|(_, rows)| rows).any(|row| matches!(&row.control, Control::Dropdown { path, options, current, .. } if path == keys::performance::GPU_DEVICE && current == &devices[1].id && options.iter().any(|(id, label)| id == current && label.contains("unavailable")))));
 }
 
 #[test]
@@ -1112,7 +1125,7 @@ fn language_tab_lists_supported_languages_and_system_default() {
         );
         let cards = build_tab("language", &cfg, &[], &[], "", &[]);
         assert_eq!(cards.len(), 1);
-        let Control::Dropdown { path, options, current } = &cards[0].1[0].control else {
+        let Control::Dropdown { path, options, current, .. } = &cards[0].1[0].control else {
             panic!("language choice missing");
         };
         assert_eq!(path, keys::general::LANGUAGE);
@@ -1124,5 +1137,44 @@ fn language_tab_lists_supported_languages_and_system_default() {
         assert_eq!(options[1].1, "English");
         assert_eq!(options[2].1, "Svenska");
         assert_eq!(options[3].1, "Español");
+    }
+}
+
+#[test]
+fn automatic_pause_controls_have_one_playback_owner() {
+    let config = cfg();
+    let paths = [
+        keys::playback::PROCESS_ENABLED,
+        keys::playback::PROCESSES,
+        keys::playback::FULLSCREEN,
+        keys::playback::MAXIMIZED,
+        keys::playback::FULLSCREEN_SCOPE,
+        keys::playback::RESUME_DELAY,
+        keys::paper::IDLE_PAUSE_SECONDS,
+    ];
+    let cards = build_tab("playback", &config, &[], &[], "", &[]);
+    for path in paths {
+        assert!(
+            cards.iter().flat_map(|(_, rows)| rows).any(|row| match &row.control {
+                Control::Toggle { path: actual, .. }
+                | Control::Number { path: actual, .. }
+                | Control::TextField { path: actual, .. }
+                | Control::Dropdown { path: actual, .. } => actual == path,
+                _ => false,
+            }),
+            "missing {path}"
+        );
+    }
+}
+
+#[test]
+fn full_width_pause_is_only_exposed_on_niri() {
+    for niri in [false, true] {
+        let config = cfg().with_niri(niri).with_flag(keys::niri::FULL_WIDTH_PAUSE, true);
+        let cards = build_tab("playback", &config, &[], &[], "", &[]);
+        let count = cards.iter().flat_map(|(_, rows)| rows).filter(|row| {
+            matches!(&row.control, Control::Toggle { path, .. } if path == keys::niri::FULL_WIDTH_PAUSE)
+        }).count();
+        assert_eq!(count, usize::from(niri));
     }
 }

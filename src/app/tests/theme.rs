@@ -675,3 +675,45 @@ fn dropped_call_starts_no_job() {
 
     assert!(app.theme.job_pending.is_none());
 }
+
+#[test]
+fn wallpaper_profile_keeps_captured_source_and_both_variants() {
+    use crate::contracts::daemon::CurrentTheme;
+    use crate::domain::theme::Candidate;
+    use crate::frontend::theme_designer::{ThemeDesigner, ThemeMsg};
+
+    let mut app = test_app();
+    seed(&mut app, &[wall("other.png", "static", 1, 0)]);
+    let mut candidate = Candidate::from_preset("nord").unwrap();
+    let secondary =
+        skwd_palette::material::ROLE_KEYS.iter().position(|key| *key == "secondary").unwrap();
+    candidate.colors[secondary] = "#abcdef".into();
+    let mut designer = ThemeDesigner::new(candidate.clone(), String::new());
+    designer.wallpaper = Some(CurrentTheme {
+        key: "static:source.png".into(),
+        name: "source.png".into(),
+        thumb: "/tmp/source.webp".into(),
+        palette: candidate.clone(),
+        dark: true,
+    });
+    designer.candidate.colors[0] = "#123456".into();
+    app.panels.theme_designer = Some(designer);
+    drain_calls(&app);
+    let _ = update(&mut app, Message::Theme(ThemeMsg::SaveWallpaper));
+    let _ = update(&mut app, Message::Theme(ThemeMsg::Variant(false)));
+    app.panels.theme_designer.as_mut().unwrap().candidate.colors[0] = "#654321".into();
+    let _ = update(&mut app, Message::Theme(ThemeMsg::SaveWallpaper));
+    let _ = update(&mut app, Message::Theme(ThemeMsg::ToggleWallpaper(false)));
+    let stored: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&app.config.config_path).unwrap()).unwrap();
+    let profiles = stored["theme"]["wallpaperProfiles"].as_array().unwrap();
+    assert_eq!(profiles.len(), 1);
+    assert_eq!(profiles[0]["key"], "static:source.png");
+    assert_eq!(profiles[0]["dark"]["primary"], "#123456");
+    assert_eq!(profiles[0]["light"]["primary"], "#654321");
+    assert_eq!(profiles[0]["dark"]["_scheme"]["colors"]["secondary"]["dark"]["color"], "#abcdef");
+    assert_eq!(profiles[0]["enabled"], false);
+    let _ = update(&mut app, Message::Theme(ThemeMsg::Variant(true)));
+    assert_eq!(app.panels.theme_designer.as_ref().unwrap().candidate.colors[0], "#123456");
+    assert!(drain_calls(&app).iter().all(|(method, _)| method != "wall.apply"));
+}

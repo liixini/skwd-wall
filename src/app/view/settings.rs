@@ -17,6 +17,7 @@ pub(super) fn settings_layer(app: &App) -> Element<'_, Message> {
         output_statuses: &app.daemon.output_statuses,
         output_previews: &app.daemon.output_wallpaper_art,
         library_watch: app.daemon.library_watch.as_ref(),
+        playback: Some(&app.daemon.playback),
         analysis: app.panels.settings.semantic_import_status.clone(),
     };
     let focus = settings::FocusCtx {

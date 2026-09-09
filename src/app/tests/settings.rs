@@ -340,7 +340,7 @@ fn layout_studio_inset_while_live() {
     assert_eq!(app.panels.settings.inset_target, 0.0);
 
     let _ = update(&mut app, Message::SetSettingsTab(String::from("search")));
-    assert_eq!(app.panels.settings.tab, "search");
+    assert_eq!(app.panels.settings.tab, "filter");
     assert_eq!(app.panels.settings.inset_target, 0.0);
     assert_eq!(app.panels.settings.section_anim.x, 0.0);
 

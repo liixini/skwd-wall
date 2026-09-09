@@ -26,7 +26,8 @@ fn parse_control_lines() {
 }
 
 #[test]
-fn theme_audition_startup() {
+fn panel_startup() {
+    assert_eq!(startup_control_command(Some("mixer")), Some("open mixer\n"));
     assert_eq!(startup_control_command(Some("theme-audition")), Some("open theme-audition\n"));
     assert_eq!(startup_control_command(Some("wallpaper")), None);
     assert_eq!(startup_control_command(None), None);
