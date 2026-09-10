@@ -315,6 +315,12 @@ pub(super) fn tab_performance(builder: &mut Builder<'_>) {
         "",
     );
     builder.action(
+        tr("settings-performance-capture-we-label"),
+        tr("settings-performance-capture-we-desc"),
+        ActionId::CaptureWeThumbnails,
+        tr("settings-performance-capture-we-action"),
+    );
+    builder.action(
         tr("settings-performance-clear-cache-label"),
         tr("settings-performance-clear-cache-desc"),
         ActionId::ClearCache,

@@ -83,6 +83,20 @@ pub(super) fn draw_actions(
             3.65,
         );
     }
+    if let Some(reset) = layout.reset_thumbnail {
+        draw_action(
+            frame,
+            palette,
+            geometry,
+            progress,
+            fade,
+            reset,
+            tr("card-back-reset-thumbnail"),
+            palette.primary,
+            false,
+            3.7,
+        );
+    }
     draw_action(
         frame,
         palette,

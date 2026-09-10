@@ -58,6 +58,7 @@ pub struct SourceCtx<'a> {
     pub output_previews: &'a HashMap<String, String>,
     pub library_watch: Option<&'a crate::contracts::daemon::LibraryWatchStatus>,
     pub playback: Option<&'a crate::contracts::daemon::PlaybackStatus>,
+    pub thumbnail_task: Option<&'a crate::contracts::daemon::TaskStatus>,
     pub analysis: String,
 }
 
@@ -71,7 +72,7 @@ impl SourceCtx<'_> {
     }
 
     fn cards(&self, tab: &str) -> Vec<(Card, Vec<Row>)> {
-        build_tab_with_runtime_status(
+        let mut cards = build_tab_with_runtime_status(
             tab,
             self.config,
             self.themes,
@@ -83,7 +84,41 @@ impl SourceCtx<'_> {
             self.output_previews,
             self.library_watch,
             self.playback,
-        )
+        );
+        if let Some(task) = self.thumbnail_task {
+            for row in cards.iter_mut().flat_map(|(_, rows)| rows) {
+                if let super::super::Control::ActionBtn {
+                    id: ActionId::CaptureWeThumbnails,
+                    label,
+                } = &mut row.control
+                {
+                    let state = match &task.state {
+                        crate::contracts::daemon::TaskState::Running => {
+                            tr("filter-bar-state-running")
+                        }
+                        crate::contracts::daemon::TaskState::Paused => {
+                            tr("filter-bar-state-paused")
+                        }
+                        crate::contracts::daemon::TaskState::Completed => {
+                            tr("filter-bar-state-done")
+                        }
+                        crate::contracts::daemon::TaskState::Failed => {
+                            tr("filter-bar-state-failed")
+                        }
+                        crate::contracts::daemon::TaskState::Cancelled => {
+                            tr("filter-bar-state-stopped")
+                        }
+                        crate::contracts::daemon::TaskState::Other(state) => state.as_str(),
+                    };
+                    row.desc =
+                        format!("{state} · {} / {} · {}", task.progress, task.total, task.detail);
+                    if task.state.is_active() {
+                        *label = tr("settings-performance-capture-we-stop").into();
+                    }
+                }
+            }
+        }
+        cards
     }
 }
 

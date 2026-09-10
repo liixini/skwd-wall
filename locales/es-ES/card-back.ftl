@@ -22,3 +22,7 @@ card-back-overview = Establecer como vista general
 card-back-overview-set = Vista general ✓
 card-back-delete = Eliminar
 card-back-scene-properties = SCENE
+card-back-reset-thumbnail = Restablecer miniatura
+card-back-reset-thumbnail-done = Generando una nueva miniatura
+card-back-reset-thumbnail-error = No se pudo restablecer la miniatura: { $error }
+card-back-reset-thumbnail-deferred = La miniatura se regenerará al aplicar este fondo

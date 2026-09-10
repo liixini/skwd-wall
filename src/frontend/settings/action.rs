@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ActionId {
     ClearCache,
+    CaptureWeThumbnails,
     RecomputeColors,
     OptimizeImages,
     RefreshBackdrop,

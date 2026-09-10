@@ -46,6 +46,9 @@ fn chrome_signature_buckets() {
     let coordinated = BackPanel { progress: 0.5, coordinated_flip: true, ..Default::default() };
     assert_ne!(with_back, chrome_signature(&[chrome], Some(&coordinated), &pal));
 
+    let generated = BackPanel { progress: 0.5, reset_thumbnail: true, ..Default::default() };
+    assert_ne!(with_back, chrome_signature(&[chrome], Some(&generated), &pal));
+
     let mut pal2 = pal;
     pal2.primary = Color::from_rgb(0.1, 0.2, 0.3);
     assert_ne!(base, chrome_signature(&[chrome], None, &pal2));

@@ -179,6 +179,7 @@ impl SceneCore {
             static_img: item.kind == WallpaperKind::Static,
             overview_available: crate::infrastructure::runtime::is_niri(),
             scene_properties: item.effective_kind() == WallpaperKind::We && !item.we_id.is_empty(),
+            reset_thumbnail: item.kind == WallpaperKind::We && !item.we_id.is_empty(),
         }
     }
 

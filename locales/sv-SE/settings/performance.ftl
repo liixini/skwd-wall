@@ -71,3 +71,8 @@ settings-performance-device-label = Bakgrundens GPU
 settings-performance-device-desc = Välj GPU för bakgrunder som renderas direkt. Ett kort som saknas ersätts med ett automatiskt val. Delade bilder i Plasma använder Plasmas egen GPU.
 settings-performance-device-auto = Automatiskt
 settings-performance-device-unavailable = Sparad GPU saknas (använder automatiskt val)
+
+settings-performance-capture-we-label = Lägg till miniatyrbilder från renderade bildrutor för alla WE-bakgrunder
+settings-performance-capture-we-desc = Rendera inbyggda scener i bakgrunden. Återanvänd giltiga bilder och behåll tidigare förhandsvisningar om en scen misslyckas. Du kan stoppa och fortsätta senare.
+settings-performance-capture-we-action = Skapa miniatyrbilder
+settings-performance-capture-we-stop = Stoppa

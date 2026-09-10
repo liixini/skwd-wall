@@ -22,3 +22,7 @@ card-back-overview = Set as overview
 card-back-overview-set = Overview ✓
 card-back-delete = Delete
 card-back-scene-properties = SCENE
+card-back-reset-thumbnail = Reset thumbnail
+card-back-reset-thumbnail-done = Generating a new thumbnail
+card-back-reset-thumbnail-error = Could not reset thumbnail: { $error }
+card-back-reset-thumbnail-deferred = Thumbnail will regenerate when this wallpaper is applied

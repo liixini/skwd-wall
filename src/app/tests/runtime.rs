@@ -688,3 +688,68 @@ fn fresh_search_rearms_pagination() {
 
     assert!(!app.source_browser.browser.as_ref().unwrap().session.page_failed);
 }
+
+#[test]
+fn scene_thumbnail_update_reloads_only_the_matching_tile() {
+    use crate::domain::library::catalog::Wallpaper;
+    use crate::rendering::scene::atlas::AtlasMap;
+    let mut app = test_app();
+    app.library_session.library.insert(Wallpaper {
+        key: "we:42".into(),
+        thumb: "/old/we-thumbs/42.webp".into(),
+        ..Wallpaper::default()
+    });
+    app.library_session.library.insert(Wallpaper {
+        key: "other".into(),
+        name: "other".into(),
+        ..Wallpaper::default()
+    });
+    let mut atlas = AtlasMap::new(2);
+    for index in 0..2 {
+        atlas.near.acquire(index).unwrap();
+        atlas.far.acquire(index).unwrap();
+        atlas.near.mark_ready(index);
+        atlas.far.mark_ready(index);
+    }
+    atlas.failed.insert(0);
+    atlas.near_failed.insert(0);
+    app.preview_resources.atlas = Some(atlas);
+    app.on_event(
+        wall_proto::ev::THUMBNAIL_UPDATED,
+        &json!({"key": "we:42", "thumb": "/new/we-thumbs/42.webp"}),
+    );
+    let atlas = app.preview_resources.atlas.as_ref().unwrap();
+    assert!(!atlas.near.is_known(0));
+    assert!(!atlas.far.is_known(0));
+    assert!(!atlas.failed.contains(&0));
+    assert!(!atlas.near_failed.contains(&0));
+    assert!(atlas.near.ready(1).is_some());
+    assert!(atlas.far.ready(1).is_some());
+    assert_eq!(app.library_session.library.catalog().items[0].thumb, "/new/we-thumbs/42.webp");
+}
+
+#[test]
+fn reset_thumbnail_accepts_older_we_cards_without_capture_metadata() {
+    let mut app = test_app();
+    let mut scene = wall("scene", "we", 1, 0);
+    scene["we_id"] = json!("42");
+    seed(&mut app, &[scene, wall("still.png", "static", 1, 0)]);
+    drain_calls(&app);
+    let _ = update(&mut app, Message::ResetThumbnail(1));
+    assert!(drain_calls(&app).is_empty());
+    let _ = update(&mut app, Message::ResetThumbnail(0));
+    let calls = drain_calls(&app);
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0], (wall_proto::rpc::WALL_RESET_THUMBNAIL.into(), json!({"we_id": "42"})));
+    let _ = update(&mut app, Message::ResetThumbnail(0));
+    assert!(drain_calls(&app).is_empty());
+    let key = app.library_session.library.catalog().items[0].key.clone();
+    app.on_event(
+        wall_proto::ev::THUMBNAIL_UPDATED,
+        &json!({"key": key, "thumb": "/fresh.webp", "generated": true}),
+    );
+    assert!(app.library_session.library.catalog().items[0].thumbnail_generated);
+    assert_eq!(app.library_session.library.catalog().items[0].thumb, "/fresh.webp");
+    let _ = update(&mut app, Message::ResetThumbnail(0));
+    assert!(drain_calls(&app).is_empty());
+}

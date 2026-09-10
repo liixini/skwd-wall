@@ -71,3 +71,8 @@ settings-performance-device-label = GPU del fondo
 settings-performance-device-desc = Elige la GPU para el renderizado nativo de fondos. Si la tarjeta no está disponible, se selecciona una automáticamente. Las imágenes compartidas de Plasma usan la GPU de Plasma.
 settings-performance-device-auto = Automática
 settings-performance-device-unavailable = GPU guardada no disponible (selección automática)
+
+settings-performance-capture-we-label = Añadir miniaturas de fotogramas capturados a todos los fondos de WE
+settings-performance-capture-we-desc = Renderiza escenas nativas en segundo plano. Reutiliza capturas válidas y conserva la vista previa si una escena falla. Puedes detener el proceso y continuar después.
+settings-performance-capture-we-action = Generar miniaturas
+settings-performance-capture-we-stop = Detener

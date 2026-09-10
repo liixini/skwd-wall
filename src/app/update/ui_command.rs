@@ -35,7 +35,8 @@ pub(crate) fn ui_state_json(app: &App) -> String {
     let card_back = app.scene.render.back.as_ref().map(|panel| {
         let layout = crate::frontend::ui::back_layout(panel);
         let action_count =
-            3 + usize::from(layout.overview.is_some()) + usize::from(layout.effects.is_some());
+            3 + usize::from(layout.overview.is_some()) + usize::from(layout.effects.is_some())
+                + usize::from(layout.reset_thumbnail.is_some());
         json!({
             "presentation": if panel.embedded { "embedded" } else { "external" },
             "card": { "x": layout.card.0, "y": layout.card.1,
@@ -47,6 +48,7 @@ pub(crate) fn ui_state_json(app: &App) -> String {
             "action_deck": { "x": layout.action_deck.0, "y": layout.action_deck.1,
                 "w": layout.action_deck.2, "h": layout.action_deck.3 },
             "actions": action_count,
+            "reset_thumbnail": layout.reset_thumbnail.map(|rect| crate::frontend::ui::back_bounds(panel, &layout, rect)),
             "tags": panel.tags,
             "tag_chips": layout.tags.len(),
             "tag_hidden": layout.tag_overflow.map_or(0, |overflow| overflow.4),

@@ -57,6 +57,7 @@ pub fn chrome_signature(chrome: &[Chrome], back: Option<&BackPanel>, palette: &P
             hasher.write_i32(panel.pop_idx);
             hasher.write_u8(panel.static_img as u8);
             hasher.write_u8(panel.overview_available as u8);
+            hasher.write_u8(panel.reset_thumbnail as u8);
         }
     }
     for color in [

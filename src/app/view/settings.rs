@@ -18,6 +18,7 @@ pub(super) fn settings_layer(app: &App) -> Element<'_, Message> {
         output_previews: &app.daemon.output_wallpaper_art,
         library_watch: app.daemon.library_watch.as_ref(),
         playback: Some(&app.daemon.playback),
+        thumbnail_task: app.daemon.tasks.values().find(|task| task.id == "we-thumbnails"),
         analysis: app.panels.settings.semantic_import_status.clone(),
     };
     let focus = settings::FocusCtx {

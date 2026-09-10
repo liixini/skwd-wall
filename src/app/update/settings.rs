@@ -1077,6 +1077,21 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
     app.panels.settings.armed = None;
     app.invalidate_settings();
     match id {
+        ActionId::CaptureWeThumbnails => {
+            if app
+                .daemon
+                .tasks
+                .values()
+                .any(|task| task.id == "we-thumbnails" && task.state.is_active())
+            {
+                app.daemon.client.call(
+                    wall_proto::rpc::TASK_CONTROL,
+                    json!({"id": "we-thumbnails", "action": "stop"}),
+                );
+            } else {
+                app.daemon.client.call(wall_proto::rpc::WALL_CAPTURE_THUMBNAILS, json!({}));
+            }
+        }
         ActionId::ClearCache => {
             app.daemon.client.call("wall.clear_data", json!({}));
         }

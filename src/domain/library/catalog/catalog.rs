@@ -24,6 +24,7 @@ pub struct Wallpaper {
     pub name: String,
     pub kind: WallpaperKind,
     pub thumb: String,
+    pub thumbnail_generated: bool,
     pub path: String,
     pub preview: String,
     pub we_id: String,

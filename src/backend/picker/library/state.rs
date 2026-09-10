@@ -40,6 +40,22 @@ impl LibraryState {
         true
     }
 
+    pub fn update_thumbnail(
+        &mut self,
+        key: &str,
+        thumb: Option<&str>,
+        generated: Option<bool>,
+    ) -> Option<usize> {
+        let index = self.catalog.items.iter().position(|item| item.key == key)?;
+        if let Some(thumb) = thumb.filter(|path| !path.is_empty()) {
+            self.catalog.items[index].thumb = thumb.to_string();
+        }
+        if let Some(generated) = generated {
+            self.catalog.items[index].thumbnail_generated = generated;
+        }
+        Some(index)
+    }
+
     pub fn remove_by_key(&mut self, key: &str) -> bool {
         let Some(pos) = self.catalog.items.iter().rposition(|wallpaper| wallpaper.key == key)
         else {

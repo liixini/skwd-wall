@@ -186,6 +186,11 @@ fn browser_boundaries_validate_remaining_result_envelopes() {
 
 #[test]
 fn status_boundaries_validate_runtime_shapes() {
+    envelope_contract(json!({"scheduled": true}), decode_thumbnail_reset);
+    assert!(decode_thumbnail_reset(&json!({"scheduled": true})).unwrap());
+    assert!(!decode_thumbnail_reset(&json!({"scheduled": false})).unwrap());
+    assert!(decode_thumbnail_reset(&json!({})).is_err());
+    assert!(decode_thumbnail_reset(&json!({"scheduled": "false"})).is_err());
     envelope_contract(json!({}), decode_status);
     envelope_contract(json!({}), decode_task_list);
     envelope_contract(json!({"we_id": "", "properties": []}), decode_scene_properties);

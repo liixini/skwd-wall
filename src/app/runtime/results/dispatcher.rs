@@ -7,6 +7,12 @@ use crate::app::*;
 impl App {
     pub(in crate::app) fn rpc_error(&mut self, kind: Pending, err: String) {
         match kind {
+            Pending::ResetThumbnail { .. } => {
+                self.show_toast(
+                    crate::i18n::tr_args!("card-back-reset-thumbnail-error", error => err),
+                );
+                self.retick();
+            }
             Pending::AudioPause => {
                 self.show_toast(crate::i18n::tr_args!("audio-playback-error", error => err));
                 self.retick();
@@ -322,6 +328,20 @@ impl App {
                 result,
                 crate::infrastructure::rpc_results::decode_weather,
             )),
+            Pending::ResetThumbnail { .. } => {
+                let scheduled = decoded!(
+                    "wall.reset_thumbnail",
+                    result,
+                    crate::infrastructure::rpc_results::decode_thumbnail_reset,
+                );
+                let message = if scheduled {
+                    "card-back-reset-thumbnail-done"
+                } else {
+                    "card-back-reset-thumbnail-deferred"
+                };
+                self.show_toast(crate::i18n::tr(message));
+                self.retick();
+            }
             Pending::SceneProperties { .. } => self.on_scene_properties(decoded!(
                 "wall.we_properties",
                 result,

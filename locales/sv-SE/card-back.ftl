@@ -22,3 +22,7 @@ card-back-overview = ÖVERSIKT
 card-back-overview-set = ÖVERSIKT  ✓
 card-back-delete = TA BORT
 card-back-scene-properties = SCEN
+card-back-reset-thumbnail = Återställ miniatyrbild
+card-back-reset-thumbnail-done = Genererar en ny miniatyrbild
+card-back-reset-thumbnail-error = Kunde inte återställa miniatyrbilden: { $error }
+card-back-reset-thumbnail-deferred = Miniatyrbilden genereras på nytt när bakgrunden används

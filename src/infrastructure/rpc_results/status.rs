@@ -66,6 +66,12 @@ pub fn decode_scene_properties(value: &Value) -> DecodeResult<ScenePropertiesRes
     })
 }
 
+pub fn decode_thumbnail_reset(value: &Value) -> DecodeResult<bool> {
+    let family = "wall.reset_thumbnail";
+    let object = envelope(family, value)?;
+    required_typed(family, object, "scheduled", "boolean")
+}
+
 pub fn decode_library_watch(value: &Value) -> DecodeResult<LibraryWatchStatus> {
     serde_json::from_value::<wall_proto::LibraryWatchStatus>(value.clone())
         .map(map_library_watch)

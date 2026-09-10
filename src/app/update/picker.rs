@@ -246,6 +246,8 @@ fn back_panel_click(app: &mut App, fi: usize, x: f32, y: f32) -> Task<Message> {
     } else if lay.effects.is_some_and(within) {
         open_effects(app, fi, crate::frontend::effects::EffectsMode::Studio);
         app.retick();
+    } else if lay.reset_thumbnail.is_some_and(within) {
+        return super::update_inner(app, Message::ResetThumbnail(si));
     } else if lay.scene_properties.is_some_and(within) {
         app.open_scene_properties();
     } else if lay.overview.is_some_and(within) {
@@ -257,6 +259,30 @@ fn back_panel_click(app: &mut App, fi: usize, x: f32, y: f32) -> Task<Message> {
     } else if app.scene.mode != Mode::Slices {
         return close_flip_or_apply(app, fi, &bp, x, y);
     }
+    Task::none()
+}
+
+pub(super) fn reset_thumbnail(app: &mut App, index: u32) -> Task<Message> {
+    let Some(item) = app.library_session.library.catalog().items.get(index as usize) else {
+        return Task::none();
+    };
+    if item.kind != WallpaperKind::We
+        || item.we_id.is_empty()
+        || app
+            .daemon
+            .pending
+            .values()
+            .any(|pending| matches!(pending, Pending::ResetThumbnail { key } if key == &item.key))
+    {
+        return Task::none();
+    }
+    let key = item.key.clone();
+    let we_id = item.we_id.clone();
+    app.call_tracked(
+        wall_proto::rpc::WALL_RESET_THUMBNAIL,
+        json!({"we_id": we_id}),
+        Pending::ResetThumbnail { key },
+    );
     Task::none()
 }
 

@@ -110,6 +110,7 @@ fn decode_row(row: &wall_proto::WallpaperItem, paths: LibraryPaths<'_>) -> Optio
         name,
         kind,
         thumb,
+        thumbnail_generated: row.thumbnail_generated,
         path,
         preview: row.preview.clone().unwrap_or_default(),
         we_id,

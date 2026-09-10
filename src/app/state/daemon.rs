@@ -39,6 +39,7 @@ pub(crate) enum Pending {
     Status,
     Weather,
     SceneProperties { we_id: String },
+    ResetThumbnail { key: String },
 }
 
 pub(crate) struct DaemonState {

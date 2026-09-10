@@ -65,6 +65,24 @@ impl App {
                 self.retick();
             }
             ev::CACHED => self.on_cached(data),
+            ev::THUMBNAIL_UPDATED => {
+                let Ok(event) = ev::ThumbnailUpdated::deserialize(data) else { return };
+                let Some(index) = self.library_session.library.update_thumbnail(
+                    &event.key,
+                    event.thumb.as_deref(),
+                    event.generated,
+                ) else {
+                    return;
+                };
+                if let Some(atlas) = self.preview_resources.atlas.as_mut() {
+                    atlas.near.release(index);
+                    atlas.far.release(index);
+                    atlas.failed.remove(&index);
+                    atlas.near_failed.remove(&index);
+                }
+                self.scene.touch();
+                self.retick();
+            }
             ev::REMOVED => {
                 let Ok(payload) = ev::Removed::deserialize(data) else { return };
                 if self.library_session.library.remove_by_key(&payload.key) {

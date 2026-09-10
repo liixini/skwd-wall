@@ -7,6 +7,7 @@ enum ActionKind {
     Playlist,
     Effects,
     SceneProperties,
+    ResetThumbnail,
     Overview,
     Delete,
 }
@@ -36,6 +37,7 @@ pub struct BackLayout {
     pub playlist: (f32, f32, f32, f32),
     pub effects: Option<(f32, f32, f32, f32)>,
     pub scene_properties: Option<(f32, f32, f32, f32)>,
+    pub reset_thumbnail: Option<(f32, f32, f32, f32)>,
     pub overview: Option<(f32, f32, f32, f32)>,
     pub delete: (f32, f32, f32, f32),
 }
@@ -128,6 +130,9 @@ fn action_specs(panel: &BackPanel, max_width: f32) -> Vec<(ActionKind, f32)> {
     }
     if panel.scene_properties {
         specs.push((ActionKind::SceneProperties, action_width(tr("card-back-scene-properties"))));
+    }
+    if panel.reset_thumbnail {
+        specs.push((ActionKind::ResetThumbnail, action_width(tr("card-back-reset-thumbnail"))));
     }
     specs.extend([
         (ActionKind::Playlist, action_width(tr("card-back-playlist"))),
@@ -230,7 +235,7 @@ fn embedded_wide_layout(panel: &BackPanel) -> BackLayout {
         row_step,
     );
 
-    let ActionRects { playlist, effects, scene_properties, overview, delete } =
+    let ActionRects { playlist, effects, scene_properties, reset_thumbnail, overview, delete } =
         assign_actions(specs, action_rectangles);
     BackLayout {
         card: (card_left, card_top, card_width, card_height),
@@ -257,6 +262,7 @@ fn embedded_wide_layout(panel: &BackPanel) -> BackLayout {
         playlist,
         effects,
         scene_properties,
+        reset_thumbnail,
         overview,
         delete,
     }
@@ -347,7 +353,7 @@ fn embedded_stacked_layout(panel: &BackPanel) -> BackLayout {
         row_step,
     );
 
-    let ActionRects { playlist, effects, scene_properties, overview, delete } =
+    let ActionRects { playlist, effects, scene_properties, reset_thumbnail, overview, delete } =
         assign_actions(specs, action_rectangles);
     BackLayout {
         card: (card_left, card_top, card_width, card_height),
@@ -374,6 +380,7 @@ fn embedded_stacked_layout(panel: &BackPanel) -> BackLayout {
         playlist,
         effects,
         scene_properties,
+        reset_thumbnail,
         overview,
         delete,
     }
@@ -462,7 +469,7 @@ fn external_layout(panel: &BackPanel) -> BackLayout {
     let (tags, tag_overflow, add, _) =
         place_tag_flow(&tag_flow, content_left, gap, tags_y, row_height, row_step);
 
-    let ActionRects { playlist, effects, scene_properties, overview, delete } =
+    let ActionRects { playlist, effects, scene_properties, reset_thumbnail, overview, delete } =
         assign_actions(specs, action_rectangles);
     BackLayout {
         card: (card_left, card_top, card_width, card_height),
@@ -489,6 +496,7 @@ fn external_layout(panel: &BackPanel) -> BackLayout {
         playlist,
         effects,
         scene_properties,
+        reset_thumbnail,
         overview,
         delete,
     }
@@ -498,6 +506,7 @@ fn external_layout(panel: &BackPanel) -> BackLayout {
 struct ActionRects {
     playlist: (f32, f32, f32, f32),
     scene_properties: Option<(f32, f32, f32, f32)>,
+    reset_thumbnail: Option<(f32, f32, f32, f32)>,
     effects: Option<(f32, f32, f32, f32)>,
     overview: Option<(f32, f32, f32, f32)>,
     delete: (f32, f32, f32, f32),
@@ -513,6 +522,7 @@ fn assign_actions(
             ActionKind::Playlist => rects.playlist = rectangle,
             ActionKind::Effects => rects.effects = Some(rectangle),
             ActionKind::SceneProperties => rects.scene_properties = Some(rectangle),
+            ActionKind::ResetThumbnail => rects.reset_thumbnail = Some(rectangle),
             ActionKind::Overview => rects.overview = Some(rectangle),
             ActionKind::Delete => rects.delete = rectangle,
         }

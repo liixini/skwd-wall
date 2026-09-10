@@ -23,7 +23,7 @@ pub use presentation::{
 };
 pub use status::{
     decode_library_watch, decode_scene_properties, decode_status, decode_task_list,
-    decode_task_status,
+    decode_task_status, decode_thumbnail_reset,
 };
 
 #[cfg(test)]

@@ -58,6 +58,7 @@ pub enum Message {
     Sched(crate::frontend::schedule_editor::SchedMsg),
     SceneProps(crate::frontend::scene_properties::ScenePropMsg),
     OpenSceneProps,
+    ResetThumbnail(u32),
     SetViewMode(String),
     Settings(crate::frontend::settings::SettingsMsg),
     SemanticModelImported(

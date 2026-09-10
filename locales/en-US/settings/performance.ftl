@@ -71,3 +71,8 @@ settings-performance-device-label = Wallpaper GPU
 settings-performance-device-desc = Choose the GPU for native wallpaper rendering. An unavailable card falls back to Automatic. Plasma shared images use Plasma's own GPU.
 settings-performance-device-auto = Automatic
 settings-performance-device-unavailable = Saved GPU unavailable (using Automatic)
+
+settings-performance-capture-we-label = Add captured frame thumbnails to all WE wallpapers
+settings-performance-capture-we-desc = Capture native scenes in the background. Reuse valid captures and keep existing previews if a scene fails. You can stop and continue later.
+settings-performance-capture-we-action = Generate thumbnails
+settings-performance-capture-we-stop = Stop

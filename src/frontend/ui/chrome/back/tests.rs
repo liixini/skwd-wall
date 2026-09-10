@@ -42,3 +42,37 @@ fn embedded_sections_preserve_matching_square_and_rounded_corners() {
     assert!(sheet[2] > 0.0);
     assert_eq!(sheet[3], 0.0);
 }
+
+#[test]
+fn generated_thumbnail_action_fits_all_card_presentations() {
+    for (embedded, hw, hh) in [(true, 160.0, 300.0), (true, 450.0, 220.0), (false, 220.0, 250.0)] {
+        let mut panel = BackPanel {
+            embedded,
+            cx: 500.0,
+            cy: 400.0,
+            hw,
+            hh,
+            scene_properties: true,
+            overview_available: true,
+            ..BackPanel::default()
+        };
+        assert!(back_layout(&panel).reset_thumbnail.is_none());
+        panel.reset_thumbnail = true;
+        let layout = back_layout(&panel);
+        let reset = layout.reset_thumbnail.expect("generated thumbnail action");
+        assert!(reset.2 > 0.0 && reset.3 > 0.0);
+        for other in [
+            layout.playlist,
+            layout.delete,
+            layout.scene_properties.unwrap(),
+            layout.overview.unwrap(),
+        ] {
+            assert!(
+                reset.0 + reset.2 <= other.0 + 0.01
+                    || other.0 + other.2 <= reset.0 + 0.01
+                    || reset.1 + reset.3 <= other.1 + 0.01
+                    || other.1 + other.3 <= reset.1 + 0.01
+            );
+        }
+    }
+}

@@ -142,6 +142,7 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
             scene_properties::update(app, message);
             Task::none()
         }
+        Message::ResetThumbnail(index) => picker::reset_thumbnail(app, index),
         Message::OpenSceneProps => {
             app.open_scene_properties();
             Task::none()
