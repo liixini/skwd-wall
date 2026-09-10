@@ -385,8 +385,7 @@ pub(super) fn layershell_error_message(desktop: &str, underlying: &str) -> Strin
         "skwd-wall could not create its layer-shell surface: {compositor}.\n\
          skwd-wall requires a wlroots-based compositor (niri, sway, Hyprland, river, wayfire, labwc), \
          KWin/KDE Plasma, or another compositor that supports wlr-layer-shell.\n\
-         Set SKWD_WALL_FORCE_WINIT=1 to run in a plain window instead (limited), \
-         or run `skwd-walld doctor` for details.\n\
+         Set SKWD_WALL_FORCE_WINIT=1 to run in a plain window instead (limited).\n\
          (underlying error: {underlying})"
     )
 }
@@ -402,14 +401,14 @@ pub(super) fn layershell_run_error_message(
         Error::ExecutorCreationFailed(underlying) => format!(
             "skwd-wall could not start its async task executor.\n\
              This is an internal runtime initialization failure, not a missing layer-shell protocol.\n\
-             Run `skwd-walld doctor` for environment details.\n\
+             Run `skwd-walld --bug-report` to collect logs for an issue.\n\
              (underlying error: {underlying})"
         ),
         Error::GraphicsCreationFailed(underlying) => format!(
             "skwd-wall could not initialize GPU rendering for its layer-shell surface.\n\
              Check that a working Vulkan/wgpu adapter with BC texture compression is available.\n\
              Set SKWD_WALL_THUMBNAILS=rgba-poc to use the uncompressed compatibility profile, \
-             then run `skwd-walld doctor` if initialization still fails.\n\
+             then run `skwd-walld --bug-report` to collect logs if initialization still fails.\n\
              (underlying error: {underlying:?})"
         ),
         Error::WindowCreationFailed(underlying) => {
@@ -417,14 +416,13 @@ pub(super) fn layershell_run_error_message(
             format!(
                 "skwd-wall could not create its layer-shell surface under {compositor}.\n\
                  The compositor advertised wlr-layer-shell, but surface creation failed.\n\
-                 Set SKWD_WALL_FORCE_WINIT=1 to run in a plain window instead (limited), \
-                 or run `skwd-walld doctor` for details.\n\
+                 Set SKWD_WALL_FORCE_WINIT=1 to run in a plain window instead (limited).\n\
                  (underlying error: {underlying})"
             )
         }
         Error::WaylandDispatchFailed(underlying) => format!(
             "skwd-wall's Wayland layer-shell event loop failed after startup.\n\
-             Check the compositor log and run `skwd-walld doctor` for connection details.\n\
+             Check the compositor log for connection details.\n\
              (underlying error: {underlying:?})"
         ),
     }

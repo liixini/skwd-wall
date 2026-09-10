@@ -2,13 +2,6 @@ status-daemon-version-mismatch = Daemonversionerna skiljer sig: skwd-walld är {
 status-daemon-connecting = Ansluter till skwd-walld... om detta kvarstår, kontrollera ~/.cache/skwd-wall-v2/skwd-walld.log
 status-daemon-lost = Tappade anslutningen till skwd-walld - försöker igen. Kontrollera ~/.cache/skwd-wall-v2/skwd-walld.log
 status-library-empty = Inga bakgrundsbilder än - lägg bilder i { $directory }, eller öppna onlinebläddraren
-status-diagnostics-passed =
-    { $count ->
-        [one] Diagnostik: { $count } kontroll godkänd
-       *[other] Diagnostik: alla { $count } kontroller godkända
-    }
-status-diagnostics-more = (+{ $count } till)
-status-diagnostics-issues = Diagnostik: { $count } problem - { $issues }{ $more }
 status-apply-file-missing = Användningen misslyckades: bakgrundsfilen saknas
 status-apply-renderer-failed = Användningen misslyckades: renderaren kunde inte starta
 status-apply-decode-failed = Användningen misslyckades: bakgrundsbilden kunde inte avkodas

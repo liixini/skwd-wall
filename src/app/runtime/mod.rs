@@ -10,6 +10,6 @@ mod settings;
 mod ticks;
 mod wake;
 
-pub(crate) use diagnostics::{TOAST_MS, apply_error_message, doctor_summary};
+pub(crate) use diagnostics::{TOAST_MS, apply_error_message};
 #[cfg(test)]
 pub(crate) use events::download_update;

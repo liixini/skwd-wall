@@ -22,7 +22,6 @@ settings-section-workshop-rendering = Renderizado Workshop
 settings-section-power = Energía
 settings-section-picker-rendering = Renderizado del selector
 settings-section-wallpaper-efficiency = Eficiencia del fondo
-settings-section-diagnostics = Diagnóstico
 settings-section-folders = Carpetas
 settings-section-library-watching = Vigilancia de la biblioteca
 settings-section-images-recovery = Imágenes y recuperación

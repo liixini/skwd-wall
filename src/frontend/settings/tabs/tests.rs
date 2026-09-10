@@ -8,6 +8,32 @@ fn cfg() -> FakeSettingsSource {
 }
 
 #[test]
+fn noctalia_mode_overrides_in_integrations() {
+    for mode in ["follow", "keep", "dark", "light", "auto"] {
+        let cfg = cfg().with_text(keys::noctalia::THEME_MODE, mode);
+        let cards = build_tab("integrations", &cfg, &[], &[], "", &[]);
+        let controls: Vec<_> = cards
+            .iter()
+            .flat_map(|(_, rows)| rows)
+            .filter_map(|row| match &row.control {
+                Control::Dropdown { path, current, options, .. }
+                    if path == keys::noctalia::THEME_MODE =>
+                {
+                    Some((current, options))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(controls.len(), 1);
+        assert_eq!(controls[0].0, mode);
+        assert_eq!(
+            controls[0].1.iter().map(|(value, _)| value.as_str()).collect::<Vec<_>>(),
+            ["follow", "keep", "dark", "light", "auto"]
+        );
+    }
+}
+
+#[test]
 fn picker_controls_bindings() {
     let cards = build_tab("picker", &cfg(), &[], &[], "", &[]);
     let controls = &cards

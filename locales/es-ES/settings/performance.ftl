@@ -58,13 +58,8 @@ settings-performance-clear-cache-action = Borrar
 settings-performance-recompute-label = Recalcular colores
 settings-performance-recompute-desc = Vuelve a derivar el cubo de color por fondo y la saturación desde las miniaturas existentes.
 settings-performance-recompute-action = Recalcular
-settings-performance-diagnostics-card = Diagnóstico
-settings-performance-diagnostics-card-desc = Comprueba el entorno en busca de problemas que impiden aplicar fondos. El detalle completo va al registro y a `skwd-walld --doctor`.
-settings-performance-doctor-label = Ejecutar diagnóstico
-settings-performance-doctor-desc = Ejecuta comprobaciones del entorno y resume cualquier problema.
-settings-performance-doctor-action = Ejecutar
 settings-performance-bug-report-label = Generar informe de error
-settings-performance-bug-report-desc = Empaqueta versión, entorno, diagnósticos y registros recientes en un archivo para adjuntar a una issue.
+settings-performance-bug-report-desc = Reúne la versión, el entorno y los registros recientes en un archivo para adjuntarlo a una incidencia.
 settings-performance-bug-report-action = Generar
 
 settings-performance-device-label = GPU del fondo

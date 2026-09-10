@@ -2,7 +2,7 @@
 resolver = "3"
 
 [workspace.package]
-version = "1.0.0-beta.11"
+version = "1.0.0-beta.12"
 edition = "2024"
 license = "GPL-3.0-or-later"
 authors = ["liixini"]

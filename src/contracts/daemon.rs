@@ -24,18 +24,6 @@ pub struct WeatherResult {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct DoctorCheck {
-    pub status: String,
-    pub check: String,
-    pub detail: String,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct DoctorResult {
-    pub checks: Vec<DoctorCheck>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct BugReportResult {
     pub path: Option<String>,
 }

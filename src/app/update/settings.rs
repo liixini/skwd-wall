@@ -961,6 +961,7 @@ pub(super) fn settings_pick(app: &mut App, path: &str, value: &str) -> Task<Mess
     }
     if path.starts_with(skwd_config::keys::matugen::PREFIX)
         || path.starts_with(skwd_config::keys::theme::PREFIX)
+        || path == skwd_config::keys::noctalia::THEME_MODE
     {
         info!("theme pick: {path}={value}");
         if app.config.theme_backend() == "static"
@@ -1129,9 +1130,6 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
         }
         ActionId::OpenThemeDesigner => {
             crate::app::helpers::theme_designer_open(app);
-        }
-        ActionId::RunDoctor => {
-            app.call_tracked("status.doctor", json!({}), Pending::Doctor);
         }
         ActionId::GenerateBugReport => {
             app.call_tracked("status.bug_report", json!({}), Pending::BugReport);

@@ -211,7 +211,7 @@ fn count_selector_singular() {
                 assert_eq!(one, two, "{locale} {key} same");
             }
         }
-        assert!(selector_keys >= 18, "{locale}: {selector_keys} selectors");
+        assert!(selector_keys >= 16, "{locale}: {selector_keys} selectors");
     }
 }
 

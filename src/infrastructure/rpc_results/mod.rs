@@ -10,7 +10,7 @@ mod status;
 pub use browser::{decode_browser_collections, decode_browser_download, decode_browser_search};
 #[allow(unused_imports)]
 pub use common::{DecodeError, DecodeResult};
-pub use diagnostics::{decode_bug_report, decode_diagnostic, decode_doctor, decode_weather};
+pub use diagnostics::{decode_bug_report, decode_diagnostic, decode_weather};
 pub use effects::{decode_effect_operation, decode_effects_list};
 pub use library::decode_library_list;
 pub use playlists::{

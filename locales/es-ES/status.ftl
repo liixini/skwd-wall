@@ -2,17 +2,6 @@ status-daemon-version-mismatch = Versión del daemon no coincide: skwd-walld es 
 status-daemon-connecting = Conectando con skwd-walld… Si no desaparece, revisa ~/.cache/skwd-wall-v2/skwd-walld.log.
 status-daemon-lost = Se perdió la conexión con skwd-walld. Reintentando; revisa ~/.cache/skwd-wall-v2/skwd-walld.log si no se reconecta.
 status-library-empty = Aún no hay fondos. Añade imágenes a { $directory } o abre el navegador en línea.
-status-diagnostics-passed =
-    { $count ->
-        [one] Diagnóstico: { $count } comprobación superada
-       *[other] Diagnóstico: las { $count } comprobaciones superadas
-    }
-status-diagnostics-more = (+{ $count } más)
-status-diagnostics-issues =
-    Diagnóstico: { $count } { $count ->
-        [one] problema
-       *[other] problemas
-    } - { $issues }{ $more }
 status-apply-file-missing = Error al aplicar: falta el archivo del fondo
 status-apply-renderer-failed = Error al aplicar: el renderizador no pudo iniciarse
 status-apply-decode-failed = Error al aplicar: no se pudo decodificar el fondo

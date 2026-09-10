@@ -2,17 +2,6 @@ status-daemon-version-mismatch = Daemon version mismatch: skwd-walld is { $daemo
 status-daemon-connecting = Connecting to skwd-walld… If this does not clear, check ~/.cache/skwd-wall-v2/skwd-walld.log.
 status-daemon-lost = Lost connection to skwd-walld. Retrying; check ~/.cache/skwd-wall-v2/skwd-walld.log if it does not reconnect.
 status-library-empty = No wallpapers yet. Add images to { $directory }, or open the online browser.
-status-diagnostics-passed =
-    { $count ->
-        [one] Diagnostics: { $count } check passed
-       *[other] Diagnostics: all { $count } checks passed
-    }
-status-diagnostics-more = (+{ $count } more)
-status-diagnostics-issues =
-    Diagnostics: { $count } { $count ->
-        [one] issue
-       *[other] issues
-    } - { $issues }{ $more }
 status-apply-file-missing = Apply failed: wallpaper file is missing
 status-apply-renderer-failed = Apply failed: renderer could not start
 status-apply-decode-failed = Apply failed: could not decode the wallpaper

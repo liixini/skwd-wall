@@ -58,13 +58,8 @@ settings-performance-clear-cache-action = Clear
 settings-performance-recompute-label = Recompute colours
 settings-performance-recompute-desc = Re-derive per-wallpaper colour bucket and saturation from existing thumbnails.
 settings-performance-recompute-action = Recompute
-settings-performance-diagnostics-card = Diagnostics
-settings-performance-diagnostics-card-desc = Check the environment for problems that stop wallpapers applying. Full detail goes to the log and `skwd-walld --doctor`.
-settings-performance-doctor-label = Run diagnostics
-settings-performance-doctor-desc = Run environment checks and summarise any issues.
-settings-performance-doctor-action = Run
 settings-performance-bug-report-label = Generate bug report
-settings-performance-bug-report-desc = Bundle version, environment, diagnostics, and recent logs into one file to attach to an issue.
+settings-performance-bug-report-desc = Bundle version, environment, and recent logs into one file to attach to an issue.
 settings-performance-bug-report-action = Generate
 
 settings-performance-device-label = Wallpaper GPU

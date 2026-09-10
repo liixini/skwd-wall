@@ -373,6 +373,18 @@ pub(super) fn tab_integrations(builder: &mut Builder<'_>) {
         tr("settings-integrations-noctalia-card"),
         tr("settings-integrations-noctalia-card-desc"),
     );
+    builder.dropdown(
+        tr("settings-integrations-noctalia-mode-label"),
+        tr("settings-integrations-noctalia-mode-desc"),
+        keys::noctalia::THEME_MODE,
+        &[
+            ("follow", tr("settings-integrations-noctalia-mode-follow")),
+            ("keep", tr("settings-integrations-noctalia-mode-keep")),
+            ("dark", tr("settings-integrations-noctalia-mode-dark")),
+            ("light", tr("settings-integrations-noctalia-mode-light")),
+            ("auto", tr("settings-integrations-noctalia-mode-auto")),
+        ],
+    );
     builder.toggle(
         tr("settings-integrations-noctalia-hover-label"),
         tr("settings-integrations-noctalia-hover-desc"),

@@ -58,13 +58,8 @@ settings-performance-clear-cache-action = Rensa
 settings-performance-recompute-label = Beräkna om färger
 settings-performance-recompute-desc = Härled om färggrupp och mättnad per bakgrundsbild från befintliga miniatyrer.
 settings-performance-recompute-action = Beräkna om
-settings-performance-diagnostics-card = Diagnostik
-settings-performance-diagnostics-card-desc = Kontrollera miljön efter problem som hindrar bakgrundsbilder från att tillämpas. Full detalj skrivs till loggen och `skwd-walld --doctor`.
-settings-performance-doctor-label = Kör diagnostik
-settings-performance-doctor-desc = Kör miljökontroller och sammanfatta eventuella problem.
-settings-performance-doctor-action = Kör
 settings-performance-bug-report-label = Skapa felrapport
-settings-performance-bug-report-desc = Packa version, miljö, diagnostik och de senaste loggarna i en fil att bifoga till ett ärende.
+settings-performance-bug-report-desc = Samla version, miljö och senaste loggar i en fil att bifoga till en felrapport.
 settings-performance-bug-report-action = Skapa
 
 settings-performance-device-label = Bakgrundens GPU

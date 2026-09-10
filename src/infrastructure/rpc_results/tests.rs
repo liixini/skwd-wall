@@ -138,22 +138,13 @@ fn effects_boundaries_return_domain_definitions() {
 fn diagnostic_boundaries_preserve_partial_and_future_fields() {
     envelope_contract(json!({}), decode_diagnostic);
     envelope_contract(json!({"weather": []}), decode_weather);
-    envelope_contract(json!({"checks": []}), decode_doctor);
     envelope_contract(json!({}), decode_bug_report);
 
     assert!(decode_weather(&json!({})).is_err());
-    assert!(decode_doctor(&json!({})).is_err());
     assert!(decode_diagnostic(&json!({"banner": 7})).is_err());
     assert!(decode_weather(&json!({"weather": {}})).is_err());
-    assert!(decode_doctor(&json!({"checks": "invalid"})).is_err());
     assert!(decode_bug_report(&json!({"path": false})).is_err());
 
-    let doctor = decode_doctor(&json!({
-        "checks": [{"status": "warn", "check": "renderer", "future": true}],
-        "future": true
-    }))
-    .unwrap();
-    assert_eq!(doctor.checks[0].check, "renderer");
     assert_eq!(decode_weather(&json!({"weather": ["rain", 7]})).unwrap().weather, ["rain"]);
 }
 

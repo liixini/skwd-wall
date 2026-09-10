@@ -22,7 +22,6 @@ settings-section-workshop-rendering = Workshop-rendering
 settings-section-power = Ström
 settings-section-picker-rendering = Väljarens rendering
 settings-section-wallpaper-efficiency = Bakgrundseffektivitet
-settings-section-diagnostics = Diagnostik
 settings-section-folders = Mappar
 settings-section-library-watching = Biblioteksbevakning
 settings-section-images-recovery = Bilder & återställning

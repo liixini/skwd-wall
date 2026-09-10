@@ -1,6 +1,5 @@
 use log::{info, warn};
 
-use crate::app::runtime::doctor_summary;
 #[allow(clippy::wildcard_imports)]
 use crate::app::*;
 
@@ -17,16 +16,6 @@ impl App {
             flt.weather_active = true;
             flt.current_weather = now;
         });
-    }
-
-    pub(super) fn on_doctor(&mut self, result: crate::contracts::daemon::DoctorResult) {
-        let summary = doctor_summary(&result.checks);
-        info!("doctor: {summary}");
-        for check in result.checks {
-            info!("doctor: [{}] {}: {}", check.status, check.check, check.detail);
-        }
-        self.show_toast(summary);
-        self.scene.touch();
     }
 
     pub(super) fn on_bug_report(&mut self, result: crate::contracts::daemon::BugReportResult) {

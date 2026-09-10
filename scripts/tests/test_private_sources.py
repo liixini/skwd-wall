@@ -65,7 +65,7 @@ class PrivateSourcePolicyTests(unittest.TestCase):
             self.assertIn(url, (ROOT / "Cargo.toml").read_text())
             self.assertIn(revision, (ROOT / "Cargo.toml").read_text())
             self.assertNotIn(f"repository: liixini/skwd-{name.replace('_', '-')}", workflow)
-        verify_revision = "e0f7fc62c3c814a8b56459868f04a8ce4d85531f"
+        verify_revision = "bf9f7f4b86c2e5ac8fcef7f2abcdc3a6e5b2cc15"
         self.assertIn("repository: liixini/skwd-verify", workflow)
         self.assertIn(f"ref: {verify_revision}", workflow)
         self.assertRegex(

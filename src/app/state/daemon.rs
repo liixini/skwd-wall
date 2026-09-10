@@ -15,7 +15,6 @@ pub(crate) enum Pending {
     ThemeBackends,
     EffectThemes,
     Diag,
-    Doctor,
     BugReport,
     PlList,
     PlMembers,

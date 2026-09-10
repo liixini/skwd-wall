@@ -290,19 +290,5 @@ pub fn card_back_applied_times(count: i64) -> String {
     catalog().format("card-back-applied-times", Some(&args))
 }
 
-pub fn status_diagnostics_passed(count: usize) -> String {
-    let mut args = FluentArgs::new();
-    args.set("count", count);
-    catalog().format("status-diagnostics-passed", Some(&args))
-}
-
-pub fn status_diagnostics_issues(count: usize, issues: &str, more: &str) -> String {
-    let mut args = FluentArgs::new();
-    args.set("count", count);
-    args.set("issues", issues);
-    args.set("more", more);
-    catalog().format("status-diagnostics-issues", Some(&args))
-}
-
 #[cfg(test)]
 mod tests;

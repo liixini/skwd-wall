@@ -214,21 +214,6 @@ fn hud_wakes_skip_scene_tick() {
 }
 
 #[test]
-fn doctor_summary_lines() {
-    let check = |status: &str, name: &str| crate::contracts::daemon::DoctorCheck {
-        status: status.into(),
-        check: name.into(),
-        detail: String::new(),
-    };
-    let all_pass = vec![check("pass", "a"), check("pass", "b")];
-    assert_eq!(doctor_summary(&all_pass), "Diagnostics: all 2 checks passed");
-    let mixed = vec![check("pass", "a"), check("fail", "skwd-wall-vk"), check("warn", "matugen")];
-    assert_eq!(doctor_summary(&mixed), "Diagnostics: 2 issues - skwd-wall-vk; matugen");
-    let single = vec![check("fail", "skwd-wall-vk")];
-    assert_eq!(doctor_summary(&single), "Diagnostics: 1 issue - skwd-wall-vk");
-}
-
-#[test]
 fn apply_error_messages() {
     assert_eq!(
         apply_error_message("file_missing", "no such file"),

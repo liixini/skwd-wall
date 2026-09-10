@@ -1,6 +1,36 @@
 use super::*;
 
 #[test]
+fn noctalia_mode_persists_before_retheme() {
+    let directory = tempfile::tempdir().unwrap();
+    let config_path = directory.path().join("config.json");
+    let mut config = Config::from_data(json!({"noctalia": {"themeMode": "follow"}}));
+    config.config_path.clone_from(&config_path);
+    config.persist();
+    let observed = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let observed_at_call = std::sync::Arc::clone(&observed);
+    let mut app = App::with_config_using(config, move |_| {
+        crate::infrastructure::ipc::DaemonClient::recording_with_observer(move |method, _| {
+            if method == "wall.retheme" {
+                let root: Value =
+                    serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
+                observed_at_call.lock().unwrap().push(root["noctalia"]["themeMode"].clone());
+            }
+        })
+    });
+    for mode in ["keep", "dark", "light", "auto", "follow"] {
+        let _ = update(
+            &mut app,
+            Message::Settings(crate::frontend::settings::SettingsMsg::Pick(
+                skwd_config::keys::noctalia::THEME_MODE.to_string(),
+                mode.to_string(),
+            )),
+        );
+    }
+    assert_eq!(*observed.lock().unwrap(), ["keep", "dark", "light", "auto", "follow"]);
+}
+
+#[test]
 fn settings_reload_sees_persisted() {
     let directory = tempfile::tempdir().unwrap();
     let config_path = directory.path().join("config.json");

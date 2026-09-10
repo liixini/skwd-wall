@@ -268,11 +268,6 @@ impl App {
                 result,
                 crate::infrastructure::rpc_results::decode_diagnostic,
             )),
-            Pending::Doctor => self.on_doctor(decoded!(
-                "status.doctor",
-                result,
-                crate::infrastructure::rpc_results::decode_doctor,
-            )),
             Pending::BugReport => self.on_bug_report(decoded!(
                 "status.bug_report",
                 result,

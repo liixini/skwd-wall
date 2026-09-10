@@ -642,9 +642,9 @@ fn compose_performance(cfg: &dyn SettingsSource) -> Vec<(Card, Vec<Row>)> {
     );
     section(
         &mut out,
-        tr("settings-section-diagnostics"),
-        tr("settings-performance-diagnostics-card-desc"),
-        take_card(&mut performance, tr("settings-performance-diagnostics-card")),
+        tr("settings-performance-bug-report-label"),
+        tr("settings-performance-bug-report-desc"),
+        take_card(&mut performance, tr("settings-performance-bug-report-label")),
     );
     out
 }

@@ -18,7 +18,6 @@ pub enum ActionId {
     OpenScheduleEditor,
     OpenThemeDesigner,
     ChooseRunningProcess,
-    RunDoctor,
     GenerateBugReport,
     ResetMotionFast,
     ResetMotionStandard,

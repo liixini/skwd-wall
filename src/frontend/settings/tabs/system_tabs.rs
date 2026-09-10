@@ -332,16 +332,7 @@ pub(super) fn tab_performance(builder: &mut Builder<'_>) {
         ActionId::RecomputeColors,
         tr("settings-performance-recompute-action"),
     );
-    builder.card(
-        tr("settings-performance-diagnostics-card"),
-        tr("settings-performance-diagnostics-card-desc"),
-    );
-    builder.action(
-        tr("settings-performance-doctor-label"),
-        tr("settings-performance-doctor-desc"),
-        ActionId::RunDoctor,
-        tr("settings-performance-doctor-action"),
-    );
+    builder.card(tr("settings-performance-bug-report-label"), "");
     builder.action(
         tr("settings-performance-bug-report-label"),
         tr("settings-performance-bug-report-desc"),

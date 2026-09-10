@@ -22,7 +22,6 @@ settings-section-workshop-rendering = Workshop rendering
 settings-section-power = Power
 settings-section-picker-rendering = Picker rendering
 settings-section-wallpaper-efficiency = Wallpaper efficiency
-settings-section-diagnostics = Diagnostics
 settings-section-folders = Folders
 settings-section-library-watching = Library watching
 settings-section-images-recovery = Images & recovery
