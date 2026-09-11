@@ -92,6 +92,22 @@ class LocalSuiteLaunchTests(unittest.TestCase):
         self.assertTrue(arguments.stage_only)
         self.assertTrue(arguments.theme_audition)
 
+    def test_launcher_refreshes_only_wall_by_default(self):
+        arguments = self.launch.parse_arguments(["--deploy-only"])
+        self.assertEqual(self.launch.selected_products(arguments), ("wall",))
+
+    def test_launcher_requires_explicit_all_products_selection(self):
+        arguments = self.launch.parse_arguments(["--deploy-only", "--all-products"])
+        self.assertEqual(self.launch.selected_products(arguments), ())
+
+    def test_launcher_passes_selected_products_to_stager(self):
+        prefix = self.root / "suite"
+        with mock.patch.object(self.launch.subprocess, "run") as run:
+            self.launch.run_stager(prefix, True, ("wall", "paper"))
+        command = run.call_args.args[0]
+        self.assertIn("--stage-only", command)
+        self.assertEqual(command[-4:], ["--product", "wall", "--product", "paper"])
+
     def test_daemon_socket_probe_passes_a_string_path_to_the_socket(self):
         runtime = self.root / "runtime"
         client = mock.Mock()
@@ -139,8 +155,9 @@ class LocalSuiteLaunchTests(unittest.TestCase):
             },
         )
 
-        def stage(_prefix, stage_only):
+        def stage(_prefix, stage_only, products):
             self.assertTrue(stage_only)
+            self.assertEqual(products, ("wall",))
             (bin_dir / "skwd-wall").write_bytes(b"new-wall")
 
         def owned(path):

@@ -97,6 +97,84 @@ class LocalSuiteStageTests(unittest.TestCase):
         self.assertNotIn("--workspace", commands[3])
         self.assertIn("skwd-wall", commands[3])
 
+    def test_product_scoped_build_only_builds_the_selected_product(self):
+        with mock.patch.object(self.stage.subprocess, "run") as run, mock.patch("builtins.print"):
+            self.stage.build_suite(self.products, ("wall",))
+        self.assertEqual(len(run.call_args_list), 1)
+        command = run.call_args.args[0]
+        self.assertEqual(
+            Path(command[command.index("--manifest-path") + 1]).parent,
+            self.products["wall"].root,
+        )
+
+    def test_product_scoped_refresh_preserves_other_artifacts_and_provenance(self):
+        destination = self.stage.publish_suite(self.products, self.prefix, "stage-only")
+        before_manifest = json.loads((destination / ".skwd-suite.json").read_text())
+        before_paper = {
+            name: (destination / name).read_bytes()
+            for name in self.stage.PRODUCT_BINARIES["paper"]
+        }
+        wall_source = self.products["wall"].bin_dir / "skwd-wall"
+        wall_source.write_text("wall:new\n", encoding="utf-8")
+        wall_source.chmod(0o755)
+
+        current = self.stage.publish_suite(
+            self.products,
+            self.prefix,
+            "built",
+            selected_products=("wall",),
+        )
+
+        after_manifest = json.loads((current / ".skwd-suite.json").read_text())
+        self.assertEqual(after_manifest["build_mode"], "built:wall")
+        self.assertEqual((current / "skwd-wall").read_text(), "wall:new\n")
+        self.assertEqual(
+            {
+                name: (current / name).read_bytes()
+                for name in self.stage.PRODUCT_BINARIES["paper"]
+            },
+            before_paper,
+        )
+        self.assertEqual(
+            after_manifest["repositories"]["paper"],
+            before_manifest["repositories"]["paper"],
+        )
+        before_artifacts = {
+            item["name"]: item for item in before_manifest["artifacts"]
+        }
+        after_artifacts = {
+            item["name"]: item for item in after_manifest["artifacts"]
+        }
+        for name in self.stage.PRODUCT_BINARIES["paper"]:
+            self.assertEqual(after_artifacts[name], before_artifacts[name])
+
+    def test_product_scoped_refresh_requires_an_installed_suite(self):
+        with self.assertRaisesRegex(
+            self.stage.StageError, "requires an installed complete suite"
+        ):
+            self.stage.publish_suite(
+                self.products,
+                self.prefix,
+                "built",
+                selected_products=("wall",),
+            )
+
+    def test_product_scoped_refresh_rejects_changed_preserved_artifact(self):
+        destination = self.stage.publish_suite(self.products, self.prefix, "stage-only")
+        before_wall = (destination / "skwd-wall").read_bytes()
+        (destination / "skwd-wall-vk").write_bytes(b"changed outside the manifest")
+        with self.assertRaisesRegex(
+            self.stage.StageError, "does not match its manifest"
+        ):
+            self.stage.publish_suite(
+                self.products,
+                self.prefix,
+                "built",
+                selected_products=("wall",),
+            )
+        self.assertEqual((destination / "skwd-wall").read_bytes(), before_wall)
+        self.assertEqual(list(self.prefix.glob(".bin.stage-*")), [])
+
     def test_refresh_replaces_the_complete_bin_directory(self):
         destination = self.stage.publish_suite(self.products, self.prefix, "stage-only")
         original_inode = destination.stat().st_ino

@@ -51,6 +51,19 @@ def parse_arguments(argv=None):
         default=Path(configured_prefix),
         help="suite root containing bin (default: ~/.local/lib/skwd-suite)",
     )
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument(
+        "--product",
+        action="append",
+        choices=("wall", "deck", "paper", "lens"),
+        dest="products",
+        help="refresh one product and preserve the others; repeat as needed (default: wall)",
+    )
+    selection.add_argument(
+        "--all-products",
+        action="store_true",
+        help="refresh Wall, Deck, Paper, and Lens together",
+    )
     return parser.parse_args(argv)
 
 
@@ -301,7 +314,13 @@ def restart_daemon(bin_dir, previous_pids):
     raise LaunchError("staged skwd-walld did not retain the daemon socket")
 
 
-def run_stager(prefix, stage_only):
+def selected_products(arguments):
+    if arguments.all_products:
+        return ()
+    return tuple(dict.fromkeys(arguments.products or ("wall",)))
+
+
+def run_stager(prefix, stage_only, products):
     command = [
         sys.executable,
         str(ROOT / "scripts/stage-local-suite.py"),
@@ -311,11 +330,14 @@ def run_stager(prefix, stage_only):
     ]
     if stage_only:
         command.append("--stage-only")
+    for product in products:
+        command.extend(("--product", product))
     subprocess.run(command, check=True)
 
 
 def main(argv=None):
     arguments = parse_arguments(argv)
+    selected = selected_products(arguments)
     prefix = Path(os.path.abspath(os.fspath(arguments.prefix.expanduser())))
     if prefix == Path("/") or prefix == Path.home():
         print(f"launch-local-suite: refusing unsafe suite prefix: {prefix}", file=sys.stderr)
@@ -333,7 +355,7 @@ def main(argv=None):
             wall_pids = suite_processes(bin_dir / WALL_NAME)
             paper_pids = suite_processes(bin_dir / PAPER_NAME)
             daemon_pids = suite_processes(bin_dir / DAEMON_NAME)
-            run_stager(prefix, arguments.stage_only)
+            run_stager(prefix, arguments.stage_only, selected)
             products = read_manifest(bin_dir)
             after_hashes = suite_hashes(bin_dir, products)
             changed = changed_artifacts(before_hashes, after_hashes)

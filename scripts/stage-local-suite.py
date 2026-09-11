@@ -79,6 +79,13 @@ def parse_arguments(argv=None):
         default=Path(configured_prefix),
         help="suite root containing bin (default: ~/.local/lib/skwd-suite)",
     )
+    parser.add_argument(
+        "--product",
+        action="append",
+        choices=PRODUCT_BINARIES,
+        dest="products",
+        help="refresh one product and preserve the others from the installed suite; repeat as needed",
+    )
     return parser.parse_args(argv)
 
 
@@ -98,19 +105,25 @@ def product_roots():
     return products
 
 
-def validate_products(products):
+def validate_products(products, selected_products=None):
     if set(products) != set(PRODUCT_BINARIES):
         raise StageError("product set does not match the suite manifest")
+    selected = set(selected_products or PRODUCT_BINARIES)
     for name, product in products.items():
         if product.name != name:
             raise StageError(f"product key/name mismatch: {name}/{product.name}")
+        if name not in selected:
+            continue
         manifest = product.root / "Cargo.toml"
         if not manifest.is_file() or manifest.is_symlink():
             raise StageError(f"missing regular Cargo manifest for {name}: {manifest}")
 
 
-def build_suite(products):
+def build_suite(products, selected_products=None):
+    selected = set(selected_products or BUILD_ORDER)
     for name in BUILD_ORDER:
+        if name not in selected:
+            continue
         product = products[name]
         command = [
             "cargo",
@@ -361,7 +374,8 @@ def artifacts_equal(first, second):
     )
 
 
-def sources_equal_destination(products, destination):
+def sources_equal_destination(products, destination, selected_products=None):
+    selected = set(selected_products or PRODUCT_BINARIES)
     names = {entry.name for entry in destination.iterdir()} - {MANIFEST_NAME}
     return names == ARTIFACT_NAMES and all(
         artifact_equal(
@@ -370,23 +384,79 @@ def sources_equal_destination(products, destination):
             name in EXECUTABLES,
         )
         for product_name, names in PRODUCT_BINARIES.items()
+        if product_name in selected
         for name in names
     )
 
 
-def publish_suite(products, prefix, build_mode, if_changed=False):
-    validate_products(products)
+def read_installed_manifest(destination):
+    path = destination / MANIFEST_NAME
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise StageError(f"cannot read installed suite manifest {path}: {error}") from error
+    if manifest.get("format") != 1:
+        raise StageError(f"unsupported installed suite manifest: {path}")
+    repositories = manifest.get("repositories")
+    artifacts = manifest.get("artifacts")
+    if not isinstance(repositories, dict) or not isinstance(artifacts, list):
+        raise StageError(f"invalid installed suite manifest: {path}")
+    by_name = {}
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            raise StageError(f"invalid artifact entry in installed suite manifest: {path}")
+        name = artifact.get("name")
+        product = artifact.get("product")
+        if (
+            name not in ARTIFACT_NAMES
+            or product not in PRODUCT_BINARIES
+            or name not in PRODUCT_BINARIES[product]
+            or name in by_name
+        ):
+            raise StageError(f"invalid artifact entry in installed suite manifest: {path}")
+        by_name[name] = artifact
+    if set(by_name) != ARTIFACT_NAMES or set(repositories) != set(PRODUCT_BINARIES):
+        raise StageError(f"incomplete installed suite manifest: {path}")
+    return repositories, by_name
+
+
+def preserved_artifact(source, destination, previous):
+    artifact = copy_artifact(source, destination, source.name in EXECUTABLES)
+    if artifact["sha256"] != previous.get("sha256"):
+        raise StageError(f"installed artifact does not match its manifest: {source}")
+    for field in ("source", "source_mode"):
+        if field in previous:
+            artifact[field] = previous[field]
+    return artifact
+
+
+def publish_suite(
+    products, prefix, build_mode, if_changed=False, selected_products=None
+):
+    selected = set(selected_products or PRODUCT_BINARIES)
+    validate_products(products, selected)
     prefix, destination = validate_prefix(prefix)
+    partial = selected != set(PRODUCT_BINARIES)
     lock_path = prefix / ".stage.lock"
     with open_stage_lock(lock_path) as lock:
         try:
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
             raise StageError(f"another suite refresh holds {lock_path}") from error
+        previous_repositories = None
+        previous_artifacts = None
         if destination.exists() or destination.is_symlink():
-            validate_suite_directory(destination, True, False, True)
-            if if_changed and sources_equal_destination(products, destination):
+            validate_suite_directory(destination, True, partial, not partial)
+            if partial:
+                previous_repositories, previous_artifacts = read_installed_manifest(destination)
+            if (
+                if_changed
+                and not partial
+                and sources_equal_destination(products, destination, selected)
+            ):
                 return destination
+        elif partial:
+            raise StageError("product-scoped refresh requires an installed complete suite")
 
         stage = Path(tempfile.mkdtemp(prefix=".bin.stage-", dir=prefix))
         stage_safe_to_remove = True
@@ -397,20 +467,33 @@ def publish_suite(products, prefix, build_mode, if_changed=False):
             repositories = {}
             for product_name in ("wall", "deck", "paper", "lens"):
                 product = products[product_name]
-                repositories[product_name] = {
-                    "root": str(product.root),
-                    **git_state(product.root),
-                }
+                if product_name in selected:
+                    repositories[product_name] = {
+                        "root": str(product.root),
+                        **git_state(product.root),
+                    }
+                else:
+                    repositories[product_name] = previous_repositories[product_name]
                 for name in PRODUCT_BINARIES[product_name]:
-                    source = product.bin_dir / name
-                    artifact = copy_artifact(source, stage / name, name in EXECUTABLES)
+                    if product_name in selected:
+                        source = product.bin_dir / name
+                        artifact = copy_artifact(source, stage / name, name in EXECUTABLES)
+                    else:
+                        source = destination / name
+                        artifact = preserved_artifact(
+                            source, stage / name, previous_artifacts[name]
+                        )
                     artifact["product"] = product_name
                     artifacts.append(artifact)
 
             manifest = {
                 "format": 1,
                 "generated_at": datetime.now(timezone.utc).isoformat(),
-                "build_mode": build_mode,
+                "build_mode": (
+                    build_mode
+                    if not partial
+                    else f"{build_mode}:{','.join(sorted(selected))}"
+                ),
                 "repositories": repositories,
                 "artifacts": artifacts,
             }
@@ -473,12 +556,19 @@ def publish_suite(products, prefix, build_mode, if_changed=False):
 def main(argv=None):
     arguments = parse_arguments(argv)
     products = product_roots()
+    selected = tuple(dict.fromkeys(arguments.products or PRODUCT_BINARIES))
     try:
-        validate_products(products)
+        validate_products(products, selected)
         if not arguments.stage_only:
-            build_suite(products)
+            build_suite(products, selected)
         mode = "stage-only" if arguments.stage_only else "built"
-        destination = publish_suite(products, arguments.prefix, mode, arguments.if_changed)
+        destination = publish_suite(
+            products,
+            arguments.prefix,
+            mode,
+            arguments.if_changed,
+            selected,
+        )
     except (StageError, OSError, subprocess.CalledProcessError) as error:
         print(f"stage-local-suite: {error}", file=sys.stderr)
         return 1
