@@ -123,7 +123,9 @@ fn place_tag_flow(
 fn action_specs(panel: &BackPanel, max_width: f32) -> Vec<(ActionKind, f32)> {
     let mut specs = Vec::with_capacity(5);
     if panel.overview_available {
-        specs.push((ActionKind::Overview, action_width(tr("card-back-overview"))));
+        let width = label_width(tr("card-back-overview"), 22.0)
+            .max(label_width(tr("card-back-overview-set"), 42.0));
+        specs.push((ActionKind::Overview, width.max(112.0)));
     }
     if panel.static_img {
         specs.push((ActionKind::Effects, action_width(tr("card-back-effects"))));

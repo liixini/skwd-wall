@@ -1,7 +1,6 @@
 use iced::widget::{canvas, container};
 use iced::{Alignment, Element, Length, Padding};
 
-use crate::domain::library::catalog::WallpaperKind;
 use crate::frontend::scene::layout::Mode;
 
 #[allow(clippy::wildcard_imports)]
@@ -45,11 +44,16 @@ pub(crate) fn bar_intent_message(intent: crate::frontend::ui::BarIntent) -> Mess
     }
 }
 
-pub(super) fn overview_set(app: &App) -> bool {
+pub(in crate::app) fn overview_set(app: &App) -> bool {
+    if !app.config.flag_default_config(skwd_config::keys::niri::OVERVIEW_BACKDROP)
+        || app.config.flag_default_config(skwd_config::keys::niri::BACKDROP_FOLLOW_WALLPAPER)
+    {
+        return false;
+    }
     app.scene.flipped().and_then(|fi| app.library_session.filtered.get(fi)).is_some_and(|&si| {
         let it = &app.library_session.library.catalog().items[si as usize];
-        let img = if it.kind == WallpaperKind::Static { &it.path } else { &it.thumb };
-        !img.is_empty() && app.config.str_path(skwd_config::keys::niri::BACKDROP) == *img
+        let img = it.backdrop_source();
+        !img.is_empty() && app.config.str_path(skwd_config::keys::niri::BACKDROP) == img
     })
 }
 

@@ -9,6 +9,13 @@ use crate::i18n::tr;
 use super::geometry::BackGeometry;
 use super::layout::{BackLayout, back_rise};
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ActionStyle {
+    Primary,
+    Selected,
+    Secondary,
+}
+
 pub(super) fn draw_actions(
     frame: &mut Frame,
     palette: &Palette,
@@ -51,7 +58,7 @@ pub(super) fn draw_actions(
             overview,
             if overview_set { tr("card-back-overview-set") } else { tr("card-back-overview") },
             palette.primary,
-            true,
+            if overview_set { ActionStyle::Selected } else { ActionStyle::Primary },
             3.35,
         );
     }
@@ -65,7 +72,7 @@ pub(super) fn draw_actions(
             effects,
             tr("card-back-effects"),
             palette.primary,
-            false,
+            ActionStyle::Secondary,
             3.55,
         );
     }
@@ -79,7 +86,7 @@ pub(super) fn draw_actions(
             scene_properties,
             tr("card-back-scene-properties"),
             palette.primary,
-            false,
+            ActionStyle::Secondary,
             3.65,
         );
     }
@@ -93,7 +100,7 @@ pub(super) fn draw_actions(
             reset,
             tr("card-back-reset-thumbnail"),
             palette.primary,
-            false,
+            ActionStyle::Secondary,
             3.7,
         );
     }
@@ -106,7 +113,7 @@ pub(super) fn draw_actions(
         layout.playlist,
         tr("card-back-playlist"),
         palette.primary,
-        false,
+        ActionStyle::Secondary,
         3.75,
     );
     draw_action(
@@ -118,7 +125,7 @@ pub(super) fn draw_actions(
         layout.delete,
         tr("card-back-delete"),
         palette.destructive(),
-        false,
+        ActionStyle::Secondary,
         3.95,
     );
 }
@@ -132,7 +139,7 @@ fn draw_action(
     rectangle: (f32, f32, f32, f32),
     label: &str,
     accent: Color,
-    primary: bool,
+    style: ActionStyle,
     slot: f32,
 ) {
     let (amount, delta_y) = back_rise(progress, slot);
@@ -143,7 +150,20 @@ fn draw_action(
     let (x, y, width, height) = (rectangle.0, rectangle.1 + delta_y, rectangle.2, rectangle.3);
     let control = geometry.path(&Path::rectangle(Point::new(x, y), Size::new(width, height)));
     frame.fill(&control, with_alpha(palette.background, 0.58 * alpha));
-    if primary {
+    let primary = style == ActionStyle::Primary;
+    let selected = style == ActionStyle::Selected;
+    if selected {
+        frame.fill(&control, with_alpha(accent, 0.16 * alpha));
+        let check = geometry.path(&Path::new(|builder| {
+            builder.move_to(Point::new(x + 10.0, y + height * 0.5));
+            builder.line_to(Point::new(x + 13.0, y + height * 0.5 + 3.0));
+            builder.line_to(Point::new(x + 19.0, y + height * 0.5 - 4.0));
+        }));
+        frame.stroke(
+            &check,
+            Stroke::default().with_color(with_alpha(accent, alpha)).with_width(1.8),
+        );
+    } else if primary {
         let slant = height * 0.72;
         let sweep = amount.mul_add(width + slant * 2.0, -slant);
         let top = (sweep - slant).clamp(0.0, width);
@@ -173,7 +193,7 @@ fn draw_action(
         frame,
         mid_text(
             label.to_string(),
-            Point::new(x + width * 0.5, y + height * 0.5),
+            Point::new(x + width * 0.5 + if selected { 7.0 } else { 0.0 }, y + height * 0.5),
             with_alpha(if primary { palette.primary_text } else { palette.surface_text }, alpha),
             9.0,
             UI_FONT,

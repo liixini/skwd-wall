@@ -6,6 +6,7 @@ mod filters;
 mod frame_clock;
 mod input;
 mod library_events;
+mod overview;
 mod playlists;
 mod runtime;
 mod scene;
