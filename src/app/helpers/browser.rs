@@ -64,3 +64,55 @@ pub(crate) fn browser_key_nav(app: &mut App, delta: i64) -> Task<Message> {
     app.retick();
     Task::none()
 }
+
+pub(crate) fn apply_browser_defaults(
+    browser: &mut crate::frontend::browser::Browser,
+    config: &Config,
+) {
+    use crate::frontend::browser::{
+        RATIOS, RESOLUTIONS, SORT_KEYS, STEAM_CATEGORIES, STEAM_RESOLUTIONS, STEAM_SORTS,
+        STEAM_TREND_DAYS, STEAM_TYPES, Source, TOP_RANGES,
+    };
+    use skwd_config::keys::{steam, wallhaven};
+
+    let choice = |path: &str, choices: &[&str], fallback: &str| {
+        let value = config.str_path(path);
+        if choices.contains(&value.as_str()) { value } else { fallback.to_string() }
+    };
+    match browser.source {
+        Source::Wallhaven => {
+            browser.request.sorting = choice(wallhaven::DEFAULT_SORT, &SORT_KEYS, "toplist");
+            let request = &mut browser.request.wallhaven;
+            request.top_range =
+                choice(wallhaven::DEFAULT_TOP_RANGE, &TOP_RANGES.map(|(key, _)| key), "1M");
+            request.atleast =
+                choice(wallhaven::DEFAULT_ATLEAST, &RESOLUTIONS.map(|(key, _)| key), "");
+            request.atmost =
+                choice(wallhaven::DEFAULT_ATMOST, &RESOLUTIONS.map(|(key, _)| key), "");
+            request.ratios = choice(wallhaven::DEFAULT_RATIOS, &RATIOS.map(|(key, _)| key), "");
+            request.general = config.flag_default_config(wallhaven::DEFAULT_GENERAL);
+            request.anime = config.flag_default_config(wallhaven::DEFAULT_ANIME);
+            request.people = config.flag_default_config(wallhaven::DEFAULT_PEOPLE);
+            if !request.general && !request.anime && !request.people {
+                request.general = true;
+            }
+            request.sfw = config.flag_default_config(wallhaven::DEFAULT_SFW);
+            request.sketchy = config.flag_default_config(wallhaven::DEFAULT_SKETCHY);
+            browser.request.nsfw = config.flag_default_config(wallhaven::DEFAULT_NSFW);
+            if !request.sfw && !request.sketchy && !browser.request.nsfw {
+                request.sfw = true;
+            }
+        }
+        Source::Steam => {
+            browser.request.sorting = choice(steam::DEFAULT_SORT, &STEAM_SORTS, "3");
+            browser.request.steam.kind = choice(steam::DEFAULT_TYPE, &STEAM_TYPES, "");
+            browser.request.steam.category = choice(steam::DEFAULT_CATEGORY, &STEAM_CATEGORIES, "");
+            browser.request.steam.resolution =
+                choice(steam::DEFAULT_RESOLUTION, &STEAM_RESOLUTIONS, "");
+            browser.request.steam.trend_days =
+                choice(steam::DEFAULT_TREND_DAYS, &STEAM_TREND_DAYS, "7");
+            browser.request.nsfw = config.flag_default_config(steam::DEFAULT_NSFW);
+        }
+        _ => {}
+    }
+}

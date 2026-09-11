@@ -12,6 +12,9 @@ pub(super) fn update(app: &mut App, msg: BrowserMsg) -> Task<Message> {
         BrowserMsg::SwitchSource(source) => switch_browser_source(app, source),
         BrowserMsg::SearchInput(query) => browser_edit(app, false, |br| br.request.query = query),
         BrowserMsg::SearchSubmit => {
+            if let Some(browser) = app.source_browser.browser.as_mut() {
+                browser.session.submitted_search = Some(browser.search_request(1, ""));
+            }
             app.run_browser_search(false);
             Task::none()
         }
@@ -213,7 +216,13 @@ pub(super) fn browser_edit(
     if let Some(br) = app.source_browser.browser.as_mut() {
         func(br);
     }
-    if search {
+    if search
+        && app
+            .source_browser
+            .browser
+            .as_ref()
+            .is_some_and(|browser| !app.config.browser_apply_button(browser.source))
+    {
         app.run_browser_search(false);
     }
     Task::none()

@@ -138,6 +138,8 @@ pub(crate) fn ui_state_json(app: &App) -> String {
             },
         },
         "filter": {
+            "folder": app.library_session.filters.folder,
+            "show_hidden_folders": app.library_session.filters.show_hidden_folders,
             "tags": app.library_session.filters.tags,
             "kind": app.library_session.filters.kind,
             "resolution": app.library_session.filters.resolution,

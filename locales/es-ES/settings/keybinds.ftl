@@ -40,3 +40,8 @@ settings-keybinds-reset-label = Restablecer a valores por defecto
 settings-keybinds-reset-desc = Restaura todas las asignaciones a su tecla o clic integrado.
 settings-keybinds-reset-action = Restablecer controles
 keybind-scene-properties = Propiedades de la escena
+
+keybind-folder-prev = Carpeta anterior
+keybind-folder-next = Carpeta siguiente
+keybind-folder-toggle = Alternar Todas/Principal
+keybind-hidden-folders = Mostrar/ocultar carpetas ocultas

@@ -7,7 +7,7 @@ pub struct KeyBindingDescriptor {
     pub title_key: &'static str,
 }
 
-pub const KEY_BINDINGS: [KeyBindingDescriptor; 20] = [
+pub const KEY_BINDINGS: [KeyBindingDescriptor; 24] = [
     KeyBindingDescriptor {
         action: InputAction::Select,
         path: skwd_config::keys::keybind::SELECT,
@@ -72,6 +72,26 @@ pub const KEY_BINDINGS: [KeyBindingDescriptor; 20] = [
         action: InputAction::FilterBar,
         path: skwd_config::keys::keybind::FILTER_BAR,
         title_key: "keybind-filter-bar",
+    },
+    KeyBindingDescriptor {
+        action: InputAction::FolderPrev,
+        path: skwd_config::keys::keybind::FOLDER_PREV,
+        title_key: "keybind-folder-prev",
+    },
+    KeyBindingDescriptor {
+        action: InputAction::FolderNext,
+        path: skwd_config::keys::keybind::FOLDER_NEXT,
+        title_key: "keybind-folder-next",
+    },
+    KeyBindingDescriptor {
+        action: InputAction::FolderToggle,
+        path: skwd_config::keys::keybind::FOLDER_TOGGLE,
+        title_key: "keybind-folder-toggle",
+    },
+    KeyBindingDescriptor {
+        action: InputAction::HiddenFolders,
+        path: skwd_config::keys::keybind::HIDDEN_FOLDERS,
+        title_key: "keybind-hidden-folders",
     },
     KeyBindingDescriptor {
         action: InputAction::ColorPrev,

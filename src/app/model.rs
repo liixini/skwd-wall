@@ -62,6 +62,7 @@ impl App {
     pub(in crate::app) fn rebuild_folder_options(&mut self) {
         let mut options = vec![String::new(), String::from("*")];
         options.extend(self.library_session.library.catalog().available_folders());
+        options.retain(|folder| self.library_session.filters.folder_visible(folder));
         self.library_session.folder_options = options;
     }
 }

@@ -95,6 +95,12 @@ Note that **I use AI tooling** in my development just like I do in my profession
 ### Base wallpaper path
 The default is a `Wallpapers` folder inside your desktop's Pictures directory, including localized names such as `Imágenes`. Existing `~/Pictures/Wallpapers` libraries keep their location. You can choose another folder in settings; spaces and non-English names work, and settings open even before you add a wallpaper.
 
+### Download filters
+
+In **Settings > Sources**, expand a source and enable **Show Apply button** to change several download filters before sending one search request. Press **Apply**, or press Enter in the search field, to search with all your changes. Each source has its own choice. The button is hidden by default, so each filter change searches immediately.
+
+Expand **Wallhaven** or **Steam Workshop** to choose the default filters for each new browser session. Changes made while browsing last until the browser closes.
+
 ### Compositor-specific examples on how to launch
 Skwd-wall-v2 comes with a .desktop file so you can launch it through your launcher. But should you wish to keybind it, this is how you do that.
 

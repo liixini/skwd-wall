@@ -40,3 +40,8 @@ settings-keybinds-reset-label = Reset to defaults
 settings-keybinds-reset-desc = Restore every binding to its built-in key or click.
 settings-keybinds-reset-action = Reset controls
 keybind-scene-properties = Scene properties
+
+keybind-folder-prev = Previous folder
+keybind-folder-next = Next folder
+keybind-folder-toggle = Toggle All/Main
+keybind-hidden-folders = Show/hide hidden folders

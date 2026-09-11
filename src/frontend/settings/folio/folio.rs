@@ -1015,6 +1015,7 @@ fn reading_surface<'a>(input: ReadingInput<'a>, focus: FocusCtx<'_>) -> Element<
     let has_transition_preview = take_transition_preview(&mut settings);
     let controls = field_grid(
         settings,
+        tab == "sources",
         values,
         has_selected_preset,
         focus,
@@ -1050,6 +1051,7 @@ fn reading_surface<'a>(input: ReadingInput<'a>, focus: FocusCtx<'_>) -> Element<
 
 fn field_grid<'a>(
     settings: Vec<Row>,
+    full_width: bool,
     values: &'a HashMap<String, String>,
     has_selected_preset: bool,
     focus: FocusCtx<'_>,
@@ -1072,7 +1074,7 @@ fn field_grid<'a>(
     let mut remaining: Vec<_> = settings.into_iter().enumerate().collect();
     let mut page = column![].spacing(30.0 * scale);
     while !remaining.is_empty() {
-        if remaining[0].1.control.is_wide_field() {
+        if full_width || remaining[0].1.control.is_wide_field() {
             let (index, setting) = remaining.remove(0);
             page = page.push(field(
                 setting,

@@ -1710,7 +1710,7 @@ fn appearance_settings_reach_render() {
         .collect();
     let widest = wall_widths.iter().copied().fold(0.0, f32::max);
     let narrowest = wall_widths.iter().copied().fold(f32::MAX, f32::min);
-    assert!((widest - narrowest - 4.0).abs() < 0.05, "widest={widest}, narrowest={narrowest}");
+    assert!((widest - narrowest).abs() < 0.05, "widest={widest}, narrowest={narrowest}");
 
     let straight = rendered_scene(Mode::Slices, SliceParams { skew: 0.0, ..base_sp() }, base_gp());
     let sheared = rendered_scene(Mode::Slices, SliceParams { skew: 30.0, ..base_sp() }, base_gp());
@@ -2087,4 +2087,75 @@ fn grid_hover_border_fade() {
             .iter()
             .any(|inst| inst.params[1] > 0.0 && (inst.border[3] - 1.0).abs() < 1e-4)
     );
+}
+
+#[test]
+fn grid_thumbnail_spacing_matches_configured_gaps() {
+    use std::sync::{Arc, Mutex};
+
+    let uploads: UploadQueue = Arc::new(Mutex::new(Vec::new()));
+    let (tx, _rx) = futures_channel::mpsc::unbounded();
+    let pool = DecodePool::start(uploads.clone(), tx, 0);
+    let mut store = Catalog::default();
+    for index in 0..8 {
+        store.items.push(Wallpaper {
+            key: format!("wall-{index}"),
+            kind: WallpaperKind::Static,
+            width: 100,
+            height: 60,
+            ..Default::default()
+        });
+    }
+    let filtered: Vec<u32> = (0..8).collect();
+    let palette = Palette::default();
+    let mut map = AtlasMap::new(8);
+    for index in 0..8 {
+        map.near.acquire(index);
+        map.near.mark_ready(index);
+    }
+    let mut atlas = Some(map);
+    for gap in [0.0, 8.0] {
+        for border in [0.0, 2.0, 8.0] {
+            for hover in [None, Some(1)] {
+                let mut scene = test_scene(Mode::Grid);
+                scene.viewport = (1280.0, 720.0);
+                scene.gp.gap_x = gap;
+                scene.gp.gap_y = gap;
+                scene.gp.corner_radius = 0.0;
+                scene.gp.border_width = border;
+                scene.hover = hover;
+                scene.motion.entrance.snap(1.0);
+                scene.motion.visibility.snap(1.0);
+                scene.rebuild(RebuildCtx {
+                    catalog: &store,
+                    filtered: &filtered,
+                    atlas: &mut atlas,
+                    pool: &pool,
+                    palette: &palette,
+                    uploads: &uploads,
+                    hover_fades: None,
+                });
+                let bodies: Vec<_> = scene
+                    .render
+                    .instances
+                    .iter()
+                    .filter(|instance| instance.misc[0] == 1)
+                    .collect();
+                assert_eq!(bodies.len(), 8);
+                let a = bodies[0].rect;
+                let right = bodies[1].rect;
+                let below = bodies[4].rect;
+                assert_eq!(right[0] - right[2] - (a[0] + a[2]), gap);
+                assert_eq!(below[1] - below[3] - (a[1] + a[3]), gap);
+                for (index, body) in bodies.iter().enumerate() {
+                    let hit = scene.render.hits.iter().find(|hit| hit.index == index).unwrap();
+                    assert_eq!(body.rect, [hit.cx, hit.cy, hit.hw, hit.hh]);
+                }
+                if hover.is_some() {
+                    assert_eq!(bodies[1].params[1], border);
+                    assert_eq!(bodies[1].border[3], 1.0);
+                }
+            }
+        }
+    }
 }

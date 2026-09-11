@@ -13,6 +13,10 @@ pub enum InputAction {
     TagCloud,
     TagMode,
     FilterBar,
+    FolderPrev,
+    FolderNext,
+    FolderToggle,
+    HiddenFolders,
     ColorPrev,
     ColorNext,
     NavLeft,
@@ -23,7 +27,7 @@ pub enum InputAction {
 }
 
 impl InputAction {
-    pub const ALL: [Self; 20] = [
+    pub const ALL: [Self; 24] = [
         Self::Select,
         Self::Apply,
         Self::Flip,
@@ -37,6 +41,10 @@ impl InputAction {
         Self::TagCloud,
         Self::TagMode,
         Self::FilterBar,
+        Self::FolderPrev,
+        Self::FolderNext,
+        Self::FolderToggle,
+        Self::HiddenFolders,
         Self::ColorPrev,
         Self::ColorNext,
         Self::NavLeft,
@@ -61,6 +69,10 @@ impl InputAction {
             Self::TagCloud => "shift+down",
             Self::TagMode => "t",
             Self::FilterBar => "shift+up",
+            Self::FolderPrev => "ctrl+left",
+            Self::FolderNext => "ctrl+right",
+            Self::FolderToggle => "ctrl+m",
+            Self::HiddenFolders => "ctrl+h",
             Self::ColorPrev => "shift+left",
             Self::ColorNext => "shift+right",
             Self::NavLeft => "left",

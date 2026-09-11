@@ -31,3 +31,19 @@ settings-sources-bing-enable-label = Aktivera Bing
 settings-sources-bing-enable-desc = Visa Bing dagligen i väljaren för nedladdningskällor.
 settings-sources-bing-market-label = Marknad
 settings-sources-bing-market-desc = Bings marknads-/regionskod, t.ex. en-US, en-GB, ja-JP.
+
+settings-source-defaults-card = Standardfilter
+settings-source-defaults-desc = Använd dessa filter när en ny bläddringssession öppnas. Ändringar under bläddringen gäller tills webbläsaren stängs.
+settings-source-default-sort = Standardsortering
+settings-source-default-range = Standardtidsperiod
+settings-source-default-min = Lägsta upplösning
+settings-source-default-max = Högsta upplösning
+settings-source-default-ratio = Standardbildförhållande
+settings-source-default-type = Standardtyp av bakgrund
+settings-source-default-resolution = Standardupplösning
+settings-source-default-category = Standardkategori
+settings-source-default-category-desc = Ta med denna kategori när Wallhaven öppnas. Om ingen väljs används Allmänt.
+settings-source-default-purity-desc = Ta med detta innehåll när källan öppnas. Wallhaven använder SFW om ingen innehållsnivå väljs.
+
+settings-sources-apply-label = Visa knappen Verkställ
+settings-sources-apply-desc = Visa en Verkställ-knapp för den här källan. Ändra flera filter och tryck sedan på Verkställ eller Enter för att skicka en sökförfrågan. När inställningen är av söker varje filterändring direkt.

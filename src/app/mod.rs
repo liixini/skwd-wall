@@ -29,9 +29,9 @@ pub use view::{view, view_single};
 
 pub(crate) use constants::PALETTE_CACHE_CAP;
 pub(crate) use helpers::{
-    apply_task, begin_card_tag_edit, browser_key_nav, browser_wall_params, commit_mass_tags,
-    commit_pending_tag, ghost_completion, mass_tag_suggestions, open_effects, remove_tag_at,
-    sync_card_tag_input, toggle_card_tag_drawer, toggle_favourite,
+    apply_browser_defaults, apply_task, begin_card_tag_edit, browser_key_nav, browser_wall_params,
+    commit_mass_tags, commit_pending_tag, ghost_completion, mass_tag_suggestions, open_effects,
+    remove_tag_at, sync_card_tag_input, toggle_card_tag_drawer, toggle_favourite,
 };
 pub(crate) use policy::{
     empty_library_hint, needs_list_refresh, scene_visibility, version_mismatch,

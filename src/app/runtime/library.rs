@@ -176,6 +176,7 @@ impl App {
                     "color": self.library_session.filters.color,
                     "kind": self.library_session.filters.kind,
                     "folder": self.library_session.filters.folder,
+                    "showHiddenFolders": self.library_session.filters.show_hidden_folders,
                     "sort": self.library_session.filters.sort,
                     "orient": self.library_session.filters.orient,
                     "resolution": self.library_session.filters.resolution,

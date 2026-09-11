@@ -358,6 +358,7 @@ pub struct SteamRequestState {
 }
 
 pub struct BrowserSessionState {
+    pub submitted_search: Option<SearchRequest>,
     pub search_generation: u64,
     pub page: u32,
     pub last_page: u32,
@@ -435,6 +436,7 @@ impl Browser {
                 },
             },
             session: BrowserSessionState {
+                submitted_search: None,
                 search_generation: 0,
                 page: 1,
                 last_page: 1,

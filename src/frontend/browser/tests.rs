@@ -394,6 +394,7 @@ fn busy_session_signals() {
     assert!(!browser.busy());
 
     let BrowserSessionState {
+        submitted_search: _,
         search_generation: _,
         page: _,
         last_page: _,

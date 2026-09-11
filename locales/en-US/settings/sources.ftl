@@ -31,3 +31,19 @@ settings-sources-bing-enable-label = Enable Bing
 settings-sources-bing-enable-desc = Show Bing Daily in the download source picker.
 settings-sources-bing-market-label = Market
 settings-sources-bing-market-desc = Bing market/region code, e.g. en-US, en-GB, ja-JP.
+
+settings-source-defaults-card = Default filters
+settings-source-defaults-desc = Start each new browser session with these filters. Changes made while browsing last until the browser closes.
+settings-source-default-sort = Default sort order
+settings-source-default-range = Default time range
+settings-source-default-min = Minimum resolution
+settings-source-default-max = Maximum resolution
+settings-source-default-ratio = Default aspect ratio
+settings-source-default-type = Default wallpaper type
+settings-source-default-resolution = Default resolution
+settings-source-default-category = Default category
+settings-source-default-category-desc = Include this category when opening Wallhaven. If none are selected, General is used.
+settings-source-default-purity-desc = Include this content when opening the source. Wallhaven uses SFW if no content levels are selected.
+
+settings-sources-apply-label = Show Apply button
+settings-sources-apply-desc = Show an Apply button for this source. Change several filters, then press Apply or Enter to send one search request. When off, each filter change searches immediately.

@@ -27,6 +27,7 @@ pub(super) fn panel_layers(app: &App) -> Vec<Element<'_, Message>> {
             crate::frontend::browser::view(
                 br,
                 &availability,
+                app.config.browser_apply_button(br.source),
                 app.scene.viewport,
                 app.source_browser.wall.layout_grid(),
                 app.source_browser.wall.scene.render.clone(),

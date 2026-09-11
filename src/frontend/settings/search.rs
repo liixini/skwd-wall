@@ -39,7 +39,7 @@ pub fn search_settings(
                 let section_title = normalized(card.title);
                 let tab_text = normalized(tab_label);
                 let desc = normalized(&setting.desc);
-                let control = control_search_text(&setting.control);
+                let control = normalized(&control_search_text(&setting.control));
                 let mut haystack = format!("{title} {section_title} {tab_text} {desc} {control}");
                 add_aliases(&mut haystack);
                 if !terms.iter().all(|term| haystack.contains(term)) {

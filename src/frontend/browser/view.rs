@@ -658,6 +658,7 @@ fn status_strip<'a>(br: &Browser, spin: f32, pal: &Palette) -> Option<Element<'a
 pub fn view<'a>(
     br: &'a Browser,
     availability: &[SourceAvailability],
+    show_apply_button: bool,
     viewport: (f32, f32),
     grid: crate::contracts::picker::BrowserGrid,
     wall_render: std::sync::Arc<crate::frontend::scene::RenderSnapshot>,
@@ -688,62 +689,74 @@ pub fn view<'a>(
     })
     .width(Length::Fixed(filter_inner_w))
     .height(Length::Fixed(compact_bar_size.1));
-    let parameters = container(
-        scrollable(
-            column![
-                label(
-                    tr("browser-search-label"),
-                    8.5,
-                    scale,
-                    with_alpha(pal.surface_text, 0.42 * ease)
-                ),
-                container(search_box(br, scale, pal))
-                    .width(Length::Fill)
-                    .padding(Padding::from([6.0 * scale, 8.0 * scale]))
-                    .style(move |_| {
-                        crate::frontend::ui::box_style(
-                            with_alpha(pal.background, 0.44),
-                            with_alpha(pal.outline, 0.34),
-                        )
-                    }),
-                folio_horizontal_rule(with_alpha(pal.outline, 0.34)),
-                label(tr("browser-filter-index"), 9.0, scale, with_alpha(pal.primary, 0.9 * ease)),
-                label(
-                    tr("browser-filter-title"),
-                    19.0,
-                    scale,
-                    with_alpha(pal.surface_text, 0.96 * ease)
-                ),
-                label(
-                    tr("browser-filter-desc"),
-                    crate::frontend::ui::TYPE_SMALL,
-                    scale,
-                    with_alpha(pal.surface_text, 0.48 * ease)
-                ),
-                bar,
-            ]
-            .spacing(10.0 * scale)
-            .padding(Padding { right: 10.0 * scale, ..Padding::ZERO }),
-        )
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .direction(crate::frontend::ui::thin_vbar())
-        .style(crate::frontend::ui::scroll_style(with_alpha(pal.outline, 0.72))),
+    let filters = scrollable(
+        column![
+            label(
+                tr("browser-search-label"),
+                8.5,
+                scale,
+                with_alpha(pal.surface_text, 0.42 * ease)
+            ),
+            container(search_box(br, scale, pal))
+                .width(Length::Fill)
+                .padding(Padding::from([6.0 * scale, 8.0 * scale]))
+                .style(move |_| {
+                    crate::frontend::ui::box_style(
+                        with_alpha(pal.background, 0.44),
+                        with_alpha(pal.outline, 0.34),
+                    )
+                }),
+            folio_horizontal_rule(with_alpha(pal.outline, 0.34)),
+            label(tr("browser-filter-index"), 9.0, scale, with_alpha(pal.primary, 0.9 * ease)),
+            label(
+                tr("browser-filter-title"),
+                19.0,
+                scale,
+                with_alpha(pal.surface_text, 0.96 * ease)
+            ),
+            label(
+                tr(if show_apply_button {
+                    "browser-filter-apply-desc"
+                } else {
+                    "browser-filter-desc"
+                }),
+                crate::frontend::ui::TYPE_SMALL,
+                scale,
+                with_alpha(pal.surface_text, 0.48 * ease)
+            ),
+            bar,
+        ]
+        .spacing(10.0 * scale)
+        .padding(Padding { right: 10.0 * scale, ..Padding::ZERO }),
     )
-    .width(Length::Fixed(filter_w))
+    .width(Length::Fill)
     .height(Length::Fill)
-    .padding(Padding {
-        top: 15.0 * scale,
-        right: 4.0 * scale,
-        bottom: 15.0 * scale,
-        left: 14.0 * scale,
-    })
-    .style(move |_| {
-        crate::frontend::ui::box_style(
-            with_alpha(pal.surface_variant, 0.3),
-            with_alpha(pal.outline, 0.34),
-        )
-    });
+    .direction(crate::frontend::ui::thin_vbar())
+    .style(crate::frontend::ui::scroll_style(with_alpha(pal.outline, 0.72)));
+    let mut parameters = column![filters].spacing(10.0 * scale);
+    if show_apply_button && br.source.searchable() {
+        parameters = parameters.push(action_btn(
+            tr("browser-apply-filters"),
+            Message::Update(BrowserMsg::SearchSubmit),
+            pal.primary,
+            pal.primary_text,
+        ));
+    }
+    let parameters = container(parameters)
+        .width(Length::Fixed(filter_w))
+        .height(Length::Fill)
+        .padding(Padding {
+            top: 15.0 * scale,
+            right: 4.0 * scale,
+            bottom: 15.0 * scale,
+            left: 14.0 * scale,
+        })
+        .style(move |_| {
+            crate::frontend::ui::box_style(
+                with_alpha(pal.surface_variant, 0.3),
+                with_alpha(pal.outline, 0.34),
+            )
+        });
 
     let wall_shader: Element<'a, Message> = shader(crate::app::scene::BrowserSceneProgram {
         render: wall_render.clone(),

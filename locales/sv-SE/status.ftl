@@ -23,3 +23,6 @@ status-demo-filtered = Demobakgrunden är bortfiltrerad: { $key }
 status-bug-report-saved = Felrapporten sparades: { $path }
 status-bug-report-failed = Felrapporten misslyckades - se loggen
 status-keybinds-reset = Kontrollerna återställdes till standard.
+
+status-hidden-folders-shown = Dolda mappar visas.
+status-hidden-folders-hidden = Dolda mappar är dolda.

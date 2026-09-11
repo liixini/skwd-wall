@@ -31,3 +31,19 @@ settings-sources-bing-enable-label = Activar Bing
 settings-sources-bing-enable-desc = Mostrar Bing Diario en el selector de fuentes de descarga.
 settings-sources-bing-market-label = Mercado
 settings-sources-bing-market-desc = Código de mercado/región de Bing, ej. en-US, en-GB, ja-JP.
+
+settings-source-defaults-card = Filtros predeterminados
+settings-source-defaults-desc = Inicia cada nueva sesión del navegador con estos filtros. Los cambios realizados durante la navegación se mantienen hasta cerrar el navegador.
+settings-source-default-sort = Orden predeterminado
+settings-source-default-range = Periodo predeterminado
+settings-source-default-min = Resolución mínima
+settings-source-default-max = Resolución máxima
+settings-source-default-ratio = Relación de aspecto predeterminada
+settings-source-default-type = Tipo de fondo predeterminado
+settings-source-default-resolution = Resolución predeterminada
+settings-source-default-category = Categoría predeterminada
+settings-source-default-category-desc = Incluye esta categoría al abrir Wallhaven. Si no se selecciona ninguna, se usa General.
+settings-source-default-purity-desc = Incluye este contenido al abrir la fuente. Wallhaven usa SFW si no se selecciona ningún nivel de contenido.
+
+settings-sources-apply-label = Mostrar botón Aplicar
+settings-sources-apply-desc = Muestra un botón Aplicar para esta fuente. Cambia varios filtros y pulsa Aplicar o Intro para enviar una sola solicitud de búsqueda. Si está desactivado, cada cambio de filtro inicia una búsqueda.

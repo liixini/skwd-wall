@@ -3,6 +3,7 @@
 mod audio;
 mod effects;
 mod filters;
+mod folder_keys;
 mod frame_clock;
 mod input;
 mod library_events;
@@ -218,3 +219,5 @@ fn settled_preview_app() -> App {
     tick_frames(&mut app, &mut now, 600);
     app
 }
+
+mod source_defaults;

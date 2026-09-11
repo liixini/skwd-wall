@@ -211,6 +211,7 @@ pub(super) fn tab_paper(builder: &mut Builder<'_>) {
 }
 
 pub(super) fn tab_wallhaven(builder: &mut Builder<'_>) {
+    super::source_defaults::wallhaven(builder);
     builder.card(tr("settings-wallhaven-grid-card"), "");
     builder.num(
         tr("settings-wallhaven-columns-label"),
@@ -253,6 +254,7 @@ pub(super) fn tab_wallhaven(builder: &mut Builder<'_>) {
 }
 
 pub(super) fn tab_steam(builder: &mut Builder<'_>) {
+    super::source_defaults::steam(builder);
     builder.card(tr("settings-steam-grid-card"), "");
     builder.num(
         tr("settings-steam-columns-label"),
@@ -357,6 +359,7 @@ pub(super) fn tab_wallpaper_engine(builder: &mut Builder<'_>) {
 
 pub(super) fn tab_sources(builder: &mut Builder<'_>) {
     builder.card(tr("settings-sources-unsplash-card"), tr("settings-sources-unsplash-card-desc"));
+    super::source_defaults::apply_button(builder, keys::sources::UNSPLASH_SHOW_APPLY_BUTTON);
     builder.toggle(
         tr("settings-sources-unsplash-enable-label"),
         tr("settings-sources-unsplash-enable-desc"),
@@ -369,6 +372,7 @@ pub(super) fn tab_sources(builder: &mut Builder<'_>) {
         tr("settings-sources-unsplash-key-placeholder"),
     );
     builder.card(tr("settings-sources-pexels-card"), tr("settings-sources-pexels-card-desc"));
+    super::source_defaults::apply_button(builder, keys::sources::PEXELS_SHOW_APPLY_BUTTON);
     builder.toggle(
         tr("settings-sources-pexels-enable-label"),
         tr("settings-sources-pexels-enable-desc"),
@@ -381,6 +385,7 @@ pub(super) fn tab_sources(builder: &mut Builder<'_>) {
         tr("settings-sources-pexels-key-placeholder"),
     );
     builder.card(tr("settings-sources-youtube-card"), tr("settings-sources-youtube-card-desc"));
+    super::source_defaults::apply_button(builder, keys::sources::YOUTUBE_SHOW_APPLY_BUTTON);
     builder.toggle(
         tr("settings-sources-youtube-enable-label"),
         tr("settings-sources-youtube-enable-desc"),

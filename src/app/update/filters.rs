@@ -11,6 +11,53 @@ pub(super) fn set_folder(app: &mut App, folder: String) -> Task<Message> {
     Task::none()
 }
 
+pub(super) fn cycle_folder(app: &mut App, backwards: bool) -> Task<Message> {
+    if app.menu_capturing() {
+        return Task::none();
+    }
+    let options = &app.library_session.folder_options;
+    if options.is_empty() {
+        return Task::none();
+    }
+    let current = options.iter().position(|folder| *folder == app.library_session.filters.folder);
+    let index = current.map_or(0, |index| {
+        if backwards {
+            (index + options.len() - 1) % options.len()
+        } else {
+            (index + 1) % options.len()
+        }
+    });
+    set_folder(app, options[index].clone())
+}
+
+pub(super) fn toggle_folder(app: &mut App) -> Task<Message> {
+    if app.menu_capturing() {
+        return Task::none();
+    }
+    let folder = if app.library_session.filters.folder == "*" { "" } else { "*" };
+    set_folder(app, folder.into())
+}
+
+pub(super) fn toggle_hidden_folders(app: &mut App) -> Task<Message> {
+    if app.menu_capturing() {
+        return Task::none();
+    }
+    app.close_flip_after_removal();
+    app.change_filters(|filters| {
+        filters.show_hidden_folders = !filters.show_hidden_folders;
+        if !filters.folder_visible(&filters.folder) {
+            filters.folder = "*".into();
+        }
+    });
+    app.rebuild_folder_options();
+    app.show_toast(crate::i18n::tr(if app.library_session.filters.show_hidden_folders {
+        "status-hidden-folders-shown"
+    } else {
+        "status-hidden-folders-hidden"
+    }));
+    Task::none()
+}
+
 pub(super) fn set_color_filter(app: &mut App, val: i64) -> Task<Message> {
     if app.menu_capturing() {
         return Task::none();

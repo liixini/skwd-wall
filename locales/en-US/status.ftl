@@ -23,3 +23,6 @@ status-demo-filtered = Demo wallpaper is filtered out: { $key }
 status-bug-report-saved = Bug report saved: { $path }
 status-bug-report-failed = Could not save the bug report. Check the log for the actual error.
 status-keybinds-reset = Controls restored to defaults.
+
+status-hidden-folders-shown = Hidden folders shown.
+status-hidden-folders-hidden = Hidden folders hidden.

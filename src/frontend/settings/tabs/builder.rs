@@ -813,12 +813,14 @@ fn compose_sources(
     wallhaven_rows.extend(take_card(&mut wallhaven, tr("settings-wallhaven-api-card")));
     wallhaven_rows.extend(take_card(&mut wallhaven, tr("settings-wallhaven-grid-card")));
     wallhaven_rows.extend(take_card(&mut wallhaven, tr("settings-wallhaven-thumb-card")));
+    wallhaven_rows.extend(take_card(&mut wallhaven, tr("settings-source-defaults-card")));
 
     let mut steam_rows = take_rows(&mut features, &[tr("settings-general-feature-steam-label")]);
     steam_rows.extend(take_card(&mut steam, tr("settings-steam-backend-card")));
     steam_rows.extend(take_card(&mut steam, tr("settings-steam-paths-card")));
     steam_rows.extend(take_card(&mut steam, tr("settings-steam-grid-card")));
     steam_rows.extend(take_card(&mut steam, tr("settings-steam-thumb-card")));
+    steam_rows.extend(take_card(&mut steam, tr("settings-source-defaults-card")));
 
     let rows = vec![
         details(

@@ -69,6 +69,9 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::SetFolder(folder) => filters::set_folder(app, folder),
+        Message::CycleFolder { backwards } => filters::cycle_folder(app, backwards),
+        Message::ToggleFolder => filters::toggle_folder(app),
+        Message::ToggleHiddenFolders => filters::toggle_hidden_folders(app),
         Message::SetSort(sort) => {
             if app.tags.search_mode == SearchMode::Describe
                 && !app.tags.semantic.search.trim().is_empty()

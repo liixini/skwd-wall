@@ -931,12 +931,12 @@ fn sources_compact_index() {
     assert_eq!(cards[0].0.title, "Source providers");
 
     let expected = [
-        ("Wallhaven", "source.wallhaven", "Disabled", 7),
-        ("Unsplash", "source.unsplash", "Enabled", 2),
-        ("Pexels", "source.pexels", "Disabled", 2),
+        ("Wallhaven", "source.wallhaven", "Disabled", 19),
+        ("Unsplash", "source.unsplash", "Enabled", 3),
+        ("Pexels", "source.pexels", "Disabled", 3),
         ("Bing daily", "source.bing", "Disabled", 2),
-        ("Steam Workshop", "source.workshop", "Enabled", 11),
-        ("YouTube", "source.youtube", "Disabled", 3),
+        ("Steam Workshop", "source.workshop", "Enabled", 18),
+        ("YouTube", "source.youtube", "Disabled", 4),
     ];
     assert_eq!(cards[0].1.len(), expected.len());
     for (row, (title, expected_id, expected_summary, field_count)) in

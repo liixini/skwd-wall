@@ -360,11 +360,12 @@ pub(crate) fn layout_params(config: &Config) -> LayoutParams {
 
 pub(crate) fn startup_filters(config: &Config) -> Filters {
     let weather_active = config.weather_match() && !config.locale().is_empty();
-    if config.filter_bar_sticky() {
+    let mut filters = if config.filter_bar_sticky() {
         Filters {
             color: config.last_filter_color(),
             kind: config.last_filter_kind(),
             folder: config.last_filter_folder(),
+            show_hidden_folders: config.last_filter_show_hidden_folders(),
             sort: config.last_filter_sort(),
             orient: config.last_filter_orient(),
             resolution: config.last_filter_resolution(),
@@ -374,5 +375,9 @@ pub(crate) fn startup_filters(config: &Config) -> Filters {
         }
     } else {
         Filters { folder: config.default_folder(), weather_active, ..Filters::default() }
+    };
+    if !filters.folder_visible(&filters.folder) {
+        filters.folder = "*".into();
     }
+    filters
 }

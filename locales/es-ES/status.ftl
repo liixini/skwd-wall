@@ -23,3 +23,6 @@ status-demo-filtered = El fondo de demostración fue filtrado: { $key }
 status-bug-report-saved = Informe de error guardado: { $path }
 status-bug-report-failed = No se pudo guardar el informe de error. Revisa el registro para ver el error real.
 status-keybinds-reset = Controles restaurados a los valores por defecto.
+
+status-hidden-folders-shown = Carpetas ocultas visibles.
+status-hidden-folders-hidden = Carpetas ocultas no visibles.

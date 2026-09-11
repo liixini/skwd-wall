@@ -8,7 +8,7 @@ use super::super::super::misc::text_width;
 use super::item::push_item;
 use super::types::BrowserAct;
 
-fn sort_label_key(key: &str) -> &'static str {
+pub(crate) fn sort_label_key(key: &str) -> &'static str {
     match key {
         "0" => "browser-top",
         "1" => "browser-new",
@@ -18,7 +18,7 @@ fn sort_label_key(key: &str) -> &'static str {
     }
 }
 
-fn trend_days_label_key(key: &str) -> &'static str {
+pub(crate) fn trend_days_label_key(key: &str) -> &'static str {
     match key {
         "1" => "browser-1-day",
         "3" => "browser-3-days",
@@ -26,7 +26,7 @@ fn trend_days_label_key(key: &str) -> &'static str {
     }
 }
 
-fn type_label_key(key: &str) -> &'static str {
+pub(crate) fn type_label_key(key: &str) -> &'static str {
     match key {
         "Scene" => "browser-scene",
         "Video" => "browser-video",
@@ -34,7 +34,7 @@ fn type_label_key(key: &str) -> &'static str {
     }
 }
 
-fn resolution_label(key: &str) -> &'static str {
+pub(crate) fn resolution_label(key: &str) -> &'static str {
     match key {
         "1920 x 1080" => "1080p",
         "2560 x 1440" => "2K",
@@ -46,7 +46,7 @@ fn resolution_label(key: &str) -> &'static str {
     }
 }
 
-fn category_label_key(key: &str) -> &'static str {
+pub(crate) fn category_label_key(key: &str) -> &'static str {
     match key {
         "Abstract" => "browser-abstract",
         "Animal" => "browser-animal",

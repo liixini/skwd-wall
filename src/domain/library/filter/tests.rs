@@ -408,3 +408,32 @@ fn res_sort_area_width() {
         vec!["uhd", "wide", "hd", "tallhd"]
     );
 }
+
+#[test]
+fn hidden_directories_exclude_descendants_without_hiding_dot_files() {
+    let mut video = named("hidden-video", "video/.private/deep/movie.mp4");
+    video.kind = WallpaperKind::Video;
+    let mut scene = named("scene", "Title/.not-a-directory");
+    scene.kind = WallpaperKind::We;
+    let catalog = with_items(vec![
+        named("root", ".root.png"),
+        named("public", "public/.file.png"),
+        named("dotted", "public.v2/a.png"),
+        named("hidden", ".private/a.png"),
+        named("descendant", ".private/deep/a.png"),
+        named("nested", "public/.private/a.png"),
+        video,
+        scene,
+    ]);
+    let mut filters = Filters::default();
+    assert_eq!(filter_sort(&catalog, &filters).len(), 8);
+    filters.show_hidden_folders = false;
+    assert_eq!(
+        keys(&catalog, &filter_sort(&catalog, &filters)),
+        ["root", "public", "dotted", "scene"]
+    );
+    filters.folder = "public".into();
+    assert_eq!(keys(&catalog, &filter_sort(&catalog, &filters)), ["public"]);
+    filters.folder = ".private".into();
+    assert!(filter_sort(&catalog, &filters).is_empty());
+}

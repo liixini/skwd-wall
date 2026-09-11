@@ -138,3 +138,6 @@ browser-max-30m = ≤30 min
 browser-max-1h = ≤1 h
 
 browser-source-steam-helper = Installera skwd-deck-steamworks eller välj SteamCMD i Inställningar > Steam
+
+browser-apply-filters = Verkställ
+browser-filter-apply-desc = Ändra filter och tryck sedan på Verkställ eller Enter för att söka.

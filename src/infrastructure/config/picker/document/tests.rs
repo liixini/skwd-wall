@@ -104,3 +104,32 @@ fn awww_engine_kept() {
         serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     assert_eq!(saved["paper"]["engine"], "awww");
 }
+
+#[test]
+fn global_apply_button_migrates_without_overwriting_source_choices() {
+    use crate::contracts::browser::Source;
+    for previous in [true, false] {
+        let dir = tempfile::tempdir().unwrap();
+        let mut config = Config::from_data(json!({
+            "sources": {
+                "showApplyButton": previous,
+                "wallhaven": {"showApplyButton": !previous},
+                "unsplash": {"accessKey": "preserved"}
+            }
+        }));
+        config.config_path = dir.path().join("config.json");
+        assert_eq!(config.browser_apply_button(Source::Wallhaven), !previous);
+        for source in [Source::Steam, Source::Unsplash, Source::Pexels, Source::Youtube] {
+            assert_eq!(config.browser_apply_button(source), previous);
+        }
+        assert!(!config.browser_apply_button(Source::Bing));
+        config.persist();
+        let saved: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&config.config_path).unwrap()).unwrap();
+        assert!(saved["sources"].get("showApplyButton").is_none());
+        assert_eq!(saved["sources"]["unsplash"]["accessKey"], "preserved");
+        let reopened = Config::from_data(saved);
+        assert_eq!(reopened.browser_apply_button(Source::Wallhaven), !previous);
+        assert_eq!(reopened.browser_apply_button(Source::Steam), previous);
+    }
+}

@@ -40,3 +40,8 @@ settings-keybinds-reset-label = Återställ till standard
 settings-keybinds-reset-desc = Återställer varje bindning till sin inbyggda tangent eller sitt inbyggda klick.
 settings-keybinds-reset-action = Återställ kontroller
 keybind-scene-properties = Scenegenskaper
+
+keybind-folder-prev = Föregående mapp
+keybind-folder-next = Nästa mapp
+keybind-folder-toggle = Växla mellan Alla och Huvudmapp
+keybind-hidden-folders = Visa/dölj dolda mappar

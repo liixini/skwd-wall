@@ -1,5 +1,5 @@
 mod bar;
-mod browser_bar;
+pub(crate) mod browser_bar;
 mod browser_wall;
 mod chips;
 mod chrome;

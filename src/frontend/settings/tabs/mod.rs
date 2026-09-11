@@ -9,6 +9,7 @@ mod media_tabs;
 mod motion_tab;
 mod position_tab;
 mod selector_tab;
+mod source_defaults;
 mod system_tabs;
 mod theme_tabs;
 mod transition_tab;

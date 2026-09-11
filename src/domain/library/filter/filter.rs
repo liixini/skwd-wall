@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::domain::library::catalog::{Catalog, Wallpaper};
+use crate::domain::library::catalog::{Catalog, Wallpaper, WallpaperKind};
 use crate::domain::library::search::NumericQuery;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -8,6 +8,7 @@ pub struct Filters {
     pub color: i64,
     pub kind: String,
     pub folder: String,
+    pub show_hidden_folders: bool,
     pub tags: Vec<String>,
     pub numeric: NumericQuery,
     pub tags_match_any: bool,
@@ -25,6 +26,7 @@ impl Default for Filters {
             color: -1,
             kind: String::new(),
             folder: String::from("*"),
+            show_hidden_folders: true,
             tags: Vec::new(),
             numeric: NumericQuery::default(),
             tags_match_any: false,
@@ -35,6 +37,12 @@ impl Default for Filters {
             orient: String::new(),
             resolution: String::new(),
         }
+    }
+}
+
+impl Filters {
+    pub fn folder_visible(&self, folder: &str) -> bool {
+        self.show_hidden_folders || !folder.split('/').any(|part| part.starts_with('.'))
     }
 }
 
@@ -200,6 +208,10 @@ fn orient_ok(filters: &Filters, item: &Wallpaper) -> bool {
 }
 
 fn folder_ok(filters: &Filters, item: &Wallpaper) -> bool {
+    let directory = item.name.rsplit_once('/').map_or("", |(folder, _)| folder);
+    if item.kind != WallpaperKind::We && !filters.folder_visible(directory) {
+        return false;
+    }
     if filters.folder == "*" {
         return true;
     }

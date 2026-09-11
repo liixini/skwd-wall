@@ -220,19 +220,15 @@ impl SceneCore {
         let hh = height * focus * 0.5;
         let radius = gp.corner_radius.clamp(0.0, hw.min(hh));
         let border_width = gp.border_width.clamp(0.0, (hw.min(hh) - 1.0).max(0.0));
-        let body_radius = (radius - border_width * 0.5).max(0.0);
         let roll = self.flip_roll_for(store_idx, cell_x, cell_y);
-        let mut outer = InstanceRaw {
+        let outer = InstanceRaw {
             rect: [cell_x, cell_y, hw, hh],
             radii: [radius; 4],
             fill: color4(ctx.palette.surface, 0.6 * entrance),
-            params: [0.0, if border_alpha > 0.003 { border_width } else { 0.0 }, entrance, 0.0],
+            params: [0.0, 0.0, entrance, 0.0],
+            misc: [0, 0, 1, 0],
             ..Default::default()
         };
-        if border_alpha > 0.003 {
-            outer.border = color4(ctx.palette.primary, border_alpha);
-        }
-        outer.misc[2] = 1;
         sinks.instances.push(outer);
         let (mut body, hit) = self.place_card(
             ctx,
@@ -247,17 +243,21 @@ impl SceneCore {
                 hh,
                 skew: 0.0,
                 edge_tilt: 0.0,
-                radii: [body_radius; 4],
+                radii: [radius; 4],
                 hex: false,
                 view: 1,
                 chrome_radius: radius,
                 opacity: entrance,
                 chrome_opacity: entrance * roll,
-                body_inset: border_width,
+                body_inset: 0.0,
                 near_ok: true,
             },
         );
         body.misc[2] = 1;
+        if border_alpha > 0.003 {
+            body.border = color4(ctx.palette.primary, border_alpha);
+            body.params[1] = border_width;
+        }
         self.card.filter_cache.push((body, store_idx as u32, roll));
         roll_in_cut(&mut body, roll);
         sinks.instances.push(body);

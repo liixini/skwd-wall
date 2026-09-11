@@ -38,6 +38,7 @@ impl Config {
         filter_bar_sticky: bool_setting(skwd_config::schema::setting::filter_bar::STICKY);
         hex_arc: on_unless_off(skwd_config::keys::selector::HEX_ARC);
         last_filter_favourites: off_unless_on(skwd_config::keys::filter_bar::LAST_FAVOURITES_ONLY);
+        last_filter_show_hidden_folders: bool_setting(skwd_config::schema::setting::filter_bar::LAST_SHOW_HIDDEN_FOLDERS);
         last_filter_kind: str(skwd_config::keys::filter_bar::LAST_KIND, "");
         launch_animation: str(skwd_config::keys::launch::ANIMATION, "fade");
         last_filter_orient: str(skwd_config::keys::filter_bar::LAST_ORIENT, "");
@@ -297,6 +298,20 @@ impl Config {
         }
     }
 
+    pub fn browser_apply_button(&self, source: crate::contracts::browser::Source) -> bool {
+        use crate::contracts::browser::Source;
+        use skwd_config::keys::sources;
+        let key = match source {
+            Source::Wallhaven => sources::WALLHAVEN_SHOW_APPLY_BUTTON,
+            Source::Steam => sources::STEAM_SHOW_APPLY_BUTTON,
+            Source::Unsplash => sources::UNSPLASH_SHOW_APPLY_BUTTON,
+            Source::Pexels => sources::PEXELS_SHOW_APPLY_BUTTON,
+            Source::Youtube => sources::YOUTUBE_SHOW_APPLY_BUTTON,
+            Source::Bing => return false,
+        };
+        self.flag_default_config(key)
+    }
+
     pub fn flag_default_true(&self, path: &str) -> bool {
         self.get(path).and_then(Value::as_bool) != Some(false)
     }
@@ -447,6 +462,25 @@ fn canonicalize_picker_config(data: &mut Value) {
     skwd_config::canonicalize_paper_engine(data);
     skwd_config::canonicalize_we_renderer(data);
     canonicalize_resolution_presets(data);
+    canonicalize_browser_apply_button(data);
+}
+
+fn canonicalize_browser_apply_button(data: &mut Value) {
+    let Some(sources) = data.get_mut("sources").and_then(Value::as_object_mut) else {
+        return;
+    };
+    let Some(previous) = sources.remove("showApplyButton").and_then(|value| value.as_bool()) else {
+        return;
+    };
+    for source in
+        crate::contracts::browser::Source::ALL.into_iter().filter(|source| source.searchable())
+    {
+        let settings =
+            sources.entry(source.key()).or_insert_with(|| Value::Object(serde_json::Map::new()));
+        if let Some(settings) = settings.as_object_mut() {
+            settings.entry("showApplyButton").or_insert(Value::Bool(previous));
+        }
+    }
 }
 
 fn canonicalize_resolution_presets(data: &mut Value) {

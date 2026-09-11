@@ -5,7 +5,7 @@ use super::super::super::bar::BarItem;
 use super::item::push_item;
 use super::types::BrowserAct;
 
-fn sort_label_key(key: &str) -> &'static str {
+pub(crate) fn sort_label_key(key: &str) -> &'static str {
     match key {
         "toplist" => "browser-top",
         "hot" => "browser-hot",
@@ -17,7 +17,7 @@ fn sort_label_key(key: &str) -> &'static str {
     }
 }
 
-fn range_label_key(key: &str) -> &'static str {
+pub(crate) fn range_label_key(key: &str) -> &'static str {
     match key {
         "1d" => "browser-day",
         "3d" => "browser-3-days",

@@ -23,6 +23,11 @@ pub enum Message {
     SetColorFilter(i64),
     SetTypeFilter(String),
     SetFolder(String),
+    CycleFolder {
+        backwards: bool,
+    },
+    ToggleFolder,
+    ToggleHiddenFolders,
     SetSort(String),
     SetOrient(String),
     SetResolution(String),
