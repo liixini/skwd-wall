@@ -1,5 +1,4 @@
-<img width="2800" height="1640" alt="Skwd2" src="https://github.com/user-attachments/assets/5bfe467f-6152-41fb-bfdb-ae76a479aa9d" />
-
+<img width="2800" height="1640" alt="Skwd wall cover" src="https://github.com/user-attachments/assets/2d95a1ae-ab01-433a-a21a-57d07a2ccc76" />
 
 > [!IMPORTANT]
 > Skwd-wall v2 beta is here!
@@ -38,10 +37,7 @@ https://github.com/user-attachments/assets/336fec28-0cc1-4f19-adf3-fc80652b6a13
 ## What is Skwd-wall?
 <img alt="But it can be better" src="https://github.com/user-attachments/assets/851e0d8f-2e16-4253-99a8-c76aa8537d71" />
 
-Skwd-wall v2 is what happens when someone says "hey so your wallpaper program is built in Quickshell and it is great but Quickshell is so-so for my 8 GB laptop, are you going to rewrite it?" and I go "challenge accepted". Then I didn't have an assignment over the summer at work and asked my boss if I could work on this and she said "sure, sounds like a great learning opportunity, we can get some extra money for your new found low level graphics API skills when negotiating with the customers" so here we are!
-
-The stats:
-~80% less RAM usage than the other video wallpaper daemons on average (check the performance chart for details) and for images I'm on par with awww (awww is an amazing piece of software, and if it supported video Skwd-paper would probably never have been built).
+Skwd-wall v2 is what happens when someone says "hey so your wallpaper program is built in Quickshell and it is great but Quickshell is so-so for my 8 GB laptop, are you going to rewrite it?" and I go "challenge accepted".
 
 <Details>
 <Summary>What Skwd-wall v2 actually does</Summary>
@@ -69,21 +65,15 @@ The stats:
 
 </Details>
 
-<Details>
-<Summary>Performance chart</Summary>
+The stats:
+~80% less RAM usage than the other video wallpaper daemons on average (check the performance chart for details) and for images I'm on par with awww (awww is an amazing piece of software, and if it supported video Skwd-paper would probably never have been built).
 
 <img width="1320" height="3530" alt="performance" src="https://github.com/user-attachments/assets/cfe5b00c-412d-4b03-b786-79309cff00c0" />
 
-</Details>
-
 ## Who is Skwd-wall not for?
-Skwd-wall is a very complex (but easy to use if you ask me who's spent hundreds of hours developing it, ahem) piece of software that solves issues related to animated wallpapers, space management, large wallpaper collections, presentation of wallpaper collections, getting new wallpapers and finally keeping your entire system colour-coordinated.
+If you're someone that can reasonably name all the wallpapers you have, they're all images and you have one monitor chances are high Skwd-wall is not for you.
 
-It is also a playground in how extreme we can go with wallpaper transitions and animations overall, all configurable to suit your level of eye candy preference all the way down to a standard grid of course.
-
-So if you're someone that can reasonably name all the wallpapers you have and tend to select one of them and apply them to one monitor, chances are high Skwd-wall is not made for you.
-
-But if you're an aspiring wallpaper collector or you're just curious about Skwd-wall you have come to the right place!
+But if you're an aspiring wallpaper collector, like the idea of a program that tries to solve every wallpaper and theming problem you might ever have or you're just curious about Skwd-wall you have come to the right place!
 
 ## The long story short - Personal motivation and development practices
 This is part of my personal shell Skwd that I have broken out into a standalone component because it was a popular request.
