@@ -32,6 +32,7 @@ pub enum BrowserMsg {
     Apply(String),
     OpenPreview(usize),
     ClosePreview,
+    CopyWorkshopId(String),
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +68,11 @@ pub struct BrowserItem {
 }
 
 impl BrowserItem {
+    pub fn preview_identity(&self, source: Source) -> (&str, Option<&str>) {
+        let title = if self.title.trim().is_empty() { &self.id } else { &self.title };
+        (title, (source == Source::Steam).then_some(self.id.as_str()))
+    }
+
     pub fn apply_download_update(&mut self, update: &DownloadUpdate) {
         match update.status {
             DownloadStatus::Done => {

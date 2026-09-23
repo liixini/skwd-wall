@@ -399,6 +399,7 @@ pub(super) fn preview_image_path(item: &BrowserItem) -> Option<(&str, bool)> {
 
 fn preview_modal<'a>(
     item: &'a BrowserItem,
+    source: Source,
     anim: f32,
     spin: f32,
     pal: &Palette,
@@ -525,9 +526,30 @@ fn preview_modal<'a>(
     );
     let actions = row![save_btn, apply_btn].spacing(8).align_y(Alignment::Center);
 
-    let bar = row![info, iced::widget::Space::new().width(Length::Fill), actions,]
-        .align_y(Alignment::Center)
-        .padding(Padding::from([0.0, 24.0]));
+    let (title, workshop_id) = item.preview_identity(source);
+    let mut identity = row![text(title).size(18).color(white).width(Length::Fill)]
+        .spacing(20)
+        .align_y(Alignment::Center);
+    if let Some(id) = workshop_id {
+        identity = identity.push(
+            row![
+                text(tr_args!("browser-workshop-id", id => id))
+                    .size(13)
+                    .color(with_alpha(white, 0.7)),
+                action_btn(
+                    tr("browser-copy-id"),
+                    Message::Update(BrowserMsg::CopyWorkshopId(id.to_owned())),
+                    with_alpha(white, 0.12),
+                    white,
+                ),
+            ]
+            .spacing(8)
+            .align_y(Alignment::Center),
+        );
+    }
+    let details = row![info, iced::widget::Space::new().width(Length::Fill), actions,]
+        .align_y(Alignment::Center);
+    let bar = column![identity, details].spacing(8).padding(Padding::from([12.0, 24.0]));
 
     let body = stack![
         container(img).width(Length::Fill).height(Length::Fill).padding(40),
@@ -547,16 +569,9 @@ fn preview_modal<'a>(
             .align_x(end())
             .align_y(Alignment::Start)
             .padding(20),
-        container(
-            container(bar)
-                .width(Length::Fill)
-                .height(Length::Fixed(56.0))
-                .center_y(Length::Fixed(56.0))
-                .style(move |_t| crate::frontend::ui::bg_style(Color {
-                    a: 0.6 * anim,
-                    ..Color::BLACK
-                })),
-        )
+        container(container(bar).width(Length::Fill).style(move |_t| {
+            crate::frontend::ui::bg_style(Color { a: 0.6 * anim, ..Color::BLACK })
+        }))
         .width(Length::Fill)
         .height(Length::Fill)
         .align_y(Alignment::End),
@@ -901,7 +916,7 @@ pub fn view<'a>(
         .then_some((br.request.catalog.clip_start.as_str(), br.request.catalog.clip_len.as_str()));
     let overlay: Element<'a, Message> =
         match br.session.preview.and_then(|idx| br.session.items.get(idx)) {
-            Some(item) => preview_modal(item, preview_anim, spin, pal, clip),
+            Some(item) => preview_modal(item, br.source, preview_anim, spin, pal, clip),
             None => container(text("")).into(),
         };
     stack![main, overlay].into()

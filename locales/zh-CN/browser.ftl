@@ -141,3 +141,6 @@ browser-source-steam-helper = 请安装 skwd-deck-steamworks，或在“设置 >
 
 browser-apply-filters = 应用
 browser-filter-apply-desc = 更改筛选条件后，按“应用”或 Enter 开始搜索。
+
+browser-workshop-id = 创意工坊 ID: { $id }
+browser-copy-id = 复制 ID

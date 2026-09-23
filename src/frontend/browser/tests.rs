@@ -443,3 +443,18 @@ fn search_request_defaults() {
     assert!(request.ratios.is_empty());
     assert_eq!(request.color_hue, None);
 }
+
+#[test]
+fn preview_identity_keeps_provider_names_and_only_labels_workshop_ids() {
+    let mut item = mk("3801970040", "/cache/thumb.webp", true);
+    item.title = "夜の街 - City lights".into();
+    for source in Source::ALL {
+        let (title, workshop_id) = item.preview_identity(source);
+        assert_eq!(title, "夜の街 - City lights");
+        assert_eq!(workshop_id, (source == Source::Steam).then_some("3801970040"));
+    }
+    for title in ["", "  "] {
+        item.title = title.into();
+        assert_eq!(item.preview_identity(Source::Wallhaven), ("3801970040", None));
+    }
+}

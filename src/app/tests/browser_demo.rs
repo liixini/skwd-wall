@@ -270,3 +270,26 @@ fn browser_demo_batch_opens_the_provider_before_submitting_its_query() {
     assert_eq!(state(&app)["query"], "forest");
     assert_eq!(state(&app)["loading"], true);
 }
+
+#[test]
+fn workshop_copy_writes_only_the_id_to_the_standard_clipboard() {
+    use iced::futures::{StreamExt, executor::block_on};
+    let mut app = demo_browser();
+    let task = crate::app::update::update_inner(
+        &mut app,
+        Message::Browser(crate::frontend::browser::BrowserMsg::CopyWorkshopId("3804689861".into())),
+    );
+    let mut actions = iced_runtime::task::into_stream(task).unwrap();
+    let action = block_on(actions.next()).unwrap();
+    let iced_runtime::Action::Clipboard(iced_runtime::clipboard::Action::Write {
+        target,
+        contents,
+    }) = action
+    else {
+        panic!("expected a clipboard write");
+    };
+    assert_eq!(target, iced::advanced::clipboard::Kind::Standard);
+    assert_eq!(contents, "3804689861");
+    assert!(block_on(actions.next()).is_none());
+    assert!(drain_calls(&app).is_empty());
+}

@@ -145,3 +145,6 @@ browser-source-steam-helper = Installez skwd-deck-steamworks ou sélectionnez St
 
 browser-apply-filters = Appliquer
 browser-filter-apply-desc = Modifiez les filtres, puis appuyez sur Appliquer ou Enter pour lancer la recherche.
+
+browser-workshop-id = ID Workshop: { $id }
+browser-copy-id = Copier l’ID

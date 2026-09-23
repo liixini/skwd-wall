@@ -112,6 +112,7 @@ pub(super) fn update(app: &mut App, msg: BrowserMsg) -> Task<Message> {
         BrowserMsg::Apply(id) => browser_apply(app, id),
         BrowserMsg::OpenPreview(idx) => browser_open_preview(app, idx),
         BrowserMsg::ClosePreview => browser_close_preview(app),
+        BrowserMsg::CopyWorkshopId(id) => iced::clipboard::write(id),
         BrowserMsg::Download(id) => browser_download(app, id),
     }
 }
