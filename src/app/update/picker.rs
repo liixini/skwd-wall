@@ -71,7 +71,11 @@ pub(super) fn click(
 ) -> Task<Message> {
     use crate::domain::input::MouseButton;
     if app.menu_capturing() && !app.tags.editing {
-        return Task::none();
+        return if button == MouseButton::Left {
+            super::lifecycle::exit(app)
+        } else {
+            Task::none()
+        };
     }
     app.input.last_activity = Instant::now();
     app.scene.input_idle = false;
@@ -83,6 +87,15 @@ pub(super) fn click(
         .find(|hit| hit.contains(x, y))
         .map(|hit| (hit.index, [hit.cx, hit.cy, hit.hw, hit.hh]));
     let hit = hit_rect.map(|(idx, _)| idx);
+    let inside = app.scene.render.back.as_ref().map_or(hit.is_some(), |back| {
+        let layout = crate::frontend::ui::back_layout(back);
+        [layout.card, layout.sheet, layout.action_deck]
+            .into_iter()
+            .any(|rect| crate::frontend::ui::back_contains(back, &layout, rect, x, y))
+    });
+    if button == MouseButton::Left && !inside {
+        return super::lifecycle::exit(app);
+    }
     if app.scene.mode == Mode::Hand
         && button == MouseButton::Left
         && app.scene.flipped().is_none()

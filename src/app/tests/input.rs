@@ -1168,3 +1168,46 @@ fn choose_displays_shortcut_can_be_rebound_and_reset() {
         Some(InputAction::Effects)
     );
 }
+
+#[test]
+fn outside_click_dismisses_one_overlay_at_a_time() {
+    use crate::domain::input::MouseButton;
+    let mut app = test_app();
+    app.panels.settings.open = true;
+    app.input.help_open = true;
+    let _ = update(&mut app, Message::Click(0.0, 0.0, MouseButton::Left));
+    assert!(!app.input.help_open);
+    assert!(app.panels.settings.open);
+    let _ = update(&mut app, Message::Click(0.0, 0.0, MouseButton::Left));
+    assert!(!app.panels.settings.open);
+    assert!(drain_calls(&app).iter().all(|(method, _)| method != "wall.apply"));
+}
+
+#[test]
+fn outside_click_closes_card_back_in_every_layout() {
+    use crate::domain::input::MouseButton;
+    for mode in [Mode::Slices, Mode::Hex, Mode::Grid, Mode::Sandy, Mode::Hand] {
+        let mut app = test_app();
+        seed(&mut app, &[wall("a", "static", 10, 1)]);
+        app.scene.mode = mode;
+        let mut now = Instant::now();
+        tick_frames(&mut app, &mut now, 150);
+        let _ = update(&mut app, Message::KeyFlip);
+        tick_frames(&mut app, &mut now, 150);
+        assert!(app.scene.render.back.is_some(), "{mode:?}");
+        let _ = update(&mut app, Message::Click(0.0, 0.0, MouseButton::Left));
+        assert!(!app.scene.flip_open(), "{mode:?}");
+        assert!(!app.detail_open(), "{mode:?}");
+        assert!(drain_calls(&app).iter().all(|(method, _)| method != "wall.apply"));
+    }
+}
+
+#[test]
+fn outside_right_click_keeps_picker_and_overlay_open() {
+    use crate::domain::input::MouseButton;
+    let mut app = test_app();
+    let _ = update(&mut app, Message::Click(0.0, 0.0, MouseButton::Right));
+    app.input.help_open = true;
+    let _ = update(&mut app, Message::Click(0.0, 0.0, MouseButton::Right));
+    assert!(app.input.help_open);
+}

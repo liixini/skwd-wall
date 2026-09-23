@@ -979,7 +979,7 @@ impl ThemeDesigner {
                 scale,
                 pal,
             ),
-            Message::Noop,
+            Message::Theme(ThemeMsg::DesignClose),
             viewport,
             scale,
             self.ease(),

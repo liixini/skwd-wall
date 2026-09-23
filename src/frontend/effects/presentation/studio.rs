@@ -65,12 +65,12 @@ impl Effects {
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .style(move |_| crate::frontend::ui::folio_scrim_style(ease)),
-            Message::Noop,
+            Message::ToggleEffects,
         );
 
         stack![
             backdrop,
-            container(panel)
+            container(iced::widget::opaque(panel))
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .center_x(Length::Fill)

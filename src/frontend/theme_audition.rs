@@ -263,13 +263,13 @@ pub fn view<'a>(
             )
         });
     mouse_area(
-        container(panel)
+        container(iced::widget::opaque(panel))
             .width(Length::Fill)
             .height(Length::Fill)
             .center_x(Length::Fill)
             .center_y(Length::Fill)
             .style(|_| crate::frontend::ui::bg_style(with_alpha(Color::BLACK, 0.58))),
     )
-    .on_press(Message::Noop)
+    .on_press(Message::CloseThemeAudition)
     .into()
 }

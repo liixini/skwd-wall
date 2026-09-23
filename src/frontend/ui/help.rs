@@ -102,12 +102,12 @@ pub fn help_overlay(
     );
     let scrim_col = scrim(0.5);
     crate::frontend::ui::inert_backdrop(
-        container(panel)
+        container(iced::widget::mouse_area(panel).on_press(HelpIntent::Capture))
             .width(Length::Fill)
             .height(Length::Fill)
             .align_x(Alignment::Center)
             .align_y(Alignment::Center)
             .style(move |_| crate::frontend::ui::bg_style(scrim_col)),
-        HelpIntent::Capture,
+        HelpIntent::Close,
     )
 }

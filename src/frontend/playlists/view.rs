@@ -821,7 +821,7 @@ pub fn view<'a>(
         masthead,
         playlist_index(playlists, scale, palette),
         reading_surface(playlists, scale, palette),
-        Message::Noop,
+        Message::ClosePlaylists,
         viewport,
         scale,
         1.0,

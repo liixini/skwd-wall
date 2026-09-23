@@ -30,7 +30,7 @@ impl Effects {
             masthead,
             index,
             reading,
-            Message::Noop,
+            Message::ToggleEffects,
             viewport,
             scale,
             ease,

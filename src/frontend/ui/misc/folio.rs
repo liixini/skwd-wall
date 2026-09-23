@@ -659,7 +659,7 @@ pub fn folio_sheet<'a, Message: Clone + 'a>(
     masthead: Element<'a, Message>,
     index: Element<'a, Message>,
     reading: Element<'a, Message>,
-    capture: Message,
+    dismiss: Message,
     viewport: (f32, f32),
     scale: f32,
     ease: f32,
@@ -691,11 +691,11 @@ pub fn folio_sheet<'a, Message: Clone + 'a>(
             .width(Length::Fill)
             .height(Length::Fill)
             .style(move |_| folio_scrim_style(ease)),
-        capture,
+        dismiss,
     );
     stack![
         backdrop,
-        container(panel)
+        container(iced::widget::opaque(panel))
             .width(Length::Fill)
             .height(Length::Fill)
             .center_x(Length::Fill)

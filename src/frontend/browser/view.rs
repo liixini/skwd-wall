@@ -909,7 +909,7 @@ pub fn view<'a>(
             .center_x(Length::Fill)
             .center_y(Length::Fill)
             .style(move |_| crate::frontend::ui::folio_scrim_style(ease)),
-        Message::Capture,
+        Message::Close,
     );
 
     let clip = (br.source == Source::Youtube)

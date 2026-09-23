@@ -311,7 +311,7 @@ pub fn view<'a>(
             scale,
             palette,
         ),
-        Message::Noop,
+        wrap(ScenePropMsg::Close),
         viewport,
         scale,
         1.0,

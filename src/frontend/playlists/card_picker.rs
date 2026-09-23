@@ -99,5 +99,5 @@ pub fn card_picker_view<'a>(
         .center_x(Length::Fill)
         .center_y(Length::Fill)
         .style(move |_theme| crate::frontend::ui::scrim_style(0.55));
-    iced::widget::mouse_area(scrim).on_press(Message::Noop).into()
+    iced::widget::mouse_area(scrim).on_press(Message::CardPicker(CardPickerMsg::Close)).into()
 }

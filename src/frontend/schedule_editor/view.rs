@@ -1587,7 +1587,7 @@ impl ScheduleEditor {
             masthead,
             self.priority_index(scale, palette),
             self.reading_surface(panel_width - index_width, scale, palette),
-            Message::Noop,
+            Message::Sched(SchedMsg::Close),
             viewport,
             scale,
             1.0,

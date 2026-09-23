@@ -288,11 +288,14 @@ pub fn settings_workbench<'a>(input: WorkbenchInput<'a>) -> Element<'a, Message>
         .clip(true)
         .style(move |_| crate::frontend::ui::folio_sheet_panel_style(palette, reveal));
     let mut layers = stack![
-        container(text(""))
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .style(move |_| crate::frontend::ui::folio_scrim_style(reveal)),
-        container(panel)
+        mouse_area(
+            container(text(""))
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .style(move |_| crate::frontend::ui::folio_scrim_style(reveal)),
+        )
+        .on_press(Message::ToggleSettings),
+        container(iced::widget::opaque(panel))
             .width(Length::Fill)
             .height(Length::Fill)
             .center_x(Length::Fill)

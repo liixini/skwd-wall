@@ -599,7 +599,7 @@ impl AudioPanel {
             masthead,
             self.index(scale, palette),
             self.reading_surface(scale, palette),
-            Message::Noop,
+            Message::ToggleAudioPanel,
             viewport,
             scale,
             self.ease(),
