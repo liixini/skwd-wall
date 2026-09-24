@@ -56,3 +56,5 @@ theme-bar-scheme = Schéma
 theme-bar-oled-black = Noir OLED
 theme-bar-current = Thème · { $backend }
 theme-bar-pin-settings = Épingler les réglages
+
+theme-bar-smart = Intelligent

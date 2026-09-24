@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = Colores semilla personalizados
 settings-theme-custom-colors-desc = Colores hex separados por comas, por ejemplo #1e1e2e, #89b4fa. Usado solo con Semillas personalizadas y expandido a una paleta completa.
 settings-theme-matugen-card = Apariencia Matugen
 settings-theme-matugen-card-desc = Matugen genera la paleta y skwd-wall importa sus colores de interfaz.
-settings-theme-matugen-scheme-desc = El esquema Material 3 que Matugen usa tanto para sus propias plantillas como para la paleta de interfaz importada.
+settings-theme-matugen-scheme-desc = El esquema Material 3 para las plantillas y la paleta de la interfaz. Inteligente permite a Matugen elegir según la intensidad de los colores de la imagen. Requiere Matugen 4.2 o posterior.
 settings-theme-interface-finish-label = Acabado de interfaz
 settings-theme-interface-finish-desc = Tratamiento final opcional aplicado a los roles de interfaz importados. No reescribe las plantillas externas de Matugen.
 settings-theme-color-index-label = Índice de color fuente
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = Dank Material Shell dirige la generació
 settings-theme-imported-variant-label = Variante importada
 settings-theme-imported-variant-desc-noctalia = Elige qué variante de Noctalia genera e importa skwd-wall para el fondo actual.
 settings-theme-imported-variant-desc-dms = Elige qué mitad de la paleta oscura/clara generada por DMS importa skwd-wall para el fondo actual.
+
+settings-theme-matugen-smart = Inteligente
+settings-theme-matugen-smart-mode-desc = Auto usa la detección de brillo de Skwd. Inteligente permite a Matugen elegir claro u oscuro según la imagen. Requiere Matugen 4.2 o posterior.

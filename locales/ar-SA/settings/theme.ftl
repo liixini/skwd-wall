@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = ألوان البذور المخصصة
 settings-theme-custom-colors-desc = ألوان hex مفصولة بفواصل، مثل #1e1e2e, #89b4fa. تُستخدم فقط مع «بذور مخصصة» وتُوسَّع إلى لوحة كاملة.
 settings-theme-matugen-card = مظهر Matugen
 settings-theme-matugen-card-desc = يولّد Matugen اللوحة ويستورد skwd-wall ألوان واجهته.
-settings-theme-matugen-scheme-desc = مخطط Material 3 الذي يستخدمه Matugen لقوالبه الخاصة ولوحة الواجهة المستوردة معًا.
+settings-theme-matugen-scheme-desc = مخطط Material 3 المستخدم للقوالب ولوحة ألوان الواجهة. يتيح الذكي لـ Matugen اختيار مخطط حسب ثراء ألوان الصورة. يتطلب الذكي Matugen 4.2 أو أحدث.
 settings-theme-interface-finish-label = اللمسة النهائية للواجهة
 settings-theme-interface-finish-desc = معالجة نهائية اختيارية تُطبَّق على أدوار الواجهة المستوردة. لا تعيد كتابة قوالب Matugen الخارجية.
 settings-theme-color-index-label = فهرس اللون المصدر
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = يقود Dank Material Shell توليد 
 settings-theme-imported-variant-label = المتغير المستورد
 settings-theme-imported-variant-desc-noctalia = اختر أي متغير من Noctalia يولّده skwd-wall ويستورده للخلفية الحالية.
 settings-theme-imported-variant-desc-dms = اختر أي نصف من لوحة DMS الداكنة/الفاتحة المولّدة يستورده skwd-wall للخلفية الحالية.
+
+settings-theme-matugen-smart = ذكي
+settings-theme-matugen-smart-mode-desc = يستخدم التلقائي اكتشاف السطوع في Skwd. يتيح الذكي لـ Matugen اختيار الوضع الفاتح أو الداكن من الصورة. يتطلب الذكي Matugen 4.2 أو أحدث.

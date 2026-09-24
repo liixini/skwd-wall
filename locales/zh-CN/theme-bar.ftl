@@ -56,3 +56,5 @@ theme-bar-scheme = 方案
 theme-bar-oled-black = OLED 纯黑
 theme-bar-current = 主题 · { $backend }
 theme-bar-pin-settings = 固定设置
+
+theme-bar-smart = 智能

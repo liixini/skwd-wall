@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = Couleurs sources personnalisées
 settings-theme-custom-colors-desc = Couleurs hexadécimales séparées par des virgules, par exemple #1e1e2e, #89b4fa. Utilisées seulement avec Couleurs sources personnalisées et étendues en une palette complète.
 settings-theme-matugen-card = Apparence Matugen
 settings-theme-matugen-card-desc = Matugen génère la palette et skwd-wall importe ses couleurs d’interface.
-settings-theme-matugen-scheme-desc = Le schéma Material 3 que Matugen utilise à la fois pour ses propres modèles et pour la palette d’interface importée.
+settings-theme-matugen-scheme-desc = Le schéma Material 3 utilisé pour les modèles et la palette de l’interface. Intelligent laisse Matugen choisir selon les couleurs de l’image. Nécessite Matugen 4.2 ou une version ultérieure.
 settings-theme-interface-finish-label = Finition de l’interface
 settings-theme-interface-finish-desc = Traitement final facultatif appliqué aux rôles d’interface importés. Il ne réécrit pas les modèles externes de Matugen.
 settings-theme-color-index-label = Index de la couleur source
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = Dank Material Shell pilote la générati
 settings-theme-imported-variant-label = Variante importée
 settings-theme-imported-variant-desc-noctalia = Choisissez quelle variante Noctalia skwd-wall génère et importe pour le fond d’écran actuel.
 settings-theme-imported-variant-desc-dms = Choisissez quelle moitié de la palette sombre/claire générée par DMS skwd-wall importe pour le fond d’écran actuel.
+
+settings-theme-matugen-smart = Intelligent
+settings-theme-matugen-smart-mode-desc = Auto utilise la détection de luminosité de Skwd. Intelligent laisse Matugen choisir un thème clair ou sombre selon l’image. Nécessite Matugen 4.2 ou une version ultérieure.

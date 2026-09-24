@@ -56,3 +56,5 @@ theme-bar-scheme = স্কিম
 theme-bar-oled-black = OLED কালো
 theme-bar-current = থিম · { $backend }
 theme-bar-pin-settings = সেটিংস পিন করুন
+
+theme-bar-smart = স্মার্ট

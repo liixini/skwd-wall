@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = কাস্টম সিড রং
 settings-theme-custom-colors-desc = কমা দিয়ে আলাদা করা হেক্স রং, যেমন #1e1e2e, #89b4fa। শুধু কাস্টম সিডের সাথে ব্যবহৃত হয় এবং পূর্ণ প্যালেটে বিস্তৃত হয়।
 settings-theme-matugen-card = Matugen চেহারা
 settings-theme-matugen-card-desc = Matugen প্যালেট তৈরি করে এবং skwd-wall এর ইন্টারফেস রং আমদানি করে।
-settings-theme-matugen-scheme-desc = Matugen নিজের টেমপ্লেট ও আমদানি করা ইন্টারফেস প্যালেট দুটোর জন্যই যে Material 3 স্কিম ব্যবহার করে।
+settings-theme-matugen-scheme-desc = টেমপ্লেট এবং ইন্টারফেস প্যালেটের জন্য Material 3 স্কিম। স্মার্টে Matugen ছবির রঙের বৈচিত্র্য থেকে স্কিম বেছে নেয়। স্মার্টের জন্য Matugen 4.2 বা নতুন সংস্করণ প্রয়োজন।
 settings-theme-interface-finish-label = ইন্টারফেস ফিনিশ
 settings-theme-interface-finish-desc = আমদানি করা ইন্টারফেস রোলে প্রয়োগ করা ঐচ্ছিক চূড়ান্ত পরিবর্তন। এটি Matugen-এর বাহ্যিক টেমপ্লেট বদলায় না।
 settings-theme-color-index-label = উৎস রঙের সূচক
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = Dank Material Shell রং তৈরি 
 settings-theme-imported-variant-label = আমদানি করা ভ্যারিয়েন্ট
 settings-theme-imported-variant-desc-noctalia = বর্তমান ওয়ালপেপারের জন্য skwd-wall কোন Noctalia ভ্যারিয়েন্ট তৈরি ও আমদানি করবে তা বেছে নিন।
 settings-theme-imported-variant-desc-dms = বর্তমান ওয়ালপেপারের জন্য DMS-এর তৈরি গাঢ়/হালকা প্যালেটের কোন অর্ধেক skwd-wall আমদানি করবে তা বেছে নিন।
+
+settings-theme-matugen-smart = স্মার্ট
+settings-theme-matugen-smart-mode-desc = অটো Skwd-এর উজ্জ্বলতা শনাক্তকরণ ব্যবহার করে। স্মার্টে Matugen ছবি থেকে হালকা বা গাঢ় মোড বেছে নেয়। স্মার্টের জন্য Matugen 4.2 বা নতুন সংস্করণ প্রয়োজন।

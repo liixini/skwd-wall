@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = カスタムシードカラー
 settings-theme-custom-colors-desc = カンマ区切りの 16 進カラーです（例: #1e1e2e, #89b4fa）。「カスタムシード」を選んだときにのみ使われ、完全なパレットに展開されます。
 settings-theme-matugen-card = Matugen の外観
 settings-theme-matugen-card-desc = Matugen がパレットを生成し、skwd-wall がインターフェースの色を取り込みます。
-settings-theme-matugen-scheme-desc = Matugen が自身のテンプレートと取り込まれるインターフェースパレットの両方に使う Material 3 スキームです。
+settings-theme-matugen-scheme-desc = テンプレートとインターフェースのパレットに使用するMaterial 3スキーム。スマートは画像の色の豊かさからMatugenがスキームを選びます。Matugen 4.2以降が必要です。
 settings-theme-interface-finish-label = インターフェースの仕上げ
 settings-theme-interface-finish-desc = 取り込んだインターフェースのカラーロールに適用する任意の最終処理です。Matugen の外部テンプレートは書き換えません。
 settings-theme-color-index-label = ソースカラーのインデックス
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = Dank Material Shell が色の生成を�
 settings-theme-imported-variant-label = 取り込むバリアント
 settings-theme-imported-variant-desc-noctalia = 現在の壁紙に対して skwd-wall が生成して取り込む Noctalia のバリアントを選びます。
 settings-theme-imported-variant-desc-dms = DMS が生成したダーク/ライトのパレットのうち、skwd-wall が現在の壁紙用に取り込む側を選びます。
+
+settings-theme-matugen-smart = スマート
+settings-theme-matugen-smart-mode-desc = 自動はSkwdの明るさ検出を使用します。スマートは画像からMatugenがライトまたはダークを選びます。Matugen 4.2以降が必要です。

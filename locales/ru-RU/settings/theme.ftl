@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = Свои исходные цвета
 settings-theme-custom-colors-desc = Цвета в формате hex через запятую, например #1e1e2e, #89b4fa. Используются только с «Своими исходными цветами» и разворачиваются в полную палитру.
 settings-theme-matugen-card = Внешний вид Matugen
 settings-theme-matugen-card-desc = Matugen создаёт палитру, а skwd-wall импортирует цвета интерфейса.
-settings-theme-matugen-scheme-desc = Схема Material 3, которую Matugen использует и для своих шаблонов, и для импортируемой палитры интерфейса.
+settings-theme-matugen-scheme-desc = Схема Material 3 для шаблонов и палитры интерфейса. Умный режим позволяет Matugen выбрать схему по насыщенности цветов изображения. Требуется Matugen 4.2 или новее.
 settings-theme-interface-finish-label = Обработка интерфейса
 settings-theme-interface-finish-desc = Необязательная финальная обработка импортированных цветовых ролей интерфейса. Не переписывает внешние шаблоны Matugen.
 settings-theme-color-index-label = Индекс исходного цвета
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = Цветами управляет Dank M
 settings-theme-imported-variant-label = Импортируемый вариант
 settings-theme-imported-variant-desc-noctalia = Выберите, какой вариант Noctalia skwd-wall создаёт и импортирует для текущих обоев.
 settings-theme-imported-variant-desc-dms = Выберите, какую половину тёмной/светлой палитры DMS skwd-wall импортирует для текущих обоев.
+
+settings-theme-matugen-smart = Умный
+settings-theme-matugen-smart-mode-desc = Авто использует анализ яркости Skwd. Умный режим позволяет Matugen выбрать светлую или тёмную тему по изображению. Требуется Matugen 4.2 или новее.

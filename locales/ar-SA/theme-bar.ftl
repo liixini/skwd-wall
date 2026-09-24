@@ -56,3 +56,5 @@ theme-bar-scheme = المخطط
 theme-bar-oled-black = أسود OLED
 theme-bar-current = السمة · { $backend }
 theme-bar-pin-settings = تثبيت الإعدادات
+
+theme-bar-smart = ذكي

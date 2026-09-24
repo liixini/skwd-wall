@@ -244,16 +244,18 @@ pub(super) fn tab_theme(builder: &mut Builder<'_>, backends: &[String]) {
                     ("scheme-rainbow", tr("settings-theme-scheme-rainbow")),
                     ("scheme-tonal-spot", tr("settings-theme-scheme-tonal-spot")),
                     ("scheme-vibrant", tr("settings-theme-scheme-vibrant")),
+                    ("scheme-smart", tr("settings-theme-matugen-smart")),
                 ],
             );
             builder.dropdown(
                 tr("settings-theme-variant-label"),
-                tr("settings-theme-variant-desc"),
+                tr("settings-theme-matugen-smart-mode-desc"),
                 keys::theme::MODE,
                 &[
                     ("dark", tr("settings-theme-variant-dark")),
                     ("light", tr("settings-theme-variant-light")),
                     ("auto", tr("settings-theme-variant-auto")),
+                    ("smart", tr("settings-theme-matugen-smart")),
                 ],
             );
             builder.dropdown(

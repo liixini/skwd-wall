@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = Custom seed colours
 settings-theme-custom-colors-desc = Comma-separated hex colours, for example #1e1e2e, #89b4fa. Used only with Custom seeds and expanded into a full palette.
 settings-theme-matugen-card = Matugen appearance
 settings-theme-matugen-card-desc = Matugen generates the palette and skwd-wall imports its interface colours.
-settings-theme-matugen-scheme-desc = The Material 3 scheme Matugen uses for both its own templates and the imported interface palette.
+settings-theme-matugen-scheme-desc = The Material 3 scheme used for templates and the interface palette. Smart lets Matugen choose a scheme from the image’s colourfulness. Smart requires Matugen 4.2 or newer.
 settings-theme-interface-finish-label = Interface finish
 settings-theme-interface-finish-desc = Optional final treatment applied to the imported interface roles. It does not rewrite Matugen's external templates.
 settings-theme-color-index-label = Source colour index
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = Dank Material Shell drives colour genera
 settings-theme-imported-variant-label = Imported variant
 settings-theme-imported-variant-desc-noctalia = Choose which Noctalia variant skwd-wall generates and imports for the current wallpaper.
 settings-theme-imported-variant-desc-dms = Choose which half of DMS's generated dark/light palette skwd-wall imports for the current wallpaper.
+
+settings-theme-matugen-smart = Smart
+settings-theme-matugen-smart-mode-desc = Auto uses Skwd’s brightness detection. Smart lets Matugen choose light or dark from the image. Smart requires Matugen 4.2 or newer.

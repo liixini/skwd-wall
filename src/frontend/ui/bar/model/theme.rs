@@ -38,6 +38,16 @@ pub(super) fn theme_items(theme: &ThemeBar, scale: f32, menu_up: bool) -> Vec<Ba
     if !matches!(theme.backend.as_str(), "off" | "static") {
         push_label(out, &mut x, scale, tr("theme-bar-mode"));
         push_options(out, &mut x, scale, &THEME_MODES, theme_setting::MODE, &theme.mode);
+        if theme.backend == "matugen" {
+            push_option(
+                out,
+                &mut x,
+                scale,
+                tr("theme-bar-smart"),
+                theme.mode == "smart",
+                BarAction::ThemeOpt(theme_setting::MODE, "smart"),
+            );
+        }
     }
     match theme.backend.as_str() {
         "static" => {
@@ -59,6 +69,16 @@ pub(super) fn theme_items(theme: &ThemeBar, scale: f32, menu_up: bool) -> Vec<Ba
                 theme_setting::SCHEME_TYPE,
                 &theme.scheme,
             );
+            if theme.backend == "matugen" {
+                push_option(
+                    out,
+                    &mut x,
+                    scale,
+                    tr("theme-bar-smart"),
+                    theme.scheme == "scheme-smart",
+                    BarAction::ThemeOpt(theme_setting::SCHEME_TYPE, "scheme-smart"),
+                );
+            }
             for (index, value) in ["0", "1", "2", "3"].into_iter().enumerate() {
                 let active = theme.color_index as usize == index;
                 let action = BarAction::ThemeOpt(theme_setting::COLOR_INDEX, value);

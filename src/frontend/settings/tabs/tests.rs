@@ -1504,3 +1504,20 @@ fn removed_default_model_is_not_presented_as_installed() {
         Control::Dropdown { path, options, .. } if path == keys::semantic::MANIFEST
             && options == &vec![(String::new(), String::from("Not installed"))])));
 }
+
+#[test]
+fn matugen_settings_offer_smart_mode_and_scheme() {
+    let cfg = cfg()
+        .with_text(keys::theme::ENGINE, "matugen")
+        .with_text(keys::theme::MODE, "smart")
+        .with_text(keys::matugen::SCHEME_TYPE, "scheme-smart");
+    let mut builder = Builder { cfg: &cfg, cards: Vec::new() };
+    theme_tabs::tab_theme(&mut builder, &[]);
+    for (key, expected) in
+        [(keys::theme::MODE, "smart"), (keys::matugen::SCHEME_TYPE, "scheme-smart")]
+    {
+        assert!(builder.cards.iter().flat_map(|(_, rows)| rows).any(|row|
+            matches!(&row.control, Control::Dropdown { path, current, options, .. }
+                if path == key && current == expected && options.iter().any(|(value, _)| value == expected))));
+    }
+}

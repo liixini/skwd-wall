@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = Egna fröfärger
 settings-theme-custom-colors-desc = Kommaseparerade hexfärger, till exempel #1e1e2e, #89b4fa. Används bara med Egna frön och byggs ut till en full palett.
 settings-theme-matugen-card = Matugen-utseende
 settings-theme-matugen-card-desc = Matugen genererar paletten och skwd-wall importerar dess gränssnittsfärger.
-settings-theme-matugen-scheme-desc = Material 3-schemat som Matugen använder både för sina egna mallar och gränssnittets importerade palett.
+settings-theme-matugen-scheme-desc = Material 3-schemat för mallar och gränssnittets palett. Smart låter Matugen välja ett schema utifrån bildens färgrikedom. Smart kräver Matugen 4.2 eller senare.
 settings-theme-interface-finish-label = Slutbehandling av gränssnittet
 settings-theme-interface-finish-desc = Valfri sista behandling av gränssnittets importerade roller. Den skriver inte om Matugens externa mallar.
 settings-theme-color-index-label = Källfärgens index
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = Dank Material Shell sköter färggenerer
 settings-theme-imported-variant-label = Importerad variant
 settings-theme-imported-variant-desc-noctalia = Välj vilken Noctalia-variant skwd-wall genererar och importerar för den aktuella bakgrunden.
 settings-theme-imported-variant-desc-dms = Välj vilken halva av DMS genererade mörka/ljusa palett skwd-wall importerar för den aktuella bakgrunden.
+
+settings-theme-matugen-smart = Smart
+settings-theme-matugen-smart-mode-desc = Auto använder Skwds ljushetsanalys. Smart låter Matugen välja ljust eller mörkt från bilden. Smart kräver Matugen 4.2 eller senare.

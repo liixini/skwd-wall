@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = 自定义种子颜色
 settings-theme-custom-colors-desc = 用逗号分隔的十六进制颜色，例如 #1e1e2e, #89b4fa。仅在选择“自定义种子颜色”时使用，并会扩展为完整的调色板。
 settings-theme-matugen-card = Matugen 外观
 settings-theme-matugen-card-desc = Matugen 生成调色板，skwd-wall 导入其界面颜色。
-settings-theme-matugen-scheme-desc = Matugen 用于自身模板和导入的界面调色板的 Material 3 方案。
+settings-theme-matugen-scheme-desc = 用于模板和界面调色板的 Material 3 配色方案。智能让 Matugen 根据图像的色彩丰富程度选择方案。智能需要 Matugen 4.2 或更新版本。
 settings-theme-interface-finish-label = 界面润色
 settings-theme-interface-finish-desc = 对导入的界面颜色角色进行可选的最终处理。不会改写 Matugen 的外部模板。
 settings-theme-color-index-label = 源颜色索引
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = 由 Dank Material Shell 负责生成颜�
 settings-theme-imported-variant-label = 导入的变体
 settings-theme-imported-variant-desc-noctalia = 选择 skwd-wall 为当前壁纸生成并导入哪个 Noctalia 变体。
 settings-theme-imported-variant-desc-dms = 选择 skwd-wall 为当前壁纸导入 DMS 生成的深色/浅色调色板中的哪一半。
+
+settings-theme-matugen-smart = 智能
+settings-theme-matugen-smart-mode-desc = 自动使用 Skwd 的亮度检测。智能让 Matugen 根据图像选择浅色或深色。智能需要 Matugen 4.2 或更新版本。

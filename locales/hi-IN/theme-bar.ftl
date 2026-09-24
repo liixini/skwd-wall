@@ -56,3 +56,5 @@ theme-bar-scheme = स्कीम
 theme-bar-oled-black = OLED ब्लैक
 theme-bar-current = थीम · { $backend }
 theme-bar-pin-settings = सेटिंग पिन करें
+
+theme-bar-smart = स्मार्ट

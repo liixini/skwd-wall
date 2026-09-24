@@ -557,7 +557,7 @@ fn theme_sub_bar() {
         .iter()
         .filter(|item| matches!(item.action, Some(BarAction::ThemeOpt("matugen.schemeType", _))))
         .collect();
-    assert_eq!(schemes.len(), 8);
+    assert_eq!(schemes.len(), 9);
     assert_eq!(schemes.iter().filter(|item| item.active).count(), 1);
     let sources: Vec<_> = with_theme
         .items
@@ -1305,4 +1305,27 @@ fn vertical_bar_mirrors_columns() {
         assert!((right.x - (ltr.width - left.x - left.w)).abs() < 0.01);
     }
     assert!(rtl.items.windows(2).any(|pair| pair[1].x < pair[0].x));
+}
+
+#[test]
+fn smart_choices_are_matugen_only() {
+    for backend in ["matugen", "dms", "native"] {
+        let theme = super::ThemeBar {
+            backend: backend.into(),
+            mode: "smart".into(),
+            scheme: "scheme-smart".into(),
+            ..Default::default()
+        };
+        let items = theme_bar_model(&theme).items;
+        for (path, value) in [("theme.mode", "smart"), ("matugen.schemeType", "scheme-smart")] {
+            let choice = items.iter().find(|item| {
+                matches!(item.action,
+                Some(BarAction::ThemeOpt(key, selected)) if key == path && selected == value)
+            });
+            assert_eq!(choice.is_some(), backend == "matugen");
+            if let Some(choice) = choice {
+                assert!(choice.active);
+            }
+        }
+    }
 }

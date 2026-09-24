@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = حسبِ ضرورت بیج رنگ
 settings-theme-custom-colors-desc = کوما سے الگ ہیکس رنگ، مثلاً #1e1e2e, #89b4fa۔ صرف حسبِ ضرورت بیج کے ساتھ استعمال ہوتے ہیں اور مکمل پیلیٹ میں پھیلائے جاتے ہیں۔
 settings-theme-matugen-card = Matugen ظاہری شکل
 settings-theme-matugen-card-desc = Matugen پیلیٹ بناتا ہے اور skwd-wall اس کے انٹرفیس رنگ درآمد کرتا ہے۔
-settings-theme-matugen-scheme-desc = وہ Material 3 اسکیم جو Matugen اپنی ٹیمپلیٹس اور درآمد شدہ انٹرفیس پیلیٹ دونوں کے لیے استعمال کرتا ہے۔
+settings-theme-matugen-scheme-desc = سانچوں اور انٹرفیس پیلیٹ کے لیے Material 3 اسکیم۔ اسمارٹ میں Matugen تصویر کی رنگینی سے اسکیم منتخب کرتا ہے۔ اسمارٹ کے لیے Matugen 4.2 یا نیا ورژن درکار ہے۔
 settings-theme-interface-finish-label = انٹرفیس فنش
 settings-theme-interface-finish-desc = درآمد شدہ انٹرفیس رولز پر لاگو اختیاری آخری ٹریٹمنٹ۔ یہ Matugen کی بیرونی ٹیمپلیٹس دوبارہ نہیں لکھتا۔
 settings-theme-color-index-label = ماخذ رنگ انڈیکس
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = Dank Material Shell رنگ بنانے ک
 settings-theme-imported-variant-label = درآمد شدہ ویریئنٹ
 settings-theme-imported-variant-desc-noctalia = منتخب کریں کہ skwd-wall موجودہ وال پیپر کے لیے کون سا Noctalia ویریئنٹ بنائے اور درآمد کرے۔
 settings-theme-imported-variant-desc-dms = منتخب کریں کہ skwd-wall موجودہ وال پیپر کے لیے DMS کے بنائے تاریک/روشن پیلیٹ کا کون سا نصف درآمد کرے۔
+
+settings-theme-matugen-smart = اسمارٹ
+settings-theme-matugen-smart-mode-desc = آٹو Skwd کی چمک کی شناخت استعمال کرتا ہے۔ اسمارٹ میں Matugen تصویر سے ہلکا یا گہرا موڈ منتخب کرتا ہے۔ اسمارٹ کے لیے Matugen 4.2 یا نیا ورژن درکار ہے۔

@@ -56,3 +56,5 @@ theme-bar-scheme = スキーム
 theme-bar-oled-black = OLED ブラック
 theme-bar-current = テーマ · { $backend }
 theme-bar-pin-settings = 設定を固定
+
+theme-bar-smart = スマート

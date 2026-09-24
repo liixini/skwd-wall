@@ -63,7 +63,7 @@ settings-theme-custom-colors-label = कस्टम बीज रंग
 settings-theme-custom-colors-desc = अल्पविराम से अलग हेक्स रंग, जैसे #1e1e2e, #89b4fa। केवल कस्टम बीज के साथ इस्तेमाल होते हैं और पूरे पैलेट में विस्तारित होते हैं।
 settings-theme-matugen-card = Matugen रूप
 settings-theme-matugen-card-desc = Matugen पैलेट बनाता है और skwd-wall उसके इंटरफ़ेस रंग आयात करता है।
-settings-theme-matugen-scheme-desc = वह Material 3 स्कीम जो Matugen अपने टेम्पलेट और आयातित इंटरफ़ेस पैलेट दोनों के लिए इस्तेमाल करता है।
+settings-theme-matugen-scheme-desc = टेम्पलेट और इंटरफ़ेस पैलेट के लिए Material 3 योजना। स्मार्ट में Matugen चित्र की रंगीनता के आधार पर योजना चुनता है। स्मार्ट के लिए Matugen 4.2 या नया संस्करण चाहिए।
 settings-theme-interface-finish-label = इंटरफ़ेस फ़िनिश
 settings-theme-interface-finish-desc = आयातित इंटरफ़ेस भूमिकाओं पर लागू वैकल्पिक अंतिम उपचार। यह Matugen के बाहरी टेम्पलेट फिर से नहीं लिखता।
 settings-theme-color-index-label = स्रोत रंग सूचकांक
@@ -82,3 +82,6 @@ settings-theme-external-card-desc-dms = Dank Material Shell रंग जनर�
 settings-theme-imported-variant-label = आयातित वेरिएंट
 settings-theme-imported-variant-desc-noctalia = चुनें कि वर्तमान वॉलपेपर के लिए skwd-wall कौन सा Noctalia वेरिएंट बनाए और आयात करे।
 settings-theme-imported-variant-desc-dms = चुनें कि DMS के बनाए गहरे/हल्के पैलेट का कौन सा आधा हिस्सा skwd-wall वर्तमान वॉलपेपर के लिए आयात करे।
+
+settings-theme-matugen-smart = स्मार्ट
+settings-theme-matugen-smart-mode-desc = ऑटो Skwd की चमक पहचान का उपयोग करता है। स्मार्ट में Matugen चित्र के आधार पर हल्का या गहरा मोड चुनता है। स्मार्ट के लिए Matugen 4.2 या नया संस्करण चाहिए।
