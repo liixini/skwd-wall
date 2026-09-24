@@ -2969,7 +2969,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-config"
-version = "1.0.0-beta.18"
+version = "1.0.0-beta.20"
 dependencies = [
  "dirs",
  "serde_json",
@@ -2977,7 +2977,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-lens-proto"
-version = "1.0.0-beta.18"
+version = "1.0.0-beta.20"
 dependencies = [
  "serde",
  "serde_json",
@@ -2985,7 +2985,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-log"
-version = "1.0.0-beta.18"
+version = "1.0.0-beta.20"
 dependencies = [
  "libc",
  "log",
@@ -2993,7 +2993,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-palette"
-version = "1.0.0-beta.18"
+version = "1.0.0-beta.20"
 dependencies = [
  "material-colors",
  "serde_json",
@@ -3001,7 +3001,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-wall"
-version = "1.0.0-beta.18"
+version = "1.0.0-beta.20"
 dependencies = [
  "ash",
  "bit-set",
@@ -3681,7 +3681,7 @@ dependencies = [
 
 [[package]]
 name = "wall-proto"
-version = "1.0.0-beta.18"
+version = "1.0.0-beta.20"
 dependencies = [
  "libc",
  "serde",
