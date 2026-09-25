@@ -1,9 +1,19 @@
-{ pkgs, packages, nixosModule, release }:
+{
+  pkgs,
+  packages,
+  nixosModule,
+  release,
+  homeManagerModule,
+  home-manager,
+}:
 {
   profile-install = pkgs.testers.runNixOSTest {
     name = "skwd-profile-install";
     nodes.machine = { ... }: {
-      users.users.alice = { isNormalUser = true; uid = 1000; };
+      users.users.alice = {
+        isNormalUser = true;
+        uid = 1000;
+      };
       nix.settings.experimental-features = [ ];
       virtualisation.additionalPaths = [ packages.default ];
       virtualisation.memorySize = 2048;
@@ -46,12 +56,20 @@
       machine.fail(user("systemctl --user is-enabled skwd-walld"))
     '';
   };
+
   release-install = pkgs.testers.runNixOSTest {
     name = "skwd-release-install";
     nodes.machine = { lib, ... }: {
       imports = [ nixosModule ];
       services.skwd-deck.enable = true;
-      users.users.alice = { isNormalUser = true; uid = 1000; extraGroups = [ "video" "render" ]; };
+      users.users.alice = {
+        isNormalUser = true;
+        uid = 1000;
+        extraGroups = [
+          "video"
+          "render"
+        ];
+      };
       services.getty.autologinUser = "alice";
       programs.sway.enable = true;
       programs.bash.loginShellInit = ''
@@ -60,8 +78,11 @@
         fi
       '';
       environment.variables.WLR_RENDERER = "pixman";
-      environment.systemPackages =
-        [ pkgs.grim pkgs.jq ] ++ lib.optional release.hasPlasma packages.skwd-paper-plasma;
+      environment.systemPackages = [
+        pkgs.grim
+        pkgs.jq
+      ]
+      ++ lib.optional release.hasPlasma packages.skwd-paper-plasma;
       virtualisation.memorySize = 4096;
       virtualisation.cores = 2;
       virtualisation.qemu.options = [ "-vga none -device virtio-gpu-pci" ];
@@ -140,4 +161,71 @@
       ''}
     '';
   };
+
+  home-manager-install = pkgs.testers.runNixOSTest {
+    name = "skwd-home-manager-install";
+    nodes.machine = { ... }: {
+      imports = [
+        home-manager.nixosModules.home-manager
+      ];
+
+      users.users.alice = {
+        isNormalUser = true;
+        uid = 1000;
+        extraGroups = [
+          "video"
+          "render"
+        ];
+      };
+
+      services.getty.autologinUser = "alice";
+      programs.sway.enable = true;
+      programs.bash.loginShellInit = ''
+        if [ "$(tty)" = /dev/tty1 ]; then
+          exec sway
+        fi
+      '';
+
+      environment.variables.WLR_RENDERER = "pixman";
+
+      home-manager.useGlobalPkgs = true;
+      home-manager.useUserPackages = true;
+      home-manager.users.alice = {
+        imports = [ homeManagerModule ];
+        services.skwd-walld.enable = true;
+        home.stateVersion = "25.05";
+      };
+
+      virtualisation.memorySize = 2048;
+      virtualisation.qemu.options = [ "-vga none -device virtio-gpu-pci" ];
+      system.stateVersion = "25.05";
+    };
+
+    testScript = ''
+      import shlex
+
+      def user(command):
+          return "su - alice -c " + shlex.quote("export XDG_RUNTIME_DIR=/run/user/1000; export WAYLAND_DISPLAY=wayland-1; " + command)
+
+      start_all()
+      machine.wait_for_unit("multi-user.target")
+      machine.succeed("loginctl enable-linger alice")
+      machine.wait_for_unit("user@1000.service")
+      machine.wait_for_file("/run/user/1000/wayland-1")
+
+      machine.succeed(user("skwd-wall-v2 --version; skwd-helm --version; skwd-lens --version"))
+      machine.succeed(user("systemctl --user daemon-reload"))
+      machine.succeed(user("systemctl --user is-enabled skwd-walld"))
+      machine.succeed(user("systemctl --user start skwd-walld"))
+      machine.wait_until_succeeds(user("systemctl --user is-active skwd-walld"))
+      
+      pid = machine.succeed(user("systemctl --user show skwd-walld -p MainPID --value")).strip()
+      assert pid != "0"
+      assert "skwd-walld" in machine.succeed("readlink /proc/" + pid + "/exe")
+      ${pkgs.lib.optionalString release.hasModel ''
+        machine.succeed("tr '\\0' '\\n' < /proc/" + pid + "/environ | grep '^SKWD_LENS_HOME=/nix/store/'")
+      ''}
+    '';
+  };
+  
 }
