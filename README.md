@@ -167,6 +167,9 @@ skwd-wall-v2
 <Details>
 <Summary>NixOS</Summary>
 
+<Details>
+<Summary>Imperative Installation</Summary>
+
 ```
 # Enable flakes if you don't already use them
 nix --extra-experimental-features 'nix-command flakes'
@@ -181,6 +184,87 @@ nix profile install github:liixini/skwd-wall/nix#skwd-paper-plasma
 skwd-wall-v2
 ```
 
+</Details>
+
+<Details>
+<Summary>Declarative Installation provided by HomieDerPrakti</Summary>
+
+This assumes a basic layout that looks like this:
+```
+.
+├── configuration.nix
+└── flake.nix
+```
+If you don't have a `flake.nix` and don't understand what it does, consider researching about nix flakes first, or using the imperative installation method.
+
+```nix
+# Enable flakes if you don't already use them
+## configuration.nix
+nix.settings.experimental-features = [
+  "nix-command"
+  "flakes"
+];
+
+# Add the input to flake.nix
+## flake.nix
+{
+  description = "Example flake";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    skwd-wall = {
+      url = "github:liixini/skwd-wall/nix";
+    };
+  };
+  outputs = inputs@{ nixpkgs, ... }:
+  {
+    nixosConfigurations = {
+      # adjust to your actual hostname
+      hostname = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        specialArgs = {
+          inherit inputs;
+        };
+        modules = [ ./configuration.nix ];
+      };
+    };
+  };
+}
+
+# Install
+## configuration.nix
+{ inputs, pkgs, ... }:
+let
+  skwd-wall = inputs.skwd-wall.programs.${pkgs.stdenv.hostPlatform.system}.default;
+  skwd-paper-plasma = inputs.skwd-wall.programs.${pkgs.stdenv.hostPlatform.system}.skwd-paper-plasma;
+in
+{
+  # import the NixOS Module if you're using it
+  imports = [
+    inputs.skwd-wall.nixosModules.default
+  ];
+  environment.systemPacakges = with pkgs; [
+    skwd-wall
+    # If you're using KDE Plasma, you also need the KDE Plasma plugin
+    skwd-paper-plasma
+  ];
+
+  # If you use the module, you don't need to add the packages to environment.systemPacakges
+  services.skwd-deck = {
+    # enable the systemd service
+    enable = true;
+    extraPackages = [
+      # If you're using KDE Plasma, you also need the KDE Plasma plugin
+      skwd-paper-plasma
+    ];
+  };
+}
+
+# run with (or put in a keybind, convenient script... up to you)...
+skwd-wall-v2
+```
+
+</Details>
+</Details>
 </Details>
 
 ### Fedora, Nobara etc.
@@ -308,3 +392,5 @@ Harman1307 for [Iris](https://github.com/Harman1307/iris) which I have reimpleme
 Achno for [Gowall](https://github.com/Achno/gowall) which I have reimplemented using Rust and similarly extended.
 
 InioX for [Matugen](https://github.com/InioX/matugen) that powers a lot of the WIP bridges between Pywal et. al. that I'm building.
+
+Kian Blakey for [Pibble](https://github.com/kianblakley/pibble) which the view mode Depth is heavily based on.
