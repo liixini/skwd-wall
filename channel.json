@@ -1,19 +1,19 @@
 {
   "format": 1,
   "name": "skwd-wall-nix-channel",
-  "nix_channel_manifest_sha256": "8fea1b2c09423068a2e2d45ed3a32e8ba2490ce08e2305c837709670f0bc38b4",
+  "nix_channel_manifest_sha256": "2107e6dac2a32bce378d9cc1da1675837f12c5a5a838943f16531434c677565d",
   "nix_store_paths": [
-    "/nix/store/5z446m8zw5a6f4sklxr672vpnyp5al4p-skwd-wall-v2-1.0.0-beta.23",
-    "/nix/store/75ij4k2yywrg6jpghizravvf9wspgb7d-skwd-deck-1.0.0-beta.23",
-    "/nix/store/756wkmxb77wl7mxj9k7bl5pz60n5ayvp-skwd-paper-1.0.0-beta.23",
-    "/nix/store/dl0d4hx165h72d3a0k72rkqnw7s8sjgk-skwd-lens-1.0.0-beta.23",
-    "/nix/store/2rjc7swz6dp4paj54bkgvpln1iksxihy-skwd-suite-binary-1.0.0-beta.23",
-    "/nix/store/4hgan4w0y38pg45b3f11j7fimyihxzx7-skwd-lens-model-1.0.0",
-    "/nix/store/hpdw3yj0zavkgrwq6rcdvfgzljgj8dhk-skwd-paper-plasma-1.0.0-beta.23",
-    "/nix/store/k1ria3khd6dl23s5zms8bxp8xr02xikz-skwd-deck-steamworks-1.0.0-beta.23"
+    "/nix/store/4rcmsjx8nyf2ql3vaj654bxfxv72sj9i-skwd-wall-v2-1.0.0-beta.24",
+    "/nix/store/nl0pvqj5haicycd98p1j99p9qvjvcwzs-skwd-deck-1.0.0-beta.24",
+    "/nix/store/qzqnbmi3zzfasywkx52gklpkiakf6ymn-skwd-paper-1.0.0-beta.24",
+    "/nix/store/9kih32s8vp839m8q4j3jl1n15yvd0f7z-skwd-lens-1.0.0-beta.24",
+    "/nix/store/z29d44p8lqiywb8dwrgcfaysdy6sld1h-skwd-suite-binary-1.0.0-beta.24",
+    "/nix/store/jrry98wrbp6zgn1q5z32rlcqrl46sq18-skwd-lens-model-1.0.0",
+    "/nix/store/bwygrwiidzf29ziamy61alg86pvdfgyc-skwd-paper-plasma-1.0.0-beta.24",
+    "/nix/store/6d8ci7ifypl5kjyc7jsg5f9rq8kbm7g4-skwd-deck-steamworks-1.0.0-beta.24"
   ],
-  "release_revision": "ed4246a13f3e31c340f9e4de00f4664d5e844c7a",
-  "release_tag": "v1.0.0-beta.23",
-  "release_url": "https://github.com/liixini/skwd-wall/releases/tag/v1.0.0-beta.23",
-  "version": "1.0.0-beta.23"
+  "release_revision": "965e9e0832448037f755d3a3bc999f48e347d352",
+  "release_tag": "v1.0.0-beta.24",
+  "release_url": "https://github.com/liixini/skwd-wall/releases/tag/v1.0.0-beta.24",
+  "version": "1.0.0-beta.24"
 }
