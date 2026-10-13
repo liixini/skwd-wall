@@ -5,14 +5,34 @@ use iced::Task;
 #[allow(clippy::wildcard_imports)]
 use super::*;
 
+const COPY_IMAGE_ERROR: &str = "card-back-copy-image-failed";
+const COPY_PATH_ERROR: &str = "card-back-copy-path-failed";
+
 pub fn update(app: &mut App, message: Message) -> Task<Message> {
     let detail_was_open = app.detail_open();
+    let flip_was_open = app.scene.flip_open();
+    let stashed = app.runtime_state.stashed;
+    let steam_client_selected = app.config.steam_uses_client();
     let audio_view = app.panels.audio_view();
     let frame = matches!(&message, Message::Daemon(crate::infrastructure::runtime::Wake::Frame(_)));
     let sync_settings_preview =
         !frame && !matches!(&message, Message::Viewport(..) | Message::MouseMoved(..));
     let sync_filter_bar = !frame && !matches!(&message, Message::MouseMoved(..));
     let task = update_inner(app, message);
+    let subscribed_card_opened = app.scene.flip_open()
+        && !flip_was_open
+        && app
+            .scene
+            .flipped()
+            .and_then(|index| app.library_session.filtered.get(index))
+            .and_then(|&index| app.library_session.library.catalog().items.get(index as usize))
+            .is_some_and(|item| item.steam_subscribed);
+    if subscribed_card_opened
+        || (stashed && !app.runtime_state.stashed)
+        || steam_client_selected != app.config.steam_uses_client()
+    {
+        app.refresh_unsubscribe_status();
+    }
     if audio_view != app.panels.audio_view() && !app.panels.audio_volumes.is_empty() {
         app.panels.audio_volumes.clear();
         app.call_tracked("wall.outputs", serde_json::json!({}), Pending::Outputs);
@@ -24,6 +44,12 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
     match message {
         Message::WindowOpened { id, width, height } => {
             super::warm::adopt_first_window(app, id, width, height)
+        }
+        Message::SddmChoices(result) => super::settings::sddm_choices(app, result),
+        Message::SddmSetup { enabled, result } => super::settings::sddm_setup(app, enabled, result),
+        Message::SddmRollback { error, result } => {
+            super::settings::sddm_rollback_done(app, &error, result);
+            Task::none()
         }
         Message::Daemon(crate::infrastructure::runtime::Wake::Toggle) => super::warm::toggle(app),
         Message::Stash => super::warm::stash(app),
@@ -51,7 +77,7 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
             if app.handle_wake(wake) {
                 app.retick();
             }
-            Task::none()
+            super::settings::sddm_rollback(app)
         }
         Message::Viewport(width, height) => {
             app.scene.viewport = (width, height);
@@ -78,7 +104,7 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
         Message::SetFolder(folder) => filters::set_folder(app, folder),
         Message::CycleFolder { backwards } => filters::cycle_folder(app, backwards),
         Message::ToggleFolder => filters::toggle_folder(app),
-        Message::ToggleHiddenFolders => filters::toggle_hidden_folders(app),
+        Message::ToggleShowHidden => filters::toggle_show_hidden(app),
         Message::SetSort(sort) => {
             if app.tags.search_mode == SearchMode::Describe
                 && !app.tags.semantic.search.trim().is_empty()
@@ -156,6 +182,31 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::ResetThumbnail(index) => picker::reset_thumbnail(app, index),
+        Message::RevealInFiles(index) => picker::reveal_in_files(app, index),
+        Message::Revealed(Ok(())) => crate::app::warm::stash(app),
+        Message::CopyWallpaper { index, kind } => picker::copy_wallpaper(app, index, kind),
+        Message::WallpaperCopied { kind, result } => {
+            use crate::app::message::CopyKind;
+            match (kind, result) {
+                (CopyKind::Image, Ok(())) => {
+                    app.show_toast(crate::i18n::tr("card-back-copy-image-done").to_owned());
+                }
+                (CopyKind::Path, Ok(())) => {
+                    app.show_toast(crate::i18n::tr("card-back-copy-path-done").to_owned());
+                }
+                (CopyKind::Image, Err(error)) => {
+                    app.show_toast(crate::i18n::tr_args!(COPY_IMAGE_ERROR, error => error));
+                }
+                (CopyKind::Path, Err(error)) => {
+                    app.show_toast(crate::i18n::tr_args!(COPY_PATH_ERROR, error => error));
+                }
+            }
+            Task::none()
+        }
+        Message::Revealed(Err(error)) => {
+            app.show_toast(crate::i18n::tr_args!("card-back-reveal-failed", error => error));
+            Task::none()
+        }
         Message::OpenSceneProps => {
             app.open_scene_properties();
             Task::none()
@@ -211,6 +262,9 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
         Message::SetViewMode(mode) => settings::set_view_mode(app, &mode),
         Message::CycleMode { backwards } => settings::cycle_view_mode(app, backwards),
         Message::Settings(message) => settings::update(app, message),
+        Message::FolderChosen(kind, index, result) => {
+            super::settings_folders::folder_chosen(app, kind, index, result)
+        }
         Message::SemanticModelImported(result) => settings::semantic_model_imported(app, result),
         Message::SemanticModelDeleted(manifest, selected, result) => {
             settings::semantic_model_deleted(app, &manifest, selected.as_deref(), result)

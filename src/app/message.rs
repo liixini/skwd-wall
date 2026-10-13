@@ -1,5 +1,11 @@
 use crate::infrastructure::runtime::Wake;
 
+#[derive(Debug, Clone, Copy)]
+pub enum CopyKind {
+    Image,
+    Path,
+}
+
 #[cfg_attr(target_os = "linux", iced_layershell::to_layer_message(multi))]
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -37,7 +43,7 @@ pub enum Message {
     CycleMode {
         backwards: bool,
     },
-    ToggleHiddenFolders,
+    ToggleShowHidden,
     SetSort(String),
     SetOrient(String),
     SetResolution(String),
@@ -75,8 +81,32 @@ pub enum Message {
     SceneProps(crate::frontend::scene_properties::ScenePropMsg),
     OpenSceneProps,
     ResetThumbnail(u32),
+    RevealInFiles(u32),
+    Revealed(Result<(), String>),
+    CopyWallpaper {
+        index: u32,
+        kind: CopyKind,
+    },
+    WallpaperCopied {
+        kind: CopyKind,
+        result: Result<(), String>,
+    },
     SetViewMode(String),
     Settings(crate::frontend::settings::SettingsMsg),
+    SddmChoices(Result<crate::infrastructure::lockscreen::SddmChoices, String>),
+    SddmSetup {
+        enabled: bool,
+        result: Result<crate::infrastructure::lockscreen::SddmSetup, String>,
+    },
+    SddmRollback {
+        error: String,
+        result: Result<String, String>,
+    },
+    FolderChosen(
+        crate::contracts::settings::FolderKind,
+        Option<usize>,
+        Result<Option<std::path::PathBuf>, String>,
+    ),
     SemanticModelImported(
         Result<Option<crate::infrastructure::semantic_pack::ImportedSemanticPack>, String>,
     ),

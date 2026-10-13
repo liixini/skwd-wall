@@ -19,6 +19,21 @@ card-back-overview-set = 壁紙を設定しました
 card-back-delete = 削除
 card-back-scene-properties = シーン
 card-back-reset-thumbnail = サムネイルをリセット
+card-back-reveal = フォルダーで表示
+card-back-reveal-failed = ファイルマネージャーを開けませんでした: { $error }
 card-back-reset-thumbnail-done = 新しいサムネイルを生成しています
 card-back-reset-thumbnail-error = サムネイルをリセットできませんでした: { $error }
 card-back-reset-thumbnail-deferred = この壁紙を適用するとサムネイルが再生成されます
+
+card-back-steam-status-unknown = Steam の状態が不明
+card-back-unsubscribe = サブスクライブを解除
+card-back-deleting = 削除中…
+card-back-unsubscribing = 解除中…
+card-back-remove-error = 壁紙を削除できませんでした: { $error }
+
+card-back-copy-image = 画像をコピー
+card-back-copy-path = 絶対パスをコピー
+card-back-copy-image-done = 画像をコピーしました
+card-back-copy-path-done = 絶対パスをコピーしました
+card-back-copy-image-failed = 画像をコピーできませんでした: { $error }
+card-back-copy-path-failed = パスをコピーできませんでした: { $error }

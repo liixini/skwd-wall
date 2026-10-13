@@ -81,3 +81,12 @@ effects-name-topographic = টপোগ্রাফিক
 effects-name-tonal-layers = টোনাল স্তর
 
 effects-saved-palette = { $name } (সংরক্ষিত)
+
+effects-activity-label = অ্যাক্টিভিটি
+effects-activity-desc = ওয়ালপেপার কোন Plasma অ্যাক্টিভিটিতে লাগবে তা বেছে নিন। ডেস্কটপ বর্তমান অ্যাক্টিভিটিতেই থাকবে।
+effects-activity-current = বর্তমান
+effects-activity-inactive-desc = নিষ্ক্রিয় অ্যাক্টিভিটিতে শুধু ওয়ালপেপার বরাদ্দ বদলানো যায়। ডিসপ্লে সেটিংস ও প্লেব্যাক নিয়ন্ত্রণ বর্তমান ডেস্কটপে প্রযোজ্য।
+effects-activity-unavailable = নির্বাচিত অ্যাক্টিভিটি পাওয়া যাচ্ছে না। বিদ্যমান একটি অ্যাক্টিভিটি বেছে আবার চেষ্টা করুন।
+effects-activity-saved = { $activity }-এর জন্য সংরক্ষিত হয়েছে।
+effects-activity-unassigned = কোনো Skwd ওয়ালপেপার নির্ধারিত নেই
+effects-activity-preparing = { $activity }-এর জন্য ওয়ালপেপার প্রস্তুত করা হচ্ছে।

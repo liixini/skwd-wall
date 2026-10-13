@@ -311,7 +311,8 @@ fn open_window(app: &mut App, width: f32, height: f32) {
 fn compact_defaults_follow_first_window() {
     let mut app = compact_app(&json!({}));
     assert_eq!(app.scene.sp.slice_h, 520.0);
-    open_window(&mut app, 1366.0, 768.0);
+    let (min_w, min_h) = crate::frontend::ui::MIN_VIEWPORT;
+    open_window(&mut app, min_w, min_h);
     assert_eq!(app.scene.sp.slice_h, 360.0);
     assert_eq!(app.scene.sp.visible_count, 8);
     assert_eq!(app.scene.sp.slice_w, 90.0);
@@ -333,7 +334,8 @@ fn regular_defaults_stay_on_wide_window() {
 #[test]
 fn saved_layout_keys_survive_compact_window() {
     let mut app = compact_app(&json!({ "sliceHeight": 400.0, "gridThumbWidth": 260.0 }));
-    open_window(&mut app, 1366.0, 768.0);
+    let (min_w, min_h) = crate::frontend::ui::MIN_VIEWPORT;
+    open_window(&mut app, min_w, min_h);
     assert_eq!(app.scene.sp.slice_h, 400.0);
     assert_eq!(app.scene.sp.visible_count, 8);
     assert_eq!(app.scene.gp.thumb_w, 260.0);

@@ -7,14 +7,21 @@ use crate::frontend::theme::Palette;
 use crate::frontend::ui::{UI_FONT, ellipsize_text, mid_text, with_alpha};
 use crate::i18n::tr;
 
-use super::super::super::bar::ICON_FAV;
+use super::super::super::bar::{ICON_FAV, ICON_HIDDEN};
 use super::super::super::misc::NERD_FONT;
 use super::geometry::BackGeometry;
-use super::layout::{BackLayout, back_rise};
+use super::layout::{BackLayout, TOGGLE_INSET, back_rise};
 
 const ICON_FAV_OUTLINE: &str = "\u{f02d5}";
 
-pub(super) fn draw_favourite(
+struct MastheadToggle {
+    at: (f32, f32, f32),
+    fill: f32,
+    on: &'static str,
+    off: &'static str,
+}
+
+pub(super) fn draw_toggles(
     frame: &mut Frame,
     palette: &Palette,
     panel: &BackPanel,
@@ -22,12 +29,37 @@ pub(super) fn draw_favourite(
     progress: f32,
     fade: f32,
 ) {
+    let favourite = MastheadToggle {
+        at: layout.fav,
+        fill: smoothstep(panel.fav_fill),
+        on: ICON_FAV,
+        off: ICON_FAV_OUTLINE,
+    };
+    let hidden = MastheadToggle {
+        at: layout.hide,
+        fill: if panel.hidden { 1.0 } else { 0.0 },
+        on: ICON_HIDDEN,
+        off: ICON_HIDDEN,
+    };
+    for toggle in [favourite, hidden] {
+        draw_toggle(frame, palette, panel, layout, (progress, fade), &toggle);
+    }
+}
+
+fn draw_toggle(
+    frame: &mut Frame,
+    palette: &Palette,
+    panel: &BackPanel,
+    layout: &BackLayout,
+    (progress, fade): (f32, f32),
+    toggle: &MastheadToggle,
+) {
     let geometry = BackGeometry::new(panel, layout);
     let (amount, delta_y) = back_rise(progress, 0.0);
-    let (x, y, size) = (layout.fav.0, layout.fav.1 + delta_y, layout.fav.2);
+    let (x, y, size) = (toggle.at.0, toggle.at.1 + delta_y, toggle.at.2);
     let alpha = fade * amount;
-    let fill = smoothstep(panel.fav_fill);
-    let button_size = layout.masthead.3 - 8.0;
+    let fill = toggle.fill;
+    let button_size = layout.masthead.3 - TOGGLE_INSET;
     let button = geometry.path(&Path::rectangle(
         Point::new(x - button_size * 0.5, y - button_size * 0.5),
         Size::new(button_size, button_size),
@@ -42,7 +74,7 @@ pub(super) fn draw_favourite(
     geometry.fill_text(
         frame,
         mid_text(
-            if fill > 0.5 { ICON_FAV } else { ICON_FAV_OUTLINE }.to_string(),
+            if fill > 0.5 { toggle.on } else { toggle.off }.to_string(),
             Point::new(x, y),
             with_alpha(if fill > 0.5 { palette.primary_text } else { palette.surface_text }, alpha),
             size,

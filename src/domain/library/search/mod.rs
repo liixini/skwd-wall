@@ -3,7 +3,7 @@ mod numeric;
 mod search;
 mod tests;
 
-#[cfg(test)]
+pub use numeric::WORKSHOP_KEY;
 pub use numeric::parse_numeric_query;
 pub use numeric::{NumericQuery, QueryChip};
 pub use search::{

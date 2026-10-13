@@ -64,6 +64,7 @@ playlists-edition-eyebrow = Oynatma listeleri / düzenle
 playlists-kind-tagline = { $kind } · ekrana atanmaya hazır
 playlists-stop-edition = Oynatma listesini durdur
 playlists-colour-notes = Renkler
+playlists-folder-notes = Klasörler
 playlists-live-collection-title = Filtrelenmiş oynatma listesi
 playlists-live-collection-desc = Bu liste seçili kaynak, etiket, çözünürlük ve renk filtrelerine göre kendini günceller.
 playlists-definition-title = Oynatma listesi ayrıntıları
@@ -86,11 +87,11 @@ playlists-picker-search = Ad veya kimlik ile ara
 playlists-picker-no-match = Bu aramaya uyan oynatma listesi yok.
 playlists-picker-hint = Göz atmak istediğiniz duvar kâğıtlarını seçin. Oynatma aynı kalır.
 playlists-filter-help = Filtre referansı
-playlists-help-combine = Filtreleri boşluklarla ayırın. Her filtre eşleşmelidir. Adlar ve yollar boşluk içeremez.
+playlists-help-combine = Filtreleri boşlukla ayırın. Klasör kuralları dışında her filtre eşleşmelidir: listelenen klasörlerden herhangi birindeki öğe sayılır. Boşluk içeren yolları tırnak içine alın.
 playlists-help-source = all / favourites
     Tüm duvar kâğıtlarıyla veya yalnızca favorilerle başlayın.
 playlists-help-folder = folder:nature/forest
-    Kitaplık köküne göre bu klasörü tam olarak eşleştirin. Alt klasörler ayrıdır.
+    Bu klasörü ve alt klasörlerini eşleştirir. Birden çok klasör kuralı herhangi biriyle eşleşir; boşluk içeren yolları tırnak içine alın.
 playlists-help-type = type:image / type:video / type:we
     Görüntüler, videolar veya Wallpaper Engine duvar kâğıtları. static, picture, pic, img; vid, mp4; scene, wallpaperengine, wallpaper-engine değerleri de kabul edilir.
 playlists-help-tag = tag:cat,night / tag:cat|dog,-anime

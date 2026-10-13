@@ -205,6 +205,25 @@ fn wallhaven_search_request() {
 }
 
 #[test]
+fn collection_keeps_maximum() {
+    let mut browser = Browser::new(Source::Wallhaven);
+    browser.request.wallhaven.res_exact = true;
+    browser.request.wallhaven.resolutions = "3840x2160".into();
+    browser.request.wallhaven.atmost = "1920x1080".into();
+    browser.request.wallhaven.collection = "12".into();
+    let SearchRequest::Wallhaven(collection) = browser.search_request(1, "") else {
+        panic!("expected Wallhaven search");
+    };
+    assert_eq!(collection.atmost, "1920x1080");
+    browser.request.wallhaven.collection.clear();
+    let SearchRequest::Wallhaven(search) = browser.search_request(1, "") else {
+        panic!("expected Wallhaven search");
+    };
+    assert!(search.atmost.is_empty());
+    assert_eq!(search.resolutions, "3840x2160");
+}
+
+#[test]
 fn photo_provider_filters() {
     let mut unsplash = Browser::new(Source::Unsplash);
     unsplash.request.catalog.unsplash.order_by = "latest".into();

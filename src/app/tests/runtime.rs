@@ -29,14 +29,19 @@ fn version_mismatch_warns() {
 
 #[test]
 fn empty_library_hints() {
-    assert!(empty_library_hint(3, "/wp", true, true).is_none());
-    let hint = empty_library_hint(0, "/home/me/walls", true, true).expect("empty library hints");
-    assert!(hint.contains("/home/me/walls"));
-    assert!(!hint.contains('\u{2014}') && !hint.contains('\u{2013}'));
-    let never = empty_library_hint(0, "/wp", false, false).expect("never-connected hints");
+    assert!(empty_library_hint(3, None, true, true).is_none());
+    let never = empty_library_hint(0, None, false, false).expect("connecting hint");
     assert!(never.contains("Connecting to skwd-walld"));
-    let lost = empty_library_hint(5, "/wp", false, true).expect("disconnect hints");
+    let lost = empty_library_hint(0, None, false, true).expect("disconnect hint");
     assert!(lost.contains("Lost connection"));
+    let mut config = json!({"paths": {"wallpaper": "/legacy"}, "library": {"folders": []}});
+    let destination = skwd_config::library_destination(&config, false);
+    let hint = empty_library_hint(0, destination.as_deref(), true, true).expect("folder hint");
+    assert!(hint.contains("Settings under Library") && !hint.contains("/legacy"));
+    config["library"]["folders"] = json!(["/custom"]);
+    let destination = skwd_config::library_destination(&config, false);
+    let hint = empty_library_hint(0, destination.as_deref(), true, true).expect("directory hint");
+    assert!(hint.contains("/custom") && !hint.contains("/legacy"));
 }
 
 #[test]
@@ -292,11 +297,16 @@ fn connect_pending_ids() {
     assert_eq!(app.daemon.pending.get(&42), Some(&Pending::List));
     let calls = drain_calls(&app);
     let methods: Vec<&str> = calls.iter().map(|(method, _)| method.as_str()).collect();
-    assert_eq!(methods, ["effects.list", "wall.outputs", "status", "task.list"]);
+    assert_eq!(
+        methods,
+        ["effects.list", "wall.outputs", "status", "wall.weather", "playlist.list", "task.list"]
+    );
     assert_eq!(app.daemon.pending.get(&1), Some(&Pending::EffectThemes));
     assert_eq!(app.daemon.pending.get(&2), Some(&Pending::Outputs));
     assert_eq!(app.daemon.pending.get(&3), Some(&Pending::Status));
-    assert_eq!(app.daemon.pending.get(&4), Some(&Pending::TaskList));
+    assert_eq!(app.daemon.pending.get(&4), Some(&Pending::Weather));
+    assert_eq!(app.daemon.pending.get(&5), Some(&Pending::WeatherPlaylists));
+    assert_eq!(app.daemon.pending.get(&6), Some(&Pending::TaskList));
 }
 
 #[test]

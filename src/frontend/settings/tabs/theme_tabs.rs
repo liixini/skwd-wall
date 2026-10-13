@@ -2,6 +2,9 @@
 use super::*;
 use crate::i18n::{tr, tr_args};
 
+const LOCKSCREEN_IMAGE_EXAMPLE: &str = "~/Pictures/lock-screen.jpg";
+const PLASMA_OFF: &str = "off";
+
 pub(super) fn authority_options(
     available: &[String],
     current: &str,
@@ -346,41 +349,6 @@ fn theme_target(builder: &mut Builder<'_>, provider: &'static str) {
 }
 
 pub(super) fn tab_integrations(builder: &mut Builder<'_>) {
-    let cfg = builder.cfg;
-    let lock_mode = cfg.text(keys::plasma::LOCK_SCREEN_MODE);
-    builder.card(
-        tr("settings-integrations-plasma-card"),
-        tr("settings-integrations-plasma-card-desc"),
-    );
-    builder.dropdown_cur(
-        tr("settings-integrations-lock-mode-label"),
-        tr("settings-integrations-lock-mode-desc"),
-        keys::plasma::LOCK_SCREEN_MODE,
-        &[
-            ("off", tr("settings-integrations-lock-off")),
-            ("static", tr("settings-integrations-lock-static")),
-            ("follow", tr("settings-integrations-lock-follow")),
-        ],
-        lock_mode.clone(),
-    );
-    if lock_mode == "static" {
-        builder.text_field(
-            tr("settings-integrations-lock-image-label"),
-            tr("settings-integrations-lock-image-desc"),
-            keys::plasma::LOCK_SCREEN_IMAGE,
-            "~/Pictures/lock-screen.jpg",
-        );
-    } else if lock_mode == "follow" {
-        builder.dropdown(
-            tr("settings-integrations-lock-dynamic-label"),
-            tr("settings-integrations-lock-dynamic-desc"),
-            keys::plasma::LOCK_SCREEN_DYNAMIC,
-            &[
-                ("poster", tr("settings-integrations-lock-poster")),
-                ("live", tr("settings-integrations-lock-live")),
-            ],
-        );
-    }
     builder.card(
         tr("settings-integrations-noctalia-card"),
         tr("settings-integrations-noctalia-card-desc"),
@@ -416,6 +384,125 @@ pub(super) fn tab_integrations(builder: &mut Builder<'_>) {
         tr("settings-integrations-dms-hover-desc"),
         keys::dms::HOVER_PREVIEW,
     );
+}
+
+#[expect(clippy::too_many_lines, reason = "Lockscreen settings declarative composition")]
+pub(super) fn tab_lockscreens(builder: &mut Builder<'_>) {
+    use crate::contracts::settings::LockScreenTarget;
+
+    let lock_mode = builder.cfg.text(keys::plasma::LOCK_SCREEN_MODE);
+    let source_mode = builder.cfg.text(keys::lock_screens::MODE);
+    builder.card(tr("settings-section-lockscreens"), "");
+    for (target, title, path) in [
+        (
+            LockScreenTarget::Plasma,
+            tr("settings-integrations-plasma-card"),
+            keys::plasma::LOCK_SCREEN_MODE,
+        ),
+        (
+            LockScreenTarget::Hyprlock,
+            tr("settings-lockscreens-hyprlock-card"),
+            keys::lock_screens::HYPRLOCK,
+        ),
+        (
+            LockScreenTarget::Swaylock,
+            tr("settings-lockscreens-swaylock-card"),
+            keys::lock_screens::SWAYLOCK,
+        ),
+        (LockScreenTarget::Dms, tr("settings-integrations-dms-card"), keys::lock_screens::DMS),
+        (
+            LockScreenTarget::Noctalia,
+            tr("settings-integrations-noctalia-card"),
+            keys::lock_screens::NOCTALIA,
+        ),
+        (
+            LockScreenTarget::Sddm,
+            tr("settings-lockscreens-sddm-card"),
+            keys::lock_screens::SDDM_IMAGE,
+        ),
+    ] {
+        let enabled = match target {
+            LockScreenTarget::Plasma => lock_mode != PLASMA_OFF,
+            LockScreenTarget::Sddm => {
+                source_mode != keys::lock_screens::OFF && !builder.cfg.text(path).is_empty()
+            }
+            _ => source_mode != keys::lock_screens::OFF && builder.cfg.flag(path),
+        };
+        let mode = if target == LockScreenTarget::Plasma { &lock_mode } else { &source_mode };
+        let detail = tr(match (target, mode == keys::lock_screens::STATIC) {
+            (LockScreenTarget::Sddm, true) => "settings-lockscreens-sddm-static-action-desc",
+            (LockScreenTarget::Sddm, false) => "settings-lockscreens-sddm-action-desc",
+            (_, true) => "settings-lockscreens-static-action-desc",
+            (_, false) => "settings-lockscreens-action-desc",
+        });
+        let state =
+            tr(if enabled { "settings-control-enabled" } else { "settings-control-disabled" });
+        let label = tr(if enabled {
+            "settings-lockscreens-disable"
+        } else {
+            "settings-lockscreens-enable"
+        });
+        builder.row(
+            title,
+            &format!("{state}. {detail}"),
+            Control::ActionBtn {
+                id: ActionId::SetLockScreen(target, !enabled),
+                label: label.to_string(),
+            },
+        );
+    }
+    builder.card(tr("settings-lockscreens-advanced-label"), "");
+    builder.dropdown_cur(
+        tr("settings-lockscreens-source-label"),
+        tr("settings-lockscreens-source-help"),
+        keys::lock_screens::MODE,
+        &[
+            (keys::lock_screens::FOLLOW, tr("settings-integrations-lock-follow")),
+            (keys::lock_screens::STATIC, tr("settings-integrations-lock-static")),
+        ],
+        if source_mode == keys::lock_screens::OFF {
+            keys::lock_screens::FOLLOW.to_string()
+        } else {
+            source_mode
+        },
+    );
+    if builder.cfg.text(keys::lock_screens::MODE) == keys::lock_screens::STATIC {
+        builder.text_field(
+            tr("settings-lockscreens-image-label"),
+            tr("settings-lockscreens-image-desc"),
+            keys::lock_screens::IMAGE,
+            LOCKSCREEN_IMAGE_EXAMPLE,
+        );
+    }
+    builder.dropdown_cur(
+        tr("settings-integrations-lock-mode-label"),
+        tr("settings-integrations-lock-mode-desc"),
+        keys::plasma::LOCK_SCREEN_MODE,
+        &[
+            ("off", tr("settings-integrations-lock-off")),
+            ("static", tr("settings-integrations-lock-static")),
+            ("follow", tr("settings-integrations-lock-follow")),
+        ],
+        lock_mode.clone(),
+    );
+    if lock_mode == "static" {
+        builder.text_field(
+            tr("settings-integrations-lock-image-label"),
+            tr("settings-integrations-lock-image-desc"),
+            keys::plasma::LOCK_SCREEN_IMAGE,
+            LOCKSCREEN_IMAGE_EXAMPLE,
+        );
+    } else if lock_mode == "follow" {
+        builder.dropdown(
+            tr("settings-integrations-lock-dynamic-label"),
+            tr("settings-integrations-lock-dynamic-desc"),
+            keys::plasma::LOCK_SCREEN_DYNAMIC,
+            &[
+                ("poster", tr("settings-integrations-lock-poster")),
+                ("live", tr("settings-integrations-lock-live")),
+            ],
+        );
+    }
 }
 
 pub(super) fn tab_matugen(builder: &mut Builder<'_>) {
@@ -462,6 +549,11 @@ pub(super) fn tab_matugen(builder: &mut Builder<'_>) {
             &format!("integrations.{idx}.name"),
             "kitty",
         );
+        let profile = super::app_themes::profile(
+            cfg,
+            format!("{}.{idx}.{}", keys::integrations::LIST, keys::integrations::PROFILE),
+        );
+        builder.row(&profile.title, &profile.desc, profile.control);
         builder.text_field(
             tr("settings-matugen-template-label"),
             tr("settings-matugen-template-desc"),

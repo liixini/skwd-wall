@@ -33,7 +33,7 @@ fn positive_edge_tilt_raises_right_side_without_slanting_sides() {
 fn transformed_hit_target_uses_the_same_inverse_geometry() {
     let panel = panel();
     let layout = super::super::layout::back_layout(&panel);
-    let target = layout.delete;
+    let target = layout.actions.delete;
     let geometry = BackGeometry::new(&panel, &layout);
     let logical_center = Point::new(target.0 + target.2 * 0.5, target.1 + target.3 * 0.5);
     let drawn_center = geometry.point(logical_center);

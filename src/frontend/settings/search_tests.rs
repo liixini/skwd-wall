@@ -15,6 +15,20 @@ fn search_aliases_across_tabs() {
 }
 
 #[test]
+fn page_sections_searchable() {
+    let cfg = FakeSettingsSource::default();
+    for (query, title) in
+        [("excluded", "Excluded folders"), ("folders", "Folders"), ("profiles", "Profiles")]
+    {
+        let results = search_settings(query, &cfg, &[], &[], "", &[], None);
+        assert!(
+            results.iter().any(|result| result.tab == "library" && result.section_title == title),
+            "{query}"
+        );
+    }
+}
+
+#[test]
 fn blank_search_empty() {
     let cfg = FakeSettingsSource::default();
     assert!(search_settings("   ", &cfg, &[], &[], "", &[], None).is_empty());

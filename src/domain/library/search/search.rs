@@ -20,8 +20,13 @@ pub struct LibraryQuery {
 }
 
 pub fn parse_library_search(text: &str, vocab: &HashSet<String>) -> LibraryQuery {
-    let numeric = parse_numeric_query(text);
-    let tag_text = strip_numeric_query(text);
+    let (numeric_tags, tokens): (Vec<_>, Vec<_>) = text.split_whitespace().partition(|token| {
+        let bare = token.trim_start_matches('-');
+        super::numeric::workshop_id(bare).is_some() && vocab.contains(bare)
+    });
+    let numeric_text = tokens.join(" ");
+    let numeric = parse_numeric_query(&numeric_text);
+    let tag_text = strip_numeric_query(text, &numeric_tags);
     let (tags, partial) = parse_search(&tag_text, vocab);
     LibraryQuery { tags, partial, numeric }
 }

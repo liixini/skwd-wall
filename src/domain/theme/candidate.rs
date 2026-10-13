@@ -31,6 +31,18 @@ impl ThemeRole {
 }
 
 pub const THEME_ROLE_COUNT: usize = skwd_palette::material::ROLE_KEYS.len();
+const PREVIEW_COLOR_LIMIT: usize = 6;
+const PREVIEW_ROLES: [ThemeRole; ThemeRole::ALL.len()] = [
+    ThemeRole::Background,
+    ThemeRole::Surface,
+    ThemeRole::SurfaceContainer,
+    ThemeRole::SurfaceText,
+    ThemeRole::Primary,
+    ThemeRole::Tertiary,
+    ThemeRole::SurfaceVariant,
+    ThemeRole::PrimaryText,
+    ThemeRole::Outline,
+];
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Candidate {
@@ -50,6 +62,24 @@ impl Default for Candidate {
 }
 
 impl Candidate {
+    pub fn preview_colors(&self) -> Vec<String> {
+        let mut colors = Vec::with_capacity(PREVIEW_COLOR_LIMIT);
+        let mut seen = Vec::with_capacity(PREVIEW_COLOR_LIMIT);
+        for role in PREVIEW_ROLES {
+            let color = &self.colors[role.index()];
+            if let Some(rgb) = parse_rgb(color)
+                && !seen.contains(&rgb)
+            {
+                seen.push(rgb);
+                colors.push(color.clone());
+                if colors.len() == PREVIEW_COLOR_LIMIT {
+                    break;
+                }
+            }
+        }
+        colors
+    }
+
     pub fn from_preset(name: &str) -> Option<Self> {
         skwd_palette::preset(name).map(Self::from_palette)
     }

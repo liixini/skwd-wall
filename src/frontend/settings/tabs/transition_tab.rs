@@ -26,7 +26,7 @@ fn family_desc_key(family: &str) -> &'static str {
     }
 }
 
-fn pretty(shader: &str) -> String {
+pub(super) fn pretty(shader: &str) -> String {
     let mut out = String::with_capacity(shader.len());
     for (idx, word) in shader.split('-').enumerate() {
         if idx > 0 {

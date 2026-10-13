@@ -21,6 +21,7 @@ pub enum PlMsg {
     EditSource(String),
     SetProp(i64, String, String),
     ColorPick(i64, i64),
+    ToggleFolder(i64, String),
     MoveMember(i64, String, i64),
     RemoveMember(i64, String),
     Delete(i64),

@@ -52,6 +52,7 @@ playlists-edition-eyebrow = 播放列表 / 编辑
 playlists-kind-tagline = { $kind } · 可分配到显示器
 playlists-stop-edition = 停止播放列表
 playlists-colour-notes = 颜色
+playlists-folder-notes = 文件夹
 playlists-live-collection-title = 筛选播放列表
 playlists-live-collection-desc = 此列表会根据所选的来源、标签、分辨率和颜色筛选自动更新。
 playlists-definition-title = 播放列表详情
@@ -74,11 +75,11 @@ playlists-picker-search = Search by name or ID
 playlists-picker-no-match = No playlists match this search.
 playlists-picker-hint = Choose which wallpapers to browse. Playback stays as it is.
 playlists-filter-help = Filter reference
-playlists-help-combine = Separate filters with spaces. Every filter must match. Names and paths cannot contain spaces.
+playlists-help-combine = 用空格分隔过滤条件。除文件夹规则外，每个条件都必须匹配；文件夹规则中任意一个文件夹内的项目即可匹配。包含空格的路径请加引号。
 playlists-help-source = all / favourites
     Start with all wallpapers or only favourites.
 playlists-help-folder = folder:nature/forest
-    Match this exact folder, relative to the library root. Subfolders are separate.
+    匹配此文件夹及其子文件夹。多个文件夹规则匹配其中任意一个；包含空格的路径请加引号。
 playlists-help-type = type:image / type:video / type:we
     Images, videos, or Wallpaper Engine wallpapers. Also accepts static, picture, pic, img; vid, mp4; scene, wallpaperengine, wallpaper-engine.
 playlists-help-tag = tag:cat,night / tag:cat|dog,-anime

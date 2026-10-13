@@ -23,6 +23,17 @@ fn envelope_contract<T>(valid: Value, decode: impl Fn(&Value) -> DecodeResult<T>
 
 #[test]
 fn presentation_boundaries_validate_envelopes_and_shapes() {
+    envelope_contract(
+        json!({"supported": true, "current": "work", "activities": []}),
+        decode_activities,
+    );
+    envelope_contract(
+        json!({"activity": "work", "visible": false, "queued": false}),
+        decode_activity_apply,
+    );
+    assert!(decode_activity_apply(&json!({"activity": "work"})).is_err());
+    assert!(decode_activity_apply(&json!({"visible": false})).is_err());
+    assert!(decode_activity_apply(&json!({"activity": "work", "visible": "false"})).is_err());
     envelope_contract(json!({"outputs": []}), decode_outputs);
     envelope_contract(json!({"outputs": []}), decode_audio_outputs);
     envelope_contract(json!({}), decode_theme_backends);
@@ -146,6 +157,71 @@ fn diagnostic_boundaries_preserve_partial_and_future_fields() {
     assert!(decode_bug_report(&json!({"path": false})).is_err());
 
     assert_eq!(decode_weather(&json!({"weather": ["rain", 7]})).unwrap().weather, ["rain"]);
+
+    let wire = wall_proto::WeatherStatus {
+        weather: vec!["rainy".into()],
+        enabled: true,
+        status: wall_proto::WeatherState::Paused,
+        source: wall_proto::WeatherSource::Playlists,
+        category: Some("rainy".into()),
+        query: None,
+        playlist_id: Some(42),
+        playlist_name: Some("Rain".into()),
+        member_keys: vec!["wall.png".into()],
+        resolved_count: 1,
+        fetched_at: Some(100),
+        paused_outputs: vec!["DP-1".into()],
+        resume_available: true,
+        ..Default::default()
+    };
+    let result = decode_weather(&serde_json::to_value(wire).unwrap()).unwrap();
+    assert_eq!(result.status, crate::contracts::daemon::WeatherState::Paused);
+    assert_eq!(result.member_keys, ["wall.png"]);
+    assert_eq!(result.fetched_at, Some(100));
+    assert!(result.resume_available);
+
+    let semantic = decode_weather(&json!({
+        "weather": ["rainy"], "source": "semantic", "status": "active",
+        "query": "rainy streets", "member_keys": ["wall.png"], "resolved_count": 1
+    }))
+    .unwrap();
+    assert_eq!(semantic.source, crate::contracts::daemon::WeatherSource::Semantic);
+    assert_eq!(semantic.query.as_deref(), Some("rainy streets"));
+    assert_eq!(semantic.member_keys, ["wall.png"]);
+
+    let outdoors = decode_weather(&json!({
+        "weather": ["cloudy"], "source": "outdoors", "status": "active",
+        "enabled": true, "location_key": "city-key", "member_keys": ["woods.png"],
+        "outdoors": {"season": "autumn", "light": "dusk", "match_kind": "starter",
+            "stale": false, "generation": 4, "location": "Stockholm",
+            "credits": "/assets/outdoors/sources.json",
+            "outputs": [{"output": "DP-1", "key": "woods.png", "name": "Woods",
+                "preview": "/walls/woods-thumb.png", "held": true}]}
+    }))
+    .unwrap();
+    assert_eq!(outdoors.source, crate::contracts::daemon::WeatherSource::Outdoors);
+    assert_eq!(outdoors.location_key.as_deref(), Some("city-key"));
+    let context = outdoors.outdoors.unwrap();
+    assert_eq!(context.match_kind, crate::contracts::daemon::OutdoorMatch::Starter);
+    assert_eq!(context.credits.as_deref(), Some("/assets/outdoors/sources.json"));
+    assert_eq!(context.outputs[0].output, "DP-1");
+    assert!(context.outputs[0].held);
+}
+
+#[test]
+fn weather_candidates_contract() {
+    use super::decode_weather_candidates;
+
+    let wire = wall_proto::WeatherCandidates {
+        category: "rainy".into(),
+        query: Some("rain at night".into()),
+        member_keys: vec!["static:a.png".into()],
+        error: None,
+    };
+    let result = decode_weather_candidates(&serde_json::to_value(wire).unwrap()).unwrap();
+    assert_eq!(result.member_keys, ["static:a.png"]);
+    assert!(decode_weather_candidates(&json!({"category": 1})).is_err());
+    assert!(decode_weather_candidates(&json!({})).is_err());
 }
 
 #[test]
@@ -242,6 +318,22 @@ fn status_boundaries_validate_runtime_shapes() {
 }
 
 #[test]
+fn removal_result_contract() {
+    envelope_contract(json!({"removed": "we:42"}), decode_wall_remove);
+    assert!(!decode_wall_remove(&json!({"removed": "we:42"})).unwrap().unsubscribed);
+    assert!(
+        decode_wall_remove(&json!({"removed": "we:42", "unsubscribed": true}))
+            .unwrap()
+            .unsubscribed
+    );
+    for result in
+        [json!({}), json!({"removed": 42}), json!({"removed": "we:42", "unsubscribed": "yes"})]
+    {
+        assert!(decode_wall_remove(&result).is_err());
+    }
+}
+
+#[test]
 fn library_boundary_rejects_atomic_shape_errors_and_accepts_future_fields() {
     let paths = LibraryPaths::new("/wallpapers", "/videos");
     assert!(decode_library_list(&json!([]), paths).is_err());
@@ -319,10 +411,44 @@ fn status_decodes_optional_steam_helper_availability() {
 }
 
 #[test]
+fn status_decodes_steam_connection() {
+    assert_eq!(decode_status(&json!({})).unwrap().steam_client_available, None);
+    for available in [false, true] {
+        let status = json!({wall_proto::STEAM_CLIENT_AVAILABLE_FIELD: available});
+        assert_eq!(decode_status(&status).unwrap().steam_client_available, Some(available));
+    }
+    assert!(decode_status(&json!({wall_proto::STEAM_CLIENT_AVAILABLE_FIELD: "yes"})).is_err());
+}
+
+#[test]
 fn saved_effect_palettes_do_not_enter_builtin_auto_recolour_settings() {
     let result = decode_effects_list(&json!({"effects": [{"id": "theme", "params": [{"id": "theme", "options": [
         {"mode": "Nord", "label": "Nord"}, {"mode": "saved:Nord", "label": "Nord", "swatch": ["#123456"]}
     ]}]}]})).unwrap();
     assert_eq!(result.theme_options.unwrap(), ["Nord"]);
     assert_eq!(result.definitions.unwrap()[0].params[0].options[1].mode, "saved:Nord");
+}
+
+#[test]
+fn activity_response_contract() {
+    for queued in [false, true] {
+        let result =
+            decode_activity_apply(&json!({"activity": "work", "visible": false, "queued": queued}))
+                .unwrap();
+        assert_eq!(result.queued, queued);
+    }
+    assert!(decode_activity_apply(&json!({"activity": "work", "visible": false})).is_err());
+    let valid = json!({"request_id": 1, "apply_token": "token", "activity": "work", "output": "DP-1", "visible": true, "ok": true});
+    envelope_contract(valid.clone(), decode_activity_event);
+    let event = decode_activity_event(&valid).unwrap().unwrap();
+    assert_eq!(event.token, "token");
+    assert!(matches!(
+        event.completion,
+        Some(crate::contracts::daemon::ActivityCompletion::Applied { visible: true })
+    ));
+    for field in ["visible", "ok"] {
+        let mut malformed = valid.clone();
+        malformed.as_object_mut().unwrap().remove(field);
+        assert!(decode_activity_event(&malformed).is_err());
+    }
 }

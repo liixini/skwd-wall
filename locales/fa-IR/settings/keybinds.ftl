@@ -63,8 +63,8 @@ keybind-scene-properties = ویژگی‌های صحنه
 
 keybind-folder-prev = پوشهٔ قبلی
 keybind-folder-next = پوشهٔ بعدی
-keybind-folder-toggle = جابه‌جایی بین همه/اصلی
-keybind-hidden-folders = نمایش/پنهان‌سازی پوشه‌های پنهان
+keybind-folder-toggle = نمایش همهٔ کاغذدیواری‌ها
+keybind-hidden-folders = نمایش/پنهان‌سازی تصاویر زمینه پنهان
 keybind-type-prev = نوع قبلی کاغذدیواری
 keybind-type-next = نوع بعدی کاغذدیواری
 keybind-sort-prev = ترتیب قبلی

@@ -1,12 +1,15 @@
 #![cfg(test)]
 
+mod activity;
 mod app_themes;
 mod audio;
 mod browser_demo;
+mod clipboard;
 mod effects;
 mod filters;
 mod folder_keys;
 mod frame_clock;
+mod hidden;
 mod input;
 mod keybind_slots;
 mod library_demo;
@@ -14,6 +17,7 @@ mod library_events;
 mod overview;
 mod picker_keys;
 mod playlists;
+mod profiles;
 mod runtime;
 mod scene;
 mod scene_properties;
@@ -85,6 +89,12 @@ fn wall(name: &str, kind: &str, hue: i64, mtime: i64) -> Value {
         "hue": hue,
         "mtime": mtime
     })
+}
+
+fn static_wall(name: &str, hue: i64) -> Value {
+    let mut item = wall(name, "static", hue, 0);
+    item["key"] = json!(format!("static:{name}"));
+    item
 }
 
 fn respond(app: &mut App, id: u64, result: Value) {

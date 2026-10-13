@@ -63,8 +63,8 @@ keybind-scene-properties = خصائص المشهد
 
 keybind-folder-prev = المجلد السابق
 keybind-folder-next = المجلد التالي
-keybind-folder-toggle = تبديل الكل/الرئيسي
-keybind-hidden-folders = إظهار/إخفاء المجلدات المخفية
+keybind-folder-toggle = إظهار كل الخلفيات
+keybind-hidden-folders = إظهار/إخفاء الخلفيات المخفية
 keybind-type-prev = نوع الخلفية السابق
 keybind-type-next = نوع الخلفية التالي
 keybind-sort-prev = الترتيب السابق

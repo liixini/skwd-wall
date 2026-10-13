@@ -75,6 +75,9 @@ pub(super) fn update(app: &mut App, msg: EffectsMsg) -> Task<Message> {
             Task::none()
         }
         EffectsMsg::MonitorLock(output, locked) => {
+            if app.panels.effects.as_ref().is_some_and(|effects| effects.activity.inactive()) {
+                return Task::none();
+            }
             let connector = app
                 .panels
                 .effects
@@ -90,6 +93,9 @@ pub(super) fn update(app: &mut App, msg: EffectsMsg) -> Task<Message> {
             Task::none()
         }
         EffectsMsg::MonitorTheme(output) => {
+            if app.panels.effects.as_ref().is_some_and(|effects| effects.activity.inactive()) {
+                return Task::none();
+            }
             let Some(connector) = app
                 .daemon
                 .output_statuses
@@ -128,6 +134,31 @@ pub(super) fn update(app: &mut App, msg: EffectsMsg) -> Task<Message> {
             Task::none()
         }
         EffectsMsg::MonitorApplySelected => monitor_apply_selected(app),
+        EffectsMsg::ActivitySelect(activity) => {
+            let Some(effects) = app.panels.effects.as_mut() else { return Task::none() };
+            if !effects.activity.supported
+                || effects.activity.list_request != 0
+                || !effects.activity.activities.iter().any(|entry| entry.id == activity)
+            {
+                return Task::none();
+            }
+            effects.activity.selected.clone_from(&activity);
+            effects.activity.ready = false;
+            effects.activity.error = None;
+            effects.activity.generation += 1;
+            effects.clear_monitors();
+            let generation = effects.activity.generation;
+            let id = app.call_tracked(
+                wall_proto::rpc::WALL_OUTPUTS,
+                json!({(wall_proto::ACTIVITY_PARAM): activity.clone()}),
+                Pending::ActivityOutputs { activity, generation },
+            );
+            if let Some(effects) = app.panels.effects.as_mut() {
+                effects.activity.output_request = id;
+            }
+            app.retick();
+            Task::none()
+        }
         EffectsMsg::SrcMute(mute) => {
             effects_edit(app, |effects| effects.set_source_mute(mute));
             Task::none()
@@ -187,6 +218,9 @@ pub(super) fn toggle_audio_panel(app: &mut App) -> Task<Message> {
 }
 
 pub(super) fn mon_fill(app: &mut App, output: &str, mode: &str) -> Task<Message> {
+    if app.panels.effects.as_ref().is_some_and(|effects| effects.activity.inactive()) {
+        return Task::none();
+    }
     let connector = app
         .panels
         .effects
@@ -491,29 +525,74 @@ pub(super) fn effects_edit(
 }
 
 pub(super) fn monitor_apply_selected(app: &mut App) -> Task<Message> {
-    let info = app
-        .panels
-        .effects
-        .as_ref()
-        .and_then(|eff| app.library_session.filtered.get(eff.card()))
-        .and_then(|&si| app.library_session.library.catalog().items.get(si as usize))
-        .map(|it| (it.kind, it.path.clone(), it.we_id.clone()));
+    let Some(activity) = app.panels.effects.as_ref().map(|effects| &effects.activity) else {
+        return Task::none();
+    };
+    if !activity.can_apply() {
+        app.show_toast(crate::i18n::tr("effects-activity-unavailable"));
+        return Task::none();
+    }
+    let selected_activity = activity.supported.then(|| activity.selected.clone());
+    let activity_name = activity
+        .activities
+        .iter()
+        .find(|entry| Some(&entry.id) == selected_activity.as_ref())
+        .map(|entry| entry.name.clone());
+    let info = app.panels.effects.as_ref().and_then(|effects| {
+        app.library_session
+            .library
+            .catalog()
+            .items
+            .iter()
+            .find(|item| item.key == effects.source_key())
+    });
+    let info = info.map(|item| (item.kind, item.path.clone(), item.we_id.clone()));
     let targets: Vec<String> = app
         .panels
         .effects
         .as_ref()
-        .map(crate::frontend::effects::Effects::apply_targets)
+        .map(|effects| {
+            if effects.activity.supported {
+                effects
+                    .selected_targets()
+                    .into_iter()
+                    .filter(|target| {
+                        effects.monitors().iter().any(|monitor| monitor.target == *target)
+                    })
+                    .collect()
+            } else {
+                effects.apply_targets()
+            }
+        })
         .unwrap_or_default();
+    if targets.is_empty() {
+        return Task::none();
+    }
     let (smute, svol) = app
         .panels
         .effects
         .as_ref()
         .map_or((true, 0), crate::frontend::effects::Effects::source_audio);
     if let Some((kind, path, we_id)) = info {
+        let batch = selected_activity.as_ref().map(|activity| {
+            app.daemon.next_activity_apply += 1;
+            let batch = app.daemon.next_activity_apply;
+            app.daemon.activity_applies.insert(
+                batch,
+                crate::app::state::ActivityApplyBatch {
+                    activity: activity.clone(),
+                    name: activity_name.unwrap_or_else(|| activity.clone()),
+                    pending: targets.len(),
+                    failed: false,
+                    visible: true,
+                },
+            );
+            batch
+        });
         info!("monitor apply: kind={} targets={targets:?}", kind.as_str());
         for (idx, output) in targets.iter().enumerate() {
             let notify = idx == 0;
-            let params = match kind.as_str() {
+            let mut params = match kind.as_str() {
                 wall_proto::kind::WE => {
                     json!({"type": wall_proto::kind::WE, "we_id": we_id, "output": output, "notify": notify, "mute": smute, "volume": svol, "override_locks": true})
                 }
@@ -524,11 +603,20 @@ pub(super) fn monitor_apply_selected(app: &mut App) -> Task<Message> {
                     json!({"type": wall_proto::kind::STATIC, "path": path, "output": output, "notify": notify, "override_locks": true})
                 }
             };
+            if let Some(activity) = &selected_activity {
+                params[wall_proto::ACTIVITY_PARAM] = json!(activity);
+            }
             info!("  -> wall.apply output={output} type={}", kind.as_str());
-            app.daemon.client.call("wall.apply", params);
+            if let Some(batch) = batch {
+                app.call_activity_apply(batch, output, params);
+            } else {
+                app.daemon.client.call("wall.apply", params);
+            }
         }
     } else {
-        info!("monitor apply: no card selected, targets={targets:?}");
+        info!("monitor apply: source unavailable");
+        app.show_toast(crate::i18n::tr("status-apply-failed"));
+        return Task::none();
     }
     if !targets.is_empty() {
         app.panels.effects = None;

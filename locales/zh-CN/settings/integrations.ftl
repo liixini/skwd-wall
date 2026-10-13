@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = 将 skwd-wall 连接到 Plasma 桌面。锁屏壁纸选项在下方配置。
 settings-integrations-lock-mode-label = 锁屏壁纸
 settings-integrations-lock-mode-desc = “不管理”不改动 Plasma。“静态图片”始终使用下方的图片。“跟随上次应用”会跟随最近应用的壁纸。
 settings-integrations-lock-off = 不管理
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = 悬停在壁纸上会临时重写 dms-col
 
 settings-integrations-follow-label = 跟随 Skwd 配色
 settings-integrations-follow-desc = 在 Skwd 控制配色时跟随其颜色。关闭后保留当前颜色。
+
+settings-section-lockscreens = 锁屏
+settings-lockscreens-source-label = 图片来源
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = 静态图片
+settings-lockscreens-image-desc = 输入现有图片的完整路径，例如 ~/Pictures/lockscreen.jpg。Skwd 会为已启用的锁屏复制该图片。这里不能使用视频文件。
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = 将当前壁纸用作此锁屏的图片。
+settings-lockscreens-static-action-desc = 将所选图片用作此锁屏的背景。
+settings-lockscreens-sddm-static-action-desc = 将所选图片用于登录屏幕。此操作需要管理员授权。
+settings-lockscreens-sddm-action-desc = 将当前壁纸用于登录屏幕。此操作需要管理员授权。
+settings-lockscreens-choose-theme-desc = 尚未为 SDDM 选择主题。请选择一个已安装的主题，以使用当前壁纸。
+settings-lockscreens-error = 无法更新锁屏：{ $error }
+settings-lockscreens-rollback-error = 无法更新锁屏：{ $error } 恢复 SDDM 也失败了：{ $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = 启用
+settings-lockscreens-disable = 禁用
+settings-lockscreens-advanced-label = 高级
+settings-lockscreens-choose-theme = 选择 SDDM 主题
+settings-lockscreens-pending = 正在更新锁屏…
+settings-lockscreens-no-sddm-theme = 没有可用的已安装 SDDM 主题。
+
+settings-app-themes-profile-label = 颜色配置
+settings-app-themes-profile-desc = 为此应用使用固定颜色配置。跟随当前主题使用当前壁纸或固定主题的颜色。
+settings-app-themes-profile-follow = 跟随当前主题
+settings-app-themes-profile-missing = 不可用：{ $name }
+settings-app-themes-profile-in-use = 删除前，请为使用 { $name } 的应用选择其他颜色配置。

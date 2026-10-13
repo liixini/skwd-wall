@@ -6,7 +6,7 @@ use crate::frontend::theme::Palette;
 
 use super::actions::draw_actions;
 use super::background::draw_surface;
-use super::content::{draw_add, draw_favourite, draw_fields, draw_tags};
+use super::content::{draw_add, draw_fields, draw_tags, draw_toggles};
 use super::layout::back_layout;
 
 pub(crate) fn draw_back(
@@ -36,7 +36,7 @@ pub(crate) fn draw_back(
     if fade <= 0.01 {
         return;
     }
-    draw_favourite(frame, palette, panel, &layout, progress, fade);
+    draw_toggles(frame, palette, panel, &layout, progress, fade);
     draw_fields(frame, palette, panel, &layout, progress, fade);
     draw_tags(frame, palette, panel, &layout, progress, fade);
     draw_add(frame, palette, panel, &layout, progress, fade);

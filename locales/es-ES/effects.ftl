@@ -81,3 +81,12 @@ effects-name-topographic = Topographic
 effects-name-tonal-layers = Tonal Layers
 
 effects-saved-palette = { $name } (guardado)
+
+effects-activity-label = Actividad
+effects-activity-desc = Elige qué actividad de Plasma recibirá el fondo. El escritorio permanecerá en la actividad actual.
+effects-activity-current = Actual
+effects-activity-inactive-desc = En una actividad inactiva solo puedes cambiar los fondos asignados. Los ajustes de pantalla y reproducción afectan al escritorio actual.
+effects-activity-unavailable = La actividad seleccionada no está disponible. Elige una actividad existente e inténtalo de nuevo.
+effects-activity-saved = Guardado para { $activity }.
+effects-activity-unassigned = Sin fondo de Skwd asignado
+effects-activity-preparing = Preparando el fondo para { $activity }.

@@ -7,7 +7,7 @@ pub(super) fn set_folder(app: &mut App, folder: String) -> Task<Message> {
     app.chrome.bar.menu = None;
     app.chrome.bar.menu_scroll.snap(0.0);
     app.library_session.playlist_filter = None;
-    app.change_filters(|flt| flt.folder = folder);
+    app.change_filters(|flt| flt.folder = if folder.is_empty() { "*".into() } else { folder });
     Task::none()
 }
 
@@ -34,27 +34,21 @@ pub(super) fn toggle_folder(app: &mut App) -> Task<Message> {
     if app.menu_capturing() {
         return Task::none();
     }
-    let folder = if app.library_session.filters.folder == "*" { "" } else { "*" };
-    set_folder(app, folder.into())
+    set_folder(app, String::from("*"))
 }
 
-pub(super) fn toggle_hidden_folders(app: &mut App) -> Task<Message> {
-    if app.menu_capturing() {
+pub(super) fn toggle_show_hidden(app: &mut App) -> Task<Message> {
+    let reveal = !app.library_session.filters.reveal;
+    if app.menu_capturing() || (reveal && !app.library_session.library.catalog().has_hidden()) {
         return Task::none();
     }
     app.close_flip_after_removal();
-    app.change_filters(|filters| {
-        filters.show_hidden_folders = !filters.show_hidden_folders;
-        if !filters.folder_visible(&filters.folder) {
-            filters.folder = "*".into();
-        }
-    });
+    app.change_filters(|filters| filters.reveal = reveal);
+    let folder = app.library_session.filters.folder.clone();
     app.rebuild_folder_options();
-    app.show_toast(crate::i18n::tr(if app.library_session.filters.show_hidden_folders {
-        "status-hidden-folders-shown"
-    } else {
-        "status-hidden-folders-hidden"
-    }));
+    if app.library_session.filters.folder != folder {
+        app.refilter_from_start();
+    }
     Task::none()
 }
 

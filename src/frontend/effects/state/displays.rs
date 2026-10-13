@@ -11,6 +11,11 @@ pub(in crate::frontend::effects) struct DisplaySelectionState {
 }
 
 impl Effects {
+    pub fn clear_monitors(&mut self) {
+        self.displays.monitors.clear();
+        self.displays.selected_outputs.clear();
+        self.displays.hovered = None;
+    }
     pub fn connector_for_target(&self, target: &str) -> Option<&str> {
         self.displays
             .monitors
@@ -164,13 +169,18 @@ impl Effects {
     }
 
     pub fn apply_targets(&self) -> Vec<String> {
-        let all = !self.displays.monitors.is_empty()
-            && self.displays.selected_outputs.len() == self.displays.monitors.len();
-        if self.displays.selected_outputs.is_empty() || all {
+        let targets = self.selected_targets();
+        if targets.is_empty() || targets.len() == self.displays.monitors.len() {
             vec!["*".to_string()]
         } else {
-            self.displays.selected_outputs.iter().cloned().collect()
+            targets
         }
+    }
+
+    pub fn selected_targets(&self) -> Vec<String> {
+        let mut targets: Vec<_> = self.displays.selected_outputs.iter().cloned().collect();
+        targets.sort();
+        targets
     }
 
     pub fn tile_audio(&self, monitor: &MonitorInfo, selected: bool) -> TileAudio {
@@ -192,6 +202,8 @@ impl Effects {
             || self.displays.hovered.as_deref() == Some(monitor.target.as_str());
         if incoming {
             self.preview.thumb.clone().or_else(|| monitor.current_thumb.clone())
+        } else if self.activity.supported {
+            monitor.current_thumb.clone()
         } else {
             monitor.current_thumb.clone().or_else(|| self.preview.thumb.clone())
         }

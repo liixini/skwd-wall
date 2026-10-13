@@ -1,7 +1,7 @@
 use super::{ARRAY_ACTIONS, choice_enabled, initial_choice, next_choice, remove_index};
 use crate::frontend::settings::{ActionId, Control};
 
-fn variant_name(id: ActionId) -> String {
+fn variant_name(id: &ActionId) -> String {
     format!("{id:?}").split('(').next().unwrap_or_default().to_string()
 }
 
@@ -9,7 +9,7 @@ fn variant_name(id: ActionId) -> String {
 fn array_actions_cover_ids() {
     let mut covered: Vec<String> = ARRAY_ACTIONS
         .iter()
-        .flat_map(|row| [variant_name(row.add), variant_name((row.remove)(0))])
+        .flat_map(|row| [variant_name(&row.add), variant_name(&(row.remove)(0))])
         .collect();
     covered.sort_unstable();
     let mut declared: Vec<String> = include_str!("../../../frontend/settings/action.rs")
@@ -17,6 +17,7 @@ fn array_actions_cover_ids() {
         .map(str::trim)
         .filter(|line| line.starts_with("Add") || line.starts_with("Remove"))
         .map(|line| line.split(['(', ',']).next().unwrap_or_default().to_string())
+        .filter(|name| !matches!(name.as_str(), "AddFolder" | "RemoveFolder"))
         .collect();
     declared.sort_unstable();
     assert_eq!(declared, covered);
@@ -30,8 +31,8 @@ fn array_rows_distinct_keys() {
     keys.dedup();
     assert_eq!(keys.len(), unique);
     for row in ARRAY_ACTIONS {
-        assert_eq!(remove_index((row.remove)(9)), Some(9));
-        assert_eq!(remove_index(row.add), None);
+        assert_eq!(remove_index(&(row.remove)(9)), Some(9));
+        assert_eq!(remove_index(&row.add), None);
         assert!(!row.add.is_destructive(), "{:?}", row.add);
     }
 }

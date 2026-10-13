@@ -89,3 +89,12 @@ effects-name-topographic = طبوغرافي
 effects-name-tonal-layers = طبقات لونية
 
 effects-saved-palette = { $name } (محفوظ)
+
+effects-activity-label = النشاط
+effects-activity-desc = اختر نشاط Plasma الذي ستُطبّق عليه الخلفية. سيبقى سطح المكتب في النشاط الحالي.
+effects-activity-current = الحالي
+effects-activity-inactive-desc = يمكن تغيير تعيينات الخلفيات فقط للنشاط غير النشط. تنطبق إعدادات العرض والتحكم في التشغيل على سطح المكتب الحالي.
+effects-activity-unavailable = النشاط المحدد غير متاح. اختر نشاطًا موجودًا وحاول مرة أخرى.
+effects-activity-saved = حُفظ للنشاط { $activity }.
+effects-activity-unassigned = لم يتم تعيين خلفية Skwd
+effects-activity-preparing = جارٍ تجهيز الخلفية لنشاط { $activity }.

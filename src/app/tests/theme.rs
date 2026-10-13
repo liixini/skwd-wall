@@ -1,5 +1,10 @@
 use super::*;
 
+fn steam_online(app: &mut App) {
+    app.config.set_key(skwd_config::keys::steam::BACKEND, json!("steam"));
+    app.daemon.steam_client_available = Some(true);
+}
+
 #[test]
 fn theme_preview_debounce() {
     let mut app = test_app();
@@ -424,7 +429,9 @@ fn delete_routing() {
     let mut app = test_app();
     let mut we = wall("Nice Scene", "we", 3, 0);
     we["we_id"] = json!("4242");
+    we["steam_subscribed"] = json!(true);
     seed(&mut app, &[wall("a.png", "static", 1, 0), we, wall("c.png", "static", 2, 0)]);
+    steam_online(&mut app);
     app.scene.viewport = (800.0, 600.0);
     app.scene.set_visible(true);
 
@@ -441,14 +448,20 @@ fn delete_routing() {
         frame(&mut app, t0 + Duration::from_millis(i * 16), 800.0, 600.0);
     }
     let panel = app.scene.render.back.clone().expect("back panel present");
+    assert_eq!(panel.removal.label(), "Unsubscribe");
     let layout = crate::frontend::ui::back_layout(&panel);
-    let (dx, dy) =
-        (layout.delete.0 + layout.delete.2 / 2.0, layout.delete.1 + layout.delete.3 / 2.0);
+    let (dx, dy) = (
+        layout.actions.delete.0 + layout.actions.delete.2 / 2.0,
+        layout.actions.delete.1 + layout.actions.delete.3 / 2.0,
+    );
     let _ = update(&mut app, Message::Click(dx, dy, crate::domain::input::MouseButton::Left));
     let calls = drain_calls(&app);
     let rm = calls.iter().find(|(method, _)| method == "wall.remove").expect("remove sent");
     assert_eq!(rm.1["we_id"], "4242");
     assert!(rm.1.get("path").is_none());
+    assert_eq!(rm.1["unsubscribe"], true);
+    frame(&mut app, t0 + Duration::from_secs(1), 800.0, 600.0);
+    assert_eq!(app.scene.render.back.as_ref().unwrap().removal.label(), "Unsubscribing…");
 
     assert!(!app.scene.filter_flip_running());
     app.on_event(
@@ -471,8 +484,10 @@ fn delete_routing() {
     }
     let panel = app.scene.render.back.clone().expect("back panel re-emitted");
     let layout = crate::frontend::ui::back_layout(&panel);
-    let (dx, dy) =
-        (layout.delete.0 + layout.delete.2 / 2.0, layout.delete.1 + layout.delete.3 / 2.0);
+    let (dx, dy) = (
+        layout.actions.delete.0 + layout.actions.delete.2 / 2.0,
+        layout.actions.delete.1 + layout.actions.delete.3 / 2.0,
+    );
     let _ = update(&mut app, Message::Click(dx, dy, crate::domain::input::MouseButton::Left));
     let calls = drain_calls(&app);
     let rm = calls.iter().find(|(method, _)| method == "wall.remove").expect("remove sent");
@@ -486,9 +501,11 @@ fn workshop_video_delete() {
     let mut app = test_app();
     let mut wv = wall("burbank", "video", 4, 0);
     wv["key"] = json!("we:1127552307");
+    wv["steam_subscribed"] = json!(true);
     wv["video_file"] =
         json!("/steam/steamapps/workshop/content/431960/1127552307/burbank - sorry.mp4");
     seed(&mut app, &[wv, wall("plain.mp4", "video", 5, 0)]);
+    steam_online(&mut app);
 
     let wi = app
         .library_session
@@ -509,6 +526,8 @@ fn workshop_video_delete() {
     let rm = calls.iter().find(|(method, _)| method == "wall.remove").expect("remove sent");
     assert_eq!(rm.1["we_id"], "1127552307");
     assert!(rm.1.get("path").is_none());
+    assert_eq!(rm.1["unsubscribe"], true);
+    assert!(!calls.iter().any(|(method, _)| method == "wall.list"));
 
     let pi = app
         .library_session
@@ -523,6 +542,302 @@ fn workshop_video_delete() {
     let calls = drain_calls(&app);
     let rm = calls.iter().find(|(method, _)| method == "wall.remove").expect("remove sent");
     assert!(rm.1.get("we_id").is_none());
+}
+
+#[test]
+fn removal_confirms_late() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("first.png", "static", 1, 0)]);
+    drain_calls(&app);
+    super::update::delete_wallpaper(&mut app, 0);
+    assert_eq!(drain_calls(&app).len(), 1);
+    super::update::delete_wallpaper(&mut app, 0);
+    assert!(drain_calls(&app).is_empty());
+    let id = *app
+        .daemon
+        .pending
+        .iter()
+        .find(|(_, request)| matches!(request, Pending::RemoveWallpaper { .. }))
+        .unwrap()
+        .0;
+    app.handle_ipc(crate::infrastructure::ipc::IpcMsg::Response {
+        id,
+        result: Some(json!({"removed": "/wallpapers/first.png", "unsubscribed": false})),
+        error: None,
+    });
+    assert!(drain_calls(&app).iter().any(|(method, _)| method == "wall.list"));
+    assert_eq!(app.library_session.library.catalog().items.len(), 1);
+}
+
+#[test]
+fn removal_failure_preserves() {
+    let mut app = test_app();
+    let mut scene = wall("scene", "we", 1, 0);
+    scene["we_id"] = json!("42");
+    scene["steam_subscribed"] = json!(true);
+    seed(&mut app, &[scene]);
+    steam_online(&mut app);
+    app.scene.set_flipped_for_test(Some(0));
+    drain_calls(&app);
+    super::update::delete_wallpaper(&mut app, 0);
+    drain_calls(&app);
+    let id = *app
+        .daemon
+        .pending
+        .iter()
+        .find(|(_, request)| matches!(request, Pending::RemoveWallpaper { .. }))
+        .unwrap()
+        .0;
+    app.handle_ipc(crate::infrastructure::ipc::IpcMsg::Response {
+        id,
+        result: None,
+        error: Some(wall_proto::ErrorInfo { code: 1, message: "Steam is offline".into() }),
+    });
+    assert_eq!(app.library_session.library.catalog().items.len(), 1);
+    assert_eq!(app.scene.flipped(), Some(0));
+    assert!(drain_calls(&app).is_empty());
+    assert!(app.runtime_state.toast.as_ref().unwrap().0.contains("Steam is offline"));
+    super::update::delete_wallpaper(&mut app, 0);
+    assert_eq!(drain_calls(&app).len(), 1);
+}
+
+#[test]
+fn steamcmd_removal_local() {
+    let mut app = test_app();
+    app.config.set_key(skwd_config::keys::steam::BACKEND, json!("steamcmd"));
+    let mut scene = wall("scene", "we", 1, 0);
+    scene["we_id"] = json!("42");
+    seed(&mut app, &[scene]);
+    drain_calls(&app);
+    super::update::delete_wallpaper(&mut app, 0);
+    let calls = drain_calls(&app);
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].1, json!({"we_id": "42", "unsubscribe": false}));
+}
+
+#[test]
+fn unknown_steam_removal_disabled() {
+    use crate::frontend::scene::RemovalAction;
+
+    let mut app = test_app();
+    let mut scene = wall("scene", "we", 1, 0);
+    scene["we_id"] = json!("42");
+    scene["steam_confirmation_required"] = json!(true);
+    seed(&mut app, &[scene]);
+    app.config.set_key(skwd_config::keys::steam::BACKEND, json!("steamcmd"));
+    app.scene.viewport = (800.0, 600.0);
+    app.scene.set_visible(true);
+    app.scene.toggle_flip(0);
+    let now = Instant::now();
+    for frame_no in 0..=30 {
+        frame(&mut app, now + Duration::from_millis(frame_no * 16), 800.0, 600.0);
+    }
+    let panel = app.scene.render.back.as_ref().unwrap();
+    assert_eq!(panel.removal, RemovalAction::SteamStatusUnknown);
+    assert_eq!(panel.removal.label(), "Steam status unknown");
+    assert!(!panel.removal.enabled());
+    let layout = crate::frontend::ui::back_layout(panel);
+    let x = layout.actions.delete.0 + layout.actions.delete.2 / 2.0;
+    let y = layout.actions.delete.1 + layout.actions.delete.3 / 2.0;
+    drain_calls(&app);
+    let _ = update(&mut app, Message::Click(x, y, crate::domain::input::MouseButton::Left));
+    super::update::delete_wallpaper(&mut app, 0);
+    assert!(!drain_calls(&app).iter().any(|(method, _)| method == "wall.remove"));
+}
+
+#[test]
+fn unsubscribe_connection_gate() {
+    use crate::frontend::scene::RemovalAction;
+
+    for (backend, connection, daemon, enabled) in [
+        ("steam", Some(true), true, true),
+        ("steam", Some(false), true, false),
+        ("steam", None, true, false),
+        ("steam", Some(true), false, false),
+        ("steamcmd", Some(true), true, false),
+        ("", Some(true), true, true),
+        ("other", Some(true), true, false),
+    ] {
+        let mut app = test_app();
+        let mut scene = wall("scene", "we", 1, 0);
+        scene["we_id"] = json!("42");
+        scene["steam_subscribed"] = json!(true);
+        seed(&mut app, &[scene]);
+        app.config.set_key(skwd_config::keys::steam::BACKEND, json!(backend));
+        app.daemon.steam_client_available = connection;
+        app.daemon.connected = daemon;
+        app.scene.viewport = (800.0, 600.0);
+        app.scene.set_visible(true);
+        app.scene.toggle_flip(0);
+        let now = Instant::now();
+        for frame_no in 0..=30 {
+            frame(&mut app, now + Duration::from_millis(frame_no * 16), 800.0, 600.0);
+        }
+        let panel = app.scene.render.back.as_ref().unwrap();
+        assert_eq!(panel.removal.label(), "Unsubscribe", "{backend} {connection:?}");
+        assert_eq!(panel.removal.enabled(), enabled, "{backend} {connection:?}");
+        assert_eq!(panel.removal == RemovalAction::Unsubscribe, enabled);
+        let state: Value = serde_json::from_str(&super::update::ui_state_json(&app)).unwrap();
+        assert_eq!(state["card_back"]["removal"]["enabled"], enabled);
+        drain_calls(&app);
+        super::update::delete_wallpaper(&mut app, 0);
+        let calls = drain_calls(&app);
+        assert_eq!(calls.iter().any(|(method, _)| method == "wall.remove"), enabled);
+    }
+}
+
+#[test]
+fn unsubscribe_status_refresh() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("scene", "we", 1, 0)]);
+    steam_online(&mut app);
+    app.refresh_unsubscribe_status();
+    assert_eq!(app.daemon.steam_client_available, None);
+    assert_eq!(drain_calls(&app).iter().filter(|(method, _)| method == "status").count(), 1);
+    app.refresh_unsubscribe_status();
+    assert!(drain_calls(&app).is_empty());
+    let id = status_request_id(&app);
+    reject(&mut app, id, "offline");
+    assert_eq!(app.daemon.steam_client_available, None);
+    assert_eq!(drain_calls(&app).iter().filter(|(method, _)| method == "status").count(), 1);
+    let id = status_request_id(&app);
+    respond(&mut app, id, json!({wall_proto::STEAM_CLIENT_AVAILABLE_FIELD: true}));
+    assert!(app.unsubscribe_available());
+    app.handle_ipc(IpcMsg::Disconnected);
+    assert!(!app.unsubscribe_available());
+    assert_eq!(app.daemon.steam_client_available, None);
+}
+
+#[test]
+fn unsubscribe_ignores_old_status() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("scene", "we", 1, 0)]);
+    steam_online(&mut app);
+    let old = app.call_tracked(wall_proto::rpc::STATUS, json!({}), Pending::Status);
+    drain_calls(&app);
+    app.refresh_unsubscribe_status();
+    assert!(app.daemon.steam_refresh_needed);
+    assert!(!app.unsubscribe_available());
+    assert!(drain_calls(&app).is_empty());
+    respond(&mut app, old, json!({wall_proto::STEAM_CLIENT_AVAILABLE_FIELD: true}));
+    assert!(!app.unsubscribe_available());
+    assert!(!app.daemon.steam_refresh_needed);
+    assert_eq!(drain_calls(&app).iter().filter(|(method, _)| method == "status").count(), 1);
+    let fresh = status_request_id(&app);
+    respond(&mut app, fresh, json!({wall_proto::STEAM_CLIENT_AVAILABLE_FIELD: false}));
+    assert!(!app.unsubscribe_available());
+    assert_eq!(app.daemon.steam_client_available, Some(false));
+}
+
+#[test]
+fn unsubscribe_backend_switch() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("scene", "we", 1, 0)]);
+    steam_online(&mut app);
+    let pick = |app: &mut App, backend: &str| {
+        let _ = update(
+            app,
+            Message::Settings(crate::frontend::settings::SettingsMsg::Pick(
+                skwd_config::keys::steam::BACKEND.into(),
+                backend.into(),
+            )),
+        );
+    };
+    pick(&mut app, "steamcmd");
+    assert!(!app.unsubscribe_available());
+    assert_eq!(app.daemon.steam_client_available, None);
+    drain_calls(&app);
+    pick(&mut app, "steam");
+    assert!(!app.unsubscribe_available());
+    assert_eq!(drain_calls(&app).iter().filter(|(method, _)| method == "status").count(), 1);
+}
+
+#[test]
+fn unavailable_unsubscribe_click() {
+    let mut app = test_app();
+    let mut scene = wall("scene", "we", 1, 0);
+    scene["we_id"] = json!("42");
+    scene["steam_subscribed"] = json!(true);
+    seed(&mut app, &[scene]);
+    app.config.set_key(skwd_config::keys::steam::BACKEND, json!("steamcmd"));
+    app.scene.viewport = (800.0, 600.0);
+    app.scene.set_visible(true);
+    app.scene.toggle_flip(0);
+    let now = Instant::now();
+    for frame_no in 0..=30 {
+        frame(&mut app, now + Duration::from_millis(frame_no * 16), 800.0, 600.0);
+    }
+    let panel = app.scene.render.back.as_ref().unwrap();
+    assert!(!panel.removal.enabled());
+    let layout = crate::frontend::ui::back_layout(panel);
+    let x = layout.actions.delete.0 + layout.actions.delete.2 / 2.0;
+    let y = layout.actions.delete.1 + layout.actions.delete.3 / 2.0;
+    drain_calls(&app);
+    let _ = update(&mut app, Message::Click(x, y, crate::domain::input::MouseButton::Left));
+    assert!(!drain_calls(&app).iter().any(|(method, _)| method == "wall.remove"));
+}
+
+#[test]
+fn subscribed_flip_probes_steam() {
+    for subscribed in [false, true] {
+        let mut app = test_app();
+        let mut scene = wall("scene", "we", 1, 0);
+        scene["steam_subscribed"] = json!(subscribed);
+        seed(&mut app, &[scene]);
+        app.scene.viewport = (800.0, 600.0);
+        app.scene.set_visible(true);
+        steam_online(&mut app);
+        drain_calls(&app);
+        let _ = update(&mut app, Message::KeyFlip);
+        assert_eq!(
+            drain_calls(&app).iter().filter(|(method, _)| method == "status").count(),
+            usize::from(subscribed)
+        );
+        assert_eq!(app.daemon.steam_client_available, if subscribed { None } else { Some(true) });
+    }
+}
+
+#[test]
+fn removal_refreshes_subscription() {
+    let mut app = test_app();
+    app.scene.set_visible(true);
+    let mut scene = wall("42", "we", 1, 0);
+    scene["we_id"] = json!("42");
+    seed(&mut app, &[scene.clone()]);
+    app.scene.set_flipped_for_test(Some(0));
+    drain_calls(&app);
+    super::update::delete_wallpaper(&mut app, 0);
+    drain_calls(&app);
+    let id = *app
+        .daemon
+        .pending
+        .iter()
+        .find(|(_, request)| matches!(request, Pending::RemoveWallpaper { .. }))
+        .unwrap()
+        .0;
+    app.handle_ipc(crate::infrastructure::ipc::IpcMsg::Response {
+        id,
+        result: None,
+        error: Some(wall_proto::ErrorInfo { code: 1, message: "Use Unsubscribe".into() }),
+    });
+    assert_eq!(drain_calls(&app)[0].0, wall_proto::rpc::WALL_LIST);
+    let id =
+        *app.daemon.pending.iter().find(|(_, request)| matches!(request, Pending::List)).unwrap().0;
+    scene["steam_subscribed"] = json!(true);
+    app.handle_ipc(crate::infrastructure::ipc::IpcMsg::Response {
+        id,
+        result: Some(json!({"wallpapers": [scene], "count": 1})),
+        error: None,
+    });
+    frame(&mut app, Instant::now() + Duration::from_secs(1), 800.0, 600.0);
+    assert!(app.library_session.library.catalog().items[0].steam_subscribed);
+    app.scene.toggle_flip(0);
+    frame(&mut app, Instant::now() + Duration::from_secs(2), 800.0, 600.0);
+    assert_eq!(app.scene.render.back.as_ref().unwrap().removal.label(), "Unsubscribe");
+    drain_calls(&app);
+    steam_online(&mut app);
+    super::update::delete_wallpaper(&mut app, 0);
+    assert_eq!(drain_calls(&app)[0].1["unsubscribe"], true);
 }
 
 #[test]
@@ -973,4 +1288,69 @@ fn saved_theme_names_do_not_clone_palette_payloads() {
     assert_eq!(names.len(), 78);
     assert_eq!(names[0], "theme-0");
     assert!(allocations < 100, "{allocations} allocations to read 78 names");
+}
+
+#[test]
+fn assigned_palette_save() {
+    use crate::domain::theme::Candidate;
+    use crate::frontend::theme_designer::{ThemeDesigner, ThemeMsg};
+    for (path, apply) in [
+        ("theme.appProfiles.kitty", false),
+        ("integrations.0.profile", false),
+        ("theme.appProfiles.kitty", true),
+        ("integrations.0.profile", true),
+    ] {
+        let mut app = test_app();
+        app.config.set_key("integrations", json!([{"name": "custom"}]));
+        app.config.set_key(path, json!("Mine"));
+        app.config.set_key(skwd_config::keys::theme::STATIC_THEME, json!("nord"));
+        let candidate = Candidate::from_preset("dracula").unwrap();
+        app.panels.theme_designer = Some(ThemeDesigner::new(candidate.clone(), "Mine".into()));
+        drain_calls(&app);
+        let _ = update(
+            &mut app,
+            Message::Theme(if apply { ThemeMsg::SaveApply } else { ThemeMsg::SaveTheme }),
+        );
+        let stored = crate::infrastructure::theme::find_saved(
+            app.config.array_slice(skwd_config::keys::theme::SAVED_THEMES),
+            "Mine",
+        );
+        assert_eq!(stored, Some(candidate));
+        assert_eq!(app.config.str_path(path), "Mine");
+        assert_eq!(
+            app.config.str_path(skwd_config::keys::theme::STATIC_THEME),
+            if apply { "Mine" } else { "nord" }
+        );
+        assert!(drain_calls(&app).iter().any(|(method, params)| method == "theme.apps.refresh"
+            && params == &json!({"profile": "Mine"})));
+    }
+}
+
+#[test]
+fn assigned_palette_delete() {
+    use crate::domain::theme::Candidate;
+    use crate::frontend::theme_designer::{ThemeDesigner, ThemeMsg};
+    for path in ["theme.appProfiles.kitty", "integrations.0.profile"] {
+        let mut app = test_app();
+        let candidate = Candidate::from_preset("nord").unwrap();
+        let saved = crate::infrastructure::theme::upsert_saved(&[], "Mine", &candidate);
+        app.config.set_key(skwd_config::keys::theme::SAVED_THEMES, json!(saved));
+        app.config.set_key("integrations", json!([{"name": "custom"}]));
+        app.config.set_key(path, json!("Mine"));
+        app.panels.theme_designer = Some(ThemeDesigner::new(candidate, "Mine".into()));
+        drain_calls(&app);
+        for _ in 0..2 {
+            let _ = update(&mut app, Message::Theme(ThemeMsg::DeleteSaved("Mine".into())));
+        }
+        assert!(
+            crate::infrastructure::theme::find_saved(
+                app.config.array_slice(skwd_config::keys::theme::SAVED_THEMES),
+                "Mine"
+            )
+            .is_some()
+        );
+        assert_eq!(app.config.str_path(path), "Mine");
+        assert!(app.runtime_state.toast.is_some());
+        assert!(drain_calls(&app).is_empty());
+    }
 }

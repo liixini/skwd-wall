@@ -63,8 +63,8 @@ keybind-scene-properties = দৃশ্যের বৈশিষ্ট্য
 
 keybind-folder-prev = আগের ফোল্ডার
 keybind-folder-next = পরের ফোল্ডার
-keybind-folder-toggle = সব/মূল টগল
-keybind-hidden-folders = লুকানো ফোল্ডার দেখান/লুকান
+keybind-folder-toggle = সব ওয়ালপেপার দেখান
+keybind-hidden-folders = লুকানো ওয়ালপেপার দেখান/লুকান
 keybind-type-prev = আগের ওয়ালপেপার ধরন
 keybind-type-next = পরের ওয়ালপেপার ধরন
 keybind-sort-prev = আগের সাজানো

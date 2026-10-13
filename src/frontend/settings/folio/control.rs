@@ -20,7 +20,7 @@ const BUTTON_FRAME: Duration = Duration::from_millis(16);
 const BUTTON_HEIGHT: f32 = 30.0;
 const BUTTON_MIN_WIDTH: f32 = 92.0;
 
-fn button_width(label: &str, scale: f32) -> f32 {
+pub(super) fn button_width(label: &str, scale: f32) -> f32 {
     crate::frontend::ui::folio_action_width_in(label, scale, BUTTON_MIN_WIDTH, f32::INFINITY)
 }
 
@@ -185,7 +185,7 @@ fn overlay_style(
     }
 }
 
-fn fixed_button<'a>(
+pub(super) fn fixed_button<'a>(
     label: String,
     active: bool,
     destructive: bool,
@@ -333,6 +333,12 @@ fn wrapped_options(
     group.into()
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct Reveals<'a> {
+    pub(super) bars: &'a HashMap<String, crate::frontend::animation::Tween>,
+    pub(super) folds: &'a std::collections::HashSet<String>,
+}
+
 pub(super) fn widget<'a>(
     control: Control,
     values: &'a HashMap<String, String>,
@@ -343,13 +349,13 @@ pub(super) fn widget<'a>(
     scale: f32,
     palette: &'a Palette,
     fade: f32,
-    armed: Option<ActionId>,
+    armed: Option<&ActionId>,
     motion: MotionProfile,
-    reveals: Option<&HashMap<String, crate::frontend::animation::Tween>>,
+    reveals: Option<Reveals<'_>>,
 ) -> Element<'a, Message> {
     match control {
         Control::Display(control) => control.view(scale, palette),
-        Control::AppTheme { app } => {
+        Control::AppTheme { app, .. } => {
             label(app.name, crate::frontend::ui::TYPE_SMALL, scale, palette.surface_text).into()
         }
         Control::Toggle { path, value } => fixed_button(
@@ -632,10 +638,10 @@ pub(super) fn widget<'a>(
             if let Some(background) = background {
                 let shown = matches!(current.as_str(), "center" | "fit");
                 let reveal = reveals
-                    .and_then(|map| map.get(&format!("background:{path}")))
+                    .and_then(|maps| maps.bars.get(&format!("background:{path}")))
                     .map_or(if shown { 1.0 } else { 0.0 }, |value| value.x);
                 let picker = reveals
-                    .and_then(|map| map.get(&background.picker_id()))
+                    .and_then(|maps| maps.bars.get(&background.picker_id()))
                     .map_or(0.0, |value| value.x);
                 column![choices, background.view(reveal, picker, scale, palette)].into()
             } else {
@@ -694,7 +700,7 @@ pub(super) fn widget<'a>(
             group.into()
         }
         Control::ActionBtn { id, label } => {
-            let confirming = armed == Some(id);
+            let confirming = armed == Some(&id);
             let confirmation = crate::i18n::tr_args!("settings-control-confirm", label => &label);
             let width = button_width(&confirmation, scale).max(button_width(&label, scale));
             fixed_button(

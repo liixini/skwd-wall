@@ -7,3 +7,8 @@ pub fn workbench_input_id(key: &str) -> iced::widget::Id {
 pub fn settings_search_input_id() -> iced::widget::Id {
     "settings-search".into()
 }
+
+pub fn weather_review_input_id() -> iced::widget::Id {
+    const WEATHER_REVIEW_SEARCH_ID: &str = "settings-weather-review-search";
+    WEATHER_REVIEW_SEARCH_ID.into()
+}

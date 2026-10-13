@@ -99,6 +99,7 @@ impl SceneMotionState {
 }
 
 pub(super) struct CardState {
+    pub(super) removal: crate::frontend::scene::RemovalAction,
     pub(super) flipped: Option<usize>,
     pub(super) flip_effect: u32,
     pub(super) flip: Spring,
@@ -131,6 +132,7 @@ impl CardState {
     fn new() -> Self {
         let motion = MotionProfile::default();
         Self {
+            removal: crate::frontend::scene::RemovalAction::Delete,
             flipped: None,
             flip_effect: 0,
             flip: motion.override_spring(0.0, 1500.0),

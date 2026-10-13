@@ -11,6 +11,16 @@ use crate::i18n::tr;
 
 use super::super::state::{Effects, EffectsMsg};
 
+struct ActivitySpec {
+    gap: f32,
+    heading: f32,
+    body: f32,
+    muted_alpha: f32,
+}
+
+const ACTIVITY: ActivitySpec =
+    ActivitySpec { gap: 8.0, heading: 14.0, body: 10.0, muted_alpha: 0.52 };
+
 impl Effects {
     pub(super) fn displays_view<'a>(
         &'a self,
@@ -222,8 +232,9 @@ impl Effects {
         };
         let apply = crate::frontend::ui::folio_action(
             apply_label,
-            count > 0,
-            (count > 0).then_some(Message::Effects(EffectsMsg::MonitorApplySelected)),
+            count > 0 && self.activity.can_apply(),
+            (count > 0 && self.activity.can_apply())
+                .then_some(Message::Effects(EffectsMsg::MonitorApplySelected)),
             Length::Fixed(210.0 * scale),
             scale,
             palette,
@@ -244,12 +255,69 @@ impl Effects {
         ]
         .align_y(Alignment::Center);
 
-        container(
-            column![header, section, targets, folio_rule(palette), commit].spacing(12.0 * scale),
-        )
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .padding(crate::frontend::ui::folio_scroll_padding(23.0, 27.0, scale))
-        .into()
+        let mut content = column![header].spacing(12.0 * scale);
+        if let Some(activity) = self.activity_section(scale, palette) {
+            content = content.push(activity);
+        }
+        container(content.push(section).push(targets).push(folio_rule(palette)).push(commit))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(crate::frontend::ui::folio_scroll_padding(23.0, 27.0, scale))
+            .into()
+    }
+
+    fn activity_section<'a>(
+        &'a self,
+        scale: f32,
+        palette: &'a Palette,
+    ) -> Option<Element<'a, Message>> {
+        if !self.activity.supported && self.activity.error.is_none() {
+            return None;
+        }
+        let mut choices = row![].spacing(ACTIVITY.gap * scale);
+        for activity in &self.activity.activities {
+            let name = if activity.current {
+                format!("{} · {}", activity.name, tr("effects-activity-current"))
+            } else {
+                activity.name.clone()
+            };
+            let width = crate::frontend::ui::folio_action_width_in(&name, scale, 0.0, f32::MAX);
+            choices = choices.push(crate::frontend::ui::folio_action(
+                name,
+                activity.id == self.activity.selected,
+                (self.activity.list_request == 0)
+                    .then(|| Message::Effects(EffectsMsg::ActivitySelect(activity.id.clone()))),
+                Length::Fixed(width),
+                scale,
+                palette,
+            ));
+        }
+        let mut section = column![
+            label(tr("effects-activity-label"), ACTIVITY.heading, scale, palette.surface_text),
+            label(
+                tr("effects-activity-desc"),
+                ACTIVITY.body,
+                scale,
+                with_alpha(palette.surface_text, ACTIVITY.muted_alpha)
+            ),
+            scrollable(choices)
+                .direction(iced::widget::scrollable::Direction::Horizontal(
+                    iced::widget::scrollable::Scrollbar::new(),
+                ))
+                .width(Length::Fill),
+        ]
+        .spacing(ACTIVITY.gap * scale);
+        if self.activity.inactive() {
+            section = section.push(label(
+                tr("effects-activity-inactive-desc"),
+                ACTIVITY.body,
+                scale,
+                with_alpha(palette.surface_text, ACTIVITY.muted_alpha),
+            ));
+        }
+        if let Some(error) = &self.activity.error {
+            section = section.push(label(error.clone(), ACTIVITY.body, scale, palette.primary));
+        }
+        Some(section.into())
     }
 }

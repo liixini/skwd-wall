@@ -1189,16 +1189,4 @@ pub(super) fn tab_filter(builder: &mut Builder<'_>, folders: &[String]) {
         tr("settings-filter-always-visible-desc"),
         crate::contracts::settings::schema::setting::general::FILTER_BAR_ALWAYS_VISIBLE,
     );
-    builder.card(tr("settings-filter-weather-card"), tr("settings-filter-weather-card-desc"));
-    builder.toggle(
-        tr("settings-filter-weather-label"),
-        tr("settings-filter-weather-desc"),
-        keys::general::WEATHER_MATCH,
-    );
-    builder.text_field(
-        tr("settings-filter-location-label"),
-        tr("settings-filter-location-desc"),
-        keys::general::LOCALE,
-        tr("settings-filter-location-placeholder"),
-    );
 }

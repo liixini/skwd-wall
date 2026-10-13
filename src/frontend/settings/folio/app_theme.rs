@@ -34,14 +34,21 @@ fn state_label(state: &str, detail: &str) -> &'static str {
     })
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct Position {
+    pub row: usize,
+    pub app: usize,
+}
+
 pub(super) fn view(
     app: AppThemeStatus,
-    index: usize,
+    position: Position,
     expanded: bool,
     focused: bool,
     scale: f32,
     palette: &Palette,
 ) -> Element<'_, Message> {
+    let index = position.app;
     let available = app.can_disable || app.can_enable;
     let action = available.then_some(Message::Settings(SettingsMsg::Run(ActionId::SetAppTheme(
         index as u8,
@@ -58,8 +65,10 @@ pub(super) fn view(
     } else {
         "settings-app-themes-config-create"
     });
-    let details_message =
-        Message::Settings(SettingsMsg::ToggleDetails(format!("app-theme:{}", app.id), index));
+    let details_message = Message::Settings(SettingsMsg::ToggleDetails(
+        format!("app-theme:{}", app.id),
+        position.row,
+    ));
     let copy = column![
         label(app.name, 22.0, scale, palette.surface_text),
         label(

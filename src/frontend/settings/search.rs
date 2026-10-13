@@ -3,6 +3,8 @@ use crate::i18n::tr;
 
 use super::{Control, build_tab, visible_tabs};
 
+const SECTION_MATCH: u32 = 3;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SettingsSearchResult {
     pub tab: String,
@@ -40,17 +42,16 @@ pub fn search_settings(
                 folders,
                 analysis,
                 backends,
-                &[],
-                &[],
-                &std::collections::HashMap::new(),
-                None,
-                None,
-                apps,
+                super::RuntimeStatus { app_themes: apps, ..super::RuntimeStatus::default() },
             )
         } else {
             build_tab(tab, cfg, themes, folders, analysis, backends)
         };
         for (section, (card, rows)) in cards.into_iter().enumerate() {
+            if rows.is_empty() {
+                results.extend(page_result(&query, &terms, tab, tab_label, section, &card));
+                continue;
+            }
             for (row, setting) in rows.into_iter().enumerate() {
                 if matches!(setting.control, Control::Segment) {
                     continue;
@@ -72,7 +73,7 @@ pub fn search_settings(
                 } else if title.contains(&query) {
                     2
                 } else if section_title.contains(&query) {
-                    3
+                    SECTION_MATCH
                 } else if tab_text.contains(&query) {
                     4
                 } else {
@@ -104,6 +105,41 @@ pub fn search_settings(
     });
     results.truncate(6);
     results
+}
+
+fn page_result(
+    query: &str,
+    terms: &[&str],
+    tab: &str,
+    tab_label: &str,
+    section: usize,
+    card: &super::Card,
+) -> Option<SettingsSearchResult> {
+    let section_title = normalized(card.title);
+    let mut haystack =
+        format!("{section_title} {} {}", normalized(tab_label), normalized(card.subtitle));
+    add_aliases(&mut haystack);
+    if !terms.iter().all(|term| haystack.contains(term)) {
+        return None;
+    }
+    let score = if section_title == query {
+        0
+    } else if section_title.starts_with(query) {
+        1
+    } else {
+        SECTION_MATCH
+    };
+    Some(SettingsSearchResult {
+        tab: tab.to_string(),
+        tab_label: tab_label.to_string(),
+        section,
+        section_title: card.title.to_string(),
+        row: 0,
+        title: card.title.to_string(),
+        desc: card.subtitle.to_string(),
+        value: String::new(),
+        score,
+    })
 }
 
 fn normalized(value: &str) -> String {
@@ -233,7 +269,7 @@ fn control_search_text(control: &Control) -> String {
                     .join(" ")
             )
         }
-        Control::AppTheme { app } => format!("{} {} {}", app.name, app.state, app.detail),
+        Control::AppTheme { app, .. } => format!("{} {} {}", app.name, app.state, app.detail),
         Control::Segment => String::new(),
         Control::Static => String::from(tr("settings-search-control-static")),
         Control::Code { snippet } => {
@@ -294,7 +330,7 @@ fn control_value(control: &Control, cfg: &dyn SettingsSource) -> String {
         Control::Static => String::from(tr("settings-control-status")),
         Control::Code { .. } => String::from(tr("settings-control-code")),
         Control::Preview => String::from(tr("settings-control-preview")),
-        Control::AppTheme { app } => app.state.clone(),
+        Control::AppTheme { app, .. } => app.state.clone(),
     }
 }
 

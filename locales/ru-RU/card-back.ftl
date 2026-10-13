@@ -25,6 +25,21 @@ card-back-overview-set = Обои установлены
 card-back-delete = Удалить
 card-back-scene-properties = СЦЕНА
 card-back-reset-thumbnail = Сбросить миниатюру
+card-back-reveal = Показать в папке
+card-back-reveal-failed = Не удалось открыть файловый менеджер: { $error }
 card-back-reset-thumbnail-done = Создаётся новая миниатюра
 card-back-reset-thumbnail-error = Не удалось сбросить миниатюру: { $error }
 card-back-reset-thumbnail-deferred = Миниатюра будет создана заново при применении этих обоев
+
+card-back-steam-status-unknown = Статус Steam неизвестен
+card-back-unsubscribe = Отписаться
+card-back-deleting = Удаление…
+card-back-unsubscribing = Отмена подписки…
+card-back-remove-error = Не удалось удалить обои: { $error }
+
+card-back-copy-image = Копировать изображение
+card-back-copy-path = Копировать абсолютный путь
+card-back-copy-image-done = Изображение скопировано
+card-back-copy-path-done = Абсолютный путь скопирован
+card-back-copy-image-failed = Не удалось скопировать изображение: { $error }
+card-back-copy-path-failed = Не удалось скопировать путь: { $error }

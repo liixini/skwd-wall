@@ -47,6 +47,38 @@ fn source_defaults_reach_requests_without_changing_factory_defaults() {
 }
 
 #[test]
+fn steam_resolution_submission() {
+    use crate::frontend::browser::BrowserMsg;
+    for manual in [false, true] {
+        let mut app = test_app();
+        app.config.set_key("sources.steam.showApplyButton", json!(manual));
+        app.config.set_key("steam.defaults.resolution", json!("2560 x 1080"));
+        app.config.set_key("steam.defaults.type", json!("Video"));
+        app.config.set_key("steam.defaults.category", json!("Nature"));
+        app.source_browser.activate(Source::Steam);
+        app.run_browser_search(false);
+        let calls = drain_calls(&app);
+        assert_eq!(calls[0].1["tags"], json!(["Video", "Nature", "Ultrawide 2560 x 1080"]));
+        for (resolution, tag) in
+            [("3440 x 1440", "Ultrawide 3440 x 1440"), ("3840 x 1080", "Dual 3840 x 1080")]
+        {
+            let _ = update(
+                &mut app,
+                Message::Browser(BrowserMsg::SteamFilter("res".into(), resolution.into())),
+            );
+            if manual {
+                assert!(drain_calls(&app).is_empty());
+                let _ = update(&mut app, Message::Browser(BrowserMsg::SearchSubmit));
+            }
+            let calls = drain_calls(&app);
+            assert_eq!(calls.len(), 1);
+            assert_eq!(calls[0].1["tags"], json!(["Video", "Nature", tag]));
+            assert_eq!(calls[0].1["page"], 1);
+        }
+    }
+}
+
+#[test]
 fn browser_defaults_apply_once_per_session_and_again_after_closing() {
     let mut app = test_app();
     app.config.set_key("steam.defaults.type", json!("Scene"));

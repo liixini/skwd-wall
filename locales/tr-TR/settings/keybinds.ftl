@@ -63,8 +63,8 @@ keybind-scene-properties = Sahne özellikleri
 
 keybind-folder-prev = Önceki klasör
 keybind-folder-next = Sonraki klasör
-keybind-folder-toggle = Tümü/Ana arasında geçiş yap
-keybind-hidden-folders = Gizli klasörleri göster/gizle
+keybind-folder-toggle = Tüm duvar kağıtlarını göster
+keybind-hidden-folders = Gizli duvar kâğıtlarını göster/gizle
 keybind-type-prev = Önceki duvar kâğıdı türü
 keybind-type-next = Sonraki duvar kâğıdı türü
 keybind-sort-prev = Önceki sıralama

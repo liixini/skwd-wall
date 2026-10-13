@@ -48,6 +48,61 @@ fn folder_catalog() -> Catalog {
 }
 
 #[test]
+fn absolute_folder_options() {
+    let catalog = with_items(vec![
+        named("poster", "/home/me/posters/a.jpg"),
+        named("nested", "/home/me/posters/archive/b.jpg"),
+        named("hidden", "/home/me/posters/.private/c.jpg"),
+        named("ancestor", "/home/me/.private/posters/d.jpg"),
+        named("legacy", "home/me/posters/e.jpg"),
+    ]);
+    let options = catalog.available_folders(&[String::from("/home/me/posters")], None);
+    assert!(options.iter().any(|folder| folder == "/home/me/posters"));
+    for folder in options {
+        let filters = Filters { folder, ..Default::default() };
+        assert!(!filter_sort(&catalog, &filters).is_empty(), "{}", filters.folder);
+    }
+    let mut filters = Filters { folder: "/home/me/posters".into(), ..Default::default() };
+    assert_eq!(filter_sort(&catalog, &filters).len(), 3);
+    filters.folder = "home/me/posters".into();
+    assert_eq!(keys(&catalog, &filter_sort(&catalog, &filters)), ["legacy"]);
+}
+
+#[test]
+fn reveal_skips_excluded() {
+    let mut catalog = with_items(vec![
+        named("plain", "a.png"),
+        named("card", "b.png"),
+        named("folder", "anime/c.png"),
+        named("gone", "sort/d.png"),
+    ]);
+    catalog.hidden.insert("card".into());
+    catalog.profile_hidden.insert("folder".into());
+    catalog.profile_excluded.insert("gone".into());
+    let mut filters = Filters::default();
+    assert_eq!(keys(&catalog, &filter_sort(&catalog, &filters)), ["plain"]);
+    filters.reveal = true;
+    let mut shown = keys(&catalog, &filter_sort(&catalog, &filters));
+    shown.sort();
+    assert_eq!(shown, ["card", "folder", "plain"]);
+}
+
+#[test]
+fn folder_options_follow_reveal() {
+    let mut catalog = with_items(vec![
+        Wallpaper { path: "/walls/a.png".into(), ..named("plain", "a.png") },
+        Wallpaper { path: "/walls/anime/b.png".into(), ..named("anime", "anime/b.png") },
+        Wallpaper { path: "/walls/sort/c.png".into(), ..named("sort", "sort/c.png") },
+    ]);
+    catalog.profile_hidden.insert("anime".into());
+    catalog.profile_excluded.insert("sort".into());
+    let roots = [String::from("/walls")];
+    assert_eq!(catalog.available_folders(&roots, Some(false)), ["/walls"]);
+    assert_eq!(catalog.available_folders(&roots, Some(true)), ["/walls", "/walls/anime"]);
+    assert_eq!(catalog.available_folders(&roots, None).len(), 3);
+}
+
+#[test]
 fn folder_descendants() {
     let catalog = folder_catalog();
     let filters = Filters { folder: "anime/seasonal".into(), ..Default::default() };
@@ -64,12 +119,105 @@ fn folder_segment_boundary() {
 }
 
 #[test]
+fn absolute_source_matches_paths() {
+    let catalog = with_items(vec![
+        Wallpaper { name: "photo.png".into(), path: "/source/photo.png".into(), ..item("photo") },
+        Wallpaper {
+            name: "clip.mp4".into(),
+            path: "/source/clip.mp4".into(),
+            video_file: "/source/clip.mp4".into(),
+            kind: WallpaperKind::Video,
+            ..item("clip")
+        },
+        Wallpaper { name: "other.png".into(), path: "/source2/other.png".into(), ..item("other") },
+    ]);
+    let filters = Filters { folder: "/source".into(), ..Default::default() };
+    assert_eq!(keys(&catalog, &filter_sort(&catalog, &filters)), ["photo", "clip"]);
+}
+
+#[test]
 fn folder_sentinels() {
     let catalog = folder_catalog();
     let mut filters = Filters { folder: String::new(), ..Default::default() };
-    assert_eq!(keys(&catalog, &filter_sort(&catalog, &filters)), vec!["top"]);
+    assert_eq!(filter_sort(&catalog, &filters).len(), catalog.items.len());
     filters.folder = "*".into();
     assert_eq!(filter_sort(&catalog, &filters).len(), catalog.items.len());
+}
+
+#[test]
+fn all_source_roots() {
+    let catalog = with_items(vec![
+        Wallpaper {
+            key: "static:a".into(),
+            name: "/first/a.png".into(),
+            path: "/first/a.png".into(),
+            ..item("a")
+        },
+        Wallpaper {
+            key: "video:b".into(),
+            name: "b.mp4".into(),
+            path: "/second/b.mp4".into(),
+            kind: WallpaperKind::Video,
+            ..item("b")
+        },
+        Wallpaper {
+            key: "static:c".into(),
+            name: "/first/nested/c.png".into(),
+            path: "/first/nested/c.png".into(),
+            ..item("c")
+        },
+        Wallpaper {
+            key: "video:d".into(),
+            name: "d.mp4".into(),
+            path: "/second/nested/d.mp4".into(),
+            kind: WallpaperKind::Video,
+            ..item("d")
+        },
+        Wallpaper {
+            key: "static:e".into(),
+            name: "/first2/e.png".into(),
+            path: "/first2/e.png".into(),
+            ..item("e")
+        },
+        Wallpaper {
+            key: "we:123".into(),
+            name: "Workshop".into(),
+            kind: WallpaperKind::Video,
+            path: "/workshop/movie.mp4".into(),
+            ..item("we")
+        },
+        Wallpaper {
+            key: "we:nested".into(),
+            name: "Artist/Title".into(),
+            kind: WallpaperKind::Video,
+            path: "/first/movie.mp4".into(),
+            ..item("nested-we")
+        },
+        Wallpaper {
+            key: "generative:pond".into(),
+            name: "Pond".into(),
+            path: "/generated/pond".into(),
+            ..item("pond")
+        },
+        Wallpaper { key: "we:456".into(), kind: WallpaperKind::We, ..item("scene") },
+        named("legacy", "old.png"),
+        Wallpaper {
+            key: "static:relative".into(),
+            name: "relative.png".into(),
+            path: "relative.png".into(),
+            ..item("relative")
+        },
+        named("legacy-nested", "old/deep.png"),
+    ]);
+    let filters = Filters { folder: String::new(), ..Default::default() };
+    let mut shown = keys(&catalog, &filter_sort(&catalog, &filters));
+    shown.sort_unstable();
+    let mut expected = catalog.items.iter().map(|item| item.key.as_str()).collect::<Vec<_>>();
+    expected.sort_unstable();
+    assert_eq!(shown, expected);
+    for key in ["static:c", "video:d", "we:456", "generative:pond"] {
+        assert!(shown.iter().any(|shown| shown == key));
+    }
 }
 
 #[test]
@@ -255,58 +403,6 @@ fn favourites_only() {
 }
 
 #[test]
-fn weather_gate() {
-    let mut catalog =
-        with_items(vec![item("rainy"), item("sunny"), item("blank"), item("untagged")]);
-    catalog.weather.insert("rainy".into(), vec!["rain".into()]);
-    catalog.weather.insert("sunny".into(), vec!["clear".into()]);
-    catalog.weather.insert("blank".into(), Vec::new());
-    let filters = Filters {
-        weather_active: true,
-        current_weather: vec!["rain".into()],
-        ..Default::default()
-    };
-    assert_eq!(keys(&catalog, &filter_sort(&catalog, &filters)), vec!["rainy"]);
-    let filters = Filters { weather_active: true, ..Default::default() };
-    assert_eq!(filter_sort(&catalog, &filters).len(), 4);
-}
-
-#[test]
-fn weather_gate_no_metadata() {
-    let catalog = with_items(vec![item("one"), item("two")]);
-    let filters = Filters {
-        weather_active: true,
-        current_weather: vec!["clear".into()],
-        ..Default::default()
-    };
-    assert_eq!(keys(&catalog, &filter_sort(&catalog, &filters)), vec!["one", "two"]);
-}
-
-#[test]
-fn weather_gate_no_match() {
-    let mut catalog = with_items(vec![item("rainy"), item("untagged")]);
-    catalog.weather.insert("rainy".into(), vec!["rain".into()]);
-    let filters = Filters {
-        weather_active: true,
-        current_weather: vec!["clear".into()],
-        ..Default::default()
-    };
-    assert_eq!(keys(&catalog, &filter_sort(&catalog, &filters)), vec!["rainy", "untagged"]);
-}
-
-#[test]
-fn weather_keeps_empty_filter() {
-    let catalog = with_items(vec![item("still")]);
-    let filters = Filters {
-        kind: "video".into(),
-        weather_active: true,
-        current_weather: vec!["clear".into()],
-        ..Default::default()
-    };
-    assert!(filter_sort(&catalog, &filters).is_empty());
-}
-
-#[test]
 fn tag_all_vs_any() {
     let catalog = tagged_catalog();
     let mut filters = Filters { tags: vec!["forest".into(), "green".into()], ..Default::default() };
@@ -407,33 +503,4 @@ fn res_sort_area_width() {
         keys(&catalog, &filter_sort(&catalog, &filters)),
         vec!["uhd", "wide", "hd", "tallhd"]
     );
-}
-
-#[test]
-fn hidden_directories_exclude_descendants_without_hiding_dot_files() {
-    let mut video = named("hidden-video", "video/.private/deep/movie.mp4");
-    video.kind = WallpaperKind::Video;
-    let mut scene = named("scene", "Title/.not-a-directory");
-    scene.kind = WallpaperKind::We;
-    let catalog = with_items(vec![
-        named("root", ".root.png"),
-        named("public", "public/.file.png"),
-        named("dotted", "public.v2/a.png"),
-        named("hidden", ".private/a.png"),
-        named("descendant", ".private/deep/a.png"),
-        named("nested", "public/.private/a.png"),
-        video,
-        scene,
-    ]);
-    let mut filters = Filters::default();
-    assert_eq!(filter_sort(&catalog, &filters).len(), 8);
-    filters.show_hidden_folders = false;
-    assert_eq!(
-        keys(&catalog, &filter_sort(&catalog, &filters)),
-        ["root", "public", "dotted", "scene"]
-    );
-    filters.folder = "public".into();
-    assert_eq!(keys(&catalog, &filter_sort(&catalog, &filters)), ["public"]);
-    filters.folder = ".private".into();
-    assert!(filter_sort(&catalog, &filters).is_empty());
 }

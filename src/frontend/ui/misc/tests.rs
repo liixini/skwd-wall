@@ -29,9 +29,9 @@ fn ellipsize_width_budget() {
 
 #[test]
 fn folio_sheet_dims_cap() {
-    let (w, h) = super::folio_sheet_dims((1024.0, 768.0), 1.0);
-    assert_eq!((w, h), (1002.0, 746.0));
-    assert!(w <= 1024.0 - 22.0 + 0.01);
+    let (w, h) = super::folio_sheet_dims(super::MIN_VIEWPORT, 1.0);
+    assert_eq!((w, h), (1344.0, 746.0));
+    assert!(w <= super::MIN_VIEWPORT.0 - 22.0 + 0.01);
     assert_eq!(super::folio_sheet_dims((1657.0, 1326.0), 0.5), (695.0, 435.0));
     assert_eq!(super::folio_sheet_dims((200.0, 150.0), 1.0), (220.0, 160.0));
 }

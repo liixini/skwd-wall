@@ -73,3 +73,12 @@ effects-name-topographic = 等高線
 effects-name-tonal-layers = トーンレイヤー
 
 effects-saved-palette = { $name }（保存済み）
+
+effects-activity-label = アクティビティ
+effects-activity-desc = 壁紙を設定する Plasma アクティビティを選びます。デスクトップは現在のアクティビティのままです。
+effects-activity-current = 現在
+effects-activity-inactive-desc = 非アクティブなアクティビティでは壁紙の割り当てのみ変更できます。画面設定と再生操作は現在のデスクトップに適用されます。
+effects-activity-unavailable = 選択したアクティビティは利用できません。既存のアクティビティを選んで再試行してください。
+effects-activity-saved = { $activity } に保存しました。
+effects-activity-unassigned = Skwd の壁紙が割り当てられていません
+effects-activity-preparing = { $activity } の壁紙を準備しています。

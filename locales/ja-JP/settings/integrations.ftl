@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = skwd-wall を Plasma デスクトップに接続します。ロック画面の壁紙オプションは下で設定します。
 settings-integrations-lock-mode-label = ロック画面の壁紙
 settings-integrations-lock-mode-desc = 「管理しない」は Plasma に手を加えません。「静止画」は常に下の画像を使います。「最後に適用した壁紙に追従」は最近適用した壁紙に合わせます。
 settings-integrations-lock-off = 管理しない
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = 壁紙にカーソルを合わせると�
 
 settings-integrations-follow-label = Skwd の配色に合わせる
 settings-integrations-follow-desc = Skwd が配色を制御している間はその色に合わせます。オフにすると現在の色を保持します。
+
+settings-section-lockscreens = ロック画面
+settings-lockscreens-source-label = 画像ソース
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = 固定画像
+settings-lockscreens-image-desc = 既存画像の完全なパスを入力します。例: ~/Pictures/lockscreen.jpg。有効なロック画面用に Skwd が画像をコピーします。ここでは動画ファイルを使えません。
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = 現在の壁紙をこのロック画面の画像に使います。
+settings-lockscreens-static-action-desc = 選択した画像をこのロック画面の背景に使います。
+settings-lockscreens-sddm-static-action-desc = サインイン画面に選択した画像を使います。管理者の承認が必要です。
+settings-lockscreens-sddm-action-desc = サインイン画面に現在の壁紙を使います。管理者の承認が必要です。
+settings-lockscreens-choose-theme-desc = SDDM のテーマが選択されていません。現在の壁紙を使うには、インストール済みのテーマを選んでください。
+settings-lockscreens-error = ロック画面を更新できませんでした: { $error }
+settings-lockscreens-rollback-error = ロック画面を更新できませんでした: { $error } SDDM の復元にも失敗しました: { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = 有効にする
+settings-lockscreens-disable = 無効にする
+settings-lockscreens-advanced-label = 詳細設定
+settings-lockscreens-choose-theme = SDDM テーマを選択
+settings-lockscreens-pending = ロック画面を更新しています…
+settings-lockscreens-no-sddm-theme = インストール済みの SDDM テーマがありません。
+
+settings-app-themes-profile-label = カラープロファイル
+settings-app-themes-profile-desc = このアプリに固定プロファイルを使用します。現在のテーマに従う場合は、現在の壁紙または固定テーマの色を使用します。
+settings-app-themes-profile-follow = 現在のテーマに従う
+settings-app-themes-profile-missing = 利用不可: { $name }
+settings-app-themes-profile-in-use = 削除する前に、{ $name } を使用するアプリで別のカラープロファイルを選択してください。

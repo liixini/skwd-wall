@@ -43,6 +43,29 @@ fn role_indices_stable() {
 }
 
 #[test]
+fn preview_prioritizes_roles() {
+    let mut candidate = Candidate::default();
+    for (index, role) in ThemeRole::ALL.into_iter().enumerate() {
+        candidate.colors[role.index()] = format!("#{:06x}", index + 1);
+    }
+    assert_eq!(
+        candidate.preview_colors(),
+        ["#000008", "#000004", "#000007", "#000005", "#000001", "#000003"]
+    );
+}
+
+#[test]
+fn preview_skips_repeated_colors() {
+    let mut candidate = Candidate::default();
+    candidate.colors[ThemeRole::Background.index()] = "#Aa0000".into();
+    candidate.colors[ThemeRole::Surface.index()] = "#aa0000".into();
+    candidate.colors[ThemeRole::SurfaceContainer.index()] = "invalid".into();
+    candidate.colors[ThemeRole::SurfaceText.index()] = "#00bb00".into();
+    candidate.colors[ThemeRole::Primary.index()] = "#0000cc".into();
+    assert_eq!(candidate.preview_colors(), ["#Aa0000", "#00bb00", "#0000cc", "#808080"]);
+}
+
+#[test]
 fn light_presets_open_their_original_colours_in_the_light_variant() {
     for name in ["catppuccin-latte", "rose-pine-dawn", "solarized-light", "github-light"] {
         let mut candidate = Candidate::from_preset(name).unwrap();

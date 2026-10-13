@@ -1,7 +1,11 @@
 use crate::domain::library::catalog::Wallpaper;
 
+pub const WORKSHOP_KEY: &str = "workshop";
+const WORKSHOP_ALIAS: &str = "id";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NumericField {
+    WorkshopId,
     Width,
     Height,
     Resolution,
@@ -12,6 +16,7 @@ pub enum NumericField {
 impl NumericField {
     fn parse(value: &str) -> Option<Self> {
         match value {
+            WORKSHOP_KEY | WORKSHOP_ALIAS => Some(Self::WorkshopId),
             "width" | "w" => Some(Self::Width),
             "height" | "h" => Some(Self::Height),
             "resolution" | "res" | "dimensions" | "dims" => Some(Self::Resolution),
@@ -23,6 +28,7 @@ impl NumericField {
 
     const fn key(self) -> &'static str {
         match self {
+            Self::WorkshopId => WORKSHOP_KEY,
             Self::Width => "width",
             Self::Height => "height",
             Self::Resolution => "res",
@@ -67,6 +73,7 @@ impl NumericRange {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NumericConstraint {
+    WorkshopId(u64),
     Scalar(NumericRange),
     Resolution { width: NumericRange, height: NumericRange },
 }
@@ -82,6 +89,9 @@ pub struct NumericPredicate {
 impl NumericPredicate {
     fn matches(&self, item: &Wallpaper) -> bool {
         let matched = match (&self.constraint, self.field) {
+            (NumericConstraint::WorkshopId(id), NumericField::WorkshopId) => {
+                item.engine_id().parse::<u64>() == Ok(*id)
+            }
             (NumericConstraint::Scalar(range), NumericField::Width) => range.matches(item.width),
             (NumericConstraint::Scalar(range), NumericField::Height) => range.matches(item.height),
             (NumericConstraint::Scalar(range), NumericField::Duration) => {
@@ -116,6 +126,10 @@ pub struct NumericQuery {
 }
 
 impl NumericQuery {
+    pub fn has_workshop(&self) -> bool {
+        self.groups.iter().flatten().any(|term| term.field == NumericField::WorkshopId)
+    }
+
     pub fn is_empty(&self) -> bool {
         self.groups.is_empty() && self.invalid.is_empty()
     }
@@ -191,11 +205,12 @@ pub fn parse_numeric_query(text: &str) -> NumericQuery {
     query
 }
 
-pub fn strip_numeric_query(text: &str) -> String {
+pub fn strip_numeric_query(text: &str, tags: &[&str]) -> String {
+    let is_numeric = |token: &str| !tags.contains(&token) && is_numeric_token(token);
     let has_numeric = text
         .split_whitespace()
         .flat_map(|token| token.trim_matches('|').split('|'))
-        .any(is_numeric_token);
+        .any(is_numeric);
     if !has_numeric {
         return text.to_string();
     }
@@ -205,15 +220,23 @@ pub fn strip_numeric_query(text: &str) -> String {
             if bare.eq_ignore_ascii_case("and") || bare.eq_ignore_ascii_case("or") {
                 return false;
             }
-            !bare.split('|').any(is_numeric_token)
+            !bare.split('|').any(is_numeric)
         })
         .collect::<Vec<_>>()
         .join(" ")
 }
 
+pub(super) fn workshop_id(token: &str) -> Option<u64> {
+    if token.is_empty() || !token.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    parse_pixels(token).ok()
+}
+
 fn is_numeric_token(token: &str) -> bool {
     let bare = token.trim_start_matches('-');
-    bare.split_once(':').and_then(|(field, _)| NumericField::parse(field)).is_some()
+    workshop_id(bare).is_some()
+        || bare.split_once(':').and_then(|(field, _)| NumericField::parse(field)).is_some()
 }
 
 fn numeric_tokens(text: &str) -> Vec<String> {
@@ -239,18 +262,34 @@ fn numeric_tokens(text: &str) -> Vec<String> {
 
 fn parse_predicate(token: &str) -> Option<Result<NumericPredicate, ()>> {
     let (excluded, bare) = token.strip_prefix('-').map_or((false, token), |value| (true, value));
-    let (field, expression) = bare.split_once(':')?;
-    let field = NumericField::parse(field)?;
+    let (field, expression) = if workshop_id(bare).is_some() {
+        (NumericField::WorkshopId, bare)
+    } else {
+        let (field, expression) = bare.split_once(':')?;
+        (NumericField::parse(field)?, expression)
+    };
     let parsed = parse_constraint(field, expression).map(|constraint| NumericPredicate {
         field,
-        constraint,
         excluded,
-        label: format!("{}{key}:{expression}", if excluded { "-" } else { "" }, key = field.key()),
+        label: format!(
+            "{}{key}:{}",
+            if excluded { "-" } else { "" },
+            if let NumericConstraint::WorkshopId(id) = constraint {
+                id.to_string()
+            } else {
+                expression.to_string()
+            },
+            key = field.key()
+        ),
+        constraint,
     });
     Some(parsed)
 }
 
 fn parse_constraint(field: NumericField, expression: &str) -> Result<NumericConstraint, ()> {
+    if field == NumericField::WorkshopId {
+        return workshop_id(expression).map(NumericConstraint::WorkshopId).ok_or(());
+    }
     if expression.is_empty() {
         return Err(());
     }
@@ -361,7 +400,7 @@ fn parse_measure(field: NumericField, value: &str) -> Result<u64, ()> {
         NumericField::Width | NumericField::Height => parse_pixels(value),
         NumericField::Duration => parse_scaled(value, duration_unit),
         NumericField::FileSize => parse_scaled(value, size_unit),
-        NumericField::Resolution => Err(()),
+        NumericField::Resolution | NumericField::WorkshopId => Err(()),
     }
 }
 

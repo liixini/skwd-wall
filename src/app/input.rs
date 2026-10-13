@@ -129,7 +129,7 @@ pub(crate) fn action_message(action: crate::domain::input::InputAction) -> Messa
         InputAction::FolderPrev => Message::CycleFolder { backwards: true },
         InputAction::FolderNext => Message::CycleFolder { backwards: false },
         InputAction::FolderToggle => Message::ToggleFolder,
-        InputAction::HiddenFolders => Message::ToggleHiddenFolders,
+        InputAction::ShowHidden => Message::ToggleShowHidden,
         InputAction::TagCloud => Message::OpenTagCloud,
         InputAction::TagMode => Message::ToggleTagMode,
         InputAction::NavLeft => Message::KeyPrev,

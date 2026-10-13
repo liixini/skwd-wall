@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = skwd-wall کو Plasma ڈیسک ٹاپ سے جوڑیں۔ لاک اسکرین وال پیپر کے اختیارات نیچے ترتیب دیے جاتے ہیں۔
 settings-integrations-lock-mode-label = لاک اسکرین وال پیپر
 settings-integrations-lock-mode-desc = غیر منظم Plasma کو چھیڑتا نہیں۔ ساکن ہمیشہ نیچے دی گئی تصویر استعمال کرتا ہے۔ پیروی سب سے آخر میں لاگو کیے گئے وال پیپر کے ساتھ چلتا ہے۔
 settings-integrations-lock-off = غیر منظم
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = وال پیپر پر ہوور کرنے س
 
 settings-integrations-follow-label = Skwd کے رنگوں کی پیروی
 settings-integrations-follow-desc = جب Skwd رنگ کنٹرول کرے تو اس کی پیروی کریں۔ بند ہونے پر موجودہ رنگ برقرار رہتے ہیں۔
+
+settings-section-lockscreens = لاک اسکرینیں
+settings-lockscreens-source-label = تصویر کا ذریعہ
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = جامد تصویر
+settings-lockscreens-image-desc = موجودہ تصویر کا مکمل راستہ درج کریں، مثلاً ~/Pictures/lockscreen.jpg۔ Skwd اسے فعال لاک اسکرینوں کے لیے نقل کرتا ہے۔ یہاں ویڈیو فائل استعمال نہیں ہو سکتی۔
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = اس لاک اسکرین کی تصویر کے لیے موجودہ وال پیپر استعمال کریں۔
+settings-lockscreens-static-action-desc = اس لاک اسکرین کے پس منظر کے لیے منتخب تصویر استعمال کریں۔
+settings-lockscreens-sddm-static-action-desc = سائن اِن اسکرین پر منتخب تصویر استعمال کریں۔ منتظم کی منظوری درکار ہے۔
+settings-lockscreens-sddm-action-desc = سائن اِن اسکرین پر موجودہ وال پیپر استعمال کریں۔ منتظم کی منظوری درکار ہے۔
+settings-lockscreens-choose-theme-desc = SDDM کے لیے کوئی تھیم منتخب نہیں۔ موجودہ وال پیپر استعمال کرنے کے لیے نصب شدہ تھیم منتخب کریں۔
+settings-lockscreens-error = لاک اسکرین اپ ڈیٹ نہیں ہو سکی: { $error }
+settings-lockscreens-rollback-error = لاک اسکرین اپ ڈیٹ نہیں ہو سکی: { $error } SDDM بحال کرنے میں بھی ناکامی ہوئی: { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = فعال کریں
+settings-lockscreens-disable = غیر فعال کریں
+settings-lockscreens-advanced-label = اعلیٰ
+settings-lockscreens-choose-theme = SDDM تھیم منتخب کریں
+settings-lockscreens-pending = لاک اسکرین اپ ڈیٹ ہو رہی ہے…
+settings-lockscreens-no-sddm-theme = کوئی نصب شدہ SDDM تھیم دستیاب نہیں ہے۔
+
+settings-app-themes-profile-label = رنگوں کا پروفائل
+settings-app-themes-profile-desc = اس ایپ کے لیے ایک مستقل پروفائل استعمال کریں۔ موجودہ تھیم کی پیروی فعال وال پیپر یا مستقل تھیم کے رنگ استعمال کرتی ہے۔
+settings-app-themes-profile-follow = موجودہ تھیم کی پیروی
+settings-app-themes-profile-missing = دستیاب نہیں: { $name }
+settings-app-themes-profile-in-use = حذف کرنے سے پہلے { $name } استعمال کرنے والی ایپس کے لیے دوسرا رنگوں کا پروفائل منتخب کریں۔

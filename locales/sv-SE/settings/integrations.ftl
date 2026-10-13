@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = Anslut skwd-wall till Plasma-skrivbordet. Alternativ för låsskärmens bakgrund finns nedan.
 settings-integrations-lock-mode-label = Låsskärmens bakgrund
 settings-integrations-lock-mode-desc = Ohanterad lämnar Plasma i fred. Statisk använder alltid bilden nedan. Följ speglar den senast använda bakgrundsbilden.
 settings-integrations-lock-off = Ohanterad
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = Att hovra över en bakgrundsbild skriver 
 
 settings-integrations-follow-label = Följ Skwds färger
 settings-integrations-follow-desc = Följ Skwd när det styr färgerna. Av behåller de aktuella färgerna.
+
+settings-section-lockscreens = Låsskärmar
+settings-lockscreens-source-label = Bildkälla
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = Statisk bild
+settings-lockscreens-image-desc = Ange hela sökvägen till en befintlig bild, till exempel ~/Pictures/lockscreen.jpg. Skwd kopierar den till aktiverade låsskärmar. En videofil kan inte användas här.
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = Använd den aktuella bakgrundsbilden på den här låsskärmen.
+settings-lockscreens-static-action-desc = Använd den valda bilden som bakgrund på den här låsskärmen.
+settings-lockscreens-sddm-static-action-desc = Använd den valda bilden på inloggningsskärmen. Administratörens godkännande krävs.
+settings-lockscreens-sddm-action-desc = Använd den aktuella bakgrundsbilden på inloggningsskärmen. Administratörens godkännande krävs.
+settings-lockscreens-choose-theme-desc = Ingen tema har valts i SDDM. Välj ett installerat tema för att använda den aktuella bakgrundsbilden.
+settings-lockscreens-error = Det gick inte att uppdatera låsskärmen: { $error }
+settings-lockscreens-rollback-error = Det gick inte att uppdatera låsskärmen: { $error } Det gick inte heller att återställa SDDM: { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = Aktivera
+settings-lockscreens-disable = Inaktivera
+settings-lockscreens-advanced-label = Avancerat
+settings-lockscreens-choose-theme = Välj ett SDDM-tema
+settings-lockscreens-pending = Uppdaterar låsskärmen…
+settings-lockscreens-no-sddm-theme = Inget installerat SDDM-tema finns tillgängligt.
+
+settings-app-themes-profile-label = Färgprofil
+settings-app-themes-profile-desc = Använd en statisk profil för den här appen. Följ aktuellt tema använder den aktiva bakgrunden eller det fasta temat.
+settings-app-themes-profile-follow = Följ aktuellt tema
+settings-app-themes-profile-missing = Ej tillgänglig: { $name }
+settings-app-themes-profile-in-use = Välj en annan färgprofil för apparna som använder { $name } innan du tar bort den.

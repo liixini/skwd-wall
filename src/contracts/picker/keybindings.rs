@@ -167,7 +167,7 @@ pub const KEY_BINDINGS: [KeyBindingDescriptor; 46] = [
         group: KeyBindingGroup::Folders,
     },
     KeyBindingDescriptor {
-        action: InputAction::HiddenFolders,
+        action: InputAction::ShowHidden,
         path: skwd_config::keys::keybind::HIDDEN_FOLDERS,
         title_key: "keybind-hidden-folders",
         group: KeyBindingGroup::Folders,

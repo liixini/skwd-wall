@@ -57,7 +57,7 @@ fn saved_theme_storage() {
 
     let two = upsert_saved(&replaced, "Other", &nord);
     assert_eq!(
-        saved_palettes(&two),
+        saved_palettes(&two, None),
         vec![("Mine".to_string(), dracula), ("Other".to_string(), nord.clone())]
     );
     let remaining = remove_saved(&two, "Mine");

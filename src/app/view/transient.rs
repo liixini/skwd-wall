@@ -4,6 +4,8 @@ use iced::{Alignment, Element, Length, Padding};
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 
+const EMPTY_FOLDER_KEY: &str = "status-library-folder-empty";
+
 pub(crate) fn help_intent_message(intent: crate::frontend::ui::HelpIntent) -> Message {
     match intent {
         crate::frontend::ui::HelpIntent::Close => Message::ToggleHelp,
@@ -29,12 +31,26 @@ pub(super) fn library_hint(app: &App) -> Option<Element<'_, Message>> {
             container(chip).width(Length::Fill).align_x(Alignment::Center).padding(16).into(),
         );
     }
-    let hint = empty_library_hint(
-        app.library_session.library.catalog().items.len(),
-        &app.library_session.wallpaper_dir,
-        app.daemon.connected,
-        app.daemon.ever_connected,
-    )?;
+    let folder = &app.library_session.filters.folder;
+    let empty_source = app.library_session.filtered.is_empty()
+        && skwd_config::library_folders(app.config.root()).contains(folder)
+        && !app.library_session.library.catalog().items.iter().any(|item| {
+            item.kind != crate::domain::library::catalog::WallpaperKind::We
+                && std::path::Path::new(&item.path).starts_with(folder)
+        });
+    let hint = if empty_source && app.daemon.connected {
+        crate::i18n::tr_args!(
+            EMPTY_FOLDER_KEY,
+            directory => folder.as_str()
+        )
+    } else {
+        empty_library_hint(
+            app.library_session.library.catalog().items.len(),
+            skwd_config::library_destination(app.config.root(), false).as_deref(),
+            app.daemon.connected,
+            app.daemon.ever_connected,
+        )?
+    };
     let color = crate::frontend::ui::with_alpha(app.theme.palette.surface_text, 0.75);
     let hint_text = iced::widget::text(hint)
         .size(16)

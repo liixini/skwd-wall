@@ -946,7 +946,9 @@ pub fn wall_aperture_dims(
 }
 
 fn search_box<'a>(br: &'a Browser, scale: f32, pal: &'a Palette) -> Element<'a, Message> {
-    if !br.source.searchable() {
+    if !br.source.searchable()
+        || (br.source == Source::Wallhaven && !br.request.wallhaven.collection.is_empty())
+    {
         return container(text(br.source.label()).size(14.0 * scale).color(pal.surface_text))
             .padding(6)
             .into();

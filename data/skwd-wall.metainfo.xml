@@ -2,7 +2,7 @@
 <component type="desktop-application">
   <id>org.skwd.wall.v2</id>
   <metadata_license>FSFAP</metadata_license>
-  <project_license>GPL-3.0-or-later</project_license>
+  <project_license>MIT</project_license>
   <name>skwd-wall v2</name>
   <summary>GPU wallpaper picker</summary>
   <developer id="io.github.liixini">
@@ -59,6 +59,7 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.0-beta.25" date="2026-10-13"/>
     <release version="1.0.0-beta.24" date="2026-10-01"/>
     <release version="1.0.0-beta.23" date="2026-09-27"/>
     <release version="1.0.0-beta.22" date="2026-09-26"/>

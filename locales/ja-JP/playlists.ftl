@@ -52,6 +52,7 @@ playlists-edition-eyebrow = プレイリスト / 編集
 playlists-kind-tagline = { $kind } · ディスプレイに割り当て可能
 playlists-stop-edition = プレイリストを停止
 playlists-colour-notes = 色
+playlists-folder-notes = フォルダー
 playlists-live-collection-title = フィルタープレイリスト
 playlists-live-collection-desc = このリストは、選択したソース、タグ、解像度、色のフィルターから自動で更新されます。
 playlists-definition-title = プレイリストの詳細
@@ -74,11 +75,11 @@ playlists-picker-search = Search by name or ID
 playlists-picker-no-match = No playlists match this search.
 playlists-picker-hint = Choose which wallpapers to browse. Playback stays as it is.
 playlists-filter-help = Filter reference
-playlists-help-combine = Separate filters with spaces. Every filter must match. Names and paths cannot contain spaces.
+playlists-help-combine = フィルターは空白で区切ります。フォルダールール以外はすべてのフィルターに一致する必要があります。フォルダールールは列挙したどれかのフォルダーにあれば一致します。空白を含むパスは引用符で囲んでください。
 playlists-help-source = all / favourites
     Start with all wallpapers or only favourites.
 playlists-help-folder = folder:nature/forest
-    Match this exact folder, relative to the library root. Subfolders are separate.
+    このフォルダーとそのサブフォルダーに一致します。複数のフォルダールールはいずれかに一致します。空白を含むパスは引用符で囲んでください。
 playlists-help-type = type:image / type:video / type:we
     Images, videos, or Wallpaper Engine wallpapers. Also accepts static, picture, pic, img; vid, mp4; scene, wallpaperengine, wallpaper-engine.
 playlists-help-tag = tag:cat,night / tag:cat|dog,-anime

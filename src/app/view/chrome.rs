@@ -20,6 +20,7 @@ pub(crate) fn bar_intent_message(intent: crate::frontend::ui::BarIntent) -> Mess
             BarAction::FolderToggle => Message::FolderMenuToggle,
             BarAction::Settings => Message::ToggleSettings,
             BarAction::Stash => Message::Stash,
+            BarAction::ShowHidden => Message::ToggleShowHidden,
             BarAction::Download => Message::OpenSourceBrowser,
             BarAction::Playlists => Message::Pl(crate::frontend::playlists::PlMsg::OpenPicker),
             BarAction::Random => Message::ToggleRandomRotate,
@@ -96,6 +97,9 @@ pub(crate) fn bar_show(app: &App) -> crate::frontend::ui::BarShow {
         tagcloud: app.config.filter_show("tagcloud"),
         download: app.config.filter_show("download"),
         playlists: app.config.filter_show("playlists"),
+        hidden: (app.library_session.library.catalog().has_hidden()
+            || app.library_session.filters.reveal)
+            .then_some(app.library_session.filters.reveal),
     }
 }
 
@@ -210,6 +214,8 @@ pub(super) fn filter_bar_layer(app: &App, vw: f32, vh: f32) -> Element<'_, Messa
         backend_options,
         menu_hover: app.chrome.bar.menu_hover,
         folder_options: &app.library_session.folder_options,
+        folder_hidden: &app.library_session.folder_hidden,
+        folder_roots: &app.library_session.folder_roots,
         selected_folder: &app.library_session.filters.folder,
         menu_scroll: app.chrome.bar.menu_scroll.x,
         theme_swatch: &app.theme.swatch,

@@ -31,6 +31,8 @@ impl App {
 
     pub(in crate::app) fn on_list(&mut self, catalog: crate::domain::library::catalog::Catalog) {
         self.library_session.library.replace(catalog);
+        self.migrate_hidden_folders();
+        self.apply_library_profile();
         if (self.tags.editing || self.tags.card_drawer_open)
             && let Some(key) = self.tags.card_key.as_deref()
             && self.library_session.library.catalog().items.iter().any(|item| item.key == key)
@@ -178,6 +180,56 @@ impl App {
         }
     }
 
+    pub(in crate::app) fn migrate_hidden_folders(&mut self) {
+        let catalog = self.library_session.library.catalog();
+        if !self.config.filter_bar_sticky()
+            || self.config.last_filter_show_hidden_folders()
+            || catalog.items.is_empty()
+        {
+            return;
+        }
+        let keys: Vec<String> = catalog
+            .items
+            .iter()
+            .filter(|item| {
+                matches!(
+                    crate::app::model::library_item(item),
+                    skwd_config::LibraryItem::Folder(path) if in_dot_folder(path)
+                )
+            })
+            .filter(|item| !catalog.hidden.contains(&item.key))
+            .map(|item| item.key.clone())
+            .collect();
+        for key in keys {
+            self.library_session.library.toggle_hidden(&key);
+            crate::app::helpers::send_hidden(self, &key, true);
+        }
+        self.config.remove_key(skwd_config::keys::filter_bar::LAST_SHOW_HIDDEN_FOLDERS);
+        self.config.persist();
+    }
+
+    pub(in crate::app) fn show_profile(&mut self, id: Option<String>) {
+        self.library_session.profile_override = id;
+        self.library_session.filters.reveal = false;
+        self.reload_library_profile();
+    }
+
+    pub(in crate::app) fn reload_library_profile(&mut self) {
+        self.apply_library_profile();
+        self.rebuild_folder_options();
+        self.refilter_from_start();
+        self.chrome.cache.clear();
+        self.chrome.bar.cache.clear();
+        self.retick();
+    }
+
+    pub(in crate::app) fn conceal(&mut self) {
+        if !self.library_session.filters.reveal && self.library_session.profile_override.is_none() {
+            return;
+        }
+        self.show_profile(None);
+    }
+
     pub(in crate::app) fn change_filters(&mut self, edit: impl FnOnce(&mut Filters)) {
         let before = self.library_session.filters.clone();
         edit(&mut self.library_session.filters);
@@ -188,7 +240,6 @@ impl App {
                     "color": self.library_session.filters.color,
                     "kind": self.library_session.filters.kind,
                     "folder": self.library_session.filters.folder,
-                    "showHiddenFolders": self.library_session.filters.show_hidden_folders,
                     "sort": self.library_session.filters.sort,
                     "orient": self.library_session.filters.orient,
                     "resolution": self.library_session.filters.resolution,
@@ -200,4 +251,9 @@ impl App {
         self.chrome.bar.cache.clear();
         self.retick();
     }
+}
+
+fn in_dot_folder(path: &std::path::Path) -> bool {
+    path.parent()
+        .is_some_and(|folder| folder.iter().any(|part| part.to_string_lossy().starts_with('.')))
 }

@@ -81,3 +81,12 @@ effects-name-topographic = Topografisk
 effects-name-tonal-layers = Tonlager
 
 effects-saved-palette = { $name } (sparat)
+
+effects-activity-label = Aktivitet
+effects-activity-desc = Välj vilken Plasma-aktivitet som får bakgrunden. Skrivbordet stannar i sin nuvarande aktivitet.
+effects-activity-current = Aktuell
+effects-activity-inactive-desc = För en inaktiv aktivitet kan du bara ändra bakgrundstilldelningar. Skärminställningar och uppspelningskontroller gäller det aktuella skrivbordet.
+effects-activity-unavailable = Den valda aktiviteten är inte tillgänglig. Välj en befintlig aktivitet och försök igen.
+effects-activity-saved = Sparad för { $activity }.
+effects-activity-unassigned = Ingen Skwd-bakgrund tilldelad
+effects-activity-preparing = Förbereder bakgrunden för { $activity }.

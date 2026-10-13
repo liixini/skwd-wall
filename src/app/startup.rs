@@ -422,24 +422,21 @@ fn hand_params(config: &Config) -> crate::frontend::scene::hand::HandParams {
 }
 
 pub(crate) fn startup_filters(config: &Config) -> Filters {
-    let weather_active = config.weather_match() && !config.locale().is_empty();
     let mut filters = if config.filter_bar_sticky() {
         Filters {
             color: config.last_filter_color(),
             kind: config.last_filter_kind(),
             folder: config.last_filter_folder(),
-            show_hidden_folders: config.last_filter_show_hidden_folders(),
             sort: config.last_filter_sort(),
             orient: config.last_filter_orient(),
             resolution: config.last_filter_resolution(),
             favourites_only: config.last_filter_favourites(),
-            weather_active,
             ..Filters::default()
         }
     } else {
-        Filters { folder: config.default_folder(), weather_active, ..Filters::default() }
+        Filters { folder: config.default_folder(), ..Filters::default() }
     };
-    if !filters.folder_visible(&filters.folder) {
+    if filters.folder.is_empty() {
         filters.folder = "*".into();
     }
     filters

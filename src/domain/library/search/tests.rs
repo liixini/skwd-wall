@@ -132,6 +132,64 @@ fn library_query_keeps_tags_and_numeric_syntax_separate() {
     assert!(parsed.partial.is_empty());
 }
 
+#[test]
+fn workshop_queries_match_exactly() {
+    let item = crate::domain::library::catalog::Wallpaper {
+        key: "we:1234567890".into(),
+        ..Default::default()
+    };
+    for text in ["1234567890", "id:1234567890", "workshop:1234567890"] {
+        let query = parse_numeric_query(text);
+        assert!(query.matches(&item), "{text}");
+        assert_eq!(query.query_text(), "workshop:1234567890");
+        assert!(!query.matches(&crate::domain::library::catalog::Wallpaper::default()));
+        assert!(!parse_numeric_query("123456789").matches(&item));
+    }
+    assert!(!parse_numeric_query("-1234567890").matches(&item));
+    assert!(
+        parse_numeric_query("-1234567890")
+            .matches(&crate::domain::library::catalog::Wallpaper::default())
+    );
+}
+
+#[test]
+fn workshop_query_keeps_tags() {
+    let parsed = parse_library_search("forest 1234567890", &vocab());
+    assert_eq!(parsed.tags, ["forest"]);
+    assert_eq!(parsed.numeric.query_text(), "workshop:1234567890");
+    assert!(parsed.partial.is_empty());
+    for text in ["id:0", "workshop:later", "workshop:>123", "id:18446744073709551616"] {
+        assert!(!parse_numeric_query(text).is_valid(), "{text}");
+    }
+}
+
+#[test]
+fn workshop_ids_use_u64() {
+    let item = crate::domain::library::catalog::Wallpaper {
+        we_id: u64::MAX.to_string(),
+        ..Default::default()
+    };
+    assert!(parse_numeric_query(&u64::MAX.to_string()).matches(&item));
+}
+
+#[test]
+fn numeric_tags_stay_tags() {
+    let vocab = ["2024".into(), "forest".into()].into_iter().collect();
+    for (text, tags) in [
+        ("2024", vec!["2024"]),
+        ("-2024 forest", vec!["-2024", "forest"]),
+        ("forest not 2024", vec!["forest", "-2024"]),
+        ("forest not 2024 width:1920", vec!["forest", "-2024"]),
+    ] {
+        let parsed = parse_library_search(text, &vocab);
+        assert_eq!(parsed.tags, tags);
+        assert_eq!(parsed.numeric.is_empty(), !text.contains("width:"));
+    }
+    let explicit = parse_library_search("id:2024", &vocab);
+    assert_eq!(explicit.numeric.query_text(), "workshop:2024");
+    assert!(explicit.tags.is_empty());
+}
+
 fn db() -> HashMap<String, Vec<String>> {
     let mut map = HashMap::new();
     map.insert("a".into(), vec!["nature".into(), "green".into(), "forest".into()]);

@@ -199,8 +199,10 @@ pub fn acquire_single_instance() {
         }
         Err(err) if err.kind() == ErrorKind::AddrInUse => {
             let startup = crate::infrastructure::runtime::startup_panel();
+            let profile = crate::infrastructure::runtime::startup_profile();
             if let Ok(mut stream) = UnixStream::connect_addr(&addr)
-                && let Some(command) = startup_control_command(startup.as_deref())
+                && let Some(command) =
+                    startup_control_command(startup.as_deref(), profile.as_deref())
             {
                 use std::io::Write;
                 let _ = stream.write_all(command.as_bytes());
@@ -245,10 +247,16 @@ pub(super) fn parse_control_command(raw: &str) -> crate::infrastructure::runtime
     }
 }
 
-pub(super) fn startup_control_command(start: Option<&str>) -> Option<&'static str> {
-    match start {
-        Some("mixer") => Some("open mixer\n"),
-        Some("theme-audition") => Some("open theme-audition\n"),
+pub(super) fn startup_control_command(
+    start: Option<&str>,
+    profile: Option<&str>,
+) -> Option<String> {
+    match (start, profile) {
+        (Some("mixer"), _) => Some("open mixer\n".into()),
+        (Some("theme-audition"), _) => Some("open theme-audition\n".into()),
+        (_, Some(id)) => {
+            Some(format!("{} {id}\n", crate::infrastructure::runtime::PROFILE_COMMAND))
+        }
         _ => None,
     }
 }

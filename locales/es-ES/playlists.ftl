@@ -64,6 +64,7 @@ playlists-edition-eyebrow = Listas / editar
 playlists-kind-tagline = { $kind } · lista para asignar a pantallas
 playlists-stop-edition = Detener lista
 playlists-colour-notes = Colores
+playlists-folder-notes = Carpetas
 playlists-live-collection-title = Lista filtrada
 playlists-live-collection-desc = Esta lista se actualiza sola según la fuente, etiquetas, resolución y filtros de color seleccionados.
 playlists-definition-title = Detalles de la lista
@@ -86,11 +87,11 @@ playlists-picker-search = Search by name or ID
 playlists-picker-no-match = No playlists match this search.
 playlists-picker-hint = Choose which wallpapers to browse. Playback stays as it is.
 playlists-filter-help = Filter reference
-playlists-help-combine = Separate filters with spaces. Every filter must match. Names and paths cannot contain spaces.
+playlists-help-combine = Separa los filtros con espacios. Cada filtro debe coincidir, salvo las reglas de carpeta: cuenta un elemento de cualquiera de las carpetas indicadas. Pon entre comillas las rutas con espacios.
 playlists-help-source = all / favourites
     Start with all wallpapers or only favourites.
 playlists-help-folder = folder:nature/forest
-    Match this exact folder, relative to the library root. Subfolders are separate.
+    Coincide con esta carpeta y sus subcarpetas. Varias reglas de carpeta coinciden con cualquiera de ellas; pon entre comillas las rutas con espacios.
 playlists-help-type = type:image / type:video / type:we
     Images, videos, or Wallpaper Engine wallpapers. Also accepts static, picture, pic, img; vid, mp4; scene, wallpaperengine, wallpaper-engine.
 playlists-help-tag = tag:cat,night / tag:cat|dog,-anime

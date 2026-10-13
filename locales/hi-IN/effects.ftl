@@ -81,3 +81,12 @@ effects-name-topographic = टोपोग्राफ़िक
 effects-name-tonal-layers = टोनल लेयर्स
 
 effects-saved-palette = { $name } (सहेजा गया)
+
+effects-activity-label = गतिविधि
+effects-activity-desc = चुनें कि वॉलपेपर किस Plasma गतिविधि में लगाया जाए। डेस्कटॉप वर्तमान गतिविधि में रहेगा।
+effects-activity-current = वर्तमान
+effects-activity-inactive-desc = निष्क्रिय गतिविधि के लिए केवल वॉलपेपर आवंटन बदला जा सकता है। डिस्प्ले सेटिंग और प्लेबैक नियंत्रण वर्तमान डेस्कटॉप पर लागू होते हैं।
+effects-activity-unavailable = चुनी गई गतिविधि उपलब्ध नहीं है। कोई मौजूदा गतिविधि चुनें और फिर प्रयास करें।
+effects-activity-saved = { $activity } के लिए सहेजा गया।
+effects-activity-unassigned = कोई Skwd वॉलपेपर असाइन नहीं किया गया
+effects-activity-preparing = { $activity } के लिए वॉलपेपर तैयार किया जा रहा है।

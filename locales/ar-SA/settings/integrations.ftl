@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = يربط skwd-wall بسطح مكتب Plasma. خيارات خلفية شاشة القفل تُضبط أدناه.
 settings-integrations-lock-mode-label = خلفية شاشة القفل
 settings-integrations-lock-mode-desc = «غير مُدار» يترك Plasma وشأنه. «صورة ثابتة» تستخدم الصورة أدناه دائمًا. «تتبّع» يتابع آخر خلفية مطبّقة.
 settings-integrations-lock-off = غير مُدار
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = التحويم فوق خلفية يعيد
 
 settings-integrations-follow-label = اتباع ألوان Skwd
 settings-integrations-follow-desc = يتبع Skwd ما دام يتحكم في الألوان. عند الإيقاف تبقى الألوان الحالية.
+
+settings-section-lockscreens = شاشات القفل
+settings-lockscreens-source-label = مصدر الصورة
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = صورة ثابتة
+settings-lockscreens-image-desc = أدخل المسار الكامل لصورة موجودة، مثل ~/Pictures/lockscreen.jpg. ينسخها Skwd لشاشات القفل المفعّلة. لا يمكن استخدام ملف فيديو هنا.
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = استخدم الخلفية الحالية صورةً لشاشة القفل هذه.
+settings-lockscreens-static-action-desc = استخدم الصورة المحددة خلفيةً لشاشة القفل هذه.
+settings-lockscreens-sddm-static-action-desc = استخدم الصورة المحددة في شاشة تسجيل الدخول. يلزم اعتماد المسؤول.
+settings-lockscreens-sddm-action-desc = استخدم الخلفية الحالية لشاشة تسجيل الدخول. يلزم اعتماد المسؤول.
+settings-lockscreens-choose-theme-desc = لم يُحدَّد نسق لـ SDDM. اختر نسقًا مثبّتًا لاستخدام الخلفية الحالية.
+settings-lockscreens-error = تعذّر تحديث شاشة القفل: { $error }
+settings-lockscreens-rollback-error = تعذّر تحديث شاشة القفل: { $error } وتعذّرت أيضًا استعادة SDDM: { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = تمكين
+settings-lockscreens-disable = تعطيل
+settings-lockscreens-advanced-label = متقدم
+settings-lockscreens-choose-theme = اختر سمة SDDM
+settings-lockscreens-pending = جارٍ تحديث شاشة القفل…
+settings-lockscreens-no-sddm-theme = لا توجد سمة SDDM مثبتة.
+
+settings-app-themes-profile-label = ملف الألوان
+settings-app-themes-profile-desc = استخدم ملف ألوان ثابتًا لهذا التطبيق. اتباع السمة الحالية يستخدم ألوان الخلفية النشطة أو السمة الثابتة.
+settings-app-themes-profile-follow = اتباع السمة الحالية
+settings-app-themes-profile-missing = غير متاح: { $name }
+settings-app-themes-profile-in-use = اختر ملف ألوان آخر للتطبيقات التي تستخدم { $name } قبل حذفه.

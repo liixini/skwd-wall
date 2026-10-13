@@ -70,6 +70,7 @@ playlists-edition-eyebrow = Плейлисты / редактирование
 playlists-kind-tagline = { $kind } · можно назначить дисплеям
 playlists-stop-edition = Остановить плейлист
 playlists-colour-notes = Цвета
+playlists-folder-notes = Папки
 playlists-live-collection-title = Плейлист по фильтру
 playlists-live-collection-desc = Этот список обновляется сам по выбранным фильтрам источника, тегов, разрешения и цвета.
 playlists-definition-title = Параметры плейлиста
@@ -92,11 +93,11 @@ playlists-picker-search = Search by name or ID
 playlists-picker-no-match = No playlists match this search.
 playlists-picker-hint = Choose which wallpapers to browse. Playback stays as it is.
 playlists-filter-help = Filter reference
-playlists-help-combine = Separate filters with spaces. Every filter must match. Names and paths cannot contain spaces.
+playlists-help-combine = Разделяйте фильтры пробелами. Должен совпасть каждый фильтр, кроме правил папок: подходит элемент из любой указанной папки. Заключайте пути с пробелами в кавычки.
 playlists-help-source = all / favourites
     Start with all wallpapers or only favourites.
 playlists-help-folder = folder:nature/forest
-    Match this exact folder, relative to the library root. Subfolders are separate.
+    Совпадает с этой папкой и её подпапками. Несколько правил папок совпадают с любой из них; заключайте пути с пробелами в кавычки.
 playlists-help-type = type:image / type:video / type:we
     Images, videos, or Wallpaper Engine wallpapers. Also accepts static, picture, pic, img; vid, mp4; scene, wallpaperengine, wallpaper-engine.
 playlists-help-tag = tag:cat,night / tag:cat|dog,-anime

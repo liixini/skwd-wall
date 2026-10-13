@@ -1,10 +1,11 @@
 from pathlib import Path
 import tomllib
 import unittest
+import xml.etree.ElementTree as xml
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PROJECT_LICENSE = "GPL-3.0-or-later"
+PROJECT_LICENSE = "MIT"
 
 
 class LicenseMetadataTests(unittest.TestCase):
@@ -17,7 +18,9 @@ class LicenseMetadataTests(unittest.TestCase):
         self.assertEqual(manifest["package"]["license"], {"workspace": True})
 
     def test_project_ships_its_license_and_dependency_texts(self):
-        self.assertTrue((ROOT / "LICENSE").is_file())
+        self.assertTrue(self.read("LICENSE").startswith("MIT License\n"))
+        metadata = xml.fromstring(self.read("data/skwd-wall.metainfo.xml"))
+        self.assertEqual(metadata.findtext("project_license"), PROJECT_LICENSE)
         texts = sorted(path.name for path in (ROOT / "LICENSES").glob("*.txt"))
         self.assertEqual(
             texts,

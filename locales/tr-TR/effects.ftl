@@ -81,3 +81,12 @@ effects-name-topographic = Topografik
 effects-name-tonal-layers = Ton katmanları
 
 effects-saved-palette = { $name } (kaydedilmiş)
+
+effects-activity-label = Etkinlik
+effects-activity-desc = Duvar kâğıdının uygulanacağı Plasma etkinliğini seçin. Masaüstü mevcut etkinlikte kalır.
+effects-activity-current = Geçerli
+effects-activity-inactive-desc = Etkin olmayan bir etkinlikte yalnızca duvar kâğıdı atamaları değiştirilebilir. Ekran ve oynatma ayarları geçerli masaüstüne uygulanır.
+effects-activity-unavailable = Seçilen etkinlik kullanılamıyor. Var olan bir etkinlik seçip yeniden deneyin.
+effects-activity-saved = { $activity } için kaydedildi.
+effects-activity-unassigned = Skwd duvar kağıdı atanmamış
+effects-activity-preparing = { $activity } için duvar kağıdı hazırlanıyor.

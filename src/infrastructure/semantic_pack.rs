@@ -57,35 +57,17 @@ pub fn import_source(
 }
 
 fn choose_source(labels: &PickerLabels) -> Result<Option<PathBuf>, String> {
-    let mut arguments = vec![
-        String::from("--file-selection"),
-        format!("--title={}", labels.title),
-        format!(
-            "--file-filter={} | semantic-pack.json *.skwdmodel *.zip *.tar *.tar.gz *.tgz *.tar.xz *.txz *.tar.zst *.tzst",
-            labels.packs
-        ),
-        format!("--file-filter={} | *", labels.all_files),
-    ];
-    if let Some(downloads) = home_directory().map(|home| home.join("Downloads"))
-        && downloads.is_dir()
-    {
-        arguments.push(format!("--filename={}/", downloads.display()));
-    }
-    let output = Command::new("zenity").args(&arguments).output().map_err(|error| {
-        if error.kind() == std::io::ErrorKind::NotFound {
-            String::from("zenity is required for the model-pack file picker")
-        } else {
-            error.to_string()
-        }
-    })?;
-    if output.status.success() {
-        let selected = String::from_utf8_lossy(&output.stdout).trim().to_owned();
-        return Ok((!selected.is_empty()).then(|| PathBuf::from(selected)));
-    }
-    if output.status.code() == Some(1) {
-        return Ok(None);
-    }
-    Err(output_error(&output, "model-pack file picker"))
+    const DOWNLOADS: &str = "Downloads";
+    const PACKS: &str =
+        "semantic-pack.json *.skwdmodel *.zip *.tar *.tar.gz *.tgz *.tar.xz *.txz *.tar.zst *.tzst";
+    let filters = [format!("{} | {PACKS}", labels.packs), format!("{} | *", labels.all_files)];
+    let downloads = home_directory().map(|home| home.join(DOWNLOADS)).filter(|path| path.is_dir());
+    super::file_picker::choose(&super::file_picker::FilePicker {
+        title: &labels.title,
+        directory: false,
+        filters: &filters,
+        start: downloads.as_deref(),
+    })
 }
 
 fn models_directory() -> Result<PathBuf, String> {

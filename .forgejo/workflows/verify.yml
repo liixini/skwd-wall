@@ -28,10 +28,28 @@ jobs:
       SKWD_VERIFY_ROOT: ../skwd-verify
       SKWD_VERIFY_TEST_ENV: /var/tmp/skwd-verify-venv-${{ github.run_id }}-${{ github.run_attempt }}
       TMPDIR: /var/tmp/skwd-verify-tmp-${{ github.run_id }}-${{ github.run_attempt }}
+      TMP: /var/tmp/skwd-verify-tmp-${{ github.run_id }}-${{ github.run_attempt }}
+      TEMP: /var/tmp/skwd-verify-tmp-${{ github.run_id }}-${{ github.run_attempt }}
+      RUNNER_TEMP: /var/tmp/skwd-verify-tmp-${{ github.run_id }}-${{ github.run_attempt }}
     defaults:
       run:
         working-directory: suite/skwd-wall
     steps:
+      - name: Prepare temporary storage
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$TMPDIR"
+          test "$TMP" = "$TMPDIR"
+          test "$TEMP" = "$TMPDIR"
+          test "$RUNNER_TEMP" = "$TMPDIR"
+          scratch_fstype=$(findmnt -n -o FSTYPE -T "$TMPDIR")
+          case "$scratch_fstype" in
+            ""|tmpfs|ramfs) exit 1 ;;
+          esac
+          findmnt -T "$TMPDIR"
+          df -h "$TMPDIR"
+
       - name: Check out Wall
         uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -42,7 +60,7 @@ jobs:
         uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: liixini/skwd-deck
-          ref: eaa991ccd43e73d7012b91d533dc1365276086d7
+          ref: ebc5580b34cd55e5110497de325017da154b0912
           path: suite/skwd-deck
           token: ${{ secrets.SKWD_SUITE_READ_TOKEN }}
           persist-credentials: false
@@ -51,7 +69,7 @@ jobs:
         uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: liixini/skwd-lens
-          ref: 01e302cf8b0b42f550fd41f6cfb35d462f89049e
+          ref: d1c985756d8e0be37af80c34cb263da3a2259775
           path: suite/skwd-lens
           token: ${{ secrets.SKWD_SUITE_READ_TOKEN }}
           persist-credentials: false
@@ -60,7 +78,7 @@ jobs:
         uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: liixini/skwd-verify
-          ref: 09f2b56581b4e817b1f17d3c4291c83484c90175
+          ref: 1939cb1f3b7aa10c61a321b5859dcc62d9fa2ad9
           path: suite/skwd-verify
           token: ${{ secrets.SKWD_SUITE_READ_TOKEN }}
           persist-credentials: false

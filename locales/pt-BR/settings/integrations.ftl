@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = Conecta o skwd-wall à área de trabalho Plasma. As opções de papel de parede da tela de bloqueio ficam abaixo.
 settings-integrations-lock-mode-label = Papel de parede da tela de bloqueio
 settings-integrations-lock-mode-desc = Não gerenciado deixa o Plasma como está. Imagem estática sempre usa a imagem abaixo. Seguir o último aplicado acompanha o papel de parede aplicado mais recentemente.
 settings-integrations-lock-off = Não gerenciado
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = Passar o mouse sobre um papel de parede r
 
 settings-integrations-follow-label = Seguir as cores do Skwd
 settings-integrations-follow-desc = Segue o Skwd quando ele controla as cores. Desativado mantém as cores atuais.
+
+settings-section-lockscreens = Telas de bloqueio
+settings-lockscreens-source-label = Origem da imagem
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = Imagem estática
+settings-lockscreens-image-desc = Informe o caminho completo de uma imagem existente, por exemplo ~/Pictures/lockscreen.jpg. O Skwd a copia para as telas de bloqueio ativadas. Não é possível usar um arquivo de vídeo aqui.
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = Use o papel de parede atual como imagem desta tela de bloqueio.
+settings-lockscreens-static-action-desc = Use a imagem selecionada como plano de fundo desta tela de bloqueio.
+settings-lockscreens-sddm-static-action-desc = Use a imagem selecionada na tela de entrada. É necessária a autorização do administrador.
+settings-lockscreens-sddm-action-desc = Use o papel de parede atual na tela de entrada. É necessária a autorização do administrador.
+settings-lockscreens-choose-theme-desc = Nenhum tema foi selecionado no SDDM. Escolha um tema instalado para usar o papel de parede atual.
+settings-lockscreens-error = Não foi possível atualizar a tela de bloqueio: { $error }
+settings-lockscreens-rollback-error = Não foi possível atualizar a tela de bloqueio: { $error } A restauração do SDDM também falhou: { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = Ativar
+settings-lockscreens-disable = Desativar
+settings-lockscreens-advanced-label = Avançado
+settings-lockscreens-choose-theme = Escolha um tema do SDDM
+settings-lockscreens-pending = Atualizando a tela de bloqueio…
+settings-lockscreens-no-sddm-theme = Nenhum tema do SDDM instalado está disponível.
+
+settings-app-themes-profile-label = Perfil de cores
+settings-app-themes-profile-desc = Use um perfil estático para este aplicativo. Seguir tema atual usa o papel de parede ativo ou o tema fixo.
+settings-app-themes-profile-follow = Seguir tema atual
+settings-app-themes-profile-missing = Indisponível: { $name }
+settings-app-themes-profile-in-use = Escolha outro perfil para os aplicativos que usam { $name } antes de excluí-lo.

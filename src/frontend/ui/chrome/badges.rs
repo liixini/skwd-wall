@@ -5,7 +5,7 @@ use crate::frontend::scene::Chrome;
 use crate::frontend::theme::Palette;
 use crate::i18n::tr;
 
-use super::super::bar::ICON_FAV;
+use super::super::bar::{ICON_FAV, ICON_HIDDEN};
 use super::super::misc::{NERD_FONT, UI_FONT, mid_text};
 use super::super::{mirror_x_for, parallelogram, with_alpha};
 
@@ -217,17 +217,35 @@ fn draw_grid(
             chrome.opacity,
         );
     }
+    let glyph_y = chrome.cy - chrome.hh + CORNER_GLYPH_Y;
     if chrome.favourite {
         frame.fill_text(mid_text(
             ICON_FAV.to_string(),
-            Point::new(fav_x, chrome.cy - chrome.hh + 11.0),
+            Point::new(fav_x, glyph_y),
             with_alpha(palette.primary, chrome.opacity),
-            14.0,
+            CORNER_GLYPH_SIZE,
+            NERD_FONT,
+            Alignment::Center,
+        ));
+    }
+    if chrome.hidden {
+        let step =
+            if chrome.favourite { HIDDEN_BADGE_STEP * (badge_x - fav_x).signum() } else { 0.0 };
+        frame.fill_text(mid_text(
+            ICON_HIDDEN.to_string(),
+            Point::new(fav_x + step, glyph_y),
+            with_alpha(palette.surface_text, HIDDEN_BADGE_ALPHA * chrome.opacity),
+            CORNER_GLYPH_SIZE,
             NERD_FONT,
             Alignment::Center,
         ));
     }
 }
+
+const CORNER_GLYPH_Y: f32 = 11.0;
+const CORNER_GLYPH_SIZE: f32 = 14.0;
+const HIDDEN_BADGE_STEP: f32 = 18.0;
+const HIDDEN_BADGE_ALPHA: f32 = 0.75;
 
 fn draw_hex(
     frame: &mut Frame,

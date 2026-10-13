@@ -85,6 +85,7 @@ pub(crate) fn unstash(app: &mut App) -> iced::Task<Message> {
         return iced::Task::none();
     }
     app.runtime_state.stashed = false;
+    app.conceal();
     app.runtime_state.last_tick = None;
     app.chrome.cache.clear();
     app.chrome.bar.cache.clear();

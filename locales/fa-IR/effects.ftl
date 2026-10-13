@@ -81,3 +81,12 @@ effects-name-topographic = توپوگرافی
 effects-name-tonal-layers = لایه‌های رنگی
 
 effects-saved-palette = { $name } (ذخیره‌شده)
+
+effects-activity-label = فعالیت
+effects-activity-desc = فعالیت Plasma را برای تصویر زمینه انتخاب کنید. میزکار در فعالیت کنونی می‌ماند.
+effects-activity-current = کنونی
+effects-activity-inactive-desc = برای فعالیت غیرفعال فقط می‌توان اختصاص تصویر زمینه را تغییر داد. تنظیمات نمایشگر و پخش مربوط به میزکار کنونی هستند.
+effects-activity-unavailable = فعالیت انتخاب‌شده در دسترس نیست. یک فعالیت موجود را انتخاب کنید و دوباره تلاش کنید.
+effects-activity-saved = برای { $activity } ذخیره شد.
+effects-activity-unassigned = تصویر پس‌زمینهٔ Skwd اختصاص داده نشده
+effects-activity-preparing = در حال آماده‌سازی تصویر پس‌زمینه برای { $activity }.

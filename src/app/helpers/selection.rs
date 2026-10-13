@@ -1,6 +1,7 @@
 use iced::Task;
 use log::info;
 use serde_json::json;
+use wall_proto::rpc_params::{HIDDEN, KEY};
 
 use crate::domain::library::catalog::{Wallpaper, WallpaperKind};
 
@@ -34,6 +35,27 @@ pub(crate) fn toggle_favourite(app: &mut App, filtered_index: usize) {
     let favourite = app.library_session.library.toggle_favourite(&key);
     app.daemon.client.call("wall.set_favourite", json!({ "key": key, "favourite": favourite }));
     app.scene.set_favourite(favourite);
+    app.retick();
+}
+
+pub(crate) fn send_hidden(app: &App, key: &str, hidden: bool) {
+    app.daemon.client.call(wall_proto::rpc::WALL_SET_HIDDEN, json!({ KEY: key, HIDDEN: hidden }));
+}
+
+pub(crate) fn toggle_hidden(app: &mut App, filtered_index: usize) {
+    let Some(&source_index) = app.library_session.filtered.get(filtered_index) else {
+        return;
+    };
+    let key = app.library_session.library.catalog().items[source_index as usize].key.clone();
+    let hidden = app.library_session.library.toggle_hidden(&key);
+    send_hidden(app, &key, hidden);
+    if hidden && !app.library_session.filters.reveal {
+        app.close_flip_after_removal();
+    }
+    app.rebuild_folder_options();
+    app.refilter();
+    app.chrome.cache.clear();
+    app.chrome.bar.cache.clear();
     app.retick();
 }
 

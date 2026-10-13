@@ -68,7 +68,7 @@ fn source_cards(
 ) -> Vec<(Card, Vec<Row>)> {
     let mut cards = vec![(
         Card { title: tr("settings-app-themes-title"), subtitle: "" },
-        super::super::app_themes::rows(None),
+        super::super::app_themes::rows(cfg, None),
     )];
     cards.extend(collect(cfg, |builder| tab_general(builder, themes, outputs)));
     cards.extend(collect(cfg, tab_launch));
@@ -79,13 +79,16 @@ fn source_cards(
     cards.extend(collect(cfg, tab_paper));
     cards.extend(collect(cfg, tab_transitions));
     cards.extend(collect(cfg, tab_schedule));
-    cards.extend(collect(cfg, tab_paths));
+    cards.extend(collect(cfg, |builder| tab_weather(builder, None, &[], false)));
+    cards.extend(collect(cfg, super::super::folders_tab::tab_paths));
+    cards.extend(collect(cfg, super::super::profiles_tab::tab_profiles));
     cards.extend(collect(cfg, tab_performance));
     cards.extend(collect(cfg, tab_postprocessing));
     cards.extend(collect(cfg, tab_keybinds));
     cards.extend(collect(cfg, tab_language));
     cards.extend(collect(cfg, |builder| tab_theme(builder, backends)));
     cards.extend(collect(cfg, tab_integrations));
+    cards.extend(collect(cfg, tab_lockscreens));
     cards.extend(collect(cfg, tab_wallhaven));
     cards.extend(collect(cfg, tab_steam));
     cards.extend(collect(cfg, tab_wallpaper_engine));
@@ -114,8 +117,15 @@ fn controls_owned_once() {
     expected.remove("path:theme.backend");
     let mut actual = BTreeMap::<String, usize>::new();
     for tab in TABS {
-        for id in ids(build_tab_with_outputs(tab, &cfg, &themes, &folders, "", &backends, &outputs))
-        {
+        for id in ids(build_tab_with_runtime_status(
+            tab,
+            &cfg,
+            &themes,
+            &folders,
+            "",
+            &backends,
+            RuntimeStatus { outputs: &outputs, ..Default::default() },
+        )) {
             *actual.entry(id).or_default() += 1;
         }
     }
@@ -191,6 +201,12 @@ fn controls_match_schema() {
                 {
                     continue;
                 }
+                if [keys::library::FOLDERS, keys::library::EXCLUDED_FOLDERS]
+                    .iter()
+                    .any(|key| path.starts_with(key))
+                {
+                    continue;
+                }
                 match schema::value_kind(&path) {
                     Some(actual) if actual == expected => {}
                     Some(actual) => wrong.push((path, actual, expected)),
@@ -220,11 +236,22 @@ fn fixed_controls_in_schema() {
     let mut missing = BTreeSet::new();
     for cfg in &configs {
         for tab in TABS {
-            for id in ids(build_tab_with_outputs(tab, cfg, &[], &[], "", &[], &[])) {
+            for id in ids(build_tab_with_runtime_status(
+                tab,
+                cfg,
+                &[],
+                &[],
+                "",
+                &[],
+                RuntimeStatus { outputs: &[], ..Default::default() },
+            )) {
                 let Some(path) = id.strip_prefix("path:") else {
                     continue;
                 };
                 let dynamic = path.starts_with("filterBar.resolutionPresets.")
+                    || [keys::library::FOLDERS, keys::library::EXCLUDED_FOLDERS]
+                        .iter()
+                        .any(|key| path.starts_with(key))
                     || path.starts_with("filterBar.show.type.")
                     || path.starts_with("filterBar.show.sort.")
                     || path.starts_with("transition.shaderScopes.")
@@ -256,7 +283,15 @@ fn selectable_current_value() {
     ];
     for cfg in &configs {
         for tab in TABS {
-            for (_, rows) in build_tab_with_outputs(tab, cfg, &[], &[], "", &[], &[]) {
+            for (_, rows) in build_tab_with_runtime_status(
+                tab,
+                cfg,
+                &[],
+                &[],
+                "",
+                &[],
+                RuntimeStatus { outputs: &[], ..Default::default() },
+            ) {
                 for row in flattened_rows(rows) {
                     let (Control::Dropdown { path, options, current, .. }
                     | Control::Chips { path, options, current, .. }) = row.control
@@ -287,7 +322,15 @@ fn controls_emit_valid_values() {
     ];
     for cfg in &configs {
         for tab in TABS {
-            for (_, rows) in build_tab_with_outputs(tab, cfg, &[], &[], "", &[], &[]) {
+            for (_, rows) in build_tab_with_runtime_status(
+                tab,
+                cfg,
+                &[],
+                &[],
+                "",
+                &[],
+                RuntimeStatus { outputs: &[], ..Default::default() },
+            ) {
                 for row in flattened_rows(rows) {
                     let values: Vec<(&str, serde_json::Value)> = match &row.control {
                         Control::Toggle { path, .. } => vec![(path, serde_json::json!(true))],
@@ -330,6 +373,12 @@ fn controls_emit_valid_values() {
                         | Control::Preview => Vec::new(),
                     };
                     for (path, value) in values {
+                        if [keys::library::FOLDERS, keys::library::EXCLUDED_FOLDERS]
+                            .iter()
+                            .any(|key| path.starts_with(key))
+                        {
+                            continue;
+                        }
                         assert!(
                             schema::normalize_value(path, &value).is_some(),
                             "{tab} / {path} / {value}"
@@ -363,7 +412,15 @@ fn card_subtitles_authored() {
     let mut subtitled = 0usize;
     let mut total = 0usize;
     for tab in TABS {
-        for (card, _) in build_tab_with_outputs(tab, &cfg, &[], &[], "", &[], &[]) {
+        for (card, _) in build_tab_with_runtime_status(
+            tab,
+            &cfg,
+            &[],
+            &[],
+            "",
+            &[],
+            RuntimeStatus { outputs: &[], ..Default::default() },
+        ) {
             total += 1;
             if card.subtitle.is_empty() {
                 continue;
@@ -387,7 +444,17 @@ fn new_layout_controls_have_one_composed_owner() {
         assert_eq!(expected.len(), if mode == "depth" { 10 } else { 6 });
         let actual: Vec<_> = TABS
             .iter()
-            .flat_map(|tab| ids(build_tab_with_outputs(tab, &cfg, &[], &[], "", &[], &[])))
+            .flat_map(|tab| {
+                ids(build_tab_with_runtime_status(
+                    tab,
+                    &cfg,
+                    &[],
+                    &[],
+                    "",
+                    &[],
+                    RuntimeStatus { outputs: &[], ..Default::default() },
+                ))
+            })
             .collect();
         for id in expected {
             assert_eq!(actual.iter().filter(|value| **value == id).count(), 1, "{id}");

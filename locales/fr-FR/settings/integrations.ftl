@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = Connecte skwd-wall au bureau Plasma. Les options de fond d’écran de verrouillage se configurent ci-dessous.
 settings-integrations-lock-mode-label = Fond d’écran de verrouillage
 settings-integrations-lock-mode-desc = Non géré laisse Plasma tranquille. Statique utilise toujours l’image ci-dessous. Suivre reprend le dernier fond d’écran appliqué.
 settings-integrations-lock-off = Non géré
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = Survoler un fond d’écran réécrit tem
 
 settings-integrations-follow-label = Suivre les couleurs de Skwd
 settings-integrations-follow-desc = Suit Skwd tant qu’il contrôle les couleurs. Désactivé conserve les couleurs actuelles.
+
+settings-section-lockscreens = Écrans de verrouillage
+settings-lockscreens-source-label = Source de l’image
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = Image fixe
+settings-lockscreens-image-desc = Saisissez le chemin complet d’une image existante, par exemple ~/Pictures/lockscreen.jpg. Skwd la copie pour les écrans de verrouillage activés. Un fichier vidéo ne peut pas être utilisé ici.
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = Utiliser le fond d’écran actuel comme image de cet écran de verrouillage.
+settings-lockscreens-static-action-desc = Utiliser l’image sélectionnée comme arrière-plan de cet écran de verrouillage.
+settings-lockscreens-sddm-static-action-desc = Utiliser l’image sélectionnée sur l’écran de connexion. L’autorisation de l’administrateur est requise.
+settings-lockscreens-sddm-action-desc = Utiliser le fond d’écran actuel sur l’écran de connexion. L’autorisation de l’administrateur est requise.
+settings-lockscreens-choose-theme-desc = Aucun thème n’est sélectionné dans SDDM. Choisissez un thème installé pour utiliser le fond d’écran actuel.
+settings-lockscreens-error = Impossible de mettre à jour l’écran de verrouillage : { $error }
+settings-lockscreens-rollback-error = Impossible de mettre à jour l’écran de verrouillage : { $error } La restauration de SDDM a également échoué : { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = Activer
+settings-lockscreens-disable = Désactiver
+settings-lockscreens-advanced-label = Avancé
+settings-lockscreens-choose-theme = Choisir un thème SDDM
+settings-lockscreens-pending = Mise à jour de l’écran de verrouillage…
+settings-lockscreens-no-sddm-theme = Aucun thème SDDM installé n’est disponible.
+
+settings-app-themes-profile-label = Profil de couleurs
+settings-app-themes-profile-desc = Utilisez un profil statique pour cette application. Suivre le thème actuel utilise le fond actif ou le thème fixe.
+settings-app-themes-profile-follow = Suivre le thème actuel
+settings-app-themes-profile-missing = Indisponible : { $name }
+settings-app-themes-profile-in-use = Choisissez un autre profil pour les applications utilisant { $name } avant de le supprimer.

@@ -64,6 +64,7 @@ playlists-edition-eyebrow = Spellistor / redigera
 playlists-kind-tagline = { $kind } · redo att tilldelas skärmar
 playlists-stop-edition = Stoppa spellistan
 playlists-colour-notes = Färger
+playlists-folder-notes = Mappar
 playlists-live-collection-title = Filtrerad spellista
 playlists-live-collection-desc = Listan uppdateras automatiskt utifrån valda filter för källa, taggar, upplösning och färg.
 playlists-definition-title = Spellistans detaljer
@@ -86,11 +87,11 @@ playlists-picker-search = Search by name or ID
 playlists-picker-no-match = No playlists match this search.
 playlists-picker-hint = Choose which wallpapers to browse. Playback stays as it is.
 playlists-filter-help = Filter reference
-playlists-help-combine = Separate filters with spaces. Every filter must match. Names and paths cannot contain spaces.
+playlists-help-combine = Separera filter med mellanslag. Varje filter måste matcha, utom mappregler: ett objekt i någon av de angivna mapparna räknas. Citera sökvägar som innehåller mellanslag.
 playlists-help-source = all / favourites
     Start with all wallpapers or only favourites.
 playlists-help-folder = folder:nature/forest
-    Match this exact folder, relative to the library root. Subfolders are separate.
+    Matchar den här mappen och dess undermappar. Flera mappregler matchar vilken som helst av dem; citera sökvägar som innehåller mellanslag.
 playlists-help-type = type:image / type:video / type:we
     Images, videos, or Wallpaper Engine wallpapers. Also accepts static, picture, pic, img; vid, mp4; scene, wallpaperengine, wallpaper-engine.
 playlists-help-tag = tag:cat,night / tag:cat|dog,-anime

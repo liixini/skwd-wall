@@ -2,7 +2,10 @@
 
 use std::collections::HashMap;
 
-use crate::contracts::settings::{GraphicsCard, GraphicsTier, SettingsSource, keys, schema};
+use crate::contracts::settings::{
+    ExclusionScope, GraphicsCard, GraphicsTier, ProfileState, ProfileStates, SettingsSource, keys,
+    schema,
+};
 use crate::domain::input::InputMap;
 
 pub(crate) struct FakeSettingsSource {
@@ -18,6 +21,8 @@ pub(crate) struct FakeSettingsSource {
     niri: bool,
     on_battery: bool,
     bindings: InputMap,
+    profile_states: HashMap<String, ProfileState>,
+    exclusion_scopes: Vec<ExclusionScope>,
 }
 
 impl Default for FakeSettingsSource {
@@ -38,6 +43,8 @@ impl Default for FakeSettingsSource {
             niri: false,
             on_battery: false,
             bindings: InputMap::default(),
+            profile_states: HashMap::new(),
+            exclusion_scopes: Vec::new(),
         }
     }
 }
@@ -45,6 +52,21 @@ impl Default for FakeSettingsSource {
 impl FakeSettingsSource {
     pub(crate) fn with_flag(mut self, path: &str, value: bool) -> Self {
         self.flags.insert(path.to_string(), value);
+        self
+    }
+
+    pub(crate) fn with_profile_state(
+        mut self,
+        index: usize,
+        folder: &str,
+        state: ProfileState,
+    ) -> Self {
+        self.profile_states.insert(format!("{index}:{folder}"), state);
+        self
+    }
+
+    pub(crate) fn with_exclusion_scopes(mut self, scopes: Vec<ExclusionScope>) -> Self {
+        self.exclusion_scopes = scopes;
         self
     }
 
@@ -127,6 +149,35 @@ impl SettingsSource for FakeSettingsSource {
 
     fn array_len(&self, path: &str) -> usize {
         self.lengths.get(path).copied().unwrap_or(0)
+    }
+
+    fn library_folders(&self) -> Vec<String> {
+        if let Some(len) = self.lengths.get(keys::library::FOLDERS) {
+            return (0..*len)
+                .map(|index| self.text(&format!("{}.{index}", keys::library::FOLDERS)))
+                .collect();
+        }
+        let mut folders = vec![self.text(keys::paths::WALLPAPER)];
+        let videos = self.text(keys::paths::VIDEO_WALLPAPER);
+        if !videos.is_empty() && !folders.contains(&videos) {
+            folders.push(videos);
+        }
+        folders
+    }
+
+    fn exclusion_scopes(&self) -> Vec<ExclusionScope> {
+        self.exclusion_scopes.clone()
+    }
+
+    fn resolved_folder(&self, folder: &str) -> String {
+        folder.to_owned()
+    }
+
+    fn profile_states(&self, index: usize, folders: &[String]) -> ProfileStates {
+        let state = |folder: &str| {
+            self.profile_states.get(&format!("{index}:{folder}")).copied().unwrap_or_default()
+        };
+        (folders.iter().map(|folder| state(folder)).collect(), state(""))
     }
 
     fn display_mode(&self) -> String {

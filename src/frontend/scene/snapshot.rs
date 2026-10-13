@@ -16,6 +16,7 @@ pub struct Chrome {
     pub kind: u8,
     pub has_video: bool,
     pub favourite: bool,
+    pub hidden: bool,
     pub radius: f32,
     pub opacity: f32,
 }
@@ -64,6 +65,7 @@ pub struct BackPanel {
     pub tags: Vec<String>,
     pub favourite: bool,
     pub fav_fill: f32,
+    pub hidden: bool,
     pub add_open: f32,
     pub chip_pop: f32,
     pub pop_idx: i32,
@@ -71,5 +73,40 @@ pub struct BackPanel {
     pub overview_available: bool,
     pub scene_properties: bool,
     pub reset_thumbnail: bool,
+    pub revealable: bool,
     pub picture_behind: bool,
+    pub removal: RemovalAction,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum RemovalAction {
+    #[default]
+    Delete,
+    Unsubscribe,
+    UnsubscribeUnavailable,
+    SteamStatusUnknown,
+    Deleting,
+    Unsubscribing,
+}
+
+impl RemovalAction {
+    pub fn label(self) -> &'static str {
+        crate::i18n::tr(match self {
+            Self::Delete => "card-back-delete",
+            Self::Unsubscribe | Self::UnsubscribeUnavailable => "card-back-unsubscribe",
+            Self::SteamStatusUnknown => "card-back-steam-status-unknown",
+            Self::Deleting => "card-back-deleting",
+            Self::Unsubscribing => "card-back-unsubscribing",
+        })
+    }
+
+    pub fn enabled(self) -> bool {
+        !matches!(
+            self,
+            Self::UnsubscribeUnavailable
+                | Self::SteamStatusUnknown
+                | Self::Deleting
+                | Self::Unsubscribing
+        )
+    }
 }

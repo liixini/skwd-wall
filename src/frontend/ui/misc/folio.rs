@@ -17,6 +17,8 @@ pub const BUTTON_HEIGHT: f32 = 30.0;
 pub const EYE_CLOSED: &str = "\u{eae7}";
 
 pub const FOLIO_INDEX_WIDTH: f32 = 318.0;
+pub const TWISTY_OPEN: &str = "▾";
+pub const TWISTY_CLOSED: &str = "▸";
 pub const FOLIO_SCRIM_ALPHA: f32 = 0.68;
 pub const FOLIO_INDEX_BG_ALPHA: f32 = 0.9;
 pub const FOLIO_INDEX_OUTLINE_ALPHA: f32 = 0.46;
@@ -316,33 +318,32 @@ pub fn folio_details<'a, Message: Clone + 'a>(
     palette: &'a Palette,
 ) -> Element<'a, Message> {
     use super::typography::label;
-    let header =
-        button(
-            row![
-                label(
-                    if expanded { "▾" } else { "▸" },
-                    11.0,
-                    scale,
-                    with_alpha(palette.primary, 0.94),
-                ),
-                label(title, 13.5, scale, palette.surface_text),
-                container(text("")).width(Length::Fill),
-                label(
-                    summary,
-                    super::typography::TYPE_SMALL,
-                    scale,
-                    with_alpha(palette.surface_text, 0.58)
-                ),
-            ]
-            .spacing(9.0 * scale)
-            .align_y(Alignment::Center),
-        )
-        .width(Length::Fill)
-        .padding([10.0 * scale, 10.0 * scale])
-        .on_press(on_toggle)
-        .style(move |_theme, status| {
-            super::style::folio_line_button_style(expanded, focused, palette, 1.0, status)
-        });
+    let header = button(
+        row![
+            label(
+                if expanded { TWISTY_OPEN } else { TWISTY_CLOSED },
+                11.0,
+                scale,
+                with_alpha(palette.primary, 0.94),
+            ),
+            label(title, 13.5, scale, palette.surface_text),
+            container(text("")).width(Length::Fill),
+            label(
+                summary,
+                super::typography::TYPE_SMALL,
+                scale,
+                with_alpha(palette.surface_text, 0.58)
+            ),
+        ]
+        .spacing(9.0 * scale)
+        .align_y(Alignment::Center),
+    )
+    .width(Length::Fill)
+    .padding([10.0 * scale, 10.0 * scale])
+    .on_press(on_toggle)
+    .style(move |_theme, status| {
+        super::style::folio_line_button_style(expanded, focused, palette, 1.0, status)
+    });
     let mut details = column![header].spacing(0.0);
     if expanded {
         let content = column![
@@ -657,6 +658,16 @@ pub fn folio_masthead<'a, Message: Clone + 'a>(
         )
     })
     .into()
+}
+
+pub fn diamond(centre: Point, radius: f32) -> Path {
+    Path::new(|builder| {
+        builder.move_to(Point::new(centre.x, centre.y - radius));
+        builder.line_to(Point::new(centre.x + radius, centre.y));
+        builder.line_to(Point::new(centre.x, centre.y + radius));
+        builder.line_to(Point::new(centre.x - radius, centre.y));
+        builder.close();
+    })
 }
 
 fn folio_blueprint<'a, Message: 'a>(palette: &Palette) -> Element<'a, Message> {

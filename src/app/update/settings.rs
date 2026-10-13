@@ -1,9 +1,9 @@
 use iced::Task;
 use log::info;
-use serde_json::json;
+use serde_json::{Value, json};
 
 use crate::app::state::SettingsInputEdit;
-use crate::app::{App, EFFECT_NAMES, Message, Pending};
+use crate::app::{App, EFFECT_NAMES, Message, Pending, WE_THUMBNAILS_TASK};
 use crate::frontend::settings::{
     ActionId, Control, PRESET_NAME_KEY, SettingsFocus, SettingsKey, SettingsMsg,
 };
@@ -87,6 +87,37 @@ pub(super) fn update(app: &mut App, msg: SettingsMsg) -> Task<Message> {
             app.panels.settings.toggle_bar(id, motion);
             app.retick();
             unfocus_settings_input()
+        }
+        SettingsMsg::SelectProfile(position) => {
+            commit_settings_input_edit(app);
+            app.panels.settings.select_profile(position);
+            app.retick();
+            unfocus_settings_input()
+        }
+        SettingsMsg::EditFolder(key) => {
+            commit_settings_input_edit(app);
+            if !app.panels.settings.open {
+                return Task::none();
+            }
+            begin_settings_input_edit(app, &key);
+            app.invalidate_settings();
+            iced::widget::operation::focus(crate::frontend::settings::workbench_input_id(&key))
+        }
+        SettingsMsg::FolderDraft(kind, raw) => {
+            app.panels.settings.folder_drafts.insert(kind.key(), raw);
+            app.invalidate_settings();
+            Task::none()
+        }
+        SettingsMsg::ProfileFilter(query) => {
+            app.panels.settings.profile_filter = query;
+            app.invalidate_settings();
+            Task::none()
+        }
+        SettingsMsg::ToggleFold(id, open_by_default) => {
+            let motion = app.motion_profile();
+            app.panels.settings.toggle_fold(id, open_by_default, motion);
+            app.retick();
+            Task::none()
         }
         SettingsMsg::SearchOpen => open_settings_search(app),
         SettingsMsg::SearchClose => {
@@ -177,6 +208,30 @@ pub(super) fn update(app: &mut App, msg: SettingsMsg) -> Task<Message> {
         }
         SettingsMsg::ProcessPickerAdd(process) => process_picker_add(app, &process),
         SettingsMsg::ProcessPickerRemove(process) => process_picker_remove(app, &process),
+        SettingsMsg::WeatherReviewClose => {
+            super::weather_review::close(app);
+            Task::none()
+        }
+        SettingsMsg::WeatherReviewTab(tab) => {
+            app.panels.settings.weather_review_tab = tab;
+            app.panels.settings.weather_review_focus = match tab {
+                crate::frontend::settings::WeatherReviewTab::Suggested => 0,
+                crate::frontend::settings::WeatherReviewTab::Approved => 1,
+                crate::frontend::settings::WeatherReviewTab::Library => 2,
+            };
+            app.retick();
+            Task::none()
+        }
+        SettingsMsg::WeatherReviewSearch(query) => {
+            app.panels.settings.weather_review_query = query;
+            app.panels.settings.weather_review_focus = 0;
+            app.retick();
+            Task::none()
+        }
+        SettingsMsg::WeatherReviewToggle(key) => {
+            super::weather_review::toggle(app, &key);
+            Task::none()
+        }
     }
 }
 
@@ -361,6 +416,9 @@ pub(super) fn keybind_capture_key(
 }
 
 fn settings_key(app: &mut App, key: SettingsKey) -> Task<Message> {
+    if app.panels.settings.weather_review_category.is_some() {
+        return super::weather_review::key(app, key);
+    }
     match key {
         SettingsKey::Search => open_settings_search(app),
         SettingsKey::Cancel => {
@@ -484,7 +542,7 @@ fn refresh_settings_search(app: &mut App) {
         &app.panels.settings.search_query,
         &app.config,
         &app.daemon.effect_themes,
-        &app.library_session.folder_options,
+        &app.library_session.all_folders,
         &app.panels.settings.semantic_import_status,
         app.theme.backends.as_deref().unwrap_or(&[]),
         app.daemon.app_themes.as_ref(),
@@ -546,19 +604,22 @@ fn settings_cards(
         &app.panels.settings.tab,
         &app.config,
         &app.daemon.effect_themes,
-        &app.library_session.folder_options,
+        &app.library_session.all_folders,
         "",
         app.theme.backends.as_deref().unwrap_or(&[]),
-        &app.daemon.output_names,
-        &app.daemon.output_statuses,
-        &app.daemon.output_wallpaper_art,
-        app.daemon.library_watch.as_ref(),
-        Some(&app.daemon.playback),
-        app.daemon.app_themes.as_ref(),
+        app.settings_runtime_status(),
     )
 }
 
 fn settings_control_pages(app: &App) -> Vec<Vec<crate::frontend::settings::Row>> {
+    if crate::frontend::settings::page_section(
+        &app.panels.settings.tab,
+        app.panels.settings.section,
+    )
+    .is_some()
+    {
+        return Vec::new();
+    }
     let rows = settings_cards(app)
         .into_iter()
         .nth(app.panels.settings.section)
@@ -747,6 +808,7 @@ fn select_settings_section(app: &mut App, section: usize) -> Task<Message> {
     if app.panels.settings.section != section {
         app.panels.settings.section = section;
         app.panels.settings.armed = None;
+        app.panels.settings.folder_undo = None;
         app.panels.settings.section_anim.run(0.0, 1.0);
         app.panels.settings.control_anim.snap(1.0);
     }
@@ -890,7 +952,7 @@ fn activate_settings_control(app: &mut App) -> Task<Message> {
     };
     match control {
         Control::Display(control) => super::update_inner(app, control.activate()),
-        Control::AppTheme { app: entry } => {
+        Control::AppTheme { app: entry, .. } => {
             let index = app
                 .daemon
                 .app_themes
@@ -976,7 +1038,7 @@ fn activate_settings_control(app: &mut App) -> Task<Message> {
                 return Task::none();
             };
             app.panels.settings.focused_choice = None;
-            items.get(choice).map_or_else(Task::none, |(id, _)| settings_run(app, *id))
+            items.get(choice).map_or_else(Task::none, |(id, _)| settings_run(app, id.clone()))
         }
         Control::Presets { mode, items } => {
             let Some(choice) = app.panels.settings.focused_choice else {
@@ -1023,7 +1085,7 @@ fn toggle_settings_details(app: &mut App, id: &str) {
     app.retick();
 }
 
-fn begin_settings_input_edit(app: &mut App, key: &str) {
+pub(super) fn begin_settings_input_edit(app: &mut App, key: &str) {
     if app.panels.settings.input_edit.is_some() {
         return;
     }
@@ -1034,13 +1096,21 @@ fn begin_settings_input_edit(app: &mut App, key: &str) {
         we_dirty: app.panels.settings.we_dirty,
         playlist_dirty: app.panels.settings.playlist_dirty,
         schedule_dirty: app.panels.settings.schedule_dirty,
+        weather_refresh: app.panels.settings.weather_refresh,
     });
     app.retick();
 }
 
+fn commit_closes_settings(app: &mut App) -> bool {
+    let open = app.panels.settings.open;
+    commit_settings_input_edit(app);
+    open && !app.panels.settings.open
+}
+
 fn commit_settings_input_edit(app: &mut App) {
-    if app.panels.settings.input_edit.take().is_some() {
+    if let Some(edit) = app.panels.settings.input_edit.take() {
         super::settings_policy::flush_staged(app);
+        super::settings_folders::reveal_committed_folder(app, &edit.key, &edit.original);
     }
 }
 
@@ -1061,6 +1131,10 @@ fn cancel_settings_input_edit(app: &mut App) -> Task<Message> {
     app.panels.settings.we_dirty = edit.we_dirty;
     app.panels.settings.playlist_dirty = edit.playlist_dirty;
     app.panels.settings.schedule_dirty = edit.schedule_dirty;
+    app.panels.settings.weather_refresh = edit.weather_refresh;
+    if super::settings_policy::changes_weather_members(&edit.key) {
+        app.call_tracked(wall_proto::rpc::WALL_WEATHER, json!({}), Pending::Weather);
+    }
     app.invalidate_settings();
     app.retick();
     Task::batch([restore, unfocus_settings_input()])
@@ -1081,6 +1155,9 @@ pub(super) fn settings_input(app: &mut App, key: &str, raw: &str) -> Task<Messag
 }
 
 pub(super) fn settings_input_store(app: &mut App, key: &str, raw: &str) {
+    if super::settings_folders::edit_folder(app, key, raw) {
+        return;
+    }
     if key.starts_with(skwd_config::keys::filter_bar::RESOLUTION_PRESETS) {
         if let Some(base) = key.strip_suffix(".from").or_else(|| key.strip_suffix(".to")) {
             let from_key = format!("{base}.from");
@@ -1112,6 +1189,12 @@ pub(super) fn settings_input_store(app: &mut App, key: &str, raw: &str) {
     }
     if key == skwd_config::keys::transition::FPS && raw.trim().is_empty() {
         super::settings_policy::stage_value(app, key, &json!(0));
+        return;
+    }
+    if key.starts_with(skwd_config::keys::library::PROFILES)
+        && key.ends_with(crate::contracts::settings::keys::library::profile::NAME)
+    {
+        super::settings_policy::stage_value(app, key, &json!(raw));
         return;
     }
     let is_text = !raw.trim().is_empty() && raw.trim().parse::<f64>().is_err();
@@ -1152,9 +1235,12 @@ pub(super) fn settings_toggle(app: &mut App, path: &str, value: bool) -> Task<Me
 }
 
 pub(super) fn settings_commit(app: &mut App) -> Task<Message> {
-    let editing = app.panels.settings.input_edit.take().is_some();
+    let editing = app.panels.settings.input_edit.take();
     super::settings_policy::flush_staged(app);
-    if editing {
+    if let Some(edit) = &editing {
+        super::settings_folders::reveal_committed_folder(app, &edit.key, &edit.original);
+    }
+    if editing.is_some() {
         app.retick();
         unfocus_settings_input()
     } else {
@@ -1179,6 +1265,7 @@ pub(super) fn set_settings_tab(app: &mut App, tab: String) -> Task<Message> {
     }
     app.panels.settings.control_anim.snap(1.0);
     app.panels.settings.armed = None;
+    app.panels.settings.folder_undo = None;
     app.init_settings_inputs();
     if changed {
         app.panels.settings.tab_anim.run(0.0, 1.0);
@@ -1190,6 +1277,19 @@ pub(super) fn set_settings_tab(app: &mut App, tab: String) -> Task<Message> {
 }
 
 pub(super) fn settings_pick(app: &mut App, path: &str, value: &str) -> Task<Message> {
+    if super::settings_profiles::pick(app, path, value) {
+        return Task::none();
+    }
+    let profile_id = path.strip_prefix(&format!("{}.", skwd_config::keys::theme::APP_PROFILES));
+    if profile_id.is_some_and(|id| {
+        app.daemon.app_themes.as_ref().is_some_and(|result| {
+            result.apps.iter().any(|entry| {
+                entry.id == id && entry.state == crate::contracts::daemon::APP_THEME_BUSY
+            })
+        })
+    }) {
+        return Task::none();
+    }
     if path == skwd_config::keys::display::FILL_MODE || path.starts_with("display.fillModes.") {
         let old = app.config.str_path(path);
         let old = if old.is_empty() {
@@ -1236,7 +1336,52 @@ pub(super) fn settings_pick(app: &mut App, path: &str, value: &str) -> Task<Mess
         }
         app.daemon.client.call("wall.apply", params);
     }
-    if path.starts_with(skwd_config::keys::matugen::PREFIX)
+    refresh_theme_setting(app, path, value, profile_id);
+    app.apply_layout();
+    if path == skwd_config::keys::display::FILL_MODE {
+        let _ = super::settings_background::commit(app, "");
+    }
+    settings_pick_side_effects(app, path, value);
+    super::settings_background::sync_monitors(app);
+    app.init_settings_inputs();
+    app.invalidate_settings();
+    app.retick();
+    Task::none()
+}
+
+fn refresh_theme_setting(app: &mut App, path: &str, value: &str, profile_id: Option<&str>) {
+    if let Some(id) = profile_id {
+        if app
+            .daemon
+            .app_themes
+            .as_ref()
+            .is_some_and(|result| result.apps.iter().any(|entry| entry.id == id && entry.enabled))
+        {
+            app.call_tracked(
+                wall_proto::rpc::THEME_APP_SET,
+                json!(wall_proto::AppThemeSet { id: id.into(), enabled: true, adopt: false }),
+                Pending::AppThemeSet,
+            );
+        }
+    } else if let Some(index) = path
+        .strip_prefix(&format!("{}.", skwd_config::keys::integrations::LIST))
+        .and_then(|suffix| {
+            suffix.strip_suffix(&format!(".{}", skwd_config::keys::integrations::PROFILE))
+        })
+        .and_then(|index| index.parse::<usize>().ok())
+    {
+        if app.config.flag_default_true(&format!(
+            "{}.{index}.{}",
+            skwd_config::keys::integrations::LIST,
+            skwd_config::keys::integrations::ENABLED
+        )) {
+            app.call_tracked(
+                wall_proto::rpc::THEME_APPS_REFRESH,
+                json!(wall_proto::AppThemeRefresh { integration: Some(index), profile: None }),
+                Pending::AppThemeSet,
+            );
+        }
+    } else if path.starts_with(skwd_config::keys::matugen::PREFIX)
         || path.starts_with(skwd_config::keys::theme::PREFIX)
         || path == skwd_config::keys::noctalia::THEME_MODE
     {
@@ -1251,16 +1396,6 @@ pub(super) fn settings_pick(app: &mut App, path: &str, value: &str) -> Task<Mess
         app.daemon.client.call("wall.retheme", json!({}));
         app.invalidate_swatch();
     }
-    app.apply_layout();
-    if path == skwd_config::keys::display::FILL_MODE {
-        let _ = super::settings_background::commit(app, "");
-    }
-    settings_pick_side_effects(app, path, value);
-    super::settings_background::sync_monitors(app);
-    app.init_settings_inputs();
-    app.invalidate_settings();
-    app.retick();
-    Task::none()
 }
 
 pub(super) fn settings_pick_side_effects(app: &mut App, path: &str, value: &str) {
@@ -1339,21 +1474,21 @@ const ARRAY_ACTIONS: &[ArrayAction] = &[
     },
 ];
 
-const fn remove_index(id: ActionId) -> Option<u16> {
+const fn remove_index(id: &ActionId) -> Option<u16> {
     match id {
         ActionId::RemovePostCommand(index)
         | ActionId::RemoveIntegration(index)
         | ActionId::RemoveResolutionPreset(index)
-        | ActionId::RemoveSemanticModel(index) => Some(index),
+        | ActionId::RemoveSemanticModel(index) => Some(*index),
         _ => None,
     }
 }
 
-fn run_array_action(app: &mut App, id: ActionId) {
+fn run_array_action(app: &mut App, id: &ActionId) {
     let index = remove_index(id);
     let matched = ARRAY_ACTIONS
         .iter()
-        .find(|row| row.add == id || index.is_some_and(|at| (row.remove)(at) == id));
+        .find(|row| &row.add == id || index.is_some_and(|at| &(row.remove)(at) == id));
     let Some(row) = matched else {
         return;
     };
@@ -1367,8 +1502,15 @@ fn run_array_action(app: &mut App, id: ActionId) {
     }
 }
 
+fn weather_action(app: &mut App, method: &str, params: Value) {
+    if app.daemon.pending.values().any(|pending| *pending == Pending::WeatherAction) {
+        return;
+    }
+    app.call_tracked(method, params, Pending::WeatherAction);
+}
+
 pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
-    if id.is_destructive() && app.panels.settings.armed != Some(id) {
+    if id.is_destructive() && app.panels.settings.armed.as_ref() != Some(&id) {
         app.panels.settings.armed = Some(id);
         app.invalidate_settings();
         app.retick();
@@ -1396,6 +1538,49 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
             );
             app.init_settings_inputs();
             app.daemon.client.call("wall.retheme", json!({}));
+        }
+        ActionId::SetLockScreen(target, enabled) => {
+            if app
+                .daemon
+                .pending
+                .values()
+                .any(|pending| matches!(pending, Pending::LockScreenSet { .. }))
+                || app.panels.settings.sddm_checking
+            {
+                return Task::none();
+            }
+            if target == wall_proto::LockScreenTarget::Sddm {
+                app.panels.settings.sddm_themes.clear();
+                app.panels.settings.sddm_checking = true;
+                app.show_toast(crate::i18n::tr("settings-lockscreens-pending"));
+                app.retick();
+                if enabled {
+                    return iced_runtime::task::blocking(|mut sender| {
+                        let result = crate::infrastructure::lockscreen::sddm_choices();
+                        let _ = sender.try_send(Message::SddmChoices(result));
+                    });
+                }
+                return sddm_helper(false, None);
+            }
+            lockscreen_set(app, target, enabled, None, None);
+        }
+        ActionId::ChooseSddmTheme(theme) => {
+            if app.panels.settings.sddm_checking {
+                return Task::none();
+            }
+            let Some(theme) = theme else {
+                app.panels.settings.sddm_themes.clear();
+                app.retick();
+                return Task::none();
+            };
+            if !app.panels.settings.sddm_themes.contains(&theme) {
+                return Task::none();
+            }
+            app.panels.settings.sddm_themes.clear();
+            app.panels.settings.sddm_checking = true;
+            app.show_toast(crate::i18n::tr("settings-lockscreens-pending"));
+            app.retick();
+            return sddm_helper(true, Some(theme));
         }
         ActionId::CopyAppThemeTemplate(index) => {
             if let Some(entry) =
@@ -1479,8 +1664,8 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
             entry.can_enable = false;
             entry.can_disable = false;
             app.call_tracked(
-                "theme.app.set",
-                json!({"id": id, "enabled": enabled, "adopt": adopt}),
+                wall_proto::rpc::THEME_APP_SET,
+                json!(wall_proto::AppThemeSet { id, enabled, adopt }),
                 Pending::AppThemeSet,
             );
         }
@@ -1489,15 +1674,71 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
                 .daemon
                 .tasks
                 .values()
-                .any(|task| task.id == "we-thumbnails" && task.state.is_active())
+                .any(|task| task.id == WE_THUMBNAILS_TASK && task.state.is_active())
             {
                 app.daemon.client.call(
                     wall_proto::rpc::TASK_CONTROL,
-                    json!({"id": "we-thumbnails", "action": "stop"}),
+                    json!({"id": WE_THUMBNAILS_TASK, "action": "stop"}),
                 );
             } else {
                 app.daemon.client.call(wall_proto::rpc::WALL_CAPTURE_THUMBNAILS, json!({}));
             }
+        }
+        ActionId::RefreshWeather => {
+            app.call_tracked(wall_proto::rpc::WALL_WEATHER_REFRESH, json!({}), Pending::Weather);
+        }
+        ActionId::ResumeWeather => {
+            app.call_tracked(wall_proto::rpc::WALL_WEATHER_RESUME, json!({}), Pending::Weather);
+        }
+        ActionId::ReviewWeather(category) => return super::weather_review::open(app, category),
+        ActionId::FollowOutdoors(enabled) => {
+            weather_action(
+                app,
+                wall_proto::rpc::WALL_WEATHER_FOLLOW,
+                json!(wall_proto::WeatherFollowRequest { enabled }),
+            );
+        }
+        ActionId::OutdoorNext(output) => {
+            weather_action(
+                app,
+                wall_proto::rpc::WALL_WEATHER_NEXT,
+                json!(wall_proto::WeatherOutputRequest { output }),
+            );
+        }
+        ActionId::OutdoorExclude { output, key } => {
+            if !app
+                .daemon
+                .weather
+                .as_ref()
+                .and_then(|weather| weather.outdoors.as_ref())
+                .is_some_and(|outdoors| {
+                    outdoors.outputs.iter().any(|entry| entry.output == output && entry.key == key)
+                })
+            {
+                return Task::none();
+            }
+            weather_action(
+                app,
+                wall_proto::rpc::WALL_WEATHER_EXCLUDE,
+                json!(wall_proto::WeatherExcludeRequest { key }),
+            );
+        }
+        ActionId::OutdoorPin(output) => {
+            weather_action(
+                app,
+                wall_proto::rpc::WALL_WEATHER_PIN,
+                json!(wall_proto::WeatherOutputRequest { output }),
+            );
+        }
+        ActionId::OutdoorResume(output) => {
+            weather_action(
+                app,
+                wall_proto::rpc::WALL_WEATHER_RESUME,
+                json!(wall_proto::WeatherOutputRequest { output }),
+            );
+        }
+        ActionId::OutdoorCredits(path) => {
+            return super::picker::reveal_path(std::path::PathBuf::from(path));
         }
         ActionId::ClearCache => {
             app.daemon.client.call("wall.clear_data", json!({}));
@@ -1514,6 +1755,9 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
         ActionId::CopyLayerRule => {
             return iced::clipboard::write(String::from(crate::frontend::settings::NIRI_SNIPPET));
         }
+        ActionId::CopyProfileCommand(index, helm) => {
+            return super::settings_profiles::copy_command(app, usize::from(index), helm);
+        }
         ActionId::ImportSemanticModel => return import_semantic_model(app),
         ActionId::DeleteSemanticModel(index) => return delete_semantic_model(app, Some(index)),
         ActionId::DeleteActiveSemanticModel => return delete_semantic_model(app, None),
@@ -1523,10 +1767,34 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
         | ActionId::RemoveIntegration(_)
         | ActionId::AddResolutionPreset
         | ActionId::RemoveResolutionPreset(_)
-        | ActionId::AddSemanticModel => run_array_action(app, id),
+        | ActionId::AddSemanticModel => run_array_action(app, &id),
+        ActionId::AddFolder(kind) => {
+            commit_settings_input_edit(app);
+            return super::settings_folders::add_folder(app, kind);
+        }
+        ActionId::ChooseFolder(kind, index) => {
+            commit_settings_input_edit(app);
+            return super::settings_folders::choose_folder(app, kind, index);
+        }
+        ActionId::RemoveFolder(kind, index) => {
+            if commit_closes_settings(app) {
+                return Task::none();
+            }
+            return super::settings_folders::remove_folder(app, kind, index);
+        }
+        ActionId::UndoFolderRemove => {
+            if commit_closes_settings(app) {
+                return Task::none();
+            }
+            return super::settings_folders::restore_folder(app);
+        }
+        ActionId::NewProfile => return super::settings_profiles::add_profile(app),
+        ActionId::DeleteProfile(index) => {
+            super::settings_profiles::remove_profile(app, usize::from(index));
+        }
         ActionId::CreateResolutionPresetBand(band) => add_resolution_preset_band(app, band),
         ActionId::RemoveSemanticModel(_) => {
-            run_array_action(app, id);
+            run_array_action(app, &id);
             reconcile_semantic_model(app);
         }
         ActionId::OpenScheduleEditor => {
@@ -1551,6 +1819,113 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
         ActionId::ResetMotionSlow => reset_motion_weight(app, skwd_config::keys::motion::SLOW_MS),
         ActionId::ResetKeybinds => reset_keybinds(app),
         ActionId::SetNavKeys(keys) => set_nav_keys(app, keys),
+    }
+    Task::none()
+}
+
+fn lockscreen_set(
+    app: &mut App,
+    target: wall_proto::LockScreenTarget,
+    enabled: bool,
+    sddm_image: Option<String>,
+    sddm_theme: Option<String>,
+) {
+    app.call_tracked(
+        wall_proto::rpc::LOCKSCREEN_SET,
+        json!(wall_proto::LockScreenSetRequest { target, enabled, sddm_image }),
+        Pending::LockScreenSet { target, enabled, sddm_theme },
+    );
+    app.show_toast(crate::i18n::tr("settings-lockscreens-pending"));
+    app.retick();
+}
+
+fn sddm_helper(enabled: bool, theme: Option<String>) -> Task<Message> {
+    iced_runtime::task::blocking(move |mut sender| {
+        let result = crate::infrastructure::lockscreen::prepare_sddm(enabled, theme.as_deref());
+        let _ = sender.try_send(Message::SddmSetup { enabled, result });
+    })
+}
+
+pub(super) fn sddm_rollback(app: &mut App) -> Task<Message> {
+    let Some(rollback) = app.panels.settings.sddm_rollback.take() else {
+        return Task::none();
+    };
+    iced_runtime::task::blocking(move |mut sender| {
+        let result = crate::infrastructure::lockscreen::set_sddm(
+            rollback.enabled,
+            rollback.theme.as_deref(),
+        );
+        let _ = sender.try_send(Message::SddmRollback { error: rollback.error, result });
+    })
+}
+
+pub(super) fn sddm_rollback_done(app: &mut App, error: &str, result: Result<String, String>) {
+    app.panels.settings.sddm_checking = false;
+    if let Err(rollback) = result {
+        app.show_toast(crate::i18n::tr_args!(
+            crate::app::constants::LOCKSCREEN_ROLLBACK_ERROR,
+            error => error,
+            rollback => rollback,
+        ));
+    } else {
+        app.show_toast(crate::i18n::tr_args!(
+            crate::app::constants::LOCKSCREEN_ERROR,
+            error => error,
+        ));
+    }
+    app.retick();
+}
+
+pub(super) fn sddm_choices(
+    app: &mut App,
+    result: Result<crate::infrastructure::lockscreen::SddmChoices, String>,
+) -> Task<Message> {
+    app.panels.settings.sddm_checking = false;
+    match result {
+        Ok(choices) if !choices.current.is_empty() => {
+            app.panels.settings.sddm_checking = true;
+            sddm_helper(true, None)
+        }
+        Ok(choices) if !choices.themes.is_empty() && app.panels.settings.open => {
+            app.panels.settings.sddm_themes = choices.themes;
+            app.retick();
+            Task::none()
+        }
+        Ok(_) => {
+            app.show_toast(crate::i18n::tr("settings-lockscreens-no-sddm-theme"));
+            app.retick();
+            Task::none()
+        }
+        Err(error) => {
+            app.show_toast(
+                crate::i18n::tr_args!(crate::app::constants::LOCKSCREEN_ERROR, error => &error),
+            );
+            app.retick();
+            Task::none()
+        }
+    }
+}
+
+pub(super) fn sddm_setup(
+    app: &mut App,
+    enabled: bool,
+    result: Result<crate::infrastructure::lockscreen::SddmSetup, String>,
+) -> Task<Message> {
+    app.panels.settings.sddm_checking = false;
+    match result {
+        Ok(setup) => lockscreen_set(
+            app,
+            wall_proto::LockScreenTarget::Sddm,
+            enabled,
+            enabled.then_some(setup.path),
+            setup.theme,
+        ),
+        Err(error) => {
+            app.show_toast(
+                crate::i18n::tr_args!(crate::app::constants::LOCKSCREEN_ERROR, error => &error),
+            );
+            app.retick();
+        }
     }
     Task::none()
 }

@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = skwd-wall'u Plasma masaüstüne bağlayın. Kilit ekranı duvar kâğıdı seçenekleri aşağıda ayarlanır.
 settings-integrations-lock-mode-label = Kilit ekranı duvar kâğıdı
 settings-integrations-lock-mode-desc = Yönetilmeyen, Plasma ayarlarını değiştirmez. Sabit görüntü her zaman aşağıdaki görüntüyü kullanır. Son uygulananı izle, en son uygulanan duvar kâğıdını izler.
 settings-integrations-lock-off = Yönetilmeyen
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = Bir duvar kâğıdının üzerine gelmek 
 
 settings-integrations-follow-label = Skwd renklerini izle
 settings-integrations-follow-desc = Renkleri yönetirken Skwd'yi izleyin. Kapalıyken mevcut renkler korunur.
+
+settings-section-lockscreens = Kilit ekranları
+settings-lockscreens-source-label = Görüntü kaynağı
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = Sabit görüntü
+settings-lockscreens-image-desc = Mevcut bir görüntünün tam yolunu girin; örneğin ~/Pictures/lockscreen.jpg. Skwd bunu etkin kilit ekranlarına kopyalar. Burada video dosyası kullanılamaz.
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = Geçerli duvar kâğıdını bu kilit ekranının görseli olarak kullanın.
+settings-lockscreens-static-action-desc = Seçilen görseli bu kilit ekranının arka planı olarak kullanın.
+settings-lockscreens-sddm-static-action-desc = Oturum açma ekranında seçilen görseli kullanın. Yönetici onayı gerekir.
+settings-lockscreens-sddm-action-desc = Oturum açma ekranında geçerli duvar kâğıdını kullanın. Yönetici onayı gerekir.
+settings-lockscreens-choose-theme-desc = SDDM için bir tema seçilmemiş. Geçerli duvar kâğıdını kullanmak için kurulu bir tema seçin.
+settings-lockscreens-error = Kilit ekranı güncellenemedi: { $error }
+settings-lockscreens-rollback-error = Kilit ekranı güncellenemedi: { $error } SDDM geri yüklenemedi: { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = Etkinleştir
+settings-lockscreens-disable = Devre dışı bırak
+settings-lockscreens-advanced-label = Gelişmiş
+settings-lockscreens-choose-theme = Bir SDDM teması seçin
+settings-lockscreens-pending = Kilit ekranı güncelleniyor…
+settings-lockscreens-no-sddm-theme = Yüklü bir SDDM teması yok.
+
+settings-app-themes-profile-label = Renk profili
+settings-app-themes-profile-desc = Bu uygulama için sabit bir profil kullanın. Geçerli temayı izle, etkin duvar kâğıdının veya sabit temanın renklerini kullanır.
+settings-app-themes-profile-follow = Geçerli temayı izle
+settings-app-themes-profile-missing = Kullanılamıyor: { $name }
+settings-app-themes-profile-in-use = Silmeden önce { $name } kullanan uygulamalar için başka bir renk profili seçin.

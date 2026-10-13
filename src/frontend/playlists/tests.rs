@@ -1,7 +1,7 @@
 #![cfg(test)]
 
-use super::filter::source_colors;
-use super::{Playlists, toggle_color_clause};
+use super::filter::{source_colors, source_folders};
+use super::{Playlists, toggle_color_clause, toggle_folder_clause};
 use crate::contracts::playlists::Playlist;
 
 fn two_lists() -> Playlists {
@@ -87,4 +87,16 @@ fn index_uses_folio_shell() {
     assert!(source.contains("crate::frontend::ui::folio_index_shell("));
     assert_eq!(source.matches("folio_rule(palette)").count(), 6);
     assert!(!source.contains("with_alpha(palette.background, 0.9)"));
+}
+
+#[test]
+fn folder_toggles_roundtrip() {
+    let source = toggle_folder_clause("all", "/w/Gwenni good");
+    assert_eq!(source, r#"folder:"/w/Gwenni good""#);
+    let source = toggle_folder_clause(&format!("{source} color:blue"), "/w/anime");
+    assert_eq!(source_folders(&source), ["/w/Gwenni good", "/w/anime"]);
+    assert_eq!(source_colors(&source), [8]);
+    let source = toggle_folder_clause(&source, "/w/Gwenni good");
+    assert_eq!(source, "color:blue folder:/w/anime");
+    assert_eq!(toggle_folder_clause("folder:/w/anime", "/w/anime"), "all");
 }

@@ -4,6 +4,8 @@ use crate::contracts::picker::BrowserGrid;
 
 use super::super::Config;
 
+const STEAM_CLIENT_BACKEND: &str = "steam";
+
 impl Config {
     pub fn browser_grid(&self, _steam: bool) -> BrowserGrid {
         let value = |new: &str, legacy: &str, large: f64, small: f64| {
@@ -47,7 +49,9 @@ impl Config {
     }
 
     pub fn steam_uses_client(&self) -> bool {
-        self.get("steam.backend").and_then(Value::as_str) != Some("steamcmd")
+        self.get(skwd_config::keys::steam::BACKEND)
+            .and_then(Value::as_str)
+            .is_none_or(|backend| backend.is_empty() || backend == STEAM_CLIENT_BACKEND)
     }
 
     pub fn steam_enabled(&self) -> bool {

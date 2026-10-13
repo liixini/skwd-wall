@@ -1,6 +1,7 @@
-use crate::contracts::settings::{SettingsSource, transitions, wallpaper_kind};
+use crate::contracts::settings::{FolderKind, SettingsSource, transitions, wallpaper_kind};
 use crate::i18n::tr;
 
+const LIBRARY_TAB: &str = "library";
 pub const TABS: [&str; 13] = [
     "picker",
     "filter",
@@ -62,6 +63,27 @@ pub(super) fn motion_speed_options() -> [(&'static str, &'static str); 3] {
 pub fn is_picker_layout_section(tab: &str, section: usize) -> bool {
     const LAYOUT_AND_PRESETS: usize = 1;
     tab == "picker" && section == LAYOUT_AND_PRESETS
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PageSection {
+    Folders(FolderKind),
+    Profiles,
+}
+
+pub fn page_section(tab: &str, section: usize) -> Option<PageSection> {
+    const FOLDERS: usize = 0;
+    const EXCLUDED: usize = 1;
+    const PROFILES: usize = 2;
+    if tab != LIBRARY_TAB {
+        return None;
+    }
+    match section {
+        FOLDERS => Some(PageSection::Folders(FolderKind::Source)),
+        EXCLUDED => Some(PageSection::Folders(FolderKind::Excluded)),
+        PROFILES => Some(PageSection::Profiles),
+        _ => None,
+    }
 }
 
 pub fn is_transition_preview_section(tab: &str, section: usize) -> bool {

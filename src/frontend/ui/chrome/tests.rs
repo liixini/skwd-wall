@@ -19,6 +19,7 @@ fn chrome_signature_buckets() {
         kind: 1,
         has_video: true,
         favourite: false,
+        hidden: false,
         radius: 8.0,
         opacity: 1.0,
     };
@@ -36,6 +37,16 @@ fn chrome_signature_buckets() {
     let back = BackPanel { progress: 0.5, ..Default::default() };
     let with_back = chrome_signature(&[chrome], Some(&back), &pal);
     assert_ne!(base, with_back);
+    let disabled = BackPanel {
+        removal: crate::frontend::scene::RemovalAction::UnsubscribeUnavailable,
+        ..back.clone()
+    };
+    let enabled =
+        BackPanel { removal: crate::frontend::scene::RemovalAction::Unsubscribe, ..back.clone() };
+    assert_ne!(
+        chrome_signature(&[chrome], Some(&disabled), &pal),
+        chrome_signature(&[chrome], Some(&enabled), &pal)
+    );
 
     let jitter = BackPanel { progress: 0.5 + 0.001, ..Default::default() };
     assert_eq!(with_back, chrome_signature(&[chrome], Some(&jitter), &pal));
@@ -80,11 +91,11 @@ fn back_actions_wrap() {
     let lay = super::back_layout(&narrow);
     let card_left = narrow.cx - narrow.hw;
     let card_right = narrow.cx + narrow.hw;
-    for rect in [lay.playlist, lay.delete] {
+    for rect in [lay.actions.playlist, lay.actions.delete] {
         assert!(rect.0 >= card_left - 0.01 && rect.0 + rect.2 <= card_right + 0.01);
     }
     let ys: std::collections::HashSet<u32> =
-        [lay.playlist.1, lay.delete.1].iter().map(|y| y.to_bits()).collect();
+        [lay.actions.playlist.1, lay.actions.delete.1].iter().map(|y| y.to_bits()).collect();
     assert!(ys.len() > 1);
 
     let wide = BackPanel {
@@ -97,11 +108,11 @@ fn back_actions_wrap() {
         ..Default::default()
     };
     let wide_lay = super::back_layout(&wide);
-    assert_eq!(wide_lay.playlist.1, wide_lay.delete.1);
-    assert!(wide_lay.overview.is_none());
+    assert_eq!(wide_lay.actions.playlist.1, wide_lay.actions.delete.1);
+    assert!(wide_lay.actions.overview.is_none());
 
     let overview = BackPanel { overview_available: true, ..wide };
-    assert!(super::back_layout(&overview).overview.is_some());
+    assert!(super::back_layout(&overview).actions.overview.is_some());
 }
 
 fn rects_overlap(a: (f32, f32, f32, f32), b: (f32, f32, f32, f32)) -> bool {
@@ -135,9 +146,9 @@ fn back_layout_no_overlap() {
         rects.push(("tag", *rect));
     }
     rects.push(("add", lay.add));
-    rects.push(("playlist", lay.playlist));
-    rects.push(("delete", lay.delete));
-    if let Some(over) = lay.overview {
+    rects.push(("playlist", lay.actions.playlist));
+    rects.push(("delete", lay.actions.delete));
+    if let Some(over) = lay.actions.overview {
         rects.push(("overview", over));
     }
     for (_, rect) in &rects {
@@ -199,10 +210,10 @@ fn landscape_caption_deck() {
     assert!(layout.sheet.3 <= layout.card.3 * 0.25);
     assert!(layout.title_right < layout.action_left);
     assert!(layout.tags.iter().all(|tag| tag.0 + tag.2 <= layout.action_left));
-    for action in [layout.overview, layout.effects]
+    for action in [layout.actions.overview, layout.actions.effects]
         .into_iter()
         .flatten()
-        .chain([layout.playlist, layout.delete])
+        .chain([layout.actions.playlist, layout.actions.delete])
     {
         assert!(action.0 >= layout.action_left);
         assert!(action.1 >= layout.facts_rule_y);
@@ -250,8 +261,8 @@ fn tag_input_morph() {
     assert_eq!(open_lay.tags.len(), open.tags.len());
     let mut rects = open_lay.tags.clone();
     rects.push(open_lay.add);
-    rects.push(open_lay.playlist);
-    rects.push(open_lay.delete);
+    rects.push(open_lay.actions.playlist);
+    rects.push(open_lay.actions.delete);
     for i in 0..rects.len() {
         for j in i + 1..rects.len() {
             assert!(!rects_overlap(rects[i], rects[j]));
@@ -260,7 +271,7 @@ fn tag_input_morph() {
     let mid = BackPanel { add_open: 0.5, ..closed };
     let mid_lay = super::back_layout(&mid);
     assert!(mid_lay.add.2 > closed_lay.add.2 && mid_lay.add.2 < open_lay.add.2);
-    assert!(open_lay.delete.1 + open_lay.delete.3 > open_lay.actions_label_cy);
+    assert!(open_lay.actions.delete.1 + open_lay.actions.delete.3 > open_lay.actions_label_cy);
 }
 
 #[test]
@@ -393,10 +404,10 @@ fn external_back_left_rail() {
     let (fav_x, _, _) = layout.fav;
     assert!(fav_x <= layout.content_right);
     for rectangle in [
-        layout.playlist,
-        layout.delete,
-        layout.effects.expect("effects"),
-        layout.overview.expect("overview"),
+        layout.actions.playlist,
+        layout.actions.delete,
+        layout.actions.effects.expect("effects"),
+        layout.actions.overview.expect("overview"),
     ] {
         assert!(rectangle.0 >= layout.action_left - 0.01);
         assert!(rectangle.0 + rectangle.2 <= layout.action_right + 0.01);
@@ -451,6 +462,7 @@ fn chrome_at(view: u8, skew: f32) -> crate::frontend::scene::Chrome {
         kind: 1,
         has_video: true,
         favourite: true,
+        hidden: false,
         radius: 8.0,
         opacity: 1.0,
     }
@@ -552,6 +564,7 @@ fn back_layout_mirrors_about_the_card() {
             static_img: true,
             overview_available: true,
             reset_thumbnail: true,
+            revealable: true,
             tags: vec![String::from("nature"), String::from("editorial")],
             fields: vec![(String::from("Resolution"), String::from("3840 x 2160"))],
             ..Default::default()
@@ -569,8 +582,8 @@ fn back_layout_mirrors_about_the_card() {
             ("sheet", ltr.sheet, rtl.sheet),
             ("deck", ltr.action_deck, rtl.action_deck),
             ("add", ltr.add, rtl.add),
-            ("playlist", ltr.playlist, rtl.playlist),
-            ("delete", ltr.delete, rtl.delete),
+            ("playlist", ltr.actions.playlist, rtl.actions.playlist),
+            ("delete", ltr.actions.delete, rtl.actions.delete),
         ] {
             assert_rect_mirrored(name, card, a, b);
         }
@@ -581,9 +594,10 @@ fn back_layout_mirrors_about_the_card() {
             assert_rect_mirrored("fact", card, *a, *b);
         }
         for (a, b) in [
-            (ltr.overview, rtl.overview),
-            (ltr.effects, rtl.effects),
-            (ltr.reset_thumbnail, rtl.reset_thumbnail),
+            (ltr.actions.overview, rtl.actions.overview),
+            (ltr.actions.effects, rtl.actions.effects),
+            (ltr.actions.reset_thumbnail, rtl.actions.reset_thumbnail),
+            (ltr.actions.reveal, rtl.actions.reveal),
         ] {
             assert_eq!(a.is_some(), b.is_some());
             if let (Some(a), Some(b)) = (a, b) {
@@ -604,7 +618,7 @@ fn back_layout_mirrors_about_the_card() {
         if rtl.tags.len() > 1 && rtl.tags[0].1 == rtl.tags[1].1 {
             assert!(rtl.tags[1].0 + rtl.tags[1].2 <= rtl.tags[0].0 + 0.01);
         }
-        for rect in rtl.tags.iter().chain([&rtl.add, &rtl.playlist, &rtl.delete]) {
+        for rect in rtl.tags.iter().chain([&rtl.add, &rtl.actions.playlist, &rtl.actions.delete]) {
             assert!(
                 rect.0 >= rtl.content_left - 0.01 && rect.0 + rect.2 <= rtl.content_right + 0.01
             );
@@ -638,11 +652,11 @@ fn mirrored_back_hit_resolves_same_target() {
         let ltr = super::back_layout_for(panel, false);
         let rtl = super::back_layout_for(panel, true);
         for (a, b) in [
-            (ltr.delete, rtl.delete),
-            (ltr.playlist, rtl.playlist),
+            (ltr.actions.delete, rtl.actions.delete),
+            (ltr.actions.playlist, rtl.actions.playlist),
             (ltr.add, rtl.add),
             (ltr.tags[1], rtl.tags[1]),
-            (ltr.overview.unwrap(), rtl.overview.unwrap()),
+            (ltr.actions.overview.unwrap(), rtl.actions.overview.unwrap()),
         ] {
             let (lx, ly, lw, lh) = super::back_bounds(panel, &ltr, a);
             let (rx, ry, rw, rh) = super::back_bounds(panel, &rtl, b);
@@ -657,4 +671,23 @@ fn mirrored_back_hit_resolves_same_target() {
             assert!(!super::back_contains(panel, &rtl, b, lx + lw * 0.5, ly + lh * 0.5));
         }
     }
+}
+
+#[test]
+fn hide_beside_favourite() {
+    use crate::frontend::scene::BackPanel;
+    let panel = BackPanel {
+        cx: 400.0,
+        cy: 300.0,
+        hw: 200.0,
+        hh: 150.0,
+        progress: 1.0,
+        ..Default::default()
+    };
+    let ltr = super::back_layout_for(&panel, false);
+    let rtl = super::back_layout_for(&panel, true);
+    let button = ltr.masthead.3 - super::BACK_TOGGLE_INSET;
+    assert_eq!(ltr.hide.1, ltr.fav.1);
+    assert!(ltr.fav.0 - ltr.hide.0 > button);
+    assert!(rtl.hide.0 - rtl.fav.0 > button);
 }

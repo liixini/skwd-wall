@@ -362,6 +362,16 @@ fn tile_thumb_swap() {
 }
 
 #[test]
+fn activity_empty_thumb() {
+    let mut effects = fixture();
+    effects.activity.supported = true;
+    let monitor = effects.displays.monitors[1].clone();
+    assert!(effects.tile_thumb(&monitor).is_none());
+    effects.toggle_output(&monitor.target);
+    assert_eq!(effects.tile_thumb(&monitor).as_deref(), Some("incoming"));
+}
+
+#[test]
 fn effect_switch_reveal() {
     let mut fx = fixture();
     fx.editor.definitions =

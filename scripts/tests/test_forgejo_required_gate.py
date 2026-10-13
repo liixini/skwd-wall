@@ -22,6 +22,21 @@ EXPECTED = [
 
 
 class ForgejoRequiredGateTests(unittest.TestCase):
+    def test_storage_precedes_checkout(self):
+        workflow = (ROOT / ".forgejo" / "workflows" / "verify.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertLess(
+            workflow.index("- name: Prepare temporary storage"),
+            workflow.index("- name: Check out Wall"),
+        )
+        self.assertIn("working-directory: ${{ github.workspace }}", workflow)
+        for name in ("TMPDIR", "TMP", "TEMP", "RUNNER_TEMP"):
+            self.assertIn(f"{name}: /var/tmp/skwd-verify-tmp-", workflow)
+        self.assertIn('findmnt -n -o FSTYPE -T "$TMPDIR"', workflow)
+        self.assertIn('""|tmpfs|ramfs) exit 1', workflow)
+        self.assertIn('df -h "$TMPDIR"', workflow)
+
     def test_workflow_emits_and_aggregates_every_required_suite(self):
         workflow = (ROOT / ".forgejo" / "workflows" / "verify.yml").read_text(
             encoding="utf-8"

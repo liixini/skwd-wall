@@ -81,3 +81,12 @@ effects-name-topographic = Topográfico
 effects-name-tonal-layers = Camadas tonais
 
 effects-saved-palette = { $name } (salvo)
+
+effects-activity-label = Atividade
+effects-activity-desc = Escolha qual atividade do Plasma receberá o papel de parede. A área de trabalho permanece na atividade atual.
+effects-activity-current = Atual
+effects-activity-inactive-desc = Em uma atividade inativa, você só pode alterar os papéis de parede atribuídos. As configurações de tela e reprodução afetam a área de trabalho atual.
+effects-activity-unavailable = A atividade selecionada não está disponível. Escolha uma atividade existente e tente novamente.
+effects-activity-saved = Salvo para { $activity }.
+effects-activity-unassigned = Nenhum papel de parede Skwd atribuído
+effects-activity-preparing = Preparando o papel de parede para { $activity }.

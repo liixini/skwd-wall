@@ -2,6 +2,22 @@ use serde_json::{Value, json};
 
 use crate::domain::theme::{Candidate, ThemeRole};
 
+pub fn profile_in_use(root: &serde_json::Value, name: &str) -> bool {
+    skwd_config::get(root, skwd_config::keys::theme::APP_PROFILES)
+        .and_then(serde_json::Value::as_object)
+        .is_some_and(|profiles| profiles.values().any(|profile| profile.as_str() == Some(name)))
+        || skwd_config::get(root, skwd_config::keys::integrations::LIST)
+            .and_then(serde_json::Value::as_array)
+            .is_some_and(|entries| {
+                entries.iter().any(|entry| {
+                    entry
+                        .get(skwd_config::keys::integrations::PROFILE)
+                        .and_then(serde_json::Value::as_str)
+                        == Some(name)
+                })
+            })
+}
+
 const ROLE_KEYS: [(&str, ThemeRole); ThemeRole::ALL.len()] = [
     ("primary", ThemeRole::Primary),
     ("primaryText", ThemeRole::PrimaryText),
@@ -13,6 +29,8 @@ const ROLE_KEYS: [(&str, ThemeRole); ThemeRole::ALL.len()] = [
     ("background", ThemeRole::Background),
     ("outline", ThemeRole::Outline),
 ];
+const SCHEME_VERSION_KEY: &str = "_schemeVersion";
+const SCHEME_VERSION: u64 = 1;
 
 pub fn decode_candidate(value: &Value) -> Candidate {
     let dark = value
@@ -64,7 +82,7 @@ pub fn encode_candidate(candidate: &Candidate, include_aliases: bool) -> Value {
         "_scheme".to_string(),
         skwd_palette::material::from_colors(dark, light, candidate.dark),
     );
-    map.insert("_schemeVersion".to_string(), json!(1));
+    map.insert(SCHEME_VERSION_KEY.to_string(), json!(SCHEME_VERSION));
     Value::Object(map)
 }
 
@@ -94,12 +112,21 @@ pub fn saved_names(themes: &[Value]) -> Vec<String> {
         .collect()
 }
 
-pub fn saved_palettes(themes: &[Value]) -> Vec<(String, Candidate)> {
+pub fn saved_palettes(themes: &[Value], dark: Option<bool>) -> Vec<(String, Candidate)> {
     themes
         .iter()
         .filter_map(|theme| {
             let name = saved_name(theme)?.trim();
-            (!name.is_empty()).then(|| (name.to_string(), decode_candidate(theme)))
+            (!name.is_empty()).then(|| {
+                let variant = dark.filter(|_| {
+                    theme.get(SCHEME_VERSION_KEY).and_then(Value::as_u64) == Some(SCHEME_VERSION)
+                });
+                let candidate = variant.map_or_else(
+                    || decode_candidate(theme),
+                    |dark| decode_candidate_variant(theme, dark),
+                );
+                (name.to_string(), candidate)
+            })
         })
         .collect()
 }

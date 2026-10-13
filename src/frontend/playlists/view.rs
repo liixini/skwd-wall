@@ -6,8 +6,15 @@ use crate::frontend::theme::Palette;
 use crate::frontend::ui::{UI_FONT, folio_rule, label, logical_padding, row, with_alpha};
 use crate::i18n::{tr, tr_args};
 
-use super::filter::source_colors;
+use super::filter::{source_colors, source_folders};
 use super::model::{PlMsg, Playlists};
+
+const NOTE_SIZE: f32 = 8.5;
+const NOTE_ALPHA: f32 = 0.44;
+const FEATURE_GAP: f32 = 13.0;
+const FEATURE_WIDTH: f32 = 420.0;
+const FOLDER_CHIP_LIMIT: usize = 12;
+const FOLDER_LIST_HEIGHT: f32 = 132.0;
 
 fn playlist_index<'a>(
     playlists: &'a Playlists,
@@ -238,6 +245,47 @@ fn colour_picker<'a>(
         );
     }
     swatches.into()
+}
+
+fn feature_row<'a>(
+    note: &'a str,
+    control: Element<'a, Message>,
+    scale: f32,
+    palette: &'a Palette,
+) -> Element<'a, Message> {
+    row![label(note, NOTE_SIZE, scale, with_alpha(palette.surface_text, NOTE_ALPHA)), control]
+        .spacing(FEATURE_GAP * scale)
+        .align_y(Alignment::Center)
+        .into()
+}
+
+fn folder_picker<'a>(
+    id: i64,
+    folders: &[String],
+    source: &str,
+    scale: f32,
+    palette: &'a Palette,
+) -> Element<'a, Message> {
+    let selected = source_folders(source);
+    let chips = crate::frontend::ui::folio_action_wrap(
+        folders
+            .iter()
+            .map(|folder| {
+                (
+                    crate::frontend::ui::folder_short_label(folder, folders),
+                    selected.contains(folder),
+                    Message::Pl(PlMsg::ToggleFolder(id, folder.clone())),
+                )
+            })
+            .collect(),
+        FEATURE_WIDTH * scale,
+        scale,
+        palette,
+    );
+    if folders.len() <= FOLDER_CHIP_LIMIT {
+        return chips;
+    }
+    scrollable(chips).height(Length::Fixed(FOLDER_LIST_HEIGHT * scale)).into()
 }
 
 fn wallpaper_type_mark(kind: &str) -> &'static str {
@@ -478,6 +526,7 @@ fn empty_reading_surface(scale: f32, palette: &Palette) -> Element<'_, Message> 
 
 fn reading_surface<'a>(
     playlists: &'a Playlists,
+    folders: &'a [String],
     scale: f32,
     palette: &'a Palette,
 ) -> Element<'a, Message> {
@@ -598,17 +647,18 @@ fn reading_surface<'a>(
                 ),
             ]
             .align_y(Alignment::Center),
-            row![
-                label(
-                    tr("playlists-colour-notes"),
-                    8.5,
-                    scale,
-                    with_alpha(palette.surface_text, 0.44)
-                ),
-                colour_picker(id, &selected_colours, 420.0 * scale, scale, palette),
-            ]
-            .spacing(13.0 * scale)
-            .align_y(Alignment::Center),
+            feature_row(
+                tr("playlists-colour-notes"),
+                colour_picker(id, &selected_colours, FEATURE_WIDTH * scale, scale, palette),
+                scale,
+                palette,
+            ),
+            feature_row(
+                tr("playlists-folder-notes"),
+                folder_picker(id, folders, &playlists.source_buf, scale, palette),
+                scale,
+                palette,
+            ),
         ]
         .spacing(14.0 * scale);
         Some(crate::frontend::ui::folio_field(
@@ -799,6 +849,7 @@ fn reading_surface<'a>(
 
 pub fn view<'a>(
     playlists: &'a Playlists,
+    folders: &'a [String],
     viewport: (f32, f32),
     scale: f32,
     palette: &'a Palette,
@@ -820,7 +871,7 @@ pub fn view<'a>(
     let sheet = crate::frontend::ui::folio_sheet(
         masthead,
         playlist_index(playlists, scale, palette),
-        reading_surface(playlists, scale, palette),
+        reading_surface(playlists, folders, scale, palette),
         Message::ClosePlaylists,
         viewport,
         scale,

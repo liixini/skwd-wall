@@ -49,3 +49,48 @@ settings-library-watch-convergence-hours = { $value ->
     [many] منذ { $value } ساعةً
    *[other] منذ { $value } ساعةٍ
     }
+settings-profiles-card = الملفات الشخصية
+settings-profiles-card-desc = حدّد المجلدات التي يستخدمها المنتقي ومرشح المجلدات والخلفيات العشوائية والجداول. تعود المجلدات المخفية بمفتاح المخفي في الشريط أو اختصاره، وتبدأ كل مرة تشغيل وهي مخفية من جديد.
+settings-profiles-everything = الكل
+settings-profiles-name-label = الاسم
+settings-profiles-name-placeholder = اسم الملف الشخصي
+settings-profiles-state-show = إظهار
+settings-profiles-state-hide = إخفاء
+settings-profiles-state-exclude = استبعاد
+settings-profiles-workshop = Wallpaper Engine
+settings-profiles-workshop-desc = عناصر Workshop ليست في مجلدات، لذا ينطبق هذا عليها كلها. أخفِ خلفية واحدة من ظهر بطاقتها.
+settings-profiles-summary = { $hidden } مخفية، { $excluded } مستبعدة
+settings-profiles-summary-none = تُظهر كل المجلدات
+settings-profiles-delete-action = حذف الملف الشخصي
+settings-profiles-add-label = ملف شخصي جديد
+settings-profiles-new-name = ملف شخصي جديد
+settings-profiles-tree-label = مجلدات هذا الملف الشخصي
+settings-profiles-tree-desc = إظهار يُبقي المجلد في المنتقي والعشوائي. إخفاء يبعده عن الأنظار حتى تضغط مفتاح المخفي في الشريط أو اختصاره. استبعاد يُخرجه من الملف الشخصي فيتجاوزه المفتاح. يضبط المجلد مجلداته الفرعية أيضًا؛ غيّر مجلدًا فرعيًا لاحقًا لاستثنائه.
+settings-profiles-never-scanned = لا يُفحص أبدًا
+settings-profiles-mixed = محتوى مختلط
+settings-profiles-hidden-inside = { $count ->
+    [zero] لا شيء مخفي بالداخل
+    [one] عنصر واحد مخفي بالداخل
+    [two] عنصران مخفيان بالداخل
+    [few] { $count } عناصر مخفية بالداخل
+    [many] { $count } عنصرًا مخفيًا بالداخل
+   *[other] { $count } عنصر مخفي بالداخل
+    }
+settings-profiles-copy-action = نسخ
+settings-profiles-helm-desc = يجعله الملف الشخصي النشط، فيتبعه التدوير والجداول.
+settings-profiles-flag-desc = يفتح منتقيًا واحدًا في هذا الملف الشخصي ويترك النشط كما هو.
+settings-profiles-make-active = تفعيل
+settings-profiles-active-tag = نشط
+settings-profiles-builtin-tag = مضمّن
+settings-profiles-filter-placeholder = تصفية المجلدات
+settings-profiles-no-match = لا يوجد مجلد مطابق.
+settings-profiles-switch-label = التبديل إلى هذا الملف
+settings-profiles-switch-desc = يغيّر skwd-helm الملف المحفوظ، فيتبعه التدوير والجداول. تفتح راية التشغيل منتقيًا واحدًا بهذا الملف وتترك المحفوظ كما هو.
+settings-profiles-hidden-note-label = الخلفيات المخفية
+settings-profiles-hidden-note-desc = يُظهر زر الإخفاء في الشريط (Ctrl+H) المجلدات المخفية للملف النشط وكل خلفية أُخفيت من خلف بطاقتها. يعود كل تشغيل لإخفائها.
+settings-profiles-tree-note = «لم يُفحص قط» يأتي من المجلدات المستبعدة في المكتبة › المجلدات، فلا يستطيع أي ملف إظهاره. الاستبعاد هنا يترك المجلد خارج هذا الملف فقط. الخلفيات المخفية من بطاقتها تبقى مخفية في كل ملف، بما فيه «الكل»، حتى «إظهار المخفي». المجلدات المنقوطة مثل .private مجلدات عادية هنا.
+settings-profiles-legend-show = في المنتقي والعشوائي.
+settings-profiles-legend-hide = حتى زر الإخفاء في الشريط أو Ctrl+H. ليس عشوائيًا أبدًا.
+settings-profiles-legend-exclude = من هذا الملف. «إظهار المخفي» يتخطاه.
+settings-profiles-everything-desc = «الكل» يُظهر كل مجلد مفحوص وكل عنصر Workshop. أنشئ ملفًا جديدًا لإخفاء بعضها أو استبعاده.
+settings-profiles-delete-hint = انقر مرة أخرى للحذف. تبقى الخلفيات والمجلدات في مكانها.

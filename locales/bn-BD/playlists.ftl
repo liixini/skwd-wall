@@ -64,6 +64,7 @@ playlists-edition-eyebrow = প্লেলিস্ট / সম্পাদন�
 playlists-kind-tagline = { $kind } · ডিসপ্লে বরাদ্দের জন্য প্রস্তুত
 playlists-stop-edition = প্লেলিস্ট থামান
 playlists-colour-notes = রং
+playlists-folder-notes = ফোল্ডার
 playlists-live-collection-title = ফিল্টার করা প্লেলিস্ট
 playlists-live-collection-desc = এই তালিকা নির্বাচিত উৎস, ট্যাগ, রেজোলিউশন ও রঙের ফিল্টার থেকে নিজে নিজে হালনাগাদ হয়।
 playlists-definition-title = প্লেলিস্টের বিবরণ
@@ -86,11 +87,11 @@ playlists-picker-search = Search by name or ID
 playlists-picker-no-match = No playlists match this search.
 playlists-picker-hint = Choose which wallpapers to browse. Playback stays as it is.
 playlists-filter-help = Filter reference
-playlists-help-combine = Separate filters with spaces. Every filter must match. Names and paths cannot contain spaces.
+playlists-help-combine = ফিল্টারগুলো ফাঁকা স্থান দিয়ে আলাদা করুন। ফোল্ডার নিয়ম ছাড়া প্রতিটি ফিল্টার মিলতে হবে; তালিকাভুক্ত যেকোনো ফোল্ডারের আইটেম গণ্য হয়। ফাঁকা স্থানযুক্ত পথ উদ্ধৃতিচিহ্নে রাখুন।
 playlists-help-source = all / favourites
     Start with all wallpapers or only favourites.
 playlists-help-folder = folder:nature/forest
-    Match this exact folder, relative to the library root. Subfolders are separate.
+    এই ফোল্ডার ও এর সাবফোল্ডারের সাথে মেলে। একাধিক ফোল্ডার নিয়ম যেকোনো একটির সাথে মেলে; ফাঁকা স্থানযুক্ত পথ উদ্ধৃতিচিহ্নে রাখুন।
 playlists-help-type = type:image / type:video / type:we
     Images, videos, or Wallpaper Engine wallpapers. Also accepts static, picture, pic, img; vid, mp4; scene, wallpaperengine, wallpaper-engine.
 playlists-help-tag = tag:cat,night / tag:cat|dog,-anime

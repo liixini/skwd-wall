@@ -33,3 +33,44 @@ settings-library-watch-convergence-hours = { $value ->
     [one] hace 1 hora
    *[other] hace { $value } horas
     }
+settings-profiles-card = Perfiles
+settings-profiles-card-desc = Decide qué carpetas usan el selector, el filtro de carpetas, los fondos aleatorios y las programaciones. Las carpetas ocultas vuelven con el interruptor de ocultos de la barra o su atajo de teclado, y cada inicio vuelve a ocultarlas.
+settings-profiles-everything = Todo
+settings-profiles-name-label = Nombre
+settings-profiles-name-placeholder = Nombre del perfil
+settings-profiles-state-show = Mostrar
+settings-profiles-state-hide = Ocultar
+settings-profiles-state-exclude = Excluir
+settings-profiles-workshop = Wallpaper Engine
+settings-profiles-workshop-desc = Los elementos de Workshop no tienen carpetas, así que esto se aplica a todos. Oculta un fondo concreto desde el reverso de su tarjeta.
+settings-profiles-summary = { $hidden } ocultas, { $excluded } excluidas
+settings-profiles-summary-none = Muestra todas las carpetas
+settings-profiles-delete-action = Eliminar perfil
+settings-profiles-add-label = Nuevo perfil
+settings-profiles-new-name = Nuevo perfil
+settings-profiles-tree-label = Carpetas de este perfil
+settings-profiles-tree-desc = Mostrar mantiene la carpeta en el selector y en el aleatorio. Ocultar la mantiene fuera de la vista hasta que pulses el interruptor de ocultos de la barra o su atajo. Excluir la deja fuera del perfil, así que el interruptor la omite. Una carpeta también fija sus subcarpetas; cambia una subcarpeta después para hacer una excepción.
+settings-profiles-never-scanned = Nunca se analiza
+settings-profiles-mixed = Mezcla dentro
+settings-profiles-hidden-inside = { $count ->
+    [one] { $count } oculta dentro
+   *[other] { $count } ocultas dentro
+    }
+settings-profiles-copy-action = Copiar
+settings-profiles-helm-desc = Lo convierte en el perfil activo, así que la rotación y las programaciones lo siguen.
+settings-profiles-flag-desc = Abre un selector en este perfil y deja el activo como está.
+settings-profiles-make-active = Activar
+settings-profiles-active-tag = Activo
+settings-profiles-builtin-tag = Integrado
+settings-profiles-filter-placeholder = Filtrar carpetas
+settings-profiles-no-match = Ninguna carpeta coincide.
+settings-profiles-switch-label = Cambiar a este perfil
+settings-profiles-switch-desc = skwd-helm cambia el perfil guardado, así que la rotación y las programaciones lo siguen. La opción de lanzamiento abre un selector en este perfil y deja el guardado intacto.
+settings-profiles-hidden-note-label = Fondos ocultos
+settings-profiles-hidden-note-desc = El botón de ocultos de la barra (Ctrl+H) muestra las carpetas ocultas del perfil activo y cada fondo ocultado desde su tarjeta. Cada inicio vuelve a ocultarlos.
+settings-profiles-tree-note = Nunca analizado viene de las carpetas excluidas en Biblioteca › Carpetas, así que ningún perfil puede mostrarlo. Excluir aquí solo deja una carpeta fuera de este perfil. Los fondos ocultados desde su tarjeta siguen ocultos en todos los perfiles, Todo incluido, hasta Mostrar ocultos. Las carpetas con punto como .private son carpetas normales aquí.
+settings-profiles-legend-show = en el selector y el aleatorio.
+settings-profiles-legend-hide = hasta el botón de ocultos de la barra o Ctrl+H. Nunca aleatorio.
+settings-profiles-legend-exclude = de este perfil. Mostrar ocultos lo omite.
+settings-profiles-everything-desc = Todo muestra cada carpeta analizada y cada elemento del Workshop. Crea un perfil nuevo para ocultar o excluir algunos.
+settings-profiles-delete-hint = Haz clic otra vez para eliminar. Los fondos y las carpetas se quedan donde están.

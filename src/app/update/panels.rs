@@ -43,6 +43,7 @@ pub(super) fn toggle_settings(app: &mut App) -> Task<Message> {
         app.panels.settings.input_edit = None;
         app.panels.settings.keybind_capture = None;
         app.panels.settings.process_picker_open = false;
+        app.panels.settings.weather_review_category = None;
         app.panels.settings.process_picker_query.clear();
         app.panels.settings.process_picker_manual.clear();
         app.panels.settings.process_picker_scroll = 0.0;

@@ -33,3 +33,44 @@ settings-library-watch-convergence-hours = { $value ->
     [one] há { $value } hora
    *[other] há { $value } horas
     }
+settings-profiles-card = Perfis
+settings-profiles-card-desc = Escolha quais pastas o seletor, o filtro de pastas, os papéis de parede aleatórios e as programações usam. Pastas ocultas voltam com o botão de ocultos na barra ou seu atalho de teclado, e cada abertura começa com elas ocultas de novo.
+settings-profiles-everything = Tudo
+settings-profiles-name-label = Nome
+settings-profiles-name-placeholder = Nome do perfil
+settings-profiles-state-show = Mostrar
+settings-profiles-state-hide = Ocultar
+settings-profiles-state-exclude = Excluir
+settings-profiles-workshop = Wallpaper Engine
+settings-profiles-workshop-desc = Itens do Workshop não têm pastas, então isto vale para todos. Oculte um papel de parede específico pelo verso do cartão.
+settings-profiles-summary = { $hidden } ocultas, { $excluded } excluídas
+settings-profiles-summary-none = Mostra todas as pastas
+settings-profiles-delete-action = Excluir perfil
+settings-profiles-add-label = Novo perfil
+settings-profiles-new-name = Novo perfil
+settings-profiles-tree-label = Pastas deste perfil
+settings-profiles-tree-desc = Mostrar mantém a pasta no seletor e no aleatório. Ocultar a mantém fora de vista até o botão de ocultos na barra ou seu atalho. Excluir a deixa fora do perfil, então o botão a ignora. Uma pasta também define suas subpastas; altere uma subpasta depois para abrir uma exceção.
+settings-profiles-never-scanned = Nunca verificada
+settings-profiles-mixed = Misto dentro
+settings-profiles-hidden-inside = { $count ->
+    [one] { $count } oculta dentro
+   *[other] { $count } ocultas dentro
+    }
+settings-profiles-copy-action = Copiar
+settings-profiles-helm-desc = Torna este o perfil ativo, então a rotação e as programações o seguem.
+settings-profiles-flag-desc = Abre um seletor neste perfil e deixa o ativo como está.
+settings-profiles-make-active = Ativar
+settings-profiles-active-tag = Ativo
+settings-profiles-builtin-tag = Integrado
+settings-profiles-filter-placeholder = Filtrar pastas
+settings-profiles-no-match = Nenhuma pasta corresponde.
+settings-profiles-switch-label = Mudar para este perfil
+settings-profiles-switch-desc = skwd-helm muda o perfil salvo, então a rotação e os agendamentos o seguem. A opção de inicialização abre um seletor neste perfil e deixa o salvo intacto.
+settings-profiles-hidden-note-label = Papéis de parede ocultos
+settings-profiles-hidden-note-desc = O botão de ocultos na barra (Ctrl+H) mostra as pastas ocultas do perfil ativo e cada papel de parede ocultado pelo verso do cartão. Cada inicialização os oculta de novo.
+settings-profiles-tree-note = Nunca verificado vem das pastas excluídas em Biblioteca › Pastas, então nenhum perfil pode mostrá-lo. Excluir aqui só deixa uma pasta fora deste perfil. Papéis de parede ocultados pelo cartão ficam ocultos em todos os perfis, Tudo incluído, até Mostrar ocultos. Pastas com ponto como .private são pastas comuns aqui.
+settings-profiles-legend-show = no seletor e no aleatório.
+settings-profiles-legend-hide = até o botão de ocultos na barra ou Ctrl+H. Nunca aleatório.
+settings-profiles-legend-exclude = deste perfil. Mostrar ocultos o ignora.
+settings-profiles-everything-desc = Tudo mostra cada pasta verificada e cada item do Workshop. Crie um novo perfil para ocultar ou excluir alguns.
+settings-profiles-delete-hint = Clique de novo para excluir. Papéis de parede e pastas ficam onde estão.

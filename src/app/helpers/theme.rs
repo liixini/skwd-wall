@@ -77,6 +77,13 @@ pub(crate) fn theme_designer_save(app: &mut App, apply: bool) -> bool {
         app.daemon.client.call("wall.retheme", json!({}));
         app.invalidate_swatch();
     }
+    if crate::infrastructure::theme::profile_in_use(app.config.root(), &name) {
+        app.call_tracked(
+            wall_proto::rpc::THEME_APPS_REFRESH,
+            json!(wall_proto::AppThemeRefresh { integration: None, profile: Some(name.clone()) }),
+            Pending::AppThemeSet,
+        );
+    }
     if let Some(designer) = app.panels.theme_designer.as_mut() {
         designer.mark_saved(name);
     }

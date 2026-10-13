@@ -44,9 +44,119 @@ pub struct DiagnosticResult {
     pub banner: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct WeatherResult {
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WeatherState {
+    #[default]
+    Disabled,
+    Loading,
+    NoLocation,
+    Unavailable,
+    Unmapped,
+    Missing,
+    Empty,
+    SearchUnavailable,
+    Active,
+    Paused,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WeatherSource {
+    #[default]
+    Playlists,
+    Semantic,
+    Outdoors,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WeatherSelection {
+    #[default]
+    Automatic,
+    Approved,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Deserialize)]
+pub struct WeatherCandidates {
+    pub category: String,
+    pub query: Option<String>,
+    pub member_keys: Vec<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OutdoorSeason {
+    #[default]
+    Neutral,
+    Spring,
+    Summer,
+    Autumn,
+    Winter,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LightPhase {
+    Dawn,
+    #[default]
+    Day,
+    Dusk,
+    Night,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OutdoorMatch {
+    Library,
+    Starter,
+    #[default]
+    Ambient,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(default)]
+pub struct OutdoorStatus {
+    pub season: OutdoorSeason,
+    pub light: LightPhase,
+    pub match_kind: OutdoorMatch,
+    pub stale: bool,
+    pub generation: u64,
+    pub location: String,
+    pub credits: Option<String>,
+    pub outputs: Vec<OutdoorOutput>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(default)]
+pub struct OutdoorOutput {
+    pub output: String,
+    pub key: String,
+    pub name: String,
+    pub preview: Option<String>,
+    pub held: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(default)]
+pub struct WeatherStatus {
     pub weather: Vec<String>,
+    pub enabled: bool,
+    pub status: WeatherState,
+    pub source: WeatherSource,
+    pub selection: WeatherSelection,
+    pub location_key: Option<String>,
+    pub category: Option<String>,
+    pub query: Option<String>,
+    pub playlist_id: Option<i64>,
+    pub playlist_name: Option<String>,
+    pub member_keys: Vec<String>,
+    pub resolved_count: usize,
+    pub fetched_at: Option<u64>,
+    pub paused_outputs: Vec<String>,
+    pub resume_available: bool,
+    pub outdoors: Option<OutdoorStatus>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -160,6 +270,40 @@ pub struct OutputsResult {
     pub outputs: Vec<OutputStatus>,
 }
 
+#[derive(Clone)]
+pub struct Activity {
+    pub id: String,
+    pub name: String,
+    pub current: bool,
+}
+
+pub struct ActivitiesResult {
+    pub supported: bool,
+    pub current: String,
+    pub activities: Vec<Activity>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct ActivityApplyResult {
+    pub activity: String,
+    pub visible: bool,
+    pub queued: bool,
+}
+
+pub enum ActivityCompletion {
+    Applied { visible: bool },
+    Failed(String),
+    Cancelled,
+}
+
+pub struct ActivityApplyEvent {
+    pub token: String,
+    pub request_id: u64,
+    pub activity: String,
+    pub output: String,
+    pub completion: Option<ActivityCompletion>,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct AudioOutputsResult {
     pub outputs: Vec<OutputStatus>,
@@ -238,6 +382,7 @@ pub struct StatusResult {
     pub protocol: Option<ProtocolStatus>,
     pub capabilities: Vec<String>,
     pub steam_helper_available: Option<bool>,
+    pub steam_client_available: Option<bool>,
     pub library_watch_present: bool,
     pub library_watch: Option<LibraryWatchStatus>,
 }
@@ -353,3 +498,4 @@ pub struct PlaybackStatus {
     pub audio_ducked: bool,
     pub available_processes: Vec<String>,
 }
+pub const APP_THEME_BUSY: &str = "busy";

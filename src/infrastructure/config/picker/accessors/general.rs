@@ -21,10 +21,6 @@ impl Config {
         skwd_config::video_dir(&self.data)
     }
 
-    pub fn locale(&self) -> String {
-        skwd_config::locale(&self.data)
-    }
-
     pub fn ui_scale(&self) -> f32 {
         skwd_config::schema::setting::general::UI_SCALE.read(self.root()) as f32
     }

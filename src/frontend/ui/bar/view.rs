@@ -10,7 +10,7 @@ use super::super::misc::{FadeFrame, NERD_FONT, UI_FONT, glyph_width, mid_text};
 use super::super::{mirror_x_for, parallelogram, with_alpha};
 use super::canvas::FilterBar;
 use super::catalog::{DROP_ARROW, DROP_ARROW_UP, ICON_FOLDER, MENU_MAX_ROWS};
-use super::menu::{MenuKind, folder_depth, folder_leaf};
+use super::menu::{MenuKind, folder_depth, folder_label};
 use super::model::{BarItem, BarNotice, BarVisualStyle, SWATCH_CELLS};
 
 pub(super) fn draw_filter_bar(
@@ -539,6 +539,9 @@ fn draw_backend_row(
     ));
 }
 
+const MENU_EDGE_INSET: f32 = 12.0;
+const MENU_MUTED_ALPHA: f32 = 0.7;
+
 fn draw_folder_row(
     frame: &mut FadeFrame<'_>,
     rectangle: Rectangle,
@@ -564,14 +567,11 @@ fn draw_folder_row(
         frame.fill(&row, with_alpha(palette.primary, if selected { 0.16 } else { 0.08 }));
     }
     let center_y = y + row_height / 2.0;
-    if let "" | "*" = option.as_str() {
-        let shown = match option.as_str() {
-            "*" => tr("filter-bar-folder-all"),
-            _ => tr("filter-bar-folder-main"),
-        };
+    if option == "*" {
+        let shown = tr("filter-bar-folder-all");
         frame.fill_text(mid_text(
             shown.to_string(),
-            Point::new(lead_x(rtl, rectangle.x, rectangle.width, 12.0), center_y),
+            Point::new(lead_x(rtl, rectangle.x, rectangle.width, MENU_EDGE_INSET), center_y),
             if selected { palette.primary } else { palette.surface_text },
             size,
             UI_FONT,
@@ -579,24 +579,37 @@ fn draw_folder_row(
         ));
         return;
     }
-    let indent = 12.0 + (folder_depth(option).min(6) as f32) * 16.0 * bar.scale;
+    let indent = MENU_EDGE_INSET
+        + (folder_depth(option, bar.folder_roots).min(6) as f32)
+            * super::menu::FOLDER_DEPTH_STEP
+            * bar.scale;
     let base_x = lead_x(rtl, rectangle.x, rectangle.width, indent);
     frame.fill_text(mid_text(
         ICON_FOLDER.to_string(),
         Point::new(base_x, center_y),
-        if selected { palette.primary } else { with_alpha(palette.surface_text, 0.7) },
+        if selected { palette.primary } else { with_alpha(palette.surface_text, MENU_MUTED_ALPHA) },
         size,
         NERD_FONT,
         lead(rtl),
     ));
     frame.fill_text(mid_text(
-        folder_leaf(option).to_string(),
+        folder_label(option, bar.folder_roots),
         Point::new(lead_x(rtl, base_x, 0.0, glyph_width(size) + 5.0), center_y),
         if selected { palette.primary } else { palette.surface_text },
         size,
         UI_FONT,
         lead(rtl),
     ));
+    if bar.folder_hidden.get(index).copied().unwrap_or(false) {
+        frame.fill_text(mid_text(
+            super::ICON_HIDDEN.to_string(),
+            Point::new(lead_x(!rtl, rectangle.x, rectangle.width, MENU_EDGE_INSET), center_y),
+            with_alpha(palette.surface_text, MENU_MUTED_ALPHA),
+            size,
+            NERD_FONT,
+            lead(!rtl),
+        ));
+    }
 }
 
 fn draw_scrollbar(

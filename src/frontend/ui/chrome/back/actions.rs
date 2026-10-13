@@ -14,8 +14,16 @@ enum ActionStyle {
     Primary,
     Selected,
     Secondary,
+    Disabled,
 }
 
+const DISABLED_ACTION_ALPHA: f32 = 0.38;
+
+const REVEAL_STAGGER: f32 = 3.72;
+const COPY_STAGGER: f32 = 3.74;
+const COPY_LABELS: [&str; 2] = ["card-back-copy-image", "card-back-copy-path"];
+
+#[expect(clippy::too_many_lines, reason = "card back action composition")]
 pub(super) fn draw_actions(
     frame: &mut Frame,
     palette: &Palette,
@@ -52,7 +60,7 @@ pub(super) fn draw_actions(
             .with_width(1.0),
     );
 
-    if let Some(overview) = layout.overview {
+    if let Some(overview) = layout.actions.overview {
         draw_action(
             frame,
             palette,
@@ -66,7 +74,7 @@ pub(super) fn draw_actions(
             3.35,
         );
     }
-    if let Some(effects) = layout.effects {
+    if let Some(effects) = layout.actions.effects {
         draw_action(
             frame,
             palette,
@@ -80,7 +88,7 @@ pub(super) fn draw_actions(
             3.55,
         );
     }
-    if let Some(scene_properties) = layout.scene_properties {
+    if let Some(scene_properties) = layout.actions.scene_properties {
         draw_action(
             frame,
             palette,
@@ -94,7 +102,7 @@ pub(super) fn draw_actions(
             3.65,
         );
     }
-    if let Some(reset) = layout.reset_thumbnail {
+    if let Some(reset) = layout.actions.reset_thumbnail {
         draw_action(
             frame,
             palette,
@@ -108,13 +116,45 @@ pub(super) fn draw_actions(
             3.7,
         );
     }
+    if let Some(reveal) = layout.actions.reveal {
+        draw_action(
+            frame,
+            palette,
+            geometry,
+            progress,
+            fade,
+            reveal,
+            tr("card-back-reveal"),
+            palette.primary,
+            ActionStyle::Secondary,
+            REVEAL_STAGGER,
+        );
+    }
+    for (rectangle, label) in
+        [(layout.actions.copy_image, COPY_LABELS[0]), (layout.actions.copy_path, COPY_LABELS[1])]
+    {
+        if let Some(rectangle) = rectangle {
+            draw_action(
+                frame,
+                palette,
+                geometry,
+                progress,
+                fade,
+                rectangle,
+                tr(label),
+                palette.primary,
+                ActionStyle::Secondary,
+                COPY_STAGGER,
+            );
+        }
+    }
     draw_action(
         frame,
         palette,
         geometry,
         progress,
         fade,
-        layout.playlist,
+        layout.actions.playlist,
         tr("card-back-playlist"),
         palette.primary,
         ActionStyle::Secondary,
@@ -126,10 +166,10 @@ pub(super) fn draw_actions(
         geometry,
         progress,
         fade,
-        layout.delete,
-        tr("card-back-delete"),
+        layout.actions.delete,
+        panel.removal.label(),
         palette.destructive(),
-        ActionStyle::Secondary,
+        if panel.removal.enabled() { ActionStyle::Secondary } else { ActionStyle::Disabled },
         3.95,
     );
 }
@@ -151,7 +191,8 @@ fn draw_action(
     slot: f32,
 ) {
     let (amount, delta_y) = back_rise(progress, slot);
-    let alpha = fade * amount;
+    let alpha =
+        fade * amount * if style == ActionStyle::Disabled { DISABLED_ACTION_ALPHA } else { 1.0 };
     if alpha <= 0.01 {
         return;
     }
@@ -186,7 +227,7 @@ fn draw_action(
             builder.close();
         }));
         frame.fill(&wipe, with_alpha(accent, 0.94 * fade));
-    } else {
+    } else if style != ActionStyle::Disabled {
         let underline = geometry.path(&Path::rectangle(
             Point::new(if rtl { x + width - width * amount } else { x }, y + height - 2.0),
             Size::new(width * amount, 2.0),

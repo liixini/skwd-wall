@@ -1,10 +1,14 @@
 pub mod browser;
 pub mod capabilities;
+pub mod clipboard;
 pub mod config;
 pub mod effects;
 pub mod executable;
+pub mod file_manager;
+pub mod file_picker;
 pub mod ipc;
 pub mod library;
+pub mod lockscreen;
 pub mod observability;
 pub mod preview;
 pub mod rpc_results;

@@ -146,25 +146,8 @@ impl App {
             self.panels.audio_playing = playing;
             self.chrome.bar.cache.clear();
         }
-        let thumb_for = |out: &crate::contracts::daemon::OutputStatus| -> Option<String> {
-            let items = &self.library_session.library.catalog().items;
-            let assigned = if out.current.is_empty() { &out.path } else { &out.current };
-            let found = match &out.kind {
-                MediaKind::WallpaperEngine if !out.we_id.is_empty() => {
-                    items.iter().find(|it| it.we_id == out.we_id)
-                }
-                MediaKind::Video if !assigned.is_empty() => {
-                    items.iter().find(|it| it.video_file == *assigned)
-                }
-                _ if !assigned.is_empty() => items.iter().find(|it| it.path == *assigned),
-                _ => None,
-            };
-            found.and_then(|it| {
-                (!it.thumb.is_empty())
-                    .then(|| it.thumb.clone())
-                    .or_else(|| (!it.preview.is_empty()).then(|| it.preview.clone()))
-            })
-        };
+        let items = &self.library_session.library.catalog().items;
+        let thumb_for = |out| output_thumb(out, items);
         self.daemon.output_wallpaper_art = outs
             .iter()
             .filter_map(|out| {
@@ -194,9 +177,100 @@ impl App {
             }
             thumb_for(out)
         });
+        let live_selection = self.panels.effects.as_ref().is_some_and(|effects| {
+            effects.mode() == crate::frontend::effects::EffectsMode::Studio
+                || effects.activity.can_apply() && !effects.activity.supported
+        });
+        if live_selection {
+            self.set_effect_monitors(&outs);
+        }
+        crate::app::update::settings_background::sync_monitors(self);
+    }
+
+    pub(super) fn on_activities(&mut self, result: crate::contracts::daemon::ActivitiesResult) {
+        let Some(effects) =
+            self.panels.effects.as_mut().filter(|effects| {
+                effects.mode() == crate::frontend::effects::EffectsMode::Displays
+            })
+        else {
+            return;
+        };
+        if !result.supported {
+            effects.activity.supported = false;
+            effects.activity.ready = true;
+            effects.activity.error = None;
+            self.set_effect_monitors(&self.daemon.output_statuses.clone());
+            self.retick();
+            return;
+        }
+        let valid = !result.current.is_empty()
+            && result
+                .activities
+                .iter()
+                .any(|activity| activity.id == result.current && activity.current);
+        if !valid {
+            effects.activity.error =
+                Some(crate::i18n::tr("effects-activity-unavailable").to_string());
+            effects.activity.ready = false;
+            effects.clear_monitors();
+            self.retick();
+            return;
+        }
+        effects.activity.supported = true;
+        effects.activity.current = result.current.clone();
+        if effects.activity.selected.is_empty() {
+            effects.activity.selected = result.current;
+        }
+        effects.activity.activities = result.activities;
+        effects.activity.error = None;
+        effects.activity.ready = false;
+        if !effects
+            .activity
+            .activities
+            .iter()
+            .any(|activity| activity.id == effects.activity.selected)
+        {
+            effects.activity.error =
+                Some(crate::i18n::tr("effects-activity-unavailable").to_string());
+            effects.clear_monitors();
+            self.retick();
+            return;
+        }
+        effects.activity.generation += 1;
+        let generation = effects.activity.generation;
+        let selected = effects.activity.selected.clone();
+        let id = self.call_tracked(
+            wall_proto::rpc::WALL_OUTPUTS,
+            serde_json::json!({(wall_proto::ACTIVITY_PARAM): selected.clone()}),
+            Pending::ActivityOutputs { activity: selected, generation },
+        );
+        if let Some(effects) = self.panels.effects.as_mut() {
+            effects.activity.output_request = id;
+        }
+        self.retick();
+    }
+
+    pub(super) fn on_activity_outputs(
+        &mut self,
+        result: &crate::contracts::daemon::OutputsResult,
+        activity: &str,
+        generation: u64,
+    ) {
+        let Some(effects) = self.panels.effects.as_mut() else { return };
+        if effects.activity.selected != activity || effects.activity.generation != generation {
+            return;
+        }
+        effects.activity.ready = true;
+        effects.activity.error = None;
+        self.set_effect_monitors(&result.outputs);
+        self.retick();
+    }
+
+    fn set_effect_monitors(&mut self, outs: &[crate::contracts::daemon::OutputStatus]) {
+        let items = &self.library_session.library.catalog().items;
         let theme_output = self.config.str_path(skwd_config::keys::display::THEME_OUTPUT);
         let mons: Vec<crate::frontend::effects::MonitorInfo> = outs
-            .into_iter()
+            .iter()
             .map(|out| {
                 let (width, height) = out.logical_size();
                 let target = out.target().to_string();
@@ -205,8 +279,8 @@ impl App {
                     format!("{}.{}", skwd_config::keys::display::OUTPUT_LOCKS, out.name);
                 let theme_source = out.name == theme_output;
                 crate::frontend::effects::MonitorInfo {
-                    current_thumb: thumb_for(&out),
-                    name: out.name,
+                    current_thumb: output_thumb(out, items),
+                    name: out.name.clone(),
                     target,
                     connected,
                     width,
@@ -222,7 +296,7 @@ impl App {
                     },
                     mute: out.mute,
                     volume: out.volume,
-                    fill: out.fill,
+                    fill: out.fill.clone(),
                     background: crate::frontend::settings::background::BackgroundControl::default(),
                     background_reveal: 0.0,
                     background_picker: 0.0,
@@ -230,15 +304,14 @@ impl App {
                     theme_source,
                     paused: out.paused,
                     manual_paused: out.manual_paused,
-                    current: out.current,
-                    we_id: out.we_id,
+                    current: out.current.clone(),
+                    we_id: out.we_id.clone(),
                 }
             })
             .collect();
         if let Some(eff) = self.panels.effects.as_mut() {
             eff.set_monitors(mons);
         }
-        crate::app::update::settings_background::sync_monitors(self);
     }
 
     pub(super) fn on_demo_outputs(&mut self, result: crate::contracts::daemon::OutputsResult) {
@@ -290,4 +363,26 @@ impl App {
             panel.mons = mons;
         }
     }
+}
+
+fn output_thumb(
+    out: &crate::contracts::daemon::OutputStatus,
+    items: &[crate::domain::library::catalog::Wallpaper],
+) -> Option<String> {
+    let assigned = if out.current.is_empty() { &out.path } else { &out.current };
+    let found = match &out.kind {
+        MediaKind::WallpaperEngine if !out.we_id.is_empty() => {
+            items.iter().find(|item| item.we_id == out.we_id)
+        }
+        MediaKind::Video if !assigned.is_empty() => {
+            items.iter().find(|item| item.video_file == *assigned)
+        }
+        _ if !assigned.is_empty() => items.iter().find(|item| item.path == *assigned),
+        _ => None,
+    };
+    found.and_then(|item| {
+        (!item.thumb.is_empty())
+            .then(|| item.thumb.clone())
+            .or_else(|| (!item.preview.is_empty()).then(|| item.preview.clone()))
+    })
 }

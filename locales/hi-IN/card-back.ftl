@@ -23,6 +23,21 @@ card-back-overview-set = वॉलपेपर सेट हुआ
 card-back-delete = हटाएँ
 card-back-scene-properties = सीन
 card-back-reset-thumbnail = थंबनेल रीसेट करें
+card-back-reveal = फ़ोल्डर में दिखाएँ
+card-back-reveal-failed = फ़ाइल मैनेजर नहीं खुल सका: { $error }
 card-back-reset-thumbnail-done = नया थंबनेल बनाया जा रहा है
 card-back-reset-thumbnail-error = थंबनेल रीसेट नहीं हो सका: { $error }
 card-back-reset-thumbnail-deferred = यह वॉलपेपर लागू होने पर थंबनेल फिर से बनेगा
+
+card-back-steam-status-unknown = Steam की स्थिति अज्ञात है
+card-back-unsubscribe = सदस्यता छोड़ें
+card-back-deleting = हटाया जा रहा है…
+card-back-unsubscribing = सदस्यता छोड़ी जा रही है…
+card-back-remove-error = वॉलपेपर हटाया नहीं जा सका: { $error }
+
+card-back-copy-image = छवि कॉपी करें
+card-back-copy-path = पूरा पाथ कॉपी करें
+card-back-copy-image-done = छवि कॉपी हो गई
+card-back-copy-path-done = पूरा पाथ कॉपी हो गया
+card-back-copy-image-failed = छवि कॉपी नहीं हो सकी: { $error }
+card-back-copy-path-failed = पाथ कॉपी नहीं हो सका: { $error }

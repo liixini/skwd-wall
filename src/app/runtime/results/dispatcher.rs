@@ -1,33 +1,111 @@
+use crate::contracts::daemon::ActivityCompletion;
 use log::warn;
 use serde_json::Value;
+
+const REMOVE_ERROR: &str = "card-back-remove-error";
+const OUTDOOR_ACTION_ERROR: &str = "settings-outdoors-action-error";
+const LOCKSCREEN_MISMATCH: &str = "Mismatched lockscreen result";
 
 #[allow(clippy::wildcard_imports)]
 use crate::app::*;
 
 impl App {
+    fn error_toast(&mut self, key: &str, error: &str) {
+        self.show_toast(crate::i18n::tr_args!(key, error => error));
+        self.scene.touch();
+        self.retick();
+    }
+
+    fn removal_error(&mut self, unsubscribe: bool, error: &str) {
+        self.error_toast(REMOVE_ERROR, error);
+        if !unsubscribe {
+            self.call_tracked(wall_proto::rpc::WALL_LIST, serde_json::json!({}), Pending::List);
+        }
+    }
+
+    fn weather_rpc_error(&mut self) {
+        let previous = self.daemon.weather.is_some();
+        if !previous && self.outdoor_mode() {
+            self.daemon.weather = Some(crate::contracts::daemon::WeatherStatus {
+                enabled: true,
+                source: crate::contracts::daemon::WeatherSource::Outdoors,
+                status: crate::contracts::daemon::WeatherState::Unavailable,
+                location_key: Some(self.outdoor_location_key()),
+                outdoors: Some(crate::contracts::daemon::OutdoorStatus::default()),
+                ..Default::default()
+            });
+        }
+        if let Some(weather) = self.daemon.weather.as_mut() {
+            weather.status = crate::contracts::daemon::WeatherState::Unavailable;
+            if let Some(outdoors) = weather.outdoors.as_mut() {
+                outdoors.stale = previous;
+            }
+        }
+        self.retick();
+    }
+
+    fn weather_action_error(&mut self, error: &str) {
+        self.show_toast(crate::i18n::tr_args!(OUTDOOR_ACTION_ERROR, error => error));
+        self.call_tracked(wall_proto::rpc::WALL_WEATHER, serde_json::json!({}), Pending::Weather);
+        self.retick();
+    }
+
+    fn app_theme_error(&mut self, kind: &Pending, error: &str) {
+        if matches!(kind, Pending::AppThemes) {
+            self.daemon.app_themes = None;
+        } else {
+            self.call_tracked("theme.apps", serde_json::json!({}), Pending::AppThemes);
+        }
+        self.show_toast(crate::i18n::tr_args!("settings-app-themes-error", error => error));
+        self.invalidate_settings();
+        self.retick();
+    }
+
+    #[expect(clippy::too_many_lines, reason = "RPC error dispatch boundary")]
     pub(in crate::app) fn rpc_error(&mut self, kind: Pending, err: String) {
         match kind {
-            Pending::AppThemeSet => {
-                self.show_toast(crate::i18n::tr_args!("settings-app-themes-error", error => err));
-                self.call_tracked("theme.apps", serde_json::json!({}), Pending::AppThemes);
-                self.invalidate_settings();
+            Pending::Weather => self.weather_rpc_error(),
+            Pending::WeatherCandidates { category, query, generation } => {
+                let review = &mut self.panels.settings;
+                if review.weather_review_category == Some(category.as_str())
+                    && review.weather_review_generation == generation
+                    && crate::app::update::weather_review::query_key(&category)
+                        .is_some_and(|path| self.config.str_path(path).trim() == query)
+                {
+                    review.weather_review_loading = false;
+                    review.weather_review_error = Some(err);
+                    self.retick();
+                }
+            }
+            Pending::WeatherAction => self.weather_action_error(&err),
+            Pending::Status => {
+                self.daemon.steam_client_available = None;
+                if self.daemon.steam_refresh_needed {
+                    self.refresh_unsubscribe_status();
+                }
+                self.scene.touch();
                 self.retick();
             }
-            Pending::AppThemes => {
-                self.daemon.app_themes = None;
-                self.show_toast(crate::i18n::tr_args!("settings-app-themes-error", error => err));
-                self.invalidate_settings();
-                self.retick();
+            Pending::RemoveWallpaper { unsubscribe, .. } => self.removal_error(unsubscribe, &err),
+            Pending::AppThemeSet | Pending::AppThemes => self.app_theme_error(&kind, &err),
+            Pending::LockScreenSet { target, enabled, sddm_theme } => {
+                if target == wall_proto::LockScreenTarget::Sddm {
+                    self.error_toast(crate::app::constants::LOCKSCREEN_ERROR, &err);
+                    self.panels.settings.sddm_rollback = Some(crate::app::state::SddmRollback {
+                        enabled: !enabled,
+                        theme: sddm_theme,
+                        error: err,
+                    });
+                    self.panels.settings.sddm_checking = true;
+                    return;
+                }
+                self.error_toast(crate::app::constants::LOCKSCREEN_ERROR, &err);
             }
             Pending::ResetThumbnail { .. } => {
-                self.show_toast(
-                    crate::i18n::tr_args!("card-back-reset-thumbnail-error", error => err),
-                );
-                self.retick();
+                self.error_toast("card-back-reset-thumbnail-error", &err);
             }
             Pending::AudioPause => {
-                self.show_toast(crate::i18n::tr_args!("audio-playback-error", error => err));
-                self.retick();
+                self.error_toast("audio-playback-error", &err);
             }
             Pending::CurrentTheme { .. } => {
                 if let Some(designer) = self.panels.theme_designer.as_mut() {
@@ -100,8 +178,28 @@ impl App {
                     self.on_scene_properties_error(&err);
                 }
             }
+            request @ (Pending::Activities | Pending::ActivityOutputs { .. }) => {
+                self.fail_activity_outputs(&request, err);
+            }
+            Pending::ActivityApply { token } => {
+                self.complete_activity_request(&token, ActivityCompletion::Failed(err));
+            }
             _ => {}
         }
+    }
+
+    fn fail_activity_outputs(&mut self, request: &Pending, error: String) {
+        let Some(effects) = self.panels.effects.as_mut() else { return };
+        if let Pending::ActivityOutputs { activity, generation } = request
+            && (effects.activity.selected != *activity
+                || effects.activity.generation != *generation)
+        {
+            return;
+        }
+        effects.activity.ready = false;
+        effects.activity.error = Some(error);
+        effects.clear_monitors();
+        self.retick();
     }
 
     pub(in crate::app) fn on_result(&mut self, kind: Pending, result: &Value) {
@@ -123,6 +221,16 @@ impl App {
             };
         }
         match kind {
+            Pending::RemoveWallpaper { .. } => {
+                decoded!(
+                    wall_proto::rpc::WALL_REMOVE,
+                    result,
+                    crate::infrastructure::rpc_results::decode_wall_remove,
+                );
+                self.call_tracked(wall_proto::rpc::WALL_LIST, serde_json::json!({}), Pending::List);
+                self.scene.touch();
+                self.retick();
+            }
             Pending::PlaybackProcesses => {
                 self.daemon.playback.available_processes = decoded!(
                     "playback.processes",
@@ -229,8 +337,30 @@ impl App {
                 result,
                 crate::infrastructure::rpc_results::decode_outputs,
             )),
+            Pending::Activities => self.on_activities(decoded!(
+                wall_proto::rpc::WALL_ACTIVITIES,
+                result,
+                crate::infrastructure::rpc_results::decode_activities,
+            )),
+            Pending::ActivityOutputs { activity, generation } => self.on_activity_outputs(
+                &decoded!(
+                    "wall.outputs",
+                    result,
+                    crate::infrastructure::rpc_results::decode_outputs,
+                ),
+                &activity,
+                generation,
+            ),
+            Pending::ActivityApply { token } => {
+                let result = decoded!(
+                    wall_proto::rpc::WALL_APPLY,
+                    result,
+                    crate::infrastructure::rpc_results::decode_activity_apply,
+                );
+                self.on_activity_apply_response(&token, &result);
+            }
             Pending::DemoOutputs => self.on_demo_outputs(decoded!(
-                "wall.outputs",
+                wall_proto::rpc::WALL_OUTPUTS,
                 result,
                 crate::infrastructure::rpc_results::decode_outputs,
             )),
@@ -241,6 +371,25 @@ impl App {
                     result,
                     crate::infrastructure::rpc_results::decode_app_themes,
                 ));
+                self.invalidate_settings();
+                self.retick();
+            }
+            Pending::LockScreenSet { target, enabled, .. } => {
+                let (actual_target, actual_enabled) = decoded!(
+                    wall_proto::rpc::LOCKSCREEN_SET,
+                    result,
+                    crate::infrastructure::rpc_results::decode_lockscreen_set,
+                );
+                if actual_target != target || actual_enabled != enabled {
+                    self.rpc_error(request_for_error, LOCKSCREEN_MISMATCH.into());
+                    return;
+                }
+                self.adopt_external_config();
+                self.show_toast(crate::i18n::tr(if enabled {
+                    "settings-lockscreens-enabled"
+                } else {
+                    "settings-lockscreens-disabled"
+                }));
                 self.invalidate_settings();
                 self.retick();
             }
@@ -309,7 +458,7 @@ impl App {
                 crate::infrastructure::rpc_results::decode_bug_report,
             )),
             Pending::PlList => self.on_pl_list(decoded!(
-                "playlist.list",
+                wall_proto::rpc::PLAYLIST_LIST,
                 result,
                 crate::infrastructure::rpc_results::decode_playlist_list,
             )),
@@ -354,9 +503,33 @@ impl App {
                 crate::infrastructure::rpc_results::decode_effects_list,
             )),
             Pending::Weather => self.on_weather(decoded!(
-                "wall.weather",
+                wall_proto::rpc::WALL_WEATHER,
                 result,
                 crate::infrastructure::rpc_results::decode_weather,
+            )),
+            Pending::WeatherCandidates { category, query, generation } => self
+                .on_weather_candidates(
+                    &category,
+                    &query,
+                    generation,
+                    decoded!(
+                        wall_proto::rpc::WALL_WEATHER_CANDIDATES,
+                        result,
+                        crate::infrastructure::rpc_results::decode_weather_candidates,
+                    ),
+                ),
+            Pending::WeatherAction => {
+                self.adopt_external_config();
+                self.on_weather(decoded!(
+                    wall_proto::rpc::WALL_WEATHER,
+                    result,
+                    crate::infrastructure::rpc_results::decode_weather,
+                ));
+            }
+            Pending::WeatherPlaylists => self.on_weather_playlists(decoded!(
+                "playlist.list",
+                result,
+                crate::infrastructure::rpc_results::decode_playlist_list,
             )),
             Pending::ResetThumbnail { .. } => {
                 let scheduled = decoded!(

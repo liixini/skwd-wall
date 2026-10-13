@@ -5,6 +5,9 @@ use serde_json::json;
 use super::super::*;
 
 use crate::frontend::theme_designer::ThemeMsg;
+use crate::i18n::tr_args;
+
+const PROFILE_USED_MESSAGE: &str = "settings-app-themes-profile-in-use";
 
 pub(super) fn update(app: &mut App, msg: ThemeMsg) -> Task<Message> {
     match msg {
@@ -176,6 +179,11 @@ fn theme_request_delete_saved(app: &mut App, name: &str) -> Task<Message> {
 }
 
 fn theme_delete_saved(app: &mut App, name: &str) -> Task<Message> {
+    if crate::infrastructure::theme::profile_in_use(app.config.root(), name) {
+        app.show_toast(tr_args!(PROFILE_USED_MESSAGE, name => name));
+        app.retick();
+        return Task::none();
+    }
     let themes = crate::infrastructure::theme::remove_saved(
         &app.config.array_values(skwd_config::keys::theme::SAVED_THEMES),
         name,

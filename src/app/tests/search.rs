@@ -275,6 +275,83 @@ fn malformed_numeric_query_is_visible_and_fail_closed() {
 }
 
 #[test]
+fn workshop_search_filters_library() {
+    let mut scene = wall("Scene", "we", 1, 0);
+    scene["key"] = json!("we:1234567890");
+    let mut video = wall("Video", "video", 2, 0);
+    video["we_id"] = json!("2345678901");
+    let mut unrelated = wall("1234567890.mp4", "video", 3, 0);
+    unrelated["tags"] = json!("2024");
+    let mut app = test_app();
+    seed(&mut app, &[scene, video, unrelated]);
+
+    for (query, name) in [
+        ("1234567890", "Scene"),
+        ("https://steamcommunity.com/sharedfiles/filedetails/?id=2345678901", "Video"),
+    ] {
+        let _ = update(&mut app, Message::Tag(TagMsg::QueryInput(query.into())));
+        assert_eq!(filtered_names(&app), [name]);
+        assert!(app.tags.matching_tags_open);
+    }
+    let _ = update(&mut app, Message::Tag(TagMsg::QueryInput("9999999999".into())));
+    assert!(app.library_session.filtered.is_empty());
+    let _ = update(&mut app, Message::ClearTags);
+    assert_eq!(app.library_session.filtered.len(), 3);
+}
+
+#[test]
+fn workshop_search_bypasses_lens() {
+    let mut item = wall("Scene", "we", 1, 0);
+    item["we_id"] = json!("1234567890");
+    let mut app = test_app();
+    seed(&mut app, &[item]);
+    app.tags.search_mode = SearchMode::Describe;
+    let generation = app.tags.semantic.generation;
+
+    let _ = update(&mut app, Message::Tag(TagMsg::QueryInput("1234567890".into())));
+
+    assert_eq!(app.tags.search_mode, SearchMode::Describe);
+    assert_eq!(filtered_names(&app), ["Scene"]);
+    assert!(app.runtime_state.semantic.is_none());
+    app.apply_semantic_result(crate::infrastructure::semantic::SemanticResult {
+        generation,
+        keys: Vec::new(),
+        exclusions: Vec::new(),
+        query_ms: 0.0,
+        search_ms: 0.0,
+        error: None,
+    });
+    assert_eq!(filtered_names(&app), ["Scene"]);
+}
+
+#[test]
+fn describe_accepts_workshop_syntax() {
+    let mut item = wall("Scene", "we", 1, 0);
+    item["we_id"] = json!("1234567890");
+    let mut app = test_app();
+    seed(&mut app, &[item]);
+    app.tags.search_mode = SearchMode::Describe;
+    for text in [
+        "id:1234567890",
+        "workshop:1234567890",
+        "1234567890",
+        "https://steamcommunity.com/sharedfiles/filedetails/?id=1234567890",
+        "steam://url/CommunityFilePage/1234567890",
+    ] {
+        let _ = update(&mut app, Message::Tag(TagMsg::QueryInput(text.into())));
+        assert_eq!(filtered_names(&app), ["Scene"]);
+        assert_eq!(app.tags.search_mode, SearchMode::Describe);
+        assert!(app.tags.semantic.resolved);
+    }
+    for text in ["3", "3d", "3d abstract"] {
+        let _ = update(&mut app, Message::Tag(TagMsg::QueryInput(text.into())));
+        assert_eq!(app.tags.search_mode, SearchMode::Describe);
+        assert_eq!(app.tags.semantic.search, text);
+    }
+    assert!(!app.tags.semantic.resolved);
+}
+
+#[test]
 fn free_form_query_stays_semantic() {
     let mut matching = wall("matching.png", "static", 1, 0);
     matching["tags"] = json!("woman,art,animal,ocean");

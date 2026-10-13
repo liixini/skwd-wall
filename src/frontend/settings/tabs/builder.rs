@@ -3,20 +3,22 @@ use crate::contracts::settings::wallpaper_kind::{STATIC, VIDEO, WE};
 use crate::contracts::settings::{SettingsSource, keys};
 use crate::i18n::tr;
 
+use super::folders_tab::tab_paths;
 use super::launch_tab::tab_launch;
 use super::media_tabs::{
     tab_paper, tab_search, tab_sources, tab_steam, tab_wallhaven, tab_wallpaper_engine,
 };
 use super::motion_tab::tab_motion;
 use super::position_tab::tab_position;
+use super::profiles_tab::tab_profiles;
 use super::selector_tab::{tab_filter, tab_selector};
 use super::system_tabs::{
-    tab_general, tab_keybinds, tab_language, tab_paths, tab_performance, tab_postprocessing,
-    tab_schedule,
+    tab_general, tab_keybinds, tab_language, tab_performance, tab_postprocessing, tab_schedule,
+    tab_weather,
 };
-use super::theme_tabs::{tab_integrations, tab_matugen, tab_niri, tab_theme};
+use super::theme_tabs::{tab_integrations, tab_lockscreens, tab_matugen, tab_niri, tab_theme};
 use super::transition_tab::tab_transitions;
-use super::{Builder, Card, Control, Row};
+use super::{ActionId, Builder, Card, Control, Row};
 
 pub(super) fn type_chip_label(kind: &str) -> &'static str {
     match kind {
@@ -28,17 +30,28 @@ pub(super) fn type_chip_label(kind: &str) -> &'static str {
 }
 
 pub(super) fn folder_dropdown_options(folders: &[String]) -> Vec<(String, String)> {
-    let mut out = vec![
-        (String::from("*"), tr("settings-filter-all-folders").to_string()),
-        (String::new(), tr("settings-filter-main-folder").to_string()),
-    ];
+    let mut out = vec![(String::from("*"), tr("settings-filter-all-folders").to_string())];
     for folder in folders {
-        if matches!(folder.as_str(), "" | "*") {
+        if folder.is_empty() || folder == "*" {
             continue;
         }
-        out.push((folder.clone(), folder.clone()));
+        out.push((folder.clone(), crate::frontend::ui::folder_short_label(folder, folders)));
     }
     out
+}
+
+#[derive(Clone, Copy, Default)]
+pub(crate) struct RuntimeStatus<'a> {
+    pub(crate) outputs: &'a [String],
+    pub(crate) statuses: &'a [crate::contracts::daemon::OutputStatus],
+    pub(crate) previews: Option<&'a std::collections::HashMap<String, String>>,
+    pub(crate) library_watch: Option<&'a crate::contracts::daemon::LibraryWatchStatus>,
+    pub(crate) playback: Option<&'a crate::contracts::daemon::PlaybackStatus>,
+    pub(crate) app_themes: Option<&'a crate::contracts::daemon::AppThemesResult>,
+    pub(crate) weather: Option<&'a crate::contracts::daemon::WeatherStatus>,
+    pub(crate) weather_pending: bool,
+    pub(crate) playlists: &'a [crate::contracts::playlists::Playlist],
+    pub(crate) sddm_themes: &'a [String],
 }
 
 pub fn build_tab(
@@ -49,50 +62,17 @@ pub fn build_tab(
     analysis: &str,
     backends: &[String],
 ) -> Vec<(Card, Vec<Row>)> {
-    build_tab_with_outputs(tab, cfg, themes, folders, analysis, backends, &[])
-}
-
-pub(crate) fn build_tab_with_outputs(
-    tab: &str,
-    cfg: &dyn SettingsSource,
-    themes: &[String],
-    folders: &[String],
-    analysis: &str,
-    backends: &[String],
-    outputs: &[String],
-) -> Vec<(Card, Vec<Row>)> {
-    build_tab_with_output_statuses(
+    build_tab_with_runtime_status(
         tab,
         cfg,
         themes,
         folders,
         analysis,
         backends,
-        outputs,
-        &[],
-        &std::collections::HashMap::new(),
+        RuntimeStatus::default(),
     )
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn build_tab_with_output_statuses(
-    tab: &str,
-    cfg: &dyn SettingsSource,
-    themes: &[String],
-    folders: &[String],
-    analysis: &str,
-    backends: &[String],
-    outputs: &[String],
-    statuses: &[crate::contracts::daemon::OutputStatus],
-    previews: &std::collections::HashMap<String, String>,
-) -> Vec<(Card, Vec<Row>)> {
-    build_tab_with_runtime_status(
-        tab, cfg, themes, folders, analysis, backends, outputs, statuses, previews, None, None,
-        None,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn build_tab_with_runtime_status(
     tab: &str,
     cfg: &dyn SettingsSource,
@@ -100,26 +80,32 @@ pub(crate) fn build_tab_with_runtime_status(
     folders: &[String],
     analysis: &str,
     backends: &[String],
-    outputs: &[String],
-    statuses: &[crate::contracts::daemon::OutputStatus],
-    previews: &std::collections::HashMap<String, String>,
-    library_watch: Option<&crate::contracts::daemon::LibraryWatchStatus>,
-    playback: Option<&crate::contracts::daemon::PlaybackStatus>,
-    app_themes: Option<&crate::contracts::daemon::AppThemesResult>,
+    runtime: RuntimeStatus<'_>,
 ) -> Vec<(Card, Vec<Row>)> {
     match tab {
-        "picker" => compose_picker(cfg, themes, outputs),
+        "picker" => compose_picker(cfg, themes, runtime.outputs),
         "filter" => compose_filter_search(cfg, folders, analysis),
         "position" => compose_position(cfg),
-        "displays" => compose_displays(cfg, statuses, previews),
+        "displays" => compose_displays(
+            cfg,
+            runtime.statuses,
+            runtime.previews.unwrap_or(&std::collections::HashMap::new()),
+        ),
         "motion" => compose_motion(cfg),
-        "playback" => compose_playback(cfg, themes, outputs, playback),
+        "playback" => compose_playback(cfg, themes, runtime.outputs, runtime.playback),
         "performance" => compose_performance(cfg),
-        "library" => compose_library(cfg, themes, outputs, library_watch),
-        "sources" => compose_sources(cfg, themes, outputs),
-        "automation" => compose_automation(cfg, themes, folders, outputs),
-        "theme" => compose_theme(cfg, backends, app_themes),
-        "integrations" => compose_integrations(cfg, themes),
+        "library" => compose_library(cfg, themes, runtime.outputs, runtime.library_watch),
+        "sources" => compose_sources(cfg, themes, runtime.outputs),
+        "automation" => compose_automation(
+            cfg,
+            themes,
+            runtime.outputs,
+            runtime.weather,
+            runtime.playlists,
+            runtime.weather_pending,
+        ),
+        "theme" => compose_theme(cfg, backends, runtime.app_themes),
+        "integrations" => compose_integrations(cfg, themes, runtime.sddm_themes),
         "language" => collect(cfg, tab_language),
         _ => Vec::new(),
     }
@@ -699,12 +685,25 @@ fn compose_library(
     let mut paths = collect(cfg, tab_paths);
     let mut performance = collect(cfg, tab_performance);
     let mut general = collect(cfg, |builder| tab_general(builder, themes, outputs));
-    section(
-        &mut out,
-        tr("settings-section-folders"),
-        tr("settings-paths-directories-card-desc"),
-        take_card(&mut paths, tr("settings-paths-directories-card")),
-    );
+    out.push((
+        Card {
+            title: tr("settings-section-folders"),
+            subtitle: tr("settings-paths-source-card-desc"),
+        },
+        take_card(&mut paths, tr("settings-paths-source-card")),
+    ));
+    out.push((
+        Card {
+            title: tr("settings-paths-excluded-card"),
+            subtitle: tr("settings-paths-excluded-card-desc"),
+        },
+        take_card(&mut paths, tr("settings-paths-excluded-card")),
+    ));
+    let mut profiles = collect(cfg, tab_profiles);
+    out.push((
+        Card { title: tr("settings-profiles-card"), subtitle: tr("settings-profiles-card-desc") },
+        take_card(&mut profiles, tr("settings-profiles-card")),
+    ));
     section(
         &mut out,
         tr("settings-section-library-watching"),
@@ -918,13 +917,16 @@ fn compose_sources(
 fn compose_automation(
     cfg: &dyn SettingsSource,
     themes: &[String],
-    folders: &[String],
     outputs: &[String],
+    weather: Option<&crate::contracts::daemon::WeatherStatus>,
+    playlists: &[crate::contracts::playlists::Playlist],
+    weather_pending: bool,
 ) -> Vec<(Card, Vec<Row>)> {
     let mut out = Vec::new();
     let mut general = collect(cfg, |builder| tab_general(builder, themes, outputs));
     let mut schedule = collect(cfg, tab_schedule);
-    let mut filter = collect(cfg, |builder| tab_filter(builder, folders));
+    let mut weather_rows =
+        collect(cfg, |builder| tab_weather(builder, weather, playlists, weather_pending));
     let mut external = collect(cfg, tab_postprocessing);
     section(
         &mut out,
@@ -939,12 +941,13 @@ fn compose_automation(
         take_card(&mut schedule, tr("settings-schedule-schedule-card")),
     );
     let mut location = take_card(&mut schedule, tr("settings-schedule-location-card"));
-    location.extend(take_card(&mut filter, tr("settings-filter-weather-card")));
+    let mut outdoor_rows = take_card(&mut weather_rows, tr("settings-weather-card"));
+    outdoor_rows.append(&mut location);
     section(
         &mut out,
         tr("settings-section-location-weather"),
         tr("settings-schedule-location-card-desc"),
-        location,
+        outdoor_rows,
     );
     let startup = take_rows(
         &mut take_card(&mut general, tr("settings-general-behaviour-card")),
@@ -978,7 +981,7 @@ fn compose_theme(
         &mut out,
         tr("settings-app-themes-title"),
         tr("settings-app-themes-desc"),
-        super::app_themes::rows(apps),
+        super::app_themes::rows(cfg, apps),
     );
     section(
         &mut out,
@@ -1061,8 +1064,34 @@ fn compose_theme(
     out
 }
 
-fn compose_integrations(cfg: &dyn SettingsSource, themes: &[String]) -> Vec<(Card, Vec<Row>)> {
+fn compose_integrations(
+    cfg: &dyn SettingsSource,
+    themes: &[String],
+    sddm_themes: &[String],
+) -> Vec<(Card, Vec<Row>)> {
     let mut out = collect(cfg, tab_integrations);
+    let mut lockscreens = collect(cfg, tab_lockscreens);
+    let mut rows = take_card(&mut lockscreens, tr("settings-section-lockscreens"));
+    if !sddm_themes.is_empty() {
+        let mut items: Vec<_> = sddm_themes
+            .iter()
+            .map(|theme| (ActionId::ChooseSddmTheme(Some(theme.clone())), theme.clone()))
+            .collect();
+        items.push((ActionId::ChooseSddmTheme(None), tr("settings-keybind-capture-cancel").into()));
+        rows.push(Row {
+            title: tr("settings-lockscreens-choose-theme").into(),
+            desc: tr("settings-lockscreens-choose-theme-desc").into(),
+            control: Control::ActionChips { items },
+        });
+    }
+    rows.push(details(
+        tr("settings-lockscreens-advanced-label"),
+        "",
+        keys::lock_screens::MODE,
+        tr("settings-lockscreens-source-label"),
+        take_card(&mut lockscreens, tr("settings-lockscreens-advanced-label")),
+    ));
+    section(&mut out, tr("settings-section-lockscreens"), "", rows);
     if cfg.is_niri() {
         out.extend(collect(cfg, |builder| tab_niri(builder, themes)));
     }

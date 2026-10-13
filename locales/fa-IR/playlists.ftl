@@ -64,6 +64,7 @@ playlists-edition-eyebrow = فهرست‌های پخش / ویرایش
 playlists-kind-tagline = { $kind } · آمادهٔ تخصیص به نمایشگر
 playlists-stop-edition = توقف فهرست پخش
 playlists-colour-notes = رنگ‌ها
+playlists-folder-notes = پوشه‌ها
 playlists-live-collection-title = فهرست پخش فیلترشده
 playlists-live-collection-desc = این فهرست بر پایهٔ منبع، برچسب‌ها، وضوح و فیلترهای رنگ انتخاب‌شده خودکار به‌روز می‌شود.
 playlists-definition-title = جزئیات فهرست پخش
@@ -86,11 +87,11 @@ playlists-picker-search = جستجو با نام یا شناسه
 playlists-picker-no-match = هیچ فهرست پخشی با این جستجو مطابق نیست.
 playlists-picker-hint = کاغذدیواری‌های مورد مرور را انتخاب کنید. پخش بدون تغییر ادامه می‌یابد.
 playlists-filter-help = راهنمای فیلتر
-playlists-help-combine = فیلترها را با فاصله جدا کنید. همهٔ فیلترها باید مطابق باشند. نام‌ها و مسیرها نمی‌توانند فاصله داشته باشند.
+playlists-help-combine = فیلترها را با فاصله جدا کنید. به‌جز قاعده‌های پوشه، هر فیلتر باید مطابقت داشته باشد؛ موردی در هر یک از پوشه‌های فهرست‌شده حساب می‌شود. مسیرهای دارای فاصله را در گیومه بگذارید.
 playlists-help-source = all / favourites
     جستجو را از همهٔ کاغذدیواری‌ها یا فقط برگزیده‌ها آغاز کنید.
 playlists-help-folder = folder:nature/forest
-    دقیقاً این پوشه را نسبت به ریشهٔ کتابخانه تطبیق دهید. زیرفولدرها جدا هستند.
+    با این پوشه و زیرپوشه‌هایش مطابقت دارد. چند قاعدهٔ پوشه با هر یک از آن‌ها مطابقت دارند؛ مسیرهای دارای فاصله را در گیومه بگذارید.
 playlists-help-type = type:image / type:video / type:we
     تصویرها، ویدیوها یا کاغذدیواری‌های Wallpaper Engine. این نام‌ها هم پذیرفته می‌شوند: static، picture، pic، img؛ vid، mp4؛ scene، wallpaperengine، wallpaper-engine.
 playlists-help-tag = tag:cat,night / tag:cat|dog,-anime

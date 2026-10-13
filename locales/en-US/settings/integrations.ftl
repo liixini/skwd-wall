@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = Connect skwd-wall to the Plasma desktop. Lock-screen wallpaper options are configured below.
 settings-integrations-lock-mode-label = Lock-screen wallpaper
 settings-integrations-lock-mode-desc = Unmanaged leaves Plasma alone. Static always uses the image below. Follow tracks the most recently applied wallpaper.
 settings-integrations-lock-off = Unmanaged
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = Hovering a wallpaper temporarily rewrites
 
 settings-integrations-follow-label = Follow Skwd colours
 settings-integrations-follow-desc = Follow Skwd while it controls colour. Off keeps the current colours.
+
+settings-section-lockscreens = Lockscreens
+settings-lockscreens-source-label = Image source
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = Static image
+settings-lockscreens-image-desc = Enter the full path to an existing image, for example ~/Pictures/lockscreen.jpg. Skwd copies it for enabled lockers. A video file cannot be used here.
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = Use the current wallpaper as this lock screen’s image.
+settings-lockscreens-static-action-desc = Use the selected image as this lock screen’s background.
+settings-lockscreens-sddm-static-action-desc = Use the selected image on the sign-in screen. Administrator approval is required.
+settings-lockscreens-sddm-action-desc = Use the current wallpaper on the sign-in screen. Administrator approval is required.
+settings-lockscreens-choose-theme-desc = SDDM has no selected theme. Choose an installed theme to use the current wallpaper.
+settings-lockscreens-error = Could not update the lock screen: { $error }
+settings-lockscreens-rollback-error = Could not update the lock screen: { $error } Restoring SDDM also failed: { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = Enable
+settings-lockscreens-disable = Disable
+settings-lockscreens-advanced-label = Advanced
+settings-lockscreens-choose-theme = Choose an SDDM theme
+settings-lockscreens-pending = Updating lock screen…
+settings-lockscreens-no-sddm-theme = No installed SDDM theme is available.
+
+settings-app-themes-profile-label = Colour profile
+settings-app-themes-profile-desc = Use a static profile for this app. Follow current theme uses the active wallpaper or fixed theme.
+settings-app-themes-profile-follow = Follow current theme
+settings-app-themes-profile-missing = Unavailable: { $name }
+settings-app-themes-profile-in-use = Choose another colour profile for the apps using { $name } before deleting it.

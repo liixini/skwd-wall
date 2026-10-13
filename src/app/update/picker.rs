@@ -256,11 +256,15 @@ fn back_panel_click(app: &mut App, fi: usize, x: f32, y: f32) -> Task<Message> {
     };
     let lay = crate::frontend::ui::back_layout(&bp);
     let key = app.library_session.library.catalog().items[si as usize].key.clone();
-    let (fx, fy, _) = lay.fav;
     let within = |rect| crate::frontend::ui::back_contains(&bp, &lay, rect, x, y);
+    let half = (lay.masthead.3 - crate::frontend::ui::BACK_TOGGLE_INSET) * 0.5
+        + crate::frontend::ui::BACK_TOGGLE_GAP * 0.5;
+    let toggle = |(cx, cy, _): (f32, f32, f32)| (cx - half, cy - half, half * 2.0, half * 2.0);
 
-    if within((fx - 30.0, fy - 26.0, 60.0, 52.0)) {
+    if within(toggle(lay.fav)) {
         toggle_favourite(app, fi);
+    } else if within(toggle(lay.hide)) {
+        toggle_hidden(app, fi);
     } else if let Some(ti) = lay.tags.iter().position(|&rect| within(rect)) {
         remove_tag_at(app, &key, ti);
     } else if lay.tag_overflow.is_some_and(|rect| within((rect.0, rect.1, rect.2, rect.3))) {
@@ -273,27 +277,84 @@ fn back_panel_click(app: &mut App, fi: usize, x: f32, y: f32) -> Task<Message> {
         begin_card_tag_edit(app, &tags);
         app.scene.set_tag_editing(true);
         app.retick();
-    } else if within(lay.playlist) {
+    } else if within(lay.actions.playlist) {
         let name = app.library_session.library.catalog().items[si as usize].name.clone();
         app.open_card_picker(key, name);
         app.retick();
-    } else if lay.effects.is_some_and(within) {
+    } else if lay.actions.effects.is_some_and(within) {
         open_effects(app, fi, crate::frontend::effects::EffectsMode::Studio);
         app.retick();
-    } else if lay.reset_thumbnail.is_some_and(within) {
+    } else if lay.actions.reset_thumbnail.is_some_and(within) {
         return super::update_inner(app, Message::ResetThumbnail(si));
-    } else if lay.scene_properties.is_some_and(within) {
+    } else if lay.actions.reveal.is_some_and(within) {
+        return super::update_inner(app, Message::RevealInFiles(si));
+    } else if lay.actions.copy_image.is_some_and(within) {
+        return copy_wallpaper(app, si, crate::app::message::CopyKind::Image);
+    } else if lay.actions.copy_path.is_some_and(within) {
+        return copy_wallpaper(app, si, crate::app::message::CopyKind::Path);
+    } else if lay.actions.scene_properties.is_some_and(within) {
         app.open_scene_properties();
-    } else if lay.overview.is_some_and(within) {
+    } else if lay.actions.overview.is_some_and(within) {
         set_overview_backdrop(app, si);
         app.retick();
-    } else if within(lay.delete) {
+    } else if within(lay.actions.delete) {
         delete_wallpaper(app, si);
         app.retick();
     } else if !matches!(app.scene.mode, Mode::Slices | Mode::Depth) {
         return close_flip_or_apply(app, fi, &bp, x, y);
     }
     Task::none()
+}
+
+pub(super) fn reveal_in_files(app: &mut App, index: u32) -> Task<Message> {
+    let Some(item) = app.library_session.library.catalog().items.get(index as usize) else {
+        return Task::none();
+    };
+    if item.path.is_empty() {
+        return Task::none();
+    }
+    reveal_path(std::path::PathBuf::from(&item.path))
+}
+
+pub(super) fn copy_wallpaper(
+    app: &App,
+    index: u32,
+    kind: crate::app::message::CopyKind,
+) -> Task<Message> {
+    use crate::app::message::CopyKind;
+
+    let Some(item) = app.library_session.library.catalog().items.get(index as usize) else {
+        return Task::none();
+    };
+    if item.path.is_empty()
+        || (matches!(kind, CopyKind::Image) && item.kind != WallpaperKind::Static)
+    {
+        return Task::none();
+    }
+    let path = std::path::PathBuf::from(&item.path);
+    iced_runtime::task::blocking(move |mut sender| {
+        let result = match kind {
+            CopyKind::Image => crate::infrastructure::clipboard::copy_image(&path),
+            CopyKind::Path => crate::infrastructure::clipboard::copy_path(&path),
+        };
+        let _ = sender.try_send(Message::WallpaperCopied { kind, result });
+    })
+}
+
+pub(super) fn reveal_path(path: std::path::PathBuf) -> Task<Message> {
+    iced_runtime::task::blocking(move |mut sender| match crate::infrastructure::file_manager::show(
+        &path,
+    ) {
+        Ok(opener) => {
+            let _ = sender.try_send(Message::Revealed(Ok(())));
+            if let Some(mut opener) = opener {
+                let _ = opener.wait();
+            }
+        }
+        Err(error) => {
+            let _ = sender.try_send(Message::Revealed(Err(error)));
+        }
+    })
 }
 
 pub(super) fn reset_thumbnail(app: &mut App, index: u32) -> Task<Message> {
@@ -333,21 +394,40 @@ fn set_overview_backdrop(app: &mut App, si: u32) {
 }
 
 pub(crate) fn delete_wallpaper(app: &mut App, si: u32) {
-    let item = &app.library_session.library.catalog().items[si as usize];
-    let we_id = if item.we_id.is_empty() {
-        item.key.strip_prefix("we:").unwrap_or("").to_string()
-    } else {
-        item.we_id.clone()
+    let Some(item) = app.library_session.library.catalog().items.get(si as usize) else {
+        return;
     };
-    if we_id.is_empty() {
-        app.daemon.client.call("wall.remove", json!({ "path": item.path.clone() }));
-    } else {
-        app.daemon.client.call("wall.remove", json!({ "we_id": we_id }));
+    if app
+        .daemon
+        .pending
+        .values()
+        .any(|pending| matches!(pending, Pending::RemoveWallpaper { key, .. } if key == &item.key))
+    {
+        return;
     }
-    app.call_tracked("wall.list", json!({"favourites": false}), Pending::List);
+    if item.steam_confirmation_required && !item.steam_subscribed {
+        return;
+    }
+    let key = item.key.clone();
+    let we_id = item.engine_id();
+    let unsubscribe = item.steam_subscribed;
+    if unsubscribe && !app.unsubscribe_available() {
+        return;
+    }
+    let params = wall_proto::WallRemoveParams {
+        path: we_id.is_empty().then(|| item.path.clone()),
+        we_id: (!we_id.is_empty()).then(|| we_id.to_owned()),
+        unsubscribe: Some(unsubscribe),
+    };
+    app.call_tracked(
+        wall_proto::rpc::WALL_REMOVE,
+        serde_json::to_value(params).expect("wall removal params"),
+        Pending::RemoveWallpaper { key, unsubscribe },
+    );
     app.tags.editing = false;
     app.tags.card_drawer_open = false;
-    app.scene.close_flip();
+    app.scene.touch();
+    app.retick();
 }
 
 fn close_flip_or_apply(

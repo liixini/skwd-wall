@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = Подключает skwd-wall к рабочему столу Plasma. Параметры обоев экрана блокировки настраиваются ниже.
 settings-integrations-lock-mode-label = Обои экрана блокировки
 settings-integrations-lock-mode-desc = «Не управлять» не трогает Plasma. «Статичное изображение» всегда использует изображение ниже. «Последние применённые» следует за недавно применёнными обоями.
 settings-integrations-lock-off = Не управлять
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = Наведение на обои врем
 
 settings-integrations-follow-label = Следовать цветам Skwd
 settings-integrations-follow-desc = Следовать Skwd, когда он управляет цветами. Выключение сохраняет текущие цвета.
+
+settings-section-lockscreens = Экраны блокировки
+settings-lockscreens-source-label = Источник изображения
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = Статичное изображение
+settings-lockscreens-image-desc = Укажите полный путь к существующему изображению, например ~/Pictures/lockscreen.jpg. Skwd копирует его для включённых экранов блокировки. Здесь нельзя использовать видеофайл.
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = Использовать текущие обои для этого экрана блокировки.
+settings-lockscreens-static-action-desc = Использовать выбранное изображение в качестве фона этого экрана блокировки.
+settings-lockscreens-sddm-static-action-desc = Использовать выбранное изображение на экране входа в систему. Требуется разрешение администратора.
+settings-lockscreens-sddm-action-desc = Использовать текущие обои на экране входа в систему. Требуется разрешение администратора.
+settings-lockscreens-choose-theme-desc = В SDDM не выбрана тема. Выберите установленную тему, чтобы использовать текущие обои.
+settings-lockscreens-error = Не удалось обновить экран блокировки: { $error }
+settings-lockscreens-rollback-error = Не удалось обновить экран блокировки: { $error } Не удалось и восстановить SDDM: { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = Включить
+settings-lockscreens-disable = Выключить
+settings-lockscreens-advanced-label = Дополнительно
+settings-lockscreens-choose-theme = Выберите тему SDDM
+settings-lockscreens-pending = Обновление экрана блокировки…
+settings-lockscreens-no-sddm-theme = Установленные темы SDDM недоступны.
+
+settings-app-themes-profile-label = Цветовой профиль
+settings-app-themes-profile-desc = Использовать статический профиль для этого приложения. Текущая тема использует цвета активных обоев или фиксированной темы.
+settings-app-themes-profile-follow = Следовать текущей теме
+settings-app-themes-profile-missing = Недоступен: { $name }
+settings-app-themes-profile-in-use = Выберите другой профиль для приложений, использующих { $name }, прежде чем удалить его.

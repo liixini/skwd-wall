@@ -63,7 +63,7 @@ settings-paper-overview-only-desc = Requiere Fondo y place-within-backdrop. Paus
 
 settings-playback-choose-process = Elegir un proceso en ejecución
 settings-playback-target-dialog-title = Objetivos de pausa automática
-settings-playback-target-dialog-desc = Añade un proceso en ejecución para pausar los fondos animados mientras esté abierto. Elimina los objetivos que ya no deban pausarlos.
+settings-playback-target-dialog-desc = Añade un proceso en ejecución para pausar los fondos animados mientras esté abierto. Elimina los objetivos que ya no deban pausarlos. Usa * para cualquier número de caracteres y ? para un solo carácter.
 settings-playback-targets = Objetivos
 settings-playback-targets-empty = No hay objetivos de proceso configurados.
 settings-playback-running = Procesos en ejecución
@@ -72,7 +72,7 @@ settings-playback-target-add = Añadir
 settings-playback-target-remove = Eliminar
 settings-playback-target-close = Cerrar
 settings-playback-target-action-desc = Consulta los objetivos que pausan fondos y añade un proceso en ejecución.
-settings-playback-target-manual-placeholder = Nombre del proceso, por ejemplo mpv
+settings-playback-target-manual-placeholder = Nombre del proceso, por ejemplo steam*
 
 settings-playback-maximized = Pausar con ventanas maximizadas
 

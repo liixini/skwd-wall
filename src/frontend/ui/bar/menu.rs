@@ -1,5 +1,6 @@
 use iced::{Point, Rectangle};
 
+use super::super::misc::text_width;
 use super::action::BarAction;
 use super::canvas::FilterBar;
 use super::catalog::{MENU_MAX_ROWS, MENU_ROW_H};
@@ -12,12 +13,45 @@ pub enum MenuKind {
     Backends,
 }
 
-pub(super) fn folder_depth(folder: &str) -> usize {
-    folder.matches('/').count()
+pub(super) const FOLDER_DEPTH_STEP: f32 = 16.0;
+const FOLDER_LABEL_SIZE: f32 = 10.0;
+const FOLDER_LABEL_PADDING: f32 = 65.0;
+
+pub(super) fn folder_depth(folder: &str, roots: &[String]) -> usize {
+    let Some(root) = roots
+        .iter()
+        .filter(|root| std::path::Path::new(folder).starts_with(root))
+        .max_by_key(|root| root.len())
+    else {
+        return folder.matches('/').count();
+    };
+    folder.strip_prefix(root).unwrap_or("").trim_start_matches('/').matches('/').count()
+        + usize::from(folder != root)
 }
 
-pub(super) fn folder_leaf(folder: &str) -> &str {
+pub(crate) fn folder_leaf(folder: &str) -> &str {
     folder.rsplit('/').next().unwrap_or(folder)
+}
+
+pub(super) fn folder_label(folder: &str, roots: &[String]) -> String {
+    if roots.iter().any(|root| root == folder) {
+        return folder_short_label(folder, roots);
+    }
+    folder_leaf(folder).to_string()
+}
+
+pub(crate) fn folder_short_label(folder: &str, options: &[String]) -> String {
+    let mut parts = folder.split('/').filter(|part| !part.is_empty()).rev();
+    let mut label = parts.next().unwrap_or(folder).to_string();
+    for part in parts {
+        if options.iter().filter(|option| std::path::Path::new(option).ends_with(&label)).count()
+            <= 1
+        {
+            break;
+        }
+        label = format!("{part}/{label}");
+    }
+    label
 }
 
 pub(in crate::frontend::ui) fn item_contains(item: &BarItem, x: f32, y: f32) -> bool {
@@ -82,15 +116,20 @@ impl FilterBar<'_> {
         let visible = self.menu_len().min(MENU_MAX_ROWS) as f32;
         let height = 6.0 + visible * row_height + 8.0;
         let width = match kind {
-            MenuKind::Folders => {
-                let max_depth = self
-                    .folder_options
-                    .iter()
-                    .map(|folder| folder_depth(folder))
-                    .max()
-                    .unwrap_or(0);
-                170.0 * self.scale + (max_depth.min(6) as f32) * 16.0 * self.scale
-            }
+            MenuKind::Folders => self
+                .folder_options
+                .iter()
+                .map(|folder| {
+                    let indent = folder_depth(folder, self.folder_roots).min(6) as f32;
+                    let label = if folder == crate::domain::library::filter::ALL_WALLPAPERS {
+                        crate::i18n::tr("filter-bar-folder-all").to_string()
+                    } else {
+                        folder_label(folder, self.folder_roots)
+                    };
+                    text_width(&label, FOLDER_LABEL_SIZE * self.scale, false)
+                        + (FOLDER_LABEL_PADDING + indent * FOLDER_DEPTH_STEP) * self.scale
+                })
+                .fold(170.0 * self.scale, f32::max),
             MenuKind::Backends => 150.0 * self.scale,
         }
         .min(self.model.width.max(120.0));

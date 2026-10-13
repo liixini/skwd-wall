@@ -21,8 +21,34 @@ pub enum EffectsMsg {
     MonitorTheme(String),
     MonitorHover(Option<String>),
     MonitorApplySelected,
+    ActivitySelect(String),
     SrcMute(bool),
     SrcVolume(u32),
+}
+
+#[derive(Clone, Default)]
+pub struct ActivitySelection {
+    pub supported: bool,
+    pub ready: bool,
+    pub current: String,
+    pub selected: String,
+    pub activities: Vec<crate::contracts::daemon::Activity>,
+    pub error: Option<String>,
+    pub generation: u64,
+    pub list_request: u64,
+    pub output_request: u64,
+}
+
+impl ActivitySelection {
+    pub fn inactive(&self) -> bool {
+        self.supported && (!self.ready || self.selected != self.current)
+    }
+
+    pub fn can_apply(&self) -> bool {
+        self.ready
+            && (!self.supported
+                || self.activities.iter().any(|activity| activity.id == self.selected))
+    }
 }
 
 pub const NAV_CATEGORY: usize = 0;
@@ -104,6 +130,8 @@ pub struct Effects {
     pub(in crate::frontend::effects) preview: PreviewSourceState,
     pub(in crate::frontend::effects) panel: EffectsPanelState,
     card: usize,
+    source_key: String,
+    pub activity: ActivitySelection,
 }
 
 impl Effects {
@@ -115,7 +143,7 @@ impl Effects {
         source_kind: WallpaperKind,
         source_mute: bool,
         source_volume: u32,
-        _source_key: String,
+        source_key: String,
     ) -> Self {
         let mut effects = Self {
             editor: EffectEditorState::new(definitions),
@@ -129,13 +157,20 @@ impl Effects {
             ),
             panel: EffectsPanelState::new(),
             card,
+            source_key,
+            activity: ActivitySelection::default(),
         };
         effects.reset_params();
         effects
     }
 
+    #[cfg(test)]
     pub fn card(&self) -> usize {
         self.card
+    }
+
+    pub fn source_key(&self) -> &str {
+        &self.source_key
     }
 
     pub fn replace_source(
@@ -144,12 +179,12 @@ impl Effects {
         source_thumb: Option<String>,
         card: usize,
         source_kind: WallpaperKind,
-        source_mute: bool,
-        source_volume: u32,
+        source_key: String,
     ) {
-        self.preview =
-            PreviewSourceState::new(source, source_thumb, source_kind, source_mute, source_volume);
+        let (mute, volume) = self.source_audio();
+        self.preview = PreviewSourceState::new(source, source_thumb, source_kind, mute, volume);
         self.card = card;
+        self.source_key = source_key;
     }
 
     pub fn mode(&self) -> EffectsMode {

@@ -84,3 +84,10 @@ impl DaemonClient {
 }
 
 mod tests;
+
+pub fn apply_token() -> Result<String, getrandom::Error> {
+    const TOKEN_BYTES: usize = size_of::<u128>();
+    let mut bytes = [0; TOKEN_BYTES];
+    getrandom::fill(&mut bytes)?;
+    Ok(format!("{:032x}", u128::from_ne_bytes(bytes)))
+}

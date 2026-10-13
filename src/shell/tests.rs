@@ -29,10 +29,14 @@ fn parse_control_lines() {
 
 #[test]
 fn panel_startup() {
-    assert_eq!(startup_control_command(Some("mixer")), Some("open mixer\n"));
-    assert_eq!(startup_control_command(Some("theme-audition")), Some("open theme-audition\n"));
-    assert_eq!(startup_control_command(Some("wallpaper")), None);
-    assert_eq!(startup_control_command(None), None);
+    assert_eq!(startup_control_command(Some("mixer"), None).as_deref(), Some("open mixer\n"));
+    assert_eq!(
+        startup_control_command(Some("theme-audition"), None).as_deref(),
+        Some("open theme-audition\n")
+    );
+    assert_eq!(startup_control_command(Some("wallpaper"), None), None);
+    assert_eq!(startup_control_command(None, None), None);
+    assert_eq!(startup_control_command(None, Some("games")).as_deref(), Some("profile games\n"));
 }
 
 #[test]

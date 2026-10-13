@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+const WE_PREFIX: &str = "we:";
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum WallpaperKind {
     #[default]
@@ -25,6 +27,8 @@ pub struct Wallpaper {
     pub kind: WallpaperKind,
     pub thumb: String,
     pub thumbnail_generated: bool,
+    pub steam_subscribed: bool,
+    pub steam_confirmation_required: bool,
     pub path: String,
     pub preview: String,
     pub we_id: String,
@@ -42,13 +46,17 @@ pub struct Wallpaper {
 }
 
 impl Wallpaper {
+    pub fn engine_id(&self) -> &str {
+        if self.we_id.is_empty() {
+            self.key.strip_prefix(WE_PREFIX).unwrap_or("")
+        } else {
+            &self.we_id
+        }
+    }
+
     pub fn backdrop_source(&self) -> String {
         if self.kind == WallpaperKind::We {
-            let id = if self.we_id.is_empty() {
-                self.key.strip_prefix("we:").unwrap_or("")
-            } else {
-                &self.we_id
-            };
+            let id = self.engine_id();
             if !id.is_empty() {
                 return format!("we:{id}");
             }
@@ -71,7 +79,7 @@ impl Wallpaper {
     }
 
     pub fn folder_path(&self) -> &str {
-        if self.kind != WallpaperKind::Static {
+        if self.kind == WallpaperKind::We {
             return "";
         }
         match self.name.rfind('/') {
@@ -103,6 +111,9 @@ pub struct Catalog {
     pub colors: HashMap<String, WallpaperColor>,
     pub weather: HashMap<String, Vec<String>>,
     pub favourites: HashSet<String>,
+    pub hidden: HashSet<String>,
+    pub profile_hidden: HashSet<String>,
+    pub profile_excluded: HashSet<String>,
 }
 
 impl Catalog {
@@ -110,32 +121,75 @@ impl Catalog {
         self.favourites.contains(&wallpaper.key)
     }
 
+    pub fn is_hidden(&self, wallpaper: &Wallpaper) -> bool {
+        self.hidden.contains(&wallpaper.key) || self.profile_hidden.contains(&wallpaper.key)
+    }
+
+    pub fn has_hidden(&self) -> bool {
+        !self.hidden.is_empty() || !self.profile_hidden.is_empty()
+    }
+
+    pub fn is_shown(&self, wallpaper: &Wallpaper, reveal: bool) -> bool {
+        !self.profile_excluded.contains(&wallpaper.key) && (reveal || !self.is_hidden(wallpaper))
+    }
+
     pub fn tags_for(&self, wallpaper: &Wallpaper) -> &[String] {
         self.tags.get(&wallpaper.key).map_or(&[], Vec::as_slice)
     }
 
-    pub fn available_folders(&self) -> Vec<String> {
-        let mut seen = HashSet::new();
-        for wallpaper in &self.items {
-            let folder = wallpaper.folder_path();
-            if folder.is_empty() {
+    pub fn available_folders(&self, roots: &[String], reveal: Option<bool>) -> Vec<String> {
+        let seen = self.populated_folders(roots, reveal);
+        let all = reveal.map(|_| self.populated_folders(roots, None));
+        let mut folders = Vec::new();
+        for root in roots {
+            let hidden_root =
+                all.as_ref().is_some_and(|all| all.contains(root) && !seen.contains(root));
+            if folders.contains(root) || hidden_root {
                 continue;
             }
-            let mut prefix = String::new();
-            for segment in folder.split('/') {
-                if segment.is_empty() {
-                    continue;
-                }
-                if !prefix.is_empty() {
-                    prefix.push('/');
-                }
-                prefix.push_str(segment);
-                seen.insert(prefix.clone());
+            folders.push(root.clone());
+            let mut descendants: Vec<_> = seen
+                .iter()
+                .filter(|folder| {
+                    std::path::Path::new(folder).starts_with(root)
+                        && *folder != root
+                        && !roots.contains(folder)
+                        && !roots.iter().any(|nested| {
+                            nested != root
+                                && std::path::Path::new(nested).starts_with(root)
+                                && std::path::Path::new(folder).starts_with(nested)
+                        })
+                })
+                .cloned()
+                .collect();
+            descendants.sort();
+            folders.extend(descendants);
+        }
+        folders
+    }
+}
+
+impl Catalog {
+    fn populated_folders(&self, roots: &[String], reveal: Option<bool>) -> HashSet<String> {
+        let mut seen = HashSet::new();
+        for wallpaper in &self.items {
+            if wallpaper.kind == WallpaperKind::We
+                || reveal.is_some_and(|reveal| !self.is_shown(wallpaper, reveal))
+            {
+                continue;
+            }
+            let path = std::path::Path::new(&wallpaper.path);
+            let Some(root) =
+                roots.iter().filter(|root| path.starts_with(root)).max_by_key(|root| root.len())
+            else {
+                continue;
+            };
+            let Some(parent) = path.parent() else { continue };
+            for folder in parent.ancestors().take_while(|folder| folder.starts_with(root)) {
+                seen.insert(folder.to_string_lossy().into_owned());
             }
         }
-        let mut folders: Vec<String> = seen.into_iter().collect();
-        folders.sort();
-        folders
+        seen
     }
 }
 

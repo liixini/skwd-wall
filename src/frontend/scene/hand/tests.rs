@@ -216,7 +216,9 @@ fn relax_window_is_a_smooth_step() {
 fn stage_scale_prefers_the_tighter_axis() {
     assert!(close(stage_scale(1440.0, 900.0), 1.0));
     assert!(close(stage_scale(2560.0, 1440.0), 1.6));
-    assert!(close(stage_scale(1024.0, 768.0), 1024.0 / 1440.0));
+    assert!(close(stage_scale(1024.0, 900.0), 1024.0 / 1440.0));
+    let (min_w, min_h) = crate::frontend::ui::MIN_VIEWPORT;
+    assert!(close(stage_scale(min_w, min_h), min_h / 900.0));
 }
 
 #[test]

@@ -19,6 +19,21 @@ card-back-overview-set = 壁纸已设置
 card-back-delete = 删除
 card-back-scene-properties = 场景
 card-back-reset-thumbnail = 重置缩略图
+card-back-reveal = 在文件夹中显示
+card-back-reveal-failed = 无法打开文件管理器：{ $error }
 card-back-reset-thumbnail-done = 正在生成新的缩略图
 card-back-reset-thumbnail-error = 无法重置缩略图：{ $error }
 card-back-reset-thumbnail-deferred = 应用此壁纸时将重新生成缩略图
+
+card-back-steam-status-unknown = Steam 状态未知
+card-back-unsubscribe = 取消订阅
+card-back-deleting = 正在删除…
+card-back-unsubscribing = 正在取消订阅…
+card-back-remove-error = 无法移除壁纸：{ $error }
+
+card-back-copy-image = 复制图片
+card-back-copy-path = 复制绝对路径
+card-back-copy-image-done = 已复制图片
+card-back-copy-path-done = 已复制绝对路径
+card-back-copy-image-failed = 无法复制图片：{ $error }
+card-back-copy-path-failed = 无法复制路径：{ $error }

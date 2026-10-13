@@ -70,6 +70,9 @@ fn open_effects_inner(
     app.panels.effects = Some(effects);
     app.call_tracked("effects.list", serde_json::json!({}), Pending::EffectThemes);
     app.call_tracked("wall.outputs", serde_json::json!({}), Pending::Outputs);
+    if mode == crate::frontend::effects::EffectsMode::Displays {
+        request_activities(app);
+    }
     if request_preview
         && mode == crate::frontend::effects::EffectsMode::Studio
         && app.panels.effects.as_ref().is_some_and(|effects| {
@@ -77,6 +80,28 @@ fn open_effects_inner(
         })
     {
         crate::app::update::effects_do_preview(app);
+    }
+    app.retick();
+}
+
+pub(crate) fn request_activities(app: &mut App) {
+    let Some(effects) = app
+        .panels
+        .effects
+        .as_mut()
+        .filter(|effects| effects.mode() == crate::frontend::effects::EffectsMode::Displays)
+    else {
+        return;
+    };
+    effects.activity.ready = false;
+    effects.activity.output_request = 0;
+    let id = app.call_tracked(
+        wall_proto::rpc::WALL_ACTIVITIES,
+        serde_json::json!({}),
+        Pending::Activities,
+    );
+    if let Some(effects) = app.panels.effects.as_mut() {
+        effects.activity.list_request = id;
     }
     app.retick();
 }

@@ -65,6 +65,14 @@ fn log_diag() {
 }
 
 fn main() {
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(result) = infrastructure::clipboard::try_serve(&arguments) {
+        if let Err(err) = result {
+            eprintln!("{err}");
+            std::process::exit(1);
+        }
+        return;
+    }
     #[cfg(target_env = "gnu")]
     unsafe {
         libc::mallopt(libc::M_ARENA_MAX, MALLOC_ARENA_MAX);
@@ -72,14 +80,15 @@ fn main() {
     }
     init_startup_clock();
 
-    let args = parse_args(std::env::args().skip(1).collect());
+    let args = parse_args(arguments);
     infrastructure::runtime::set_debug(args.debug);
     if args.help {
         println!("skwd-wall-v2 {}", env!("CARGO_PKG_VERSION"));
         println!(
-            "usage: skwd-wall-v2 [--mixer] [--debug] [--version | -V]  (no arguments launches the picker)"
+            "usage: skwd-wall-v2 [--mixer] [--profile NAME] [--debug] [--version | -V]  (no arguments launches the picker)"
         );
         println!("  --mixer  Open the wallpaper mixer directly, including in a running instance.");
+        println!("  --profile NAME  Open the picker in a library profile for this launch only.");
         println!("control commands delegate to skwd-helm:\n");
         let _ = std::io::Write::flush(&mut std::io::stdout());
     }

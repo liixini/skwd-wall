@@ -1,4 +1,10 @@
+use std::collections::HashSet;
+
+use skwd_config::LibraryItem;
+
 use crate::app::SearchMode;
+use crate::domain::library::catalog::{Wallpaper, WallpaperKind};
+use crate::domain::library::filter::{ALL_WALLPAPERS, Filters};
 use crate::frontend::theme::Palette;
 use crate::infrastructure::config::Config;
 
@@ -59,10 +65,62 @@ impl App {
         entries
     }
 
+    pub(in crate::app) fn apply_library_profile(&mut self) {
+        let root = self.config.root();
+        let profile = match &self.library_session.profile_override {
+            Some(id) => skwd_config::library_profile(root, id),
+            None => skwd_config::active_library_profile(root),
+        };
+        let mut hidden = HashSet::new();
+        let mut excluded = HashSet::new();
+        for item in &self.library_session.library.catalog().items {
+            match skwd_config::profile_state(profile.as_ref(), library_item(item)) {
+                skwd_config::FolderState::Hide => {
+                    hidden.insert(item.key.clone());
+                }
+                skwd_config::FolderState::Exclude => {
+                    excluded.insert(item.key.clone());
+                }
+                skwd_config::FolderState::Show => {}
+            }
+        }
+        self.library_session.library.set_profile_sets(hidden, excluded);
+    }
+
     pub(in crate::app) fn rebuild_folder_options(&mut self) {
-        let mut options = vec![String::new(), String::from("*")];
-        options.extend(self.library_session.library.catalog().available_folders());
-        options.retain(|folder| self.library_session.filters.folder_visible(folder));
+        self.library_session.folder_roots = skwd_config::library_folders(self.config.root());
+        let catalog = self.library_session.library.catalog();
+        let roots = &self.library_session.folder_roots;
+        self.library_session.all_folders = catalog.available_folders(roots, None);
+        let shown = catalog.available_folders(roots, Some(false));
+        let mut options = vec![String::from("*")];
+        options.extend(catalog.available_folders(roots, Some(self.library_session.filters.reveal)));
+        self.library_session.folder_hidden = options
+            .iter()
+            .map(|folder| folder != ALL_WALLPAPERS && !shown.contains(folder))
+            .collect();
+        let selected = &self.library_session.filters.folder;
+        let outside_roots = std::path::Path::new(selected).is_absolute()
+            && !self
+                .library_session
+                .folder_roots
+                .iter()
+                .any(|root| std::path::Path::new(selected).starts_with(root));
+        if !options.contains(selected)
+            && (!self.library_session.library.catalog().items.is_empty() || outside_roots)
+        {
+            self.library_session.filters.folder = Filters::default().folder;
+        }
         self.library_session.folder_options = options;
+    }
+}
+
+pub(in crate::app) fn library_item(item: &Wallpaper) -> LibraryItem<'_> {
+    match (LibraryItem::new(&item.key, &item.path), item.kind) {
+        (LibraryItem::Other, WallpaperKind::We) => LibraryItem::Workshop,
+        (LibraryItem::Other, _) if !item.path.is_empty() => {
+            LibraryItem::Folder(std::path::Path::new(&item.path))
+        }
+        (classified, _) => classified,
     }
 }

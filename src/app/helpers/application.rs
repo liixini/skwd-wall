@@ -2,6 +2,26 @@
 use super::super::*;
 
 impl App {
+    pub(in crate::app) fn unsubscribe_available(&self) -> bool {
+        self.config.steam_uses_client()
+            && self.daemon.connected
+            && self.daemon.steam_client_available == Some(true)
+    }
+
+    pub(in crate::app) fn refresh_unsubscribe_status(&mut self) {
+        self.daemon.steam_client_available = None;
+        self.daemon.steam_refresh_needed = false;
+        if self.daemon.connected && self.config.steam_uses_client() {
+            if self.daemon.pending.values().any(|kind| matches!(kind, Pending::Status)) {
+                self.daemon.steam_refresh_needed = true;
+            } else {
+                self.call_tracked(wall_proto::rpc::STATUS, serde_json::json!({}), Pending::Status);
+            }
+        }
+        self.scene.touch();
+        self.retick();
+    }
+
     pub(in crate::app) fn call_tracked(
         &mut self,
         method: &str,
@@ -34,6 +54,8 @@ impl App {
         self.panels.settings.search_results.clear();
         self.panels.settings.focused_choice = None;
         self.panels.settings.armed = None;
+        self.panels.settings.sddm_themes.clear();
+        self.panels.settings.folder_undo = None;
         crate::app::update::settings_policy::flush_staged(self);
         self.release_settings_preview();
         self.retick();

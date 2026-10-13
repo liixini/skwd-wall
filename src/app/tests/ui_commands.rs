@@ -1,5 +1,12 @@
 use super::*;
 
+fn non_plasma(app: &mut App) {
+    app.on_result(
+        Pending::Activities,
+        &json!({"supported": false, "current": "", "activities": []}),
+    );
+}
+
 #[test]
 fn ui_commands() {
     let mut app = test_app();
@@ -1037,6 +1044,7 @@ fn display_commands_drive_picker() {
     assert!(state(&app)["displays"].is_null());
 
     command(&mut app, "open displays");
+    non_plasma(&mut app);
     let _ = drain_calls(&app);
     command(&mut app, "display apply");
     assert!(drain_calls(&app).is_empty());
@@ -1068,6 +1076,7 @@ fn display_commands_drive_picker() {
     assert!(app.panels.effects.is_none());
 
     command(&mut app, "open displays");
+    non_plasma(&mut app);
     app.panels.effects.as_mut().unwrap().set_monitors(screens());
     command(&mut app, "display all");
     assert_eq!(state(&app)["displays"]["targets"], json!(["*"]));
@@ -1096,6 +1105,7 @@ fn demo_display_names_no_race() {
 
     command(&mut app, "demo begin");
     command(&mut app, "open displays");
+    non_plasma(&mut app);
     let _ = drain_calls(&app);
     command(&mut app, "display hover DP-2");
     command(&mut app, "display toggle DP-2");

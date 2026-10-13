@@ -205,7 +205,10 @@ fn tag_query_input(app: &mut App, text: String) -> Task<Message> {
         let vocabulary: std::collections::HashSet<String> =
             app.library_session.library.catalog().tags.values().flatten().cloned().collect();
         let parsed: crate::domain::library::search::LibraryQuery =
-            crate::domain::library::search::parse_library_search(&app.tags.tag_search, &vocabulary);
+            crate::domain::library::search::parse_library_search(
+                &workshop_query(&app.tags.tag_search),
+                &vocabulary,
+            );
         let parsed_tags = if deleting || commits_token {
             parsed.tags
         } else {
@@ -224,12 +227,40 @@ fn tag_query_input(app: &mut App, text: String) -> Task<Message> {
         *app.tags.cloud_cache.borrow_mut() = None;
     } else {
         app.tags.semantic.search = text;
-        app.request_semantic_search();
+        let numeric = crate::domain::library::search::parse_numeric_query(&workshop_query(
+            &app.tags.semantic.search,
+        ));
+        if numeric.has_workshop() {
+            app.clear_semantic_search();
+            app.tags.semantic.ranked = app
+                .library_session
+                .library
+                .catalog()
+                .items
+                .iter()
+                .filter(|item| numeric.matches(item))
+                .map(|item| item.key.clone())
+                .collect();
+            app.tags.semantic.resolved = true;
+            app.refilter_semantic_from_start();
+        } else {
+            app.request_semantic_search();
+        }
     }
     app.tags.cloud_scroll.snap(0.0);
     app.chrome.bar.cache.clear();
     app.retick();
     iced::widget::operation::focus(tag_query_id())
+}
+
+fn workshop_query(text: &str) -> String {
+    if !text.trim().bytes().all(|byte| byte.is_ascii_digit())
+        && let Some(id) = wall_proto::workshop_id(text)
+    {
+        format!("{}:{id}", crate::domain::library::search::WORKSHOP_KEY)
+    } else {
+        text.to_string()
+    }
 }
 
 pub(super) fn clear_tags(app: &mut App) -> Task<Message> {

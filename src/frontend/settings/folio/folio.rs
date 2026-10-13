@@ -59,6 +59,10 @@ pub struct SourceCtx<'a> {
     pub library_watch: Option<&'a crate::contracts::daemon::LibraryWatchStatus>,
     pub app_themes: Option<&'a crate::contracts::daemon::AppThemesResult>,
     pub playback: Option<&'a crate::contracts::daemon::PlaybackStatus>,
+    pub weather: Option<&'a crate::contracts::daemon::WeatherStatus>,
+    pub weather_pending: bool,
+    pub playlists: &'a [crate::contracts::playlists::Playlist],
+    pub sddm_themes: &'a [String],
     pub thumbnail_task: Option<&'a crate::contracts::daemon::TaskStatus>,
     pub analysis: String,
 }
@@ -80,12 +84,18 @@ impl SourceCtx<'_> {
             self.folders,
             &self.analysis,
             self.backends,
-            self.outputs,
-            self.output_statuses,
-            self.output_previews,
-            self.library_watch,
-            self.playback,
-            self.app_themes,
+            super::super::RuntimeStatus {
+                outputs: self.outputs,
+                statuses: self.output_statuses,
+                previews: Some(self.output_previews),
+                library_watch: self.library_watch,
+                playback: self.playback,
+                app_themes: self.app_themes,
+                weather: self.weather,
+                weather_pending: self.weather_pending,
+                playlists: self.playlists,
+                sddm_themes: self.sddm_themes,
+            },
         );
         if let Some(task) = self.thumbnail_task {
             for row in cards.iter_mut().flat_map(|(_, rows)| rows) {
@@ -132,16 +142,20 @@ pub struct FocusCtx<'a> {
     pub expanded_details: &'a HashSet<String>,
     pub bar_reveals: &'a HashMap<String, Tween>,
     pub active_input: Option<&'a str>,
-    pub armed: Option<ActionId>,
+    pub armed: Option<&'a ActionId>,
 }
 
-impl FocusCtx<'_> {
-    fn on(self, area: SettingsFocus, index: usize) -> (bool, Option<usize>) {
+impl<'a> FocusCtx<'a> {
+    fn on(&self, area: SettingsFocus, index: usize) -> (bool, Option<usize>) {
         let focused = self.keyboard_focus == area && self.focused_control == index;
         (focused, if focused { self.focused_choice } else { None })
     }
 
-    fn bar(self, id: &str) -> (bool, f32) {
+    pub(super) fn reveals(&self) -> control::Reveals<'a> {
+        control::Reveals { bars: self.bar_reveals, folds: self.expanded_details }
+    }
+
+    fn bar(&self, id: &str) -> (bool, f32) {
         self.bar_reveals.get(id).map_or((false, 0.0), |reveal| (reveal.target > 0.5, reveal.x))
     }
 }
@@ -169,10 +183,66 @@ pub struct ProcessPickerView {
     pub scroll: f32,
 }
 
+#[derive(Clone, Copy)]
+pub struct ProfilesCtx<'a> {
+    pub selected: usize,
+    pub filter: &'a str,
+    pub enter: f32,
+    pub marker: f32,
+}
+
+#[derive(Clone, Copy)]
+pub struct FoldersCtx<'a> {
+    pub drafts: &'a HashMap<&'static str, String>,
+    pub undo: Option<(crate::contracts::settings::FolderKind, &'a str)>,
+}
+
+enum Page<'a> {
+    Profiles(super::profiles_page::ProfilesView<'a>),
+    Folders(super::folders_page::FoldersView<'a>),
+}
+
+fn page_view<'a>(
+    tab: &str,
+    section: usize,
+    source: &SourceCtx<'a>,
+    focus: FocusCtx<'a>,
+    profiles: ProfilesCtx<'a>,
+    folders: FoldersCtx<'a>,
+) -> Option<Page<'a>> {
+    use super::super::PageSection;
+    match super::super::page_section(tab, section)? {
+        PageSection::Profiles => Some(Page::Profiles(super::profiles_page::ProfilesView {
+            page: super::super::profiles_page(
+                source.config,
+                source.folders,
+                profiles.selected,
+                profiles.filter,
+            ),
+            filter: profiles.filter,
+            enter: profiles.enter,
+            marker: profiles.marker,
+            values: source.values,
+            reveals: focus.reveals(),
+            armed: focus.armed,
+        })),
+        PageSection::Folders(kind) => Some(Page::Folders(super::folders_page::FoldersView {
+            ledger: super::super::folder_ledger(source.config, kind, source.library_watch),
+            draft: folders.drafts.get(kind.key()).map_or("", String::as_str),
+            undo: folders.undo.filter(|(undone, _)| *undone == kind).map(|(_, path)| path),
+            values: source.values,
+            editing: focus.active_input,
+            bars: focus.bar_reveals,
+        })),
+    }
+}
+
 pub struct WorkbenchInput<'a> {
     pub source: SourceCtx<'a>,
     pub focus: FocusCtx<'a>,
     pub chrome: ChromeCtx<'a>,
+    pub profiles: ProfilesCtx<'a>,
+    pub folders: FoldersCtx<'a>,
     pub preview_path: &'a str,
     pub transition_preview: Option<iced::advanced::image::Handle>,
     pub tab_transition: f32,
@@ -183,6 +253,7 @@ pub struct WorkbenchInput<'a> {
     pub search_results: &'a [SettingsSearchResult],
     pub keybind_capture: Option<KeybindCaptureView>,
     pub process_picker: Option<ProcessPickerView>,
+    pub weather_review: Option<super::weather_review::WeatherReviewView>,
 }
 
 pub fn settings_workbench<'a>(input: WorkbenchInput<'a>) -> Element<'a, Message> {
@@ -190,6 +261,8 @@ pub fn settings_workbench<'a>(input: WorkbenchInput<'a>) -> Element<'a, Message>
         source,
         focus,
         chrome,
+        profiles,
+        folders,
         preview_path,
         transition_preview,
         tab_transition,
@@ -200,6 +273,7 @@ pub fn settings_workbench<'a>(input: WorkbenchInput<'a>) -> Element<'a, Message>
         search_results,
         keybind_capture,
         process_picker,
+        weather_review,
     } = input;
     let ChromeCtx { viewport, scale, entrance, palette } = chrome;
     let motion = source.motion();
@@ -235,11 +309,13 @@ pub fn settings_workbench<'a>(input: WorkbenchInput<'a>) -> Element<'a, Message>
         search_query,
         search_results,
     );
+    let page = page_view(tab, selected_section, &source, focus, profiles, folders);
     let reading = reading_surface(
         ReadingInput {
             tab,
             card,
             settings,
+            page,
             transition_preview,
             values: source.values,
             has_selected_preset,
@@ -306,6 +382,9 @@ pub fn settings_workbench<'a>(input: WorkbenchInput<'a>) -> Element<'a, Message>
     }
     if let Some(picker) = process_picker {
         layers = layers.push(process_picker_layer(picker, scale, palette, reveal));
+    }
+    if let Some(review) = weather_review {
+        layers = layers.push(super::weather_review::layer(review, scale, palette, reveal));
     }
     layers.into()
 }
@@ -822,14 +901,18 @@ fn picker_layout_field<'a>(
     fade: f32,
     motion: MotionProfile,
 ) -> Element<'a, Message> {
-    if let Control::AppTheme { app } = &setting.control {
-        return super::app_theme::view(
-            app.clone(),
+    if matches!(setting.control, Control::AppTheme { .. }) {
+        return field(
+            setting,
             index,
-            focus.expanded_details.contains(&format!("app-theme:{}", app.id)),
-            focus.on(SettingsFocus::Controls, index).0,
+            values,
+            has_selected_preset,
+            focus,
+            available_width,
             scale,
             palette,
+            fade,
+            motion,
         );
     }
     if setting.control.is_inline_editor() {
@@ -897,7 +980,7 @@ fn picker_layout_field<'a>(
         fade,
         focus.armed,
         motion,
-        Some(focus.bar_reveals),
+        Some(focus.reveals()),
     );
     let line = if focused || locked { palette.primary } else { palette.outline };
     mouse_area(
@@ -950,11 +1033,11 @@ fn navigation<'a>(
             let category = button(
                 row![
                     text(if active {
-                        "▾"
+                        crate::frontend::ui::TWISTY_OPEN
                     } else if rtl() {
                         "◂"
                     } else {
-                        "▸"
+                        crate::frontend::ui::TWISTY_CLOSED
                     })
                     .font(crate::frontend::ui::UI_FONT)
                     .size(10.0 * legible_type_scale(scale)),
@@ -1201,6 +1284,7 @@ struct ReadingInput<'a> {
     tab: &'a str,
     card: Card,
     settings: Vec<Row>,
+    page: Option<Page<'a>>,
     transition_preview: Option<iced::advanced::image::Handle>,
     values: &'a HashMap<String, String>,
     has_selected_preset: bool,
@@ -1268,6 +1352,7 @@ fn reading_surface<'a>(input: ReadingInput<'a>, focus: FocusCtx<'_>) -> Element<
         tab,
         card,
         mut settings,
+        page,
         transition_preview,
         values,
         has_selected_preset,
@@ -1318,18 +1403,23 @@ fn reading_surface<'a>(input: ReadingInput<'a>, focus: FocusCtx<'_>) -> Element<
     .spacing(12.0 * scale);
     let (content_width, column_width, single_column) = reading_columns(available_width, scale);
     let has_transition_preview = take_transition_preview(&mut settings);
-    let controls = field_grid(
-        settings,
-        tab == "sources" || single_column,
-        values,
-        has_selected_preset,
-        focus,
-        column_width,
-        scale,
-        palette,
-        fade,
-        motion,
-    );
+    let paint = super::page::Paint { scale, palette, fade, motion };
+    let controls = match page {
+        Some(Page::Profiles(view)) => super::profiles_page::profiles_page(view, paint),
+        Some(Page::Folders(view)) => super::folders_page::folders_page(view, paint),
+        None => field_grid(
+            settings,
+            tab == "sources" || single_column,
+            values,
+            has_selected_preset,
+            focus,
+            column_width,
+            scale,
+            palette,
+            fade,
+            motion,
+        ),
+    };
     let mut page = column![header, controls].spacing(28.0 * scale);
     if has_transition_preview {
         page = page.push(transition_preview_stage(
@@ -1855,7 +1945,7 @@ fn compact_group_field<'a>(
                 fade,
                 focus.armed,
                 motion,
-                Some(focus.bar_reveals),
+                Some(focus.reveals()),
             ),
             110.0,
         ),
@@ -1897,10 +1987,10 @@ fn field<'a>(
     fade: f32,
     motion: MotionProfile,
 ) -> Element<'a, Message> {
-    if let Control::AppTheme { app } = &setting.control {
+    if let Control::AppTheme { app, index: app_index } = &setting.control {
         return super::app_theme::view(
             app.clone(),
-            index,
+            super::app_theme::Position { row: index, app: *app_index },
             focus.expanded_details.contains(&format!("app-theme:{}", app.id)),
             focus.on(SettingsFocus::Controls, index).0,
             scale,
@@ -2016,7 +2106,7 @@ fn field<'a>(
         fade,
         focus.armed,
         motion,
-        Some(focus.bar_reveals),
+        Some(focus.reveals()),
     );
     let body = column![
         container(text(""))
@@ -2051,6 +2141,7 @@ fn field<'a>(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_lines, reason = "composes nested settings rows and app theme controls")]
 fn detail_rows<'a>(
     rows: Vec<Row>,
     parent_index: usize,
@@ -2065,6 +2156,21 @@ fn detail_rows<'a>(
 ) -> Element<'a, Message> {
     let mut content = column![].spacing(15.0 * scale);
     for row in rows {
+        if matches!(row.control, Control::AppTheme { .. }) {
+            content = content.push(field(
+                row,
+                parent_index,
+                values,
+                has_selected_preset,
+                focus,
+                available_width,
+                scale,
+                palette,
+                fade,
+                motion,
+            ));
+            continue;
+        }
         if let Control::Display(control) = row.control {
             content = content.push(control.view(scale * 0.94, palette));
             continue;
@@ -2154,7 +2260,7 @@ fn detail_rows<'a>(
             fade,
             focus.armed,
             motion,
-            Some(focus.bar_reveals),
+            Some(focus.reveals()),
         );
         content = content.push(
             column![
@@ -2226,14 +2332,7 @@ impl canvas::Program<Message> for IndexRail {
             }
         }
         let y = top + (bottom - top) * tracker_position(self.active, self.count);
-        let radius = 5.0;
-        let diamond = Path::new(|builder| {
-            builder.move_to(Point::new(x, y - radius));
-            builder.line_to(Point::new(x + radius, y));
-            builder.line_to(Point::new(x, y + radius));
-            builder.line_to(Point::new(x - radius, y));
-            builder.close();
-        });
+        let diamond = crate::frontend::ui::diamond(Point::new(x, y), 5.0);
         frame.fill(&diamond, with_alpha(self.palette.background, self.fade));
         frame.stroke(
             &diamond,
@@ -2280,13 +2379,7 @@ impl canvas::Program<Message> for Blueprint {
             &Path::line(Point::new(0.0, centre.y), Point::new(bounds.width, centre.y)),
             Stroke::default().with_color(line).with_width(1.0),
         );
-        let marker = Path::new(|builder| {
-            builder.move_to(Point::new(centre.x, centre.y - 7.0));
-            builder.line_to(Point::new(centre.x + 7.0, centre.y));
-            builder.line_to(Point::new(centre.x, centre.y + 7.0));
-            builder.line_to(Point::new(centre.x - 7.0, centre.y));
-            builder.close();
-        });
+        let marker = crate::frontend::ui::diamond(centre, 7.0);
         frame.stroke(&marker, Stroke::default().with_color(accent).with_width(1.3));
         vec![frame.into_geometry()]
     }

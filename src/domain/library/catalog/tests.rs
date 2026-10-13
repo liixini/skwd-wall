@@ -27,7 +27,7 @@ fn we_video_effective_kind() {
 }
 
 #[test]
-fn folder_path_static_only() {
+fn folder_path_local_media() {
     assert_eq!(wallpaper("anime/seasonal/x.webp").folder_path(), "anime/seasonal");
     assert_eq!(wallpaper("top.webp").folder_path(), "");
     assert_eq!(wallpaper("one/two.png").folder_path(), "one");
@@ -37,7 +37,9 @@ fn folder_path_static_only() {
         kind: WallpaperKind::Video,
         ..Wallpaper::default()
     };
-    assert_eq!(video.folder_path(), "");
+    assert_eq!(video.folder_path(), "videos");
+    let workshop = Wallpaper { kind: WallpaperKind::We, ..video };
+    assert_eq!(workshop.folder_path(), "");
 }
 
 #[test]
@@ -90,15 +92,22 @@ fn catalog_metadata_by_key() {
 }
 
 #[test]
-fn folder_prefixes_sorted() {
+fn folder_roots_sorted() {
     let catalog = Catalog {
         items: vec![
-            wallpaper("anime/seasonal/2024/x.webp"),
-            wallpaper("anime/seasonal/y.webp"),
-            wallpaper("photos/z.png"),
-            wallpaper("top.png"),
             Wallpaper {
-                name: String::from("ignored/video.mp4"),
+                path: "/walls/anime/seasonal/2024/x.webp".into(),
+                ..wallpaper("anime/seasonal/2024/x.webp")
+            },
+            Wallpaper {
+                path: "/walls/anime/seasonal/y.webp".into(),
+                ..wallpaper("anime/seasonal/y.webp")
+            },
+            Wallpaper { path: "/extra/photos/z.png".into(), ..wallpaper("/extra/photos/z.png") },
+            Wallpaper { path: "/walls/top.png".into(), ..wallpaper("top.png") },
+            Wallpaper {
+                path: "/walls/anime/clip.mp4".into(),
+                name: String::from("anime/clip.mp4"),
                 kind: WallpaperKind::Video,
                 ..Wallpaper::default()
             },
@@ -107,8 +116,57 @@ fn folder_prefixes_sorted() {
     };
 
     assert_eq!(
-        catalog.available_folders(),
-        ["anime", "anime/seasonal", "anime/seasonal/2024", "photos"]
+        catalog.available_folders(&[String::from("/walls"), String::from("/extra")], None),
+        [
+            "/walls",
+            "/walls/anime",
+            "/walls/anime/seasonal",
+            "/walls/anime/seasonal/2024",
+            "/extra",
+            "/extra/photos"
+        ]
+    );
+}
+
+#[test]
+fn hidden_roots_follow_reveal() {
+    let catalog = Catalog {
+        items: vec![
+            Wallpaper { key: "a".into(), path: "/walls/a.png".into(), ..wallpaper("a.png") },
+            Wallpaper { key: "b".into(), path: "/private/b.png".into(), ..wallpaper("b.png") },
+            Wallpaper { key: "c".into(), path: "/junk/c.png".into(), ..wallpaper("c.png") },
+        ],
+        profile_hidden: ["b".to_string()].into(),
+        profile_excluded: ["c".to_string()].into(),
+        ..Catalog::default()
+    };
+    let roots = ["/walls", "/private", "/junk", "/empty"].map(str::to_string);
+    assert_eq!(catalog.available_folders(&roots, None), roots);
+    assert_eq!(catalog.available_folders(&roots, Some(false)), ["/walls", "/empty"]);
+    assert_eq!(catalog.available_folders(&roots, Some(true)), ["/walls", "/private", "/empty"]);
+}
+
+#[test]
+fn nested_roots_distinct() {
+    let catalog = Catalog {
+        items: vec![
+            Wallpaper { path: "/walls/photos/a.png".into(), ..wallpaper("photos/a.png") },
+            Wallpaper { path: "/walls/nested/photos/b.png".into(), ..wallpaper("photos/b.png") },
+            Wallpaper { path: "/other/photos/c.png".into(), ..wallpaper("/other/photos/c.png") },
+        ],
+        ..Catalog::default()
+    };
+    let roots = ["/walls", "/walls/nested", "/other"].map(str::to_string);
+    assert_eq!(
+        catalog.available_folders(&roots, None),
+        [
+            "/walls",
+            "/walls/photos",
+            "/walls/nested",
+            "/walls/nested/photos",
+            "/other",
+            "/other/photos"
+        ]
     );
 }
 

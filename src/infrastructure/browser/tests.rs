@@ -56,6 +56,55 @@ fn wallhaven_search_encoding() {
 }
 
 #[test]
+fn wallhaven_palette() {
+    let choices = [
+        ("red", "cc0000"),
+        ("orange", "ff6600"),
+        ("yellow", "999900"),
+        ("lime", "669900"),
+        ("green", "336600"),
+        ("mint", "66cccc"),
+        ("cyan", "0099cc"),
+        ("azure", "0066cc"),
+        ("blue", "333399"),
+        ("purple", "663399"),
+        ("magenta", "993399"),
+        ("pink", "ea4c88"),
+        ("gray", "999999"),
+    ];
+    let mut browser = crate::frontend::browser::Browser::new(Source::Wallhaven);
+    for (index, (label, color)) in choices.into_iter().enumerate() {
+        assert_eq!(crate::frontend::ui::color_bucket_name(index as i64), label);
+        browser.request.wallhaven.color = index as i64;
+        let call = encode_search(&browser.search_request(1, ""));
+        assert_eq!(call.params["colors"], color);
+    }
+    browser.request.wallhaven.color = -1;
+    let call = encode_search(&browser.search_request(1, ""));
+    assert_eq!(call.params["colors"], "");
+}
+
+#[test]
+fn steam_resolution_tags() {
+    let mut browser = crate::frontend::browser::Browser::new(Source::Steam);
+    let tags = [
+        "",
+        "1920 x 1080",
+        "2560 x 1440",
+        "3840 x 2160",
+        "Ultrawide 2560 x 1080",
+        "Ultrawide 3440 x 1440",
+        "Dual 3840 x 1080",
+    ];
+    for (resolution, tag) in crate::frontend::browser::STEAM_RESOLUTIONS.into_iter().zip(tags) {
+        browser.request.steam.resolution = resolution.into();
+        let call = encode_search(&browser.search_request(1, ""));
+        let expected: Vec<&str> = (!tag.is_empty()).then_some(tag).into_iter().collect();
+        assert_eq!(call.params["tags"], json!(expected), "{resolution}");
+    }
+}
+
+#[test]
 fn provider_search_encoding() {
     let call = encode_search(&SearchRequest::Steam(SteamSearch {
         query: String::from("city"),

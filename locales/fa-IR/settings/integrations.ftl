@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = skwd-wall را به میزکار Plasma وصل کنید. گزینه‌های کاغذدیواری صفحهٔ قفل در پایین تنظیم می‌شوند.
 settings-integrations-lock-mode-label = کاغذدیواری صفحهٔ قفل
 settings-integrations-lock-mode-desc = «بدون مدیریت» Plasma را تغییر نمی‌دهد. «تصویر ثابت» همیشه از تصویر زیر استفاده می‌کند. «پیروی» آخرین کاغذدیواری اعمال‌شده را دنبال می‌کند.
 settings-integrations-lock-off = بدون مدیریت
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = نگه‌داشتن نشانگر روی �
 
 settings-integrations-follow-label = پیروی از رنگ‌های Skwd
 settings-integrations-follow-desc = تا وقتی Skwd رنگ‌ها را کنترل می‌کند از آن پیروی کنید. حالت خاموش رنگ‌های فعلی را نگه می‌دارد.
+
+settings-section-lockscreens = صفحه‌های قفل
+settings-lockscreens-source-label = منبع تصویر
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = تصویر ثابت
+settings-lockscreens-image-desc = مسیر کامل یک تصویر موجود را وارد کنید، مانند ~/Pictures/lockscreen.jpg. Skwd آن را برای صفحه‌های قفل فعال کپی می‌کند. در اینجا نمی‌توان از فایل ویدیو استفاده کرد.
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = از تصویر زمینهٔ فعلی برای تصویر این قفل‌صفحه استفاده کنید.
+settings-lockscreens-static-action-desc = از تصویر انتخاب‌شده به‌عنوان پس‌زمینهٔ این قفل‌صفحه استفاده کنید.
+settings-lockscreens-sddm-static-action-desc = از تصویر انتخاب‌شده در صفحهٔ ورود استفاده کنید. تأیید مدیر لازم است.
+settings-lockscreens-sddm-action-desc = از تصویر زمینهٔ فعلی در صفحهٔ ورود استفاده کنید. تأیید مدیر لازم است.
+settings-lockscreens-choose-theme-desc = برای SDDM پوسته‌ای انتخاب نشده است. برای استفاده از تصویر زمینهٔ فعلی، یک پوستهٔ نصب‌شده انتخاب کنید.
+settings-lockscreens-error = قفل‌صفحه به‌روزرسانی نشد: { $error }
+settings-lockscreens-rollback-error = قفل‌صفحه به‌روزرسانی نشد: { $error } بازیابی SDDM هم ناموفق بود: { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = فعال کردن
+settings-lockscreens-disable = غیرفعال کردن
+settings-lockscreens-advanced-label = پیشرفته
+settings-lockscreens-choose-theme = یک پوستهٔ SDDM انتخاب کنید
+settings-lockscreens-pending = در حال به‌روزرسانی صفحهٔ قفل…
+settings-lockscreens-no-sddm-theme = هیچ پوستهٔ SDDM نصب نشده است.
+
+settings-app-themes-profile-label = نمایهٔ رنگ
+settings-app-themes-profile-desc = برای این برنامه از نمایهٔ ثابت استفاده کنید. پیروی از پوستهٔ فعلی از رنگ‌های تصویر زمینهٔ فعال یا پوستهٔ ثابت استفاده می‌کند.
+settings-app-themes-profile-follow = پیروی از پوستهٔ فعلی
+settings-app-themes-profile-missing = ناموجود: { $name }
+settings-app-themes-profile-in-use = پیش از حذف، برای برنامه‌هایی که از { $name } استفاده می‌کنند نمایهٔ رنگ دیگری انتخاب کنید.

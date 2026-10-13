@@ -23,6 +23,21 @@ card-back-overview-set = Wallpaper set
 card-back-delete = Delete
 card-back-scene-properties = SCENE
 card-back-reset-thumbnail = Reset thumbnail
+card-back-reveal = Show in folder
+card-back-reveal-failed = Could not open the file manager: { $error }
 card-back-reset-thumbnail-done = Generating a new thumbnail
 card-back-reset-thumbnail-error = Could not reset thumbnail: { $error }
 card-back-reset-thumbnail-deferred = Thumbnail will regenerate when this wallpaper is applied
+
+card-back-steam-status-unknown = Steam status unknown
+card-back-unsubscribe = Unsubscribe
+card-back-deleting = Deleting…
+card-back-unsubscribing = Unsubscribing…
+card-back-remove-error = Could not remove wallpaper: { $error }
+
+card-back-copy-image = Copy image
+card-back-copy-path = Copy absolute path
+card-back-copy-image-done = Image copied
+card-back-copy-path-done = Absolute path copied
+card-back-copy-image-failed = Could not copy image: { $error }
+card-back-copy-path-failed = Could not copy path: { $error }

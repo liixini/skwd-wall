@@ -24,6 +24,7 @@ pub fn chrome_signature(chrome: &[Chrome], back: Option<&BackPanel>, palette: &P
         hasher.write_u8(item.kind);
         hasher.write_u8(item.has_video as u8);
         hasher.write_u8(item.favourite as u8);
+        hasher.write_u8(u8::from(item.hidden));
     }
     match back {
         None => hasher.write_u8(0),
@@ -41,6 +42,8 @@ pub fn chrome_signature(chrome: &[Chrome], back: Option<&BackPanel>, palette: &P
             hasher.write_u8(panel.animate_flip_shader as u8);
             hasher.write_u8(panel.animate_flip_back as u8);
             hasher.write(panel.title.as_bytes());
+            hasher.write(panel.removal.label().as_bytes());
+            hasher.write_u8(u8::from(panel.removal.enabled()));
             hasher.write(panel.kind_label.as_bytes());
             hasher.write_usize(panel.fields.len());
             for (key, value) in &panel.fields {
@@ -53,12 +56,14 @@ pub fn chrome_signature(chrome: &[Chrome], back: Option<&BackPanel>, palette: &P
             }
             hasher.write_u8(panel.favourite as u8);
             hasher.write_i32((panel.fav_fill * 256.0) as i32);
+            hasher.write_u8(u8::from(panel.hidden));
             hasher.write_i32((panel.add_open * 256.0) as i32);
             hasher.write_i32((panel.chip_pop * 256.0) as i32);
             hasher.write_i32(panel.pop_idx);
             hasher.write_u8(panel.static_img as u8);
             hasher.write_u8(panel.overview_available as u8);
             hasher.write_u8(panel.reset_thumbnail as u8);
+            hasher.write_u8(panel.revealable as u8);
         }
     }
     for color in [

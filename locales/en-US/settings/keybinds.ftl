@@ -63,8 +63,8 @@ keybind-scene-properties = Scene properties
 
 keybind-folder-prev = Previous folder
 keybind-folder-next = Next folder
-keybind-folder-toggle = Toggle All/Main
-keybind-hidden-folders = Show/hide hidden folders
+keybind-folder-toggle = Show all wallpapers
+keybind-hidden-folders = Show/hide hidden wallpapers
 keybind-type-prev = Previous wallpaper type
 keybind-type-next = Next wallpaper type
 keybind-sort-prev = Previous sort

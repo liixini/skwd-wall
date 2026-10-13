@@ -23,6 +23,21 @@ card-back-overview-set = Duvar kâğıdı ayarlandı
 card-back-delete = Sil
 card-back-scene-properties = SAHNE
 card-back-reset-thumbnail = Küçük resmi sıfırla
+card-back-reveal = Klasörde göster
+card-back-reveal-failed = Dosya yöneticisi açılamadı: { $error }
 card-back-reset-thumbnail-done = Yeni küçük resim oluşturuluyor
 card-back-reset-thumbnail-error = Küçük resim sıfırlanamadı: { $error }
 card-back-reset-thumbnail-deferred = Bu duvar kâğıdı uygulandığında küçük resim yeniden oluşturulacak
+
+card-back-steam-status-unknown = Steam durumu bilinmiyor
+card-back-unsubscribe = Abonelikten çık
+card-back-deleting = Siliniyor…
+card-back-unsubscribing = Abonelikten çıkılıyor…
+card-back-remove-error = Duvar kâğıdı kaldırılamadı: { $error }
+
+card-back-copy-image = Görseli kopyala
+card-back-copy-path = Mutlak yolu kopyala
+card-back-copy-image-done = Görsel kopyalandı
+card-back-copy-path-done = Mutlak yol kopyalandı
+card-back-copy-image-failed = Görsel kopyalanamadı: { $error }
+card-back-copy-path-failed = Yol kopyalanamadı: { $error }

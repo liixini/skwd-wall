@@ -1,10 +1,585 @@
 #![cfg(test)]
 
 use super::*;
+use crate::contracts::settings::FolderKind;
 use crate::frontend::settings::test_source::FakeSettingsSource;
 
 fn cfg() -> FakeSettingsSource {
     FakeSettingsSource::default()
+}
+
+fn weather_rows(cards: &[(Card, Vec<Row>)]) -> Vec<Row> {
+    let section = &cards.iter().find(|(card, _)| card.title == "Location & weather").unwrap().1;
+    section
+        .iter()
+        .flat_map(|row| match &row.control {
+            Control::Details { rows, .. } => rows.clone(),
+            _ => vec![row.clone()],
+        })
+        .collect()
+}
+
+#[test]
+fn outdoors_display_controls() {
+    use crate::contracts::daemon::{
+        LightPhase, OutdoorMatch, OutdoorOutput, OutdoorSeason, OutdoorStatus, WeatherSource,
+        WeatherState, WeatherStatus,
+    };
+
+    let cfg = cfg()
+        .with_flag(keys::weather::ENABLED, true)
+        .with_text(keys::weather::SOURCE, keys::weather::SOURCE_OUTDOORS);
+    let status = WeatherStatus {
+        enabled: true,
+        source: WeatherSource::Outdoors,
+        status: WeatherState::Active,
+        weather: vec!["cloudy".into()],
+        outdoors: Some(OutdoorStatus {
+            season: OutdoorSeason::Autumn,
+            light: LightPhase::Dusk,
+            match_kind: OutdoorMatch::Library,
+            location: "Stockholm".into(),
+            credits: Some("/assets/outdoors/sources.json".into()),
+            outputs: vec![OutdoorOutput {
+                output: "DP-1".into(),
+                key: "woods.png".into(),
+                name: "Woods".into(),
+                preview: Some("/walls/woods-thumb.png".into()),
+                held: false,
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let cards = build_tab_with_runtime_status(
+        "automation",
+        &cfg,
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { weather: Some(&status), ..Default::default() },
+    );
+    let rows = weather_rows(&cards);
+    assert!(rows.iter().any(|row| matches!(
+        &row.control,
+        Control::ActionBtn { id: ActionId::FollowOutdoors(false), label }
+            if label == "Stop following"
+    )));
+    assert!(
+        rows.iter()
+            .any(|row| row.title == "Outside now" && row.desc == "Autumn · cloudy · Evening")
+    );
+    assert!(rows.iter().any(|row| row.title == "Weather location" && row.desc == "Stockholm"));
+    assert!(rows.iter().any(|row| matches!(
+        &row.control,
+        Control::ActionBtn { id: ActionId::OutdoorCredits(path), .. }
+            if path == "/assets/outdoors/sources.json"
+    )));
+    let display = rows.iter().find(|row| row.title == "DP-1").unwrap();
+    let Control::StackBar { summary, preview, rows, .. } = &display.control else { panic!() };
+    assert_eq!(summary, "Woods");
+    assert_eq!(preview.as_deref(), Some("/walls/woods-thumb.png"));
+    assert!(matches!(&rows[0].control, Control::ActionChips { items }
+        if items.iter().any(|(id, _)| id == &ActionId::OutdoorNext("DP-1".into()))
+            && items.iter().any(|(id, _)| id == &ActionId::OutdoorExclude { output: "DP-1".into(), key: "woods.png".into() })
+            && items.iter().any(|(id, _)| id == &ActionId::OutdoorPin("DP-1".into()))));
+    let section = &cards.iter().find(|(card, _)| card.title == "Location & weather").unwrap().1;
+    assert!(section.iter().any(
+        |row| matches!(&row.control, Control::Details { id, .. } if id == "weather.advanced")
+    ));
+}
+
+#[test]
+fn outdoors_missing_location() {
+    let cards = build_tab("automation", &cfg(), &[], &[], "", &[]);
+    let rows = weather_rows(&cards);
+    assert!(rows.iter().any(|row| matches!(
+        &row.control,
+        Control::ActionBtn { id: ActionId::FollowOutdoors(true), .. }
+    )));
+    assert!(
+        rows.iter().any(|row| row.title == "Weather location" && row.desc.contains("Add one city"))
+    );
+}
+
+#[test]
+fn outdoors_policy_controls() {
+    let config = cfg()
+        .with_text(keys::transition::SHADER, "sand-helix")
+        .with_text(keys::theme::POLICY, "wallpaper");
+    let cards = build_tab("automation", &config, &[], &[], "", &[]);
+    let rows = weather_rows(&cards);
+    let transition = rows.iter().find(|row| row.title == "Transition type").unwrap();
+    let Control::Dropdown { path, options, current, .. } = &transition.control else { panic!() };
+    assert_eq!(path, keys::weather::OUTDOORS_TRANSITION_SHADER);
+    assert_eq!(current, "crossfade");
+    assert!(options.iter().any(|option| option == &("crossfade".into(), "Crossfade".into())));
+    assert!(options.iter().any(|option| option == &("random".into(), "Random".into())));
+    assert_eq!(options.len(), super::super::tables::SHADERS.len());
+    let retheme = rows.iter().find(|row| row.title == "Colour retheming").unwrap();
+    assert!(matches!(&retheme.control, Control::Toggle { path, value: false }
+        if path == keys::weather::OUTDOORS_RETHEME));
+
+    let config = cfg()
+        .with_text(keys::weather::OUTDOORS_TRANSITION_SHADER, "sand-helix")
+        .with_flag(keys::weather::OUTDOORS_RETHEME, true);
+    let rows = weather_rows(&build_tab("automation", &config, &[], &[], "", &[]));
+    assert!(rows.iter().any(|row| matches!(&row.control,
+        Control::Dropdown { path, current, .. }
+            if path == keys::weather::OUTDOORS_TRANSITION_SHADER && current == "sand-helix")));
+    assert!(rows.iter().any(|row| matches!(&row.control,
+        Control::Toggle { path, value: true } if path == keys::weather::OUTDOORS_RETHEME)));
+}
+
+#[test]
+fn outdoors_pending_controls() {
+    use crate::contracts::daemon::{OutdoorOutput, OutdoorStatus, WeatherSource, WeatherStatus};
+
+    let status = WeatherStatus {
+        source: WeatherSource::Outdoors,
+        outdoors: Some(OutdoorStatus {
+            outputs: vec![OutdoorOutput {
+                output: "DP-1".into(),
+                key: "a.png".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let cards = build_tab_with_runtime_status(
+        "automation",
+        &cfg(),
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { weather: Some(&status), weather_pending: true, ..Default::default() },
+    );
+    let rows = weather_rows(&cards);
+    assert!(rows.iter().any(|row| matches!(&row.control,
+        Control::ActionBtn { label, .. } if label == "Updating…")));
+    let display = rows.iter().find(|row| row.title == "DP-1").unwrap();
+    assert!(
+        matches!(&display.control, Control::StackBar { rows, .. } if matches!(&rows[0].control, Control::Static))
+    );
+}
+
+#[test]
+fn outdoors_fallback_feedback() {
+    use crate::contracts::daemon::{
+        OutdoorMatch, OutdoorOutput, OutdoorStatus, WeatherSource, WeatherState, WeatherStatus,
+    };
+
+    let mut status = WeatherStatus {
+        source: WeatherSource::Outdoors,
+        enabled: true,
+        status: WeatherState::Active,
+        outdoors: Some(OutdoorStatus {
+            match_kind: OutdoorMatch::Starter,
+            outputs: vec![OutdoorOutput {
+                output: "DP-1".into(),
+                key: "starter.png".into(),
+                held: true,
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let cards = build_tab_with_runtime_status(
+        "automation",
+        &cfg(),
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { weather: Some(&status), ..Default::default() },
+    );
+    let rows = weather_rows(&cards);
+    assert!(
+        rows.iter()
+            .any(|row| row.title == "Status" && row.desc == "Using the built-in starter set")
+    );
+    let display = rows.iter().find(|row| row.title == "DP-1").unwrap();
+    assert!(matches!(&display.control, Control::StackBar { rows, .. }
+        if matches!(&rows[0].control, Control::ActionChips { items }
+            if items == &[(ActionId::OutdoorResume("DP-1".into()), "Resume this display".into())])));
+
+    status.status = WeatherState::Unavailable;
+    let outdoors = status.outdoors.as_mut().unwrap();
+    outdoors.stale = true;
+    outdoors.match_kind = OutdoorMatch::Ambient;
+    outdoors.outputs[0].held = false;
+    outdoors.outputs.push(OutdoorOutput {
+        output: "DP-2".into(),
+        key: "held.png".into(),
+        held: true,
+        ..Default::default()
+    });
+    let cards = build_tab_with_runtime_status(
+        "automation",
+        &cfg(),
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { weather: Some(&status), ..Default::default() },
+    );
+    let rows = weather_rows(&cards);
+    assert!(
+        rows.iter()
+            .any(|row| row.title == "Status" && row.desc.contains("last matching wallpapers"))
+    );
+    let display = rows.iter().find(|row| row.title == "DP-1").unwrap();
+    let Control::StackBar { rows: controls, .. } = &display.control else { panic!() };
+    let Control::ActionChips { items } = &controls[0].control else { panic!() };
+    assert!(items.iter().all(|(id, _)| !matches!(id, ActionId::OutdoorNext(_))));
+    assert!(items.iter().any(|(id, _)| matches!(id, ActionId::OutdoorExclude { .. })));
+    assert!(items.iter().any(|(id, _)| matches!(id, ActionId::OutdoorPin(_))));
+    let held = rows.iter().find(|row| row.title == "DP-2").unwrap();
+    let Control::StackBar { rows: controls, .. } = &held.control else { panic!() };
+    assert!(matches!(&controls[0].control, Control::ActionChips { items }
+        if items == &[(ActionId::OutdoorResume("DP-2".into()), "Resume this display".into())]));
+}
+
+#[test]
+fn weather_mapping_controls() {
+    use crate::contracts::daemon::{WeatherState, WeatherStatus};
+
+    let cfg = cfg().with_flag(keys::weather::ENABLED, true).with_text(keys::weather::RAINY, "42");
+    let playlists = vec![crate::contracts::playlists::Playlist {
+        id: 42,
+        name: "Rain walls".into(),
+        ..Default::default()
+    }];
+    let weather = WeatherStatus {
+        weather: vec!["rainy".into(), "windy".into()],
+        enabled: true,
+        status: WeatherState::Active,
+        category: Some("rainy".into()),
+        playlist_id: Some(42),
+        playlist_name: Some("Rain walls".into()),
+        resolved_count: 3,
+        ..Default::default()
+    };
+    let cards = build_tab_with_runtime_status(
+        "automation",
+        &cfg,
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { weather: Some(&weather), playlists: &playlists, ..Default::default() },
+    );
+    let rows = weather_rows(&cards);
+    assert!(rows.iter().any(|row| matches!(
+        &row.control,
+        Control::Dropdown { path, current, options, .. }
+            if path == keys::weather::RAINY && current == "42"
+                && options.iter().any(|(id, label)| id == "42" && label.contains("Rain walls"))
+    )));
+    assert!(
+        rows.iter().any(|row| row.title == "Status" && row.desc == "Weather playlist is active.")
+    );
+    assert!(rows.iter().any(|row| row.title == "Current weather" && row.desc == "rainy, windy"));
+    assert!(
+        rows.iter().any(|row| row.title == "Available wallpapers" && row.desc == "3 wallpapers")
+    );
+}
+
+#[test]
+fn semantic_weather_controls() {
+    let cfg = cfg().with_text(keys::weather::SOURCE, "semantic");
+    let weather = crate::contracts::daemon::WeatherStatus {
+        source: crate::contracts::daemon::WeatherSource::Semantic,
+        status: crate::contracts::daemon::WeatherState::Active,
+        query: Some("rainy streets".into()),
+        resolved_count: 4,
+        ..Default::default()
+    };
+    let cards = build_tab_with_runtime_status(
+        "automation",
+        &cfg,
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { weather: Some(&weather), ..Default::default() },
+    );
+    let rows = weather_rows(&cards);
+    for path in [
+        keys::weather::SEMANTIC_CLEAR,
+        keys::weather::SEMANTIC_CLOUDY,
+        keys::weather::SEMANTIC_RAINY,
+        keys::weather::SEMANTIC_SNOWY,
+        keys::weather::SEMANTIC_STORMY,
+        keys::weather::SEMANTIC_FOGGY,
+        keys::weather::SEMANTIC_WINDY,
+    ] {
+        assert!(rows.iter().any(
+            |row| matches!(&row.control, Control::TextField { path: actual, .. } if actual == path)
+        ));
+    }
+    for path in [keys::weather::SEMANTIC_MAX_RESULTS, keys::weather::SEMANTIC_DWELL_SECONDS] {
+        assert!(rows.iter().any(
+            |row| matches!(&row.control, Control::Number { path: actual, .. } if actual == path)
+        ));
+    }
+    assert!(!rows.iter().any(
+        |row| matches!(&row.control, Control::Dropdown { path, .. } if path == keys::weather::RAINY)
+    ));
+    assert!(rows.iter().any(|row| row.title == "Current search" && row.desc == "rainy streets"));
+    assert!(
+        rows.iter().any(|row| row.title == "Available wallpapers" && row.desc == "4 wallpapers")
+    );
+    assert!(rows.iter().any(|row| matches!(
+        &row.control,
+        Control::Dropdown { path, current, .. }
+            if path == keys::weather::SOURCE && current == "semantic"
+    )));
+}
+
+#[test]
+fn semantic_search_unavailable() {
+    let weather = crate::contracts::daemon::WeatherStatus {
+        source: crate::contracts::daemon::WeatherSource::Semantic,
+        status: crate::contracts::daemon::WeatherState::SearchUnavailable,
+        ..Default::default()
+    };
+    let cards = build_tab_with_runtime_status(
+        "automation",
+        &cfg(),
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { weather: Some(&weather), ..Default::default() },
+    );
+    let rows = weather_rows(&cards);
+    assert!(rows.iter().any(|row| row.title == "Status" && row.desc.contains("Search & tags")));
+}
+
+#[test]
+fn semantic_unmapped_copy() {
+    let weather = crate::contracts::daemon::WeatherStatus {
+        source: crate::contracts::daemon::WeatherSource::Semantic,
+        status: crate::contracts::daemon::WeatherState::Unmapped,
+        ..Default::default()
+    };
+    let cards = build_tab_with_runtime_status(
+        "automation",
+        &cfg().with_text(keys::weather::SOURCE, "semantic"),
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { weather: Some(&weather), ..Default::default() },
+    );
+    let rows = weather_rows(&cards);
+    assert!(rows.iter().any(|row| row.title == "Status" && row.desc.contains("search text")));
+    assert!(rows.iter().any(|row| row.title == "Change wallpaper with the weather"
+        && row.desc.contains("selected source")));
+}
+
+#[test]
+fn unmapped_weather_visible() {
+    let cfg = cfg();
+    let weather = crate::contracts::daemon::WeatherStatus {
+        weather: vec!["clear".into(), "sunny".into()],
+        status: crate::contracts::daemon::WeatherState::Unmapped,
+        ..Default::default()
+    };
+    let cards = build_tab_with_runtime_status(
+        "automation",
+        &cfg,
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { weather: Some(&weather), ..Default::default() },
+    );
+    let rows = weather_rows(&cards);
+    assert!(rows.iter().any(|row| row.title == "Status" && row.desc.contains("No playlist")));
+    assert!(rows.iter().any(|row| row.title == "Current weather" && row.desc == "sunny"));
+}
+
+#[test]
+fn loading_weather_visible() {
+    let cfg = cfg();
+    let weather = crate::contracts::daemon::WeatherStatus {
+        status: crate::contracts::daemon::WeatherState::Loading,
+        ..Default::default()
+    };
+    let cards = build_tab_with_runtime_status(
+        "automation",
+        &cfg,
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { weather: Some(&weather), ..Default::default() },
+    );
+    let rows = weather_rows(&cards);
+    assert!(
+        rows.iter().any(|row| row.title == "Status" && row.desc == "Updating weather matches.")
+    );
+}
+
+#[test]
+fn resume_requires_direct_pause() {
+    let cfg = cfg();
+    for resume_available in [false, true] {
+        let weather = crate::contracts::daemon::WeatherStatus {
+            status: crate::contracts::daemon::WeatherState::Paused,
+            paused_outputs: vec!["DP-1".into()],
+            resume_available,
+            ..Default::default()
+        };
+        let cards = build_tab_with_runtime_status(
+            "automation",
+            &cfg,
+            &[],
+            &[],
+            "",
+            &[],
+            RuntimeStatus { weather: Some(&weather), ..Default::default() },
+        );
+        let rows = weather_rows(&cards);
+        assert!(rows.iter().any(|row| row.title == "Paused displays" && row.desc == "DP-1"));
+        assert_eq!(
+            rows.iter().any(|row| matches!(
+                row.control,
+                Control::ActionBtn { id: ActionId::ResumeWeather, .. }
+            )),
+            resume_available,
+        );
+    }
+}
+
+#[test]
+fn excluded_rows_show_scope() {
+    use crate::contracts::settings::ExclusionScope;
+    use crate::frontend::settings::{TagTone, folder_ledger};
+    let excluded = keys::library::EXCLUDED_FOLDERS;
+    let cfg = cfg()
+        .with_array_len(keys::library::FOLDERS, 1)
+        .with_text(&format!("{}.0", keys::library::FOLDERS), "/walls")
+        .with_array_len(excluded, 3)
+        .with_text(&format!("{excluded}.0"), "/walls/anime")
+        .with_text(&format!("{excluded}.1"), "/other")
+        .with_exclusion_scopes(vec![
+            ExclusionScope::Inside("/walls".into()),
+            ExclusionScope::Outside,
+            ExclusionScope::Empty,
+        ]);
+    let ledger = folder_ledger(&cfg, FolderKind::Excluded, None);
+    let rows: Vec<_> = ledger
+        .rows
+        .iter()
+        .map(|row| (row.path.as_str(), row.tag.as_ref().map(|(text, tone)| (text.as_str(), *tone))))
+        .collect();
+    assert_eq!(
+        rows,
+        [
+            ("/walls/anime", Some(("Inside walls", TagTone::Quiet))),
+            (
+                "/other",
+                Some(("Not inside any wallpaper folder, so it skips nothing", TagTone::Warn))
+            ),
+            ("", None),
+        ]
+    );
+}
+
+#[test]
+fn watch_tags_follow_status() {
+    use crate::contracts::daemon::{LibraryWatchRootStatus, LibraryWatchStatus};
+    use crate::frontend::settings::{TagTone, folder_ledger};
+    let cfg = cfg()
+        .with_array_len(keys::library::FOLDERS, 3)
+        .with_text("library.folders.0", "/native")
+        .with_text("library.folders.1", "/nas")
+        .with_text("library.folders.2", "/gone");
+    let root = |path: &str, mode: &str, error: Option<&str>| LibraryWatchRootStatus {
+        path: path.into(),
+        mode: mode.into(),
+        last_poll_error: error.map(str::to_owned),
+        ..LibraryWatchRootStatus::default()
+    };
+    let watch = LibraryWatchStatus {
+        roots: vec![
+            root("/native", "native", None),
+            root("/nas", "polling", None),
+            root("/gone", "polling", Some("denied")),
+        ],
+        ..LibraryWatchStatus::default()
+    };
+    let ledger = folder_ledger(&cfg, FolderKind::Source, Some(&watch));
+    let tags: Vec<_> = ledger
+        .rows
+        .iter()
+        .map(|row| (row.tag.as_ref().map(|(_, tone)| *tone), row.note.is_some()))
+        .collect();
+    assert_eq!(tags, [(None, false), (Some(TagTone::Info), false), (Some(TagTone::Warn), true)]);
+    assert!(folder_ledger(&cfg, FolderKind::Source, None).rows.iter().all(|row| row.tag.is_none()));
+}
+
+#[test]
+fn profile_page_lists_states() {
+    use crate::contracts::settings::ProfileState;
+    use crate::frontend::settings::profiles_page;
+    let folders = [String::from("/walls"), String::from("/walls/anime")];
+    let cfg = cfg()
+        .with_array_len(keys::library::PROFILES, 1)
+        .with_text("library.profiles.0.id", "public")
+        .with_text("library.profiles.0.name", "Public")
+        .with_text(keys::library::PROFILE, "public")
+        .with_profile_state(0, "/walls/anime", ProfileState::Hide);
+    let page = profiles_page(&cfg, &folders, 1, "");
+    let names: Vec<_> =
+        page.profiles.iter().map(|entry| (entry.name.as_str(), entry.active)).collect();
+    assert_eq!(names, [("Everything", false), ("Public", true)]);
+    assert_eq!(page.current().name_key().as_deref(), Some("library.profiles.0.name"));
+    let states: Vec<_> = page.tree.iter().map(|node| (node.depth, node.state)).collect();
+    assert_eq!(
+        states,
+        [
+            (0, Some(ProfileState::Show)),
+            (1, Some(ProfileState::Hide)),
+            (0, Some(ProfileState::Show))
+        ]
+    );
+    assert!(page.tree[0].children && page.tree[0].mixed && page.tree[0].hidden_inside == 1);
+    assert_eq!(page.tree[2].path, "library.profiles.0.workshop");
+    assert!(page.summary.contains('1'));
+    let everything = profiles_page(&cfg, &folders, 0, "");
+    assert!(everything.current().builtin());
+    assert!(everything.tree.iter().all(|node| node.path.is_empty()));
+    assert_eq!(profiles_page(&cfg, &folders, 9, "").selected, 1);
+}
+
+#[test]
+fn profile_filter_keeps_ancestors() {
+    use crate::frontend::settings::profiles_page;
+    let folders = [
+        String::from("/w"),
+        String::from("/w/anime"),
+        String::from("/w/games"),
+        String::from("/w/games/x"),
+    ];
+    let cfg =
+        cfg().with_array_len(keys::library::PROFILES, 1).with_text("library.profiles.0.id", "p");
+    let page = profiles_page(&cfg, &folders, 1, "GAM");
+    let shape: Vec<_> = page.tree.iter().map(|node| (node.label.as_str(), node.children)).collect();
+    assert_eq!(shape, [("/w", true), ("games", false)]);
+    assert!(!page.no_match);
+    let deep = profiles_page(&cfg, &folders, 1, "x");
+    let labels: Vec<_> = deep.tree.iter().map(|node| node.label.as_str()).collect();
+    assert_eq!(labels, ["/w", "games", "x"]);
+    let none = profiles_page(&cfg, &folders, 1, "zzz");
+    assert!(none.no_match && none.tree.is_empty());
 }
 
 #[test]
@@ -244,7 +819,133 @@ fn matugen_under_theme() {
     assert!(theme_paths.contains(&"integrations.0.template"));
     assert!(!integration_paths.contains(&keys::features::MATUGEN));
     assert!(!integration_paths.iter().any(|path| path.starts_with("workspace.")));
-    assert!(integrations.iter().any(|(card, _)| card.title == "KDE Plasma"));
+    assert!(integrations.iter().any(|(card, _)| card.title == "Lockscreens"));
+    assert!(!integrations.iter().any(|(card, _)| card.title == "KDE Plasma"));
+}
+
+#[test]
+fn lockscreens_under_integrations() {
+    let cards = build_tab("integrations", &cfg(), &[], &[], "", &[]);
+    let lockscreens = &cards.iter().find(|(card, _)| card.title == "Lockscreens").unwrap().1;
+    let names: Vec<_> = lockscreens.iter().map(|row| row.title.as_str()).collect();
+    assert_eq!(
+        names,
+        [
+            "KDE Plasma",
+            "Hyprlock",
+            "Swaylock",
+            "Dank Material Shell",
+            "Noctalia",
+            "SDDM",
+            "Advanced"
+        ]
+    );
+    assert!(cards.iter().any(|(card, _)| card.title == "Noctalia"));
+    assert!(cards.iter().any(|(card, _)| card.title == "Dank Material Shell"));
+    assert!(lockscreens[..6].iter().all(|row| matches!(row.control, Control::ActionBtn { .. })));
+    assert!(
+        matches!(&lockscreens[6].control, Control::Details { id, .. } if id == keys::lock_screens::MODE)
+    );
+}
+
+#[test]
+fn lockscreen_source_controls() {
+    let off = build_tab("integrations", &cfg(), &[], &[], "", &[]);
+    let static_cfg = cfg().with_text(keys::lock_screens::MODE, keys::lock_screens::STATIC);
+    let static_cards = build_tab("integrations", &static_cfg, &[], &[], "", &[]);
+    let source = |cards: Vec<(Card, Vec<Row>)>| {
+        cards.into_iter().find(|(card, _)| card.title == "Lockscreens").unwrap().1
+    };
+    let off_rows = source(off);
+    let Control::Details { rows: off_advanced, .. } = &off_rows[6].control else { panic!() };
+    assert!(matches!(&off_advanced[0].control, Control::Dropdown { options, current, .. }
+        if current == keys::lock_screens::FOLLOW
+            && options.iter().map(|(value, _)| value.as_str()).collect::<Vec<_>>()
+                == [keys::lock_screens::FOLLOW, keys::lock_screens::STATIC]));
+    assert!(!off_advanced.iter().any(|row| matches!(&row.control, Control::TextField { path, .. } if path == keys::lock_screens::IMAGE)));
+    let static_rows = source(static_cards);
+    let Control::Details { rows: static_advanced, .. } = &static_rows[6].control else { panic!() };
+    assert!(static_advanced.iter().any(|row| matches!(&row.control, Control::TextField { path, .. } if path == keys::lock_screens::IMAGE)));
+}
+
+#[test]
+fn lockscreen_actions_match_state() {
+    use crate::contracts::settings::LockScreenTarget;
+
+    let legacy = cfg().with_flag(keys::lock_screens::HYPRLOCK, true);
+    let enabled = cfg()
+        .with_text(keys::lock_screens::MODE, keys::lock_screens::FOLLOW)
+        .with_flag(keys::lock_screens::HYPRLOCK, true);
+    for (source, expected) in [(legacy, false), (enabled, true)] {
+        let cards = build_tab("integrations", &source, &[], &[], "", &[]);
+        let rows = &cards.iter().find(|(card, _)| card.title == "Lockscreens").unwrap().1;
+        assert!(matches!(&rows[1].control,
+            Control::ActionBtn { id: ActionId::SetLockScreen(LockScreenTarget::Hyprlock, next), label }
+                if *next != expected && label == if expected { "Disable" } else { "Enable" }));
+    }
+}
+
+#[test]
+fn sddm_theme_choices() {
+    let themes = vec!["breeze".to_string(), "elarun".to_string()];
+    let cards = build_tab_with_runtime_status(
+        "integrations",
+        &cfg(),
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { sddm_themes: &themes, ..Default::default() },
+    );
+    let rows = &cards.iter().find(|(card, _)| card.title == "Lockscreens").unwrap().1;
+    assert!(matches!(&rows[6].control, Control::ActionChips { items }
+        if matches!(&items[0].0, ActionId::ChooseSddmTheme(Some(theme)) if theme == "breeze")
+            && matches!(&items[2].0, ActionId::ChooseSddmTheme(None))));
+    assert!(matches!(&rows[7].control, Control::Details { .. }));
+}
+
+#[test]
+fn plasma_lock_modes_preserved() {
+    let modes = [
+        ("off", None),
+        ("static", Some(keys::plasma::LOCK_SCREEN_IMAGE)),
+        ("follow", Some(keys::plasma::LOCK_SCREEN_DYNAMIC)),
+    ];
+    for (mode, conditional) in modes {
+        let source = cfg().with_text(keys::plasma::LOCK_SCREEN_MODE, mode);
+        let cards = build_tab("integrations", &source, &[], &[], "", &[]);
+        let lockscreens = &cards.iter().find(|(card, _)| card.title == "Lockscreens").unwrap().1;
+        let Control::Details { rows, .. } = &lockscreens[6].control else { panic!() };
+        assert!(
+            matches!(&rows[1].control, Control::Dropdown { path, current, .. } if path == keys::plasma::LOCK_SCREEN_MODE && current == mode)
+        );
+        let paths: Vec<_> = rows
+            .iter()
+            .skip(2)
+            .filter_map(|row| match &row.control {
+                Control::TextField { path, .. } | Control::Dropdown { path, .. } => {
+                    Some(path.as_str())
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(paths, conditional.into_iter().collect::<Vec<_>>());
+    }
+}
+
+#[test]
+fn lockscreen_paths_in_schema() {
+    for path in [
+        keys::lock_screens::MODE,
+        keys::lock_screens::IMAGE,
+        keys::lock_screens::HYPRLOCK,
+        keys::lock_screens::SWAYLOCK,
+        keys::lock_screens::DMS,
+        keys::lock_screens::NOCTALIA,
+        keys::lock_screens::SDDM_IMAGE,
+    ] {
+        assert!(crate::contracts::settings::schema::find(path).is_some(), "{path}");
+    }
 }
 
 #[test]
@@ -331,14 +1032,17 @@ fn niri_stationary_controls_use_current_wallpaper() {
 #[test]
 fn monitor_choices_detected() {
     let cfg = FakeSettingsSource::default().with_text("monitor", "DP-9");
-    let cards = build_tab_with_outputs(
+    let cards = build_tab_with_runtime_status(
         "picker",
         &cfg,
         &[],
         &[],
         "",
         &[],
-        &[String::from("HDMI-A-1"), String::from("DP-1"), String::from("DP-1")],
+        RuntimeStatus {
+            outputs: &[String::from("HDMI-A-1"), String::from("DP-1"), String::from("DP-1")],
+            ..Default::default()
+        },
     );
     let options = cards
         .iter()
@@ -381,16 +1085,19 @@ fn displays_placement_lock() {
         String::from("DP-1"),
         String::from("/thumbs/forest.webp"),
     )]);
-    let cards = build_tab_with_output_statuses(
+    let cards = build_tab_with_runtime_status(
         "displays",
         &cfg,
         &[],
         &[],
         "",
         &[],
-        &[String::from("DP-1")],
-        &statuses,
-        &previews,
+        RuntimeStatus {
+            outputs: &[String::from("DP-1")],
+            statuses: &statuses,
+            previews: Some(&previews),
+            ..Default::default()
+        },
     );
     let rows = &cards[0].1;
     assert_eq!(rows.len(), 1);
@@ -428,16 +1135,19 @@ fn remembered_monitor_offline() {
         path: String::from("/walls/return.png"),
         ..Default::default()
     }];
-    let cards = build_tab_with_output_statuses(
+    let cards = build_tab_with_runtime_status(
         "displays",
         &cfg,
         &[],
         &[],
         "",
         &[],
-        &[],
-        &statuses,
-        &std::collections::HashMap::new(),
+        RuntimeStatus {
+            outputs: &[],
+            statuses: &statuses,
+            previews: Some(&std::collections::HashMap::new()),
+            ..Default::default()
+        },
     );
     let row = &cards[0].1[0];
     assert_eq!(row.title, "DP-3");
@@ -479,12 +1189,7 @@ fn library_watching_surfaces_polling_state_and_controls() {
         &[],
         "",
         &[],
-        &[],
-        &[],
-        &std::collections::HashMap::new(),
-        Some(&status),
-        None,
-        None,
+        RuntimeStatus { library_watch: Some(&status), ..RuntimeStatus::default() },
     );
     let rows = &cards
         .iter()
@@ -534,12 +1239,7 @@ fn library_watching_explains_recovery_and_unavailable_states() {
             &[],
             "",
             &[],
-            &[],
-            &[],
-            &std::collections::HashMap::new(),
-            Some(&status),
-            None,
-            None,
+            RuntimeStatus { library_watch: Some(&status), ..RuntimeStatus::default() },
         );
         let status_row = &cards
             .iter()
@@ -608,6 +1308,25 @@ fn picker_layout_predicate() {
         .position(|(card, _)| card.title == "Layout & presets")
         .expect("picker exposes its layout studio");
     assert_eq!(live, [studio], "the live-scene predicate must follow the composed picker tab");
+}
+
+#[test]
+fn library_page_predicate() {
+    use crate::frontend::settings::{PageSection, page_section};
+    let cards = build_tab("library", &cfg(), &[], &[], "", &[]);
+    let pages: Vec<(&str, PageSection)> = (0..cards.len())
+        .filter_map(|section| {
+            page_section("library", section).map(|page| (cards[section].0.title, page))
+        })
+        .collect();
+    assert_eq!(
+        pages,
+        [
+            ("Folders", PageSection::Folders(FolderKind::Source)),
+            ("Excluded folders", PageSection::Folders(FolderKind::Excluded)),
+            ("Profiles", PageSection::Profiles),
+        ]
+    );
 }
 
 #[test]
@@ -765,6 +1484,12 @@ fn filter_search_top_level() {
     assert!(picker.iter().all(|(card, _)| card.title != "Filter bar"));
 
     let filter = build_tab("filter", &cfg(), &[], &[], "", &[]);
+    assert!(filter.iter().all(|(card, rows)| {
+        card.title != "Weather filter"
+            && rows.iter().all(|row| {
+                !matches!(&row.control, Control::Toggle { path, .. } if path == keys::general::WEATHER_MATCH)
+            })
+    }));
     assert_eq!(
         filter.iter().map(|(card, _)| card.title).collect::<Vec<_>>(),
         [
@@ -1044,21 +1769,18 @@ fn folder_dropdown_values() {
         String::from("nature"),
     ]);
     assert_eq!(opts[0].0, "*");
-    assert_eq!(opts[1].0, "");
-    assert_eq!(opts[2], (String::from("anime"), String::from("anime")));
-    assert_eq!(opts[3], (String::from("nature"), String::from("nature")));
-    assert_eq!(opts.len(), 4);
+    assert_eq!(opts[1], (String::from("anime"), String::from("anime")));
+    assert_eq!(opts[2], (String::from("nature"), String::from("nature")));
+    assert_eq!(opts.len(), 3);
 }
 
 #[test]
 fn folder_sentinel_labels() {
     let opts = super::builder::folder_dropdown_options(&[String::new(), String::from("*")]);
     let all = crate::i18n::tr("settings-filter-all-folders");
-    let main = crate::i18n::tr("settings-filter-main-folder");
     assert_eq!(opts[0], (String::from("*"), all.to_string()));
-    assert_eq!(opts[1], (String::new(), main.to_string()));
     assert_ne!(opts[0].1, opts[0].0);
-    assert_ne!(opts[1].1, opts[1].0);
+    assert_eq!(opts.len(), 1);
 }
 
 #[test]
@@ -1498,12 +2220,7 @@ fn other_audio_status_row_follows_daemon_playback_state() {
             &[],
             "",
             &[],
-            &[],
-            &[],
-            &std::collections::HashMap::new(),
-            None,
-            Some(status),
-            None,
+            RuntimeStatus { playback: Some(status), ..RuntimeStatus::default() },
         )
         .into_iter()
         .find(|(card, _)| card.title == "Audio")
@@ -1650,16 +2367,19 @@ fn current_wallpapers_exposes_live_controls_only_for_connected_media() {
             manual_paused: false,
             ..Default::default()
         };
-        let cards = build_tab_with_output_statuses(
+        let cards = build_tab_with_runtime_status(
             "displays",
             &cfg,
             &[],
             &[],
             "",
             &[],
-            &[],
-            &[output],
-            &std::collections::HashMap::default(),
+            RuntimeStatus {
+                outputs: &[],
+                statuses: &[output],
+                previews: Some(&std::collections::HashMap::default()),
+                ..Default::default()
+            },
         );
         let Control::StackBar { rows, .. } = &cards[0].1[0].control else {
             panic!("display controls")
@@ -1710,4 +2430,68 @@ fn stationary_wallpaper_hides_overview_only_pause_control() {
         assert!(rows.iter().any(|row| matches!(&row.control,
             Control::Toggle { path, .. } if path == keys::playback::FULLSCREEN)));
     }
+}
+
+#[test]
+fn tree_follows_ancestry() {
+    use crate::contracts::settings::ProfileState;
+    let folders = [
+        String::from("/w"),
+        String::from("/w/anime"),
+        String::from("/w/anime-2"),
+        String::from("/w/anime/x"),
+        String::from("/w/anime/x/deep"),
+    ];
+    let cfg = cfg()
+        .with_array_len(keys::library::PROFILES, 1)
+        .with_text("library.profiles.0.id", "p")
+        .with_array_len(keys::library::EXCLUDED_FOLDERS, 2)
+        .with_text("library.excludedFolders.0", "/w/anime/x/old")
+        .with_text("library.excludedFolders.1", "raw")
+        .with_profile_state(0, "/w/anime/x", ProfileState::Hide)
+        .with_profile_state(0, "/w/anime/x/deep", ProfileState::Hide);
+    let mut nodes = crate::frontend::settings::profiles_page(&cfg, &folders, 1, "").tree;
+    nodes.pop();
+    let shape: Vec<(&str, u8, bool, bool)> = nodes
+        .iter()
+        .map(|node| (node.label.as_str(), node.depth, node.children, node.state.is_none()))
+        .collect();
+    assert_eq!(
+        shape,
+        [
+            ("/w", 0, true, false),
+            ("anime", 1, true, false),
+            ("x", 2, true, false),
+            ("deep", 3, false, false),
+            ("old", 3, false, true),
+            ("anime-2", 1, false, false),
+            ("raw", 1, false, true),
+        ]
+    );
+    assert_eq!(nodes[0].hidden_inside, 1);
+    assert!(nodes[0].mixed && nodes[1].mixed && !nodes[2].mixed);
+    let ids: std::collections::HashSet<_> = nodes.iter().map(|node| node.id.as_str()).collect();
+    assert_eq!(ids.len(), nodes.len());
+}
+
+#[test]
+fn fold_marks_nested() {
+    use crate::frontend::settings::{TreeNode, mark_folds};
+    let node = |id: &str, depth: u8, children: bool| TreeNode {
+        id: id.into(),
+        path: String::new(),
+        label: String::new(),
+        depth,
+        state: None,
+        mixed: false,
+        hidden_inside: 0,
+        children,
+        collapsed: false,
+    };
+    let mut nodes =
+        vec![node("r", 0, true), node("a", 1, true), node("b", 2, false), node("c", 1, true)];
+    let toggled: std::collections::HashSet<String> = ["r".to_string(), "c".to_string()].into();
+    mark_folds(&mut nodes, &toggled);
+    let collapsed: Vec<bool> = nodes.iter().map(|node| node.collapsed).collect();
+    assert_eq!(collapsed, [true, true, false, false]);
 }

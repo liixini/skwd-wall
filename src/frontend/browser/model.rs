@@ -488,7 +488,9 @@ impl Browser {
                 } else {
                     self.request.wallhaven.atleast.clone()
                 },
-                atmost: if self.request.wallhaven.res_exact {
+                atmost: if self.request.wallhaven.res_exact
+                    && self.request.wallhaven.collection.is_empty()
+                {
                     String::new()
                 } else {
                     self.request.wallhaven.atmost.clone()

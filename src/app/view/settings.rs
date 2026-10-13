@@ -7,21 +7,7 @@ use super::super::*;
 
 pub(super) fn settings_layer(app: &App) -> Element<'_, Message> {
     crate::zone!("settings_layer");
-    let source = settings::SourceCtx {
-        config: &app.config,
-        values: &app.panels.settings.inputs,
-        themes: &app.daemon.effect_themes,
-        folders: &app.library_session.folder_options,
-        backends: app.theme.backends.as_deref().unwrap_or(&[]),
-        outputs: &app.daemon.output_names,
-        output_statuses: &app.daemon.output_statuses,
-        output_previews: &app.daemon.output_wallpaper_art,
-        library_watch: app.daemon.library_watch.as_ref(),
-        playback: Some(&app.daemon.playback),
-        app_themes: app.daemon.app_themes.as_ref(),
-        thumbnail_task: app.daemon.tasks.values().find(|task| task.id == "we-thumbnails"),
-        analysis: app.panels.settings.semantic_import_status.clone(),
-    };
+    let source = app.settings_source_ctx();
     let focus = settings::FocusCtx {
         keyboard_focus: app.panels.settings.focus,
         focused_control: app.panels.settings.focused_control,
@@ -29,7 +15,7 @@ pub(super) fn settings_layer(app: &App) -> Element<'_, Message> {
         expanded_details: &app.panels.settings.expanded_details,
         bar_reveals: &app.panels.settings.bar_reveals,
         active_input: app.panels.settings.input_edit.as_ref().map(|edit| edit.key.as_str()),
-        armed: app.panels.settings.armed,
+        armed: app.panels.settings.armed.as_ref(),
     };
     let chrome = settings::ChromeCtx {
         viewport: app.scene.viewport,
@@ -44,6 +30,21 @@ pub(super) fn settings_layer(app: &App) -> Element<'_, Message> {
         source,
         focus,
         chrome,
+        profiles: settings::ProfilesCtx {
+            selected: app.panels.settings.profile,
+            filter: &app.panels.settings.profile_filter,
+            enter: app.panels.settings.profile_enter.x,
+            marker: app.panels.settings.profile_marker.x,
+        },
+        folders: settings::FoldersCtx {
+            drafts: &app.panels.settings.folder_drafts,
+            undo: app
+                .panels
+                .settings
+                .folder_undo
+                .as_ref()
+                .map(|undo| (undo.kind, undo.path.as_str())),
+        },
         preview_path: app.selected_settings_preview_path(),
         transition_preview: app.panels.transition_preview.handle.clone(),
         tab_transition: app.panels.settings.tab_anim.x,
@@ -54,6 +55,43 @@ pub(super) fn settings_layer(app: &App) -> Element<'_, Message> {
         search_results: &app.panels.settings.search_results,
         keybind_capture: keybind_capture_view(app),
         process_picker: process_picker_view(app),
+        weather_review: weather_review_view(app),
+    })
+}
+
+fn weather_review_view(app: &App) -> Option<settings::WeatherReviewView> {
+    let review = &app.panels.settings;
+    let category = review.weather_review_category?;
+    let approved = crate::app::update::weather_review::approved(app, category);
+    let catalog = app.library_session.library.catalog();
+    let catalog_by_key = catalog
+        .items
+        .iter()
+        .map(|wallpaper| (wallpaper.key.as_str(), wallpaper))
+        .collect::<std::collections::HashMap<_, _>>();
+    let items = crate::app::update::weather_review::visible_keys(app)
+        .into_iter()
+        .map(|key| {
+            let wallpaper = catalog_by_key.get(key.as_str()).copied();
+            settings::WeatherReviewItem {
+                name: wallpaper.map_or_else(|| key.clone(), |wallpaper| wallpaper.name.clone()),
+                thumbnail: wallpaper.map_or_else(String::new, |wallpaper| wallpaper.thumb.clone()),
+                approved: approved.contains(&key),
+                missing: wallpaper.is_none(),
+                key,
+            }
+        })
+        .collect();
+    Some(settings::WeatherReviewView {
+        category: category.to_owned(),
+        tab: review.weather_review_tab,
+        query: review.weather_review_query.clone(),
+        items,
+        loading: review.weather_review_loading,
+        error: review.weather_review_error.clone(),
+        focus: review.weather_review_focus,
+        library_limited: review.weather_review_tab == settings::WeatherReviewTab::Library
+            && catalog.items.len() > crate::app::update::weather_review::VISIBLE_LIMIT,
     })
 }
 

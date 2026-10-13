@@ -11,6 +11,9 @@ enum ActionKind {
     Effects,
     SceneProperties,
     ResetThumbnail,
+    Reveal,
+    CopyImage,
+    CopyPath,
     Overview,
     Delete,
 }
@@ -29,6 +32,7 @@ pub struct BackLayout {
     pub action_right: f32,
     pub kicker_cy: f32,
     pub fav: (f32, f32, f32),
+    pub hide: (f32, f32, f32),
     pub title_cy: f32,
     pub title_size: f32,
     pub facts: Vec<(f32, f32, f32, f32)>,
@@ -38,12 +42,15 @@ pub struct BackLayout {
     pub tag_overflow: Option<(f32, f32, f32, f32, usize)>,
     pub add: (f32, f32, f32, f32),
     pub actions_label_cy: f32,
-    pub playlist: (f32, f32, f32, f32),
-    pub effects: Option<(f32, f32, f32, f32)>,
-    pub scene_properties: Option<(f32, f32, f32, f32)>,
-    pub reset_thumbnail: Option<(f32, f32, f32, f32)>,
-    pub overview: Option<(f32, f32, f32, f32)>,
-    pub delete: (f32, f32, f32, f32),
+    pub actions: ActionRects,
+}
+
+pub const TOGGLE_INSET: f32 = 8.0;
+pub const TOGGLE_GAP: f32 = 6.0;
+const ACTION_LABEL_PADDING: f32 = 22.0;
+
+fn beside(fav: (f32, f32, f32), masthead_height: f32) -> (f32, f32, f32) {
+    (fav.0 - (masthead_height - TOGGLE_INSET) - TOGGLE_GAP, fav.1, fav.2)
 }
 
 pub fn back_rise(progress: f32, slot: f32) -> (f32, f32) {
@@ -61,7 +68,7 @@ fn tag_width(text: &str) -> f32 {
 }
 
 fn action_width(text: &str) -> f32 {
-    label_width(text, 22.0).clamp(64.0, 112.0)
+    label_width(text, ACTION_LABEL_PADDING).clamp(64.0, 112.0)
 }
 
 fn add_width(open: f32, available: f32) -> f32 {
@@ -140,9 +147,19 @@ fn action_specs(panel: &BackPanel, max_width: f32) -> Vec<(ActionKind, f32)> {
     if panel.reset_thumbnail {
         specs.push((ActionKind::ResetThumbnail, action_width(tr("card-back-reset-thumbnail"))));
     }
+    if panel.revealable {
+        specs.push((ActionKind::Reveal, action_width(tr("card-back-reveal"))));
+        if panel.static_img {
+            specs.push((ActionKind::CopyImage, action_width(tr("card-back-copy-image"))));
+        }
+        specs.push((
+            ActionKind::CopyPath,
+            label_width(tr("card-back-copy-path"), ACTION_LABEL_PADDING),
+        ));
+    }
     specs.extend([
         (ActionKind::Playlist, action_width(tr("card-back-playlist"))),
-        (ActionKind::Delete, action_width(tr("card-back-delete"))),
+        (ActionKind::Delete, action_width(panel.removal.label())),
     ]);
     for (_, width) in &mut specs {
         *width = width.min(max_width);
@@ -196,6 +213,7 @@ fn mirrored(layout: BackLayout) -> BackLayout {
         action_right: flip(layout.action_left, 0.0),
         kicker_cy: layout.kicker_cy,
         fav: (flip(layout.fav.0, 0.0), layout.fav.1, layout.fav.2),
+        hide: (flip(layout.hide.0, 0.0), layout.hide.1, layout.hide.2),
         title_cy: layout.title_cy,
         title_size: layout.title_size,
         facts: rects(layout.facts),
@@ -205,12 +223,7 @@ fn mirrored(layout: BackLayout) -> BackLayout {
         tag_overflow: layout.tag_overflow.map(|o| (flip(o.0, o.2), o.1, o.2, o.3, o.4)),
         add: rect(layout.add),
         actions_label_cy: layout.actions_label_cy,
-        playlist: rect(layout.playlist),
-        effects: layout.effects.map(rect),
-        scene_properties: layout.scene_properties.map(rect),
-        reset_thumbnail: layout.reset_thumbnail.map(rect),
-        overview: layout.overview.map(rect),
-        delete: rect(layout.delete),
+        actions: layout.actions.map(rect),
     }
 }
 
@@ -257,8 +270,7 @@ fn embedded_wide_layout(panel: &BackPanel) -> BackLayout {
     let lower_label = 15.0;
     let lower_rows = tag_flow.rows.len().max(action_rows.len()).max(1) as f32;
     let desired_sheet_height = top_band + lower_label + lower_rows * row_step + 10.0;
-    let sheet_height =
-        desired_sheet_height.clamp(112.0, (card_height - inset * 2.0).min(card_height * 0.36));
+    let sheet_height = desired_sheet_height.clamp(112.0, card_height - inset * 2.0);
     let sheet_top = card_bottom - inset - sheet_height;
     let masthead_height = 32.0;
     let masthead = (sheet_left, card_top + inset, sheet_width, masthead_height);
@@ -301,8 +313,7 @@ fn embedded_wide_layout(panel: &BackPanel) -> BackLayout {
         row_step,
     );
 
-    let ActionRects { playlist, effects, scene_properties, reset_thumbnail, overview, delete } =
-        assign_actions(specs, action_rectangles);
+    let actions = assign_actions(specs, action_rectangles);
     BackLayout {
         rtl: false,
         card: (card_left, card_top, card_width, card_height),
@@ -317,6 +328,7 @@ fn embedded_wide_layout(panel: &BackPanel) -> BackLayout {
         action_right: content_right,
         kicker_cy,
         fav,
+        hide: beside(fav, masthead.3),
         title_cy,
         title_size,
         facts,
@@ -326,12 +338,7 @@ fn embedded_wide_layout(panel: &BackPanel) -> BackLayout {
         tag_overflow,
         add,
         actions_label_cy,
-        playlist,
-        effects,
-        scene_properties,
-        reset_thumbnail,
-        overview,
-        delete,
+        actions,
     }
 }
 
@@ -376,8 +383,7 @@ fn embedded_stacked_layout(panel: &BackPanel) -> BackLayout {
         + label_gap
         + action_rows.len() as f32 * row_step
         + bottom_pad;
-    let sheet_height = desired_sheet_height
-        .clamp(card_height * 0.40, (card_height - inset * 2.0).min(card_height * 0.72));
+    let sheet_height = desired_sheet_height.clamp(card_height * 0.40, card_height - inset * 2.0);
     let sheet_top = card_bottom - inset - sheet_height;
     let masthead_height = if compact { 29.0 } else { 34.0 };
     let masthead = (sheet_left, card_top + inset, sheet_width, masthead_height);
@@ -420,8 +426,7 @@ fn embedded_stacked_layout(panel: &BackPanel) -> BackLayout {
         row_step,
     );
 
-    let ActionRects { playlist, effects, scene_properties, reset_thumbnail, overview, delete } =
-        assign_actions(specs, action_rectangles);
+    let actions = assign_actions(specs, action_rectangles);
     BackLayout {
         rtl: false,
         card: (card_left, card_top, card_width, card_height),
@@ -436,6 +441,7 @@ fn embedded_stacked_layout(panel: &BackPanel) -> BackLayout {
         action_right: content_right,
         kicker_cy,
         fav,
+        hide: beside(fav, masthead.3),
         title_cy,
         title_size,
         facts,
@@ -445,12 +451,7 @@ fn embedded_stacked_layout(panel: &BackPanel) -> BackLayout {
         tag_overflow,
         add,
         actions_label_cy,
-        playlist,
-        effects,
-        scene_properties,
-        reset_thumbnail,
-        overview,
-        delete,
+        actions,
     }
 }
 
@@ -537,8 +538,7 @@ fn external_layout(panel: &BackPanel) -> BackLayout {
     let (tags, tag_overflow, add, _) =
         place_tag_flow(&tag_flow, content_left, gap, tags_y, row_height, row_step);
 
-    let ActionRects { playlist, effects, scene_properties, reset_thumbnail, overview, delete } =
-        assign_actions(specs, action_rectangles);
+    let actions = assign_actions(specs, action_rectangles);
     BackLayout {
         rtl: false,
         card: (card_left, card_top, card_width, card_height),
@@ -553,6 +553,7 @@ fn external_layout(panel: &BackPanel) -> BackLayout {
         action_right,
         kicker_cy,
         fav,
+        hide: beside(fav, masthead.3),
         title_cy,
         title_size,
         facts,
@@ -562,23 +563,39 @@ fn external_layout(panel: &BackPanel) -> BackLayout {
         tag_overflow,
         add,
         actions_label_cy,
-        playlist,
-        effects,
-        scene_properties,
-        reset_thumbnail,
-        overview,
-        delete,
+        actions,
     }
 }
 
-#[derive(Default)]
-struct ActionRects {
-    playlist: (f32, f32, f32, f32),
-    scene_properties: Option<(f32, f32, f32, f32)>,
-    reset_thumbnail: Option<(f32, f32, f32, f32)>,
-    effects: Option<(f32, f32, f32, f32)>,
-    overview: Option<(f32, f32, f32, f32)>,
-    delete: (f32, f32, f32, f32),
+type Rect = (f32, f32, f32, f32);
+
+#[derive(Clone, Copy, Default)]
+pub struct ActionRects {
+    pub playlist: Rect,
+    pub scene_properties: Option<Rect>,
+    pub reset_thumbnail: Option<Rect>,
+    pub reveal: Option<Rect>,
+    pub copy_image: Option<Rect>,
+    pub copy_path: Option<Rect>,
+    pub effects: Option<Rect>,
+    pub overview: Option<Rect>,
+    pub delete: Rect,
+}
+
+impl ActionRects {
+    fn map(self, place: impl Fn(Rect) -> Rect) -> Self {
+        Self {
+            playlist: place(self.playlist),
+            scene_properties: self.scene_properties.map(&place),
+            reset_thumbnail: self.reset_thumbnail.map(&place),
+            reveal: self.reveal.map(&place),
+            copy_image: self.copy_image.map(&place),
+            copy_path: self.copy_path.map(&place),
+            effects: self.effects.map(&place),
+            overview: self.overview.map(&place),
+            delete: place(self.delete),
+        }
+    }
 }
 
 fn assign_actions(
@@ -592,6 +609,9 @@ fn assign_actions(
             ActionKind::Effects => rects.effects = Some(rectangle),
             ActionKind::SceneProperties => rects.scene_properties = Some(rectangle),
             ActionKind::ResetThumbnail => rects.reset_thumbnail = Some(rectangle),
+            ActionKind::Reveal => rects.reveal = Some(rectangle),
+            ActionKind::CopyImage => rects.copy_image = Some(rectangle),
+            ActionKind::CopyPath => rects.copy_path = Some(rectangle),
             ActionKind::Overview => rects.overview = Some(rectangle),
             ActionKind::Delete => rects.delete = rectangle,
         }

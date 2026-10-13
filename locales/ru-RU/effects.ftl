@@ -85,3 +85,12 @@ effects-name-topographic = Топография
 effects-name-tonal-layers = Тональные слои
 
 effects-saved-palette = { $name } (сохранено)
+
+effects-activity-label = Активность
+effects-activity-desc = Выберите активность Plasma для обоев. Рабочий стол останется в текущей активности.
+effects-activity-current = Текущая
+effects-activity-inactive-desc = Для неактивной активности можно изменить только назначение обоев. Настройки экранов и воспроизведения относятся к текущему рабочему столу.
+effects-activity-unavailable = Выбранная активность недоступна. Выберите существующую активность и повторите попытку.
+effects-activity-saved = Сохранено для { $activity }.
+effects-activity-unassigned = Обои Skwd не назначены
+effects-activity-preparing = Подготовка обоев для { $activity }.

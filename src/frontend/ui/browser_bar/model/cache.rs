@@ -10,6 +10,9 @@ use super::super::super::{mirror_x_for, rtl};
 use super::builder::browser_bar_items;
 use super::types::BrowserAct;
 
+const SAFETY_GROUP: &str = "browser-group-safety";
+const SAFETY_COLOUR_GROUP: &str = "browser-group-safety-colour";
+
 fn browser_bar_key(browser: &Browser, scale: f32, max_width: f32, rtl: bool) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     scale.to_bits().hash(&mut hasher);
@@ -88,7 +91,7 @@ pub(super) fn compact_reflow(
         if matches!(action, BrowserAct::Close) {
             continue;
         }
-        let group = compact_section_label(browser.source, &action);
+        let group = compact_section_label(browser, &action);
         let starts_group = current_group.is_some_and(|previous| previous != group);
         if current_group.is_none() || starts_group {
             if starts_group {
@@ -148,8 +151,8 @@ pub(super) fn compact_reflow(
     output
 }
 
-fn compact_section_label(source: Source, action: &BrowserAct) -> &'static str {
-    tr(match (source, action) {
+fn compact_section_label(browser: &Browser, action: &BrowserAct) -> &'static str {
+    tr(match (browser.source, action) {
         (Source::Wallhaven, BrowserAct::Category(_)) => "browser-group-content",
         (Source::Wallhaven, BrowserAct::Sort(_) | BrowserAct::TopRange(_))
         | (Source::Steam, BrowserAct::Sort(_) | BrowserAct::SteamFilter("days", _))
@@ -157,7 +160,11 @@ fn compact_section_label(source: Source, action: &BrowserAct) -> &'static str {
             "browser-group-order"
         }
         (Source::Wallhaven, BrowserAct::Purity(_) | BrowserAct::Color(_)) => {
-            "browser-group-safety-colour"
+            if browser.request.wallhaven.collection.is_empty() {
+                SAFETY_COLOUR_GROUP
+            } else {
+                SAFETY_GROUP
+            }
         }
         (
             Source::Wallhaven,
@@ -170,9 +177,7 @@ fn compact_section_label(source: Source, action: &BrowserAct) -> &'static str {
         }
         (Source::Steam, BrowserAct::SteamFilter("res", _)) => "browser-group-resolution",
         (Source::Steam, BrowserAct::SteamFilter("cat", _)) => "browser-group-subject",
-        (Source::Unsplash, BrowserAct::CatalogFilter("unsplash-safety", _)) => {
-            "browser-group-safety"
-        }
+        (Source::Unsplash, BrowserAct::CatalogFilter("unsplash-safety", _)) => SAFETY_GROUP,
         (Source::Unsplash, BrowserAct::CatalogFilter("unsplash-orientation", _))
         | (Source::Pexels, BrowserAct::CatalogFilter("pexels-orientation", _)) => {
             "browser-group-orientation"

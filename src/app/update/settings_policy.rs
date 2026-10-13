@@ -1,3 +1,4 @@
+use crate::app::state::WeatherRefresh;
 use serde_json::{Value, json};
 
 #[allow(clippy::wildcard_imports)]
@@ -11,6 +12,9 @@ pub(super) fn stage_value(app: &mut App, path: &str, value: &Value) {
     mark_deferred_reload(app, path);
     app.config.set_key(path, value);
     sync_picker_runtime(app, path);
+    if changes_weather_members(path) {
+        clear_weather_status(app);
+    }
 }
 
 pub(super) fn save_value(app: &mut App, path: &str, value: &Value) {
@@ -18,10 +22,30 @@ pub(super) fn save_value(app: &mut App, path: &str, value: &Value) {
         return;
     };
     app.config.ensure_selector_enabled();
+    if path == skwd_config::keys::lock_screens::MODE
+        && value.as_str() != Some(skwd_config::keys::lock_screens::OFF)
+        && app.config.str_path(path) == skwd_config::keys::lock_screens::OFF
+    {
+        for key in skwd_config::keys::lock_screens::TARGET_FLAGS {
+            app.config.set_key(key, json!(false));
+        }
+        app.config.set_key(skwd_config::keys::lock_screens::SDDM_IMAGE, json!(""));
+    }
     app.config.save_key(path, value.clone());
     sync_audio(app, path, &value);
     sync_picker_runtime(app, path);
     reload_now(app, path);
+    if changes_weather_members(path) {
+        clear_weather_status(app);
+    }
+    if path == skwd_config::keys::general::LOCALE
+        || path == skwd_config::keys::schedule::LATITUDE
+        || path == skwd_config::keys::schedule::LONGITUDE
+        || path == skwd_config::keys::semantic::ENABLED
+        || path.starts_with(skwd_config::keys::weather::PREFIX)
+    {
+        app.call_tracked(wall_proto::rpc::WALL_WEATHER, json!({}), Pending::Weather);
+    }
 }
 
 pub(super) fn save_audio_volume(app: &mut App, volume: u32, unmute: bool) {
@@ -50,6 +74,26 @@ pub(in crate::app) fn flush_staged(app: &mut App) {
         app.panels.settings.schedule_dirty = false;
         app.daemon.client.call("schedule.reload", json!({}));
     }
+    if matches!(app.panels.settings.weather_refresh, WeatherRefresh::Pending) {
+        app.panels.settings.weather_refresh = WeatherRefresh::Clean;
+        app.call_tracked(wall_proto::rpc::WALL_WEATHER, json!({}), Pending::Weather);
+    }
+}
+
+pub(super) fn changes_weather_members(path: &str) -> bool {
+    path.starts_with(skwd_config::keys::weather::PREFIX)
+        || matches!(
+            path,
+            skwd_config::keys::semantic::ENABLED
+                | skwd_config::keys::schedule::LATITUDE
+                | skwd_config::keys::schedule::LONGITUDE
+                | skwd_config::keys::general::LOCALE
+        )
+}
+
+fn clear_weather_status(app: &mut App) {
+    app.daemon.weather = None;
+    app.daemon.pending.retain(|_, kind| *kind != Pending::Weather);
 }
 
 fn requires_we_reload(path: &str) -> bool {
@@ -79,6 +123,13 @@ fn mark_deferred_reload(app: &mut App, path: &str) {
     if is_schedule(path) {
         app.panels.settings.schedule_dirty = true;
     }
+    if path.starts_with(skwd_config::keys::weather::PREFIX)
+        || path == skwd_config::keys::general::LOCALE
+        || path == skwd_config::keys::schedule::LATITUDE
+        || path == skwd_config::keys::schedule::LONGITUDE
+    {
+        app.panels.settings.weather_refresh = WeatherRefresh::Pending;
+    }
 }
 
 fn reload_now(app: &mut App, path: &str) {
@@ -105,6 +156,9 @@ fn sync_audio(app: &mut App, path: &str, value: &Value) {
 }
 
 fn sync_picker_runtime(app: &mut App, path: &str) {
+    if path == skwd_config::keys::library::PROFILE {
+        app.reload_library_profile();
+    }
     if path == skwd_config::keys::semantic::ENABLED {
         app.sync_semantic_enabled();
     }

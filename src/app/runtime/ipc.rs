@@ -33,10 +33,10 @@ impl App {
         }
         self.call_tracked("effects.list", json!({}), Pending::EffectThemes);
         self.call_tracked("wall.outputs", json!({}), Pending::Outputs);
+        crate::app::helpers::request_activities(self);
         self.call_tracked("status", json!({}), Pending::Status);
-        if self.library_session.filters.weather_active {
-            self.call_tracked("wall.weather", json!({}), Pending::Weather);
-        }
+        self.call_tracked(wall_proto::rpc::WALL_WEATHER, json!({}), Pending::Weather);
+        self.call_tracked(wall_proto::rpc::PLAYLIST_LIST, json!({}), Pending::WeatherPlaylists);
         self.call_tracked("task.list", json!({}), Pending::TaskList);
         if self.source_browser.browser.is_some() {
             self.run_browser_search(false);
@@ -51,11 +51,16 @@ impl App {
     }
 
     fn ipc_disconnected(&mut self) {
+        self.daemon.weather = None;
+        self.daemon.steam_client_available = None;
+        self.daemon.steam_refresh_needed = false;
+        self.scene.touch();
         self.library_session.list_dirty = true;
         let dropped: Vec<Pending> = self.daemon.pending.drain().map(|(_, kind)| kind).collect();
         for kind in dropped {
             self.rpc_error(kind, crate::i18n::tr("status-daemon-lost").to_string());
         }
+        self.fail_activity_requests(crate::i18n::tr("status-daemon-lost"));
         self.theme.job_pending = None;
         self.theme.audition_pending_backend = None;
         if self.daemon.connected {
@@ -73,6 +78,22 @@ impl App {
         let Some(kind) = self.daemon.pending.remove(&id) else {
             return false;
         };
+        if matches!(kind, Pending::Activities | Pending::ActivityOutputs { .. })
+            && !self.panels.effects.as_ref().is_some_and(|effects| {
+                if matches!(kind, Pending::Activities) {
+                    effects.activity.list_request == id
+                } else {
+                    effects.activity.output_request == id
+                }
+            })
+        {
+            return false;
+        }
+        if matches!(kind, Pending::Activities)
+            && let Some(effects) = self.panels.effects.as_mut()
+        {
+            effects.activity.list_request = 0;
+        }
         let quiet = matches!(kind, Pending::Diag);
         if let Some(error) = error {
             let message = wall_proto::redact_sensitive(&error.message);
@@ -81,6 +102,19 @@ impl App {
             return !quiet;
         }
         let Some(result) = result else {
+            if matches!(
+                kind,
+                Pending::Status | Pending::WeatherAction | Pending::LockScreenSet { .. }
+            ) {
+                self.rpc_error(kind, crate::i18n::tr("status-daemon-lost").to_string());
+            } else if matches!(
+                kind,
+                Pending::Activities
+                    | Pending::ActivityOutputs { .. }
+                    | Pending::ActivityApply { .. }
+            ) {
+                self.rpc_error(kind, crate::i18n::tr("effects-activity-unavailable").to_string());
+            }
             return !quiet;
         };
         self.on_result(kind, &result);

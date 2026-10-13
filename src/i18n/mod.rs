@@ -14,7 +14,7 @@ pub use catalog::{
 };
 
 macro_rules! tr_args {
-    ($key:literal $(, $name:ident => $value:expr)+ $(,)?) => {{
+    ($key:expr $(, $name:ident => $value:expr)+ $(,)?) => {{
         let mut args = ::fluent::FluentArgs::new();
         $(args.set(stringify!($name), $value);)+
         $crate::i18n::format($key, &args)

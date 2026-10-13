@@ -1,6 +1,8 @@
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ActionId {
     SetThemeTarget(&'static str, bool),
+    SetLockScreen(crate::contracts::settings::LockScreenTarget, bool),
+    ChooseSddmTheme(Option<String>),
     RefreshAppThemes,
     SetAppTheme(u8, bool),
     AdoptAppTheme(u8),
@@ -15,6 +17,13 @@ pub enum ActionId {
     CopyLayerRule,
     AddPostCommand,
     RemovePostCommand(u16),
+    AddFolder(crate::contracts::settings::FolderKind),
+    ChooseFolder(crate::contracts::settings::FolderKind, Option<usize>),
+    RemoveFolder(crate::contracts::settings::FolderKind, usize),
+    UndoFolderRemove,
+    NewProfile,
+    DeleteProfile(u16),
+    CopyProfileCommand(u16, bool),
     AddIntegration,
     RemoveIntegration(u16),
     ImportSemanticModel,
@@ -26,6 +35,15 @@ pub enum ActionId {
     CreateResolutionPresetBand(&'static str),
     RemoveResolutionPreset(u16),
     OpenScheduleEditor,
+    RefreshWeather,
+    ResumeWeather,
+    ReviewWeather(&'static str),
+    FollowOutdoors(bool),
+    OutdoorNext(String),
+    OutdoorExclude { output: String, key: String },
+    OutdoorPin(String),
+    OutdoorResume(String),
+    OutdoorCredits(String),
     OpenThemeDesigner,
     ChooseRunningProcess,
     GenerateBugReport,
@@ -37,7 +55,7 @@ pub enum ActionId {
 }
 
 impl ActionId {
-    pub const fn is_destructive(self) -> bool {
+    pub const fn is_destructive(&self) -> bool {
         matches!(
             self,
             Self::ClearCache
@@ -45,6 +63,7 @@ impl ActionId {
                 | Self::ResetKeybinds
                 | Self::DeleteSemanticModel(_)
                 | Self::DeleteActiveSemanticModel
+                | Self::DeleteProfile(_)
         )
     }
 }
@@ -69,6 +88,16 @@ pub enum SettingsKey {
     Cancel,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum WeatherReviewTab {
+    #[default]
+    Suggested,
+    Approved,
+    Library,
+}
+
+pub const WEATHER_REVIEW_TAB_COUNT: usize = 3;
+
 #[derive(Debug, Clone)]
 pub enum SettingsMsg {
     Input(String, String),
@@ -86,6 +115,11 @@ pub enum SettingsMsg {
     FocusControl(usize),
     ToggleDetails(String, usize),
     ToggleBar(String, usize),
+    ToggleFold(String, bool),
+    SelectProfile(usize),
+    ProfileFilter(String),
+    EditFolder(String),
+    FolderDraft(crate::contracts::settings::FolderKind, String),
     SearchOpen,
     SearchClose,
     SearchInput(String),
@@ -106,4 +140,8 @@ pub enum SettingsMsg {
     ProcessPickerScroll(f32),
     ProcessPickerAdd(String),
     ProcessPickerRemove(String),
+    WeatherReviewClose,
+    WeatherReviewTab(WeatherReviewTab),
+    WeatherReviewSearch(String),
+    WeatherReviewToggle(String),
 }

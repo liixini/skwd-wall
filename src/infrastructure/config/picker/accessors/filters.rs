@@ -39,7 +39,13 @@ impl Config {
     }
 
     pub fn last_filter_folder(&self) -> String {
-        self.str_at(skwd_config::keys::filter_bar::LAST_FOLDER, &self.default_folder())
+        let folder =
+            self.str_at(skwd_config::keys::filter_bar::LAST_FOLDER, &self.default_folder());
+        if folder.is_empty() {
+            String::from(crate::domain::library::filter::ALL_WALLPAPERS)
+        } else {
+            folder
+        }
     }
 
     pub fn resolution_presets(&self) -> Vec<ResolutionPreset> {

@@ -30,7 +30,8 @@ fn set_folder_narrows() {
     assert!(app.library_session.playlist_filter.is_none());
     assert_eq!(filtered_names(&app), ["nature/a.png", "nature/deep/b.png"]);
     let _ = update(&mut app, Message::SetFolder(String::new()));
-    assert_eq!(filtered_names(&app), ["root.png"]);
+    assert_eq!(app.library_session.filters.folder, "*");
+    assert_eq!(app.library_session.filtered.len(), 4);
     let _ = update(&mut app, Message::SetFolder(String::from("*")));
     assert_eq!(app.library_session.filtered.len(), 4);
 }
@@ -416,20 +417,155 @@ fn tag_mode_clears() {
 }
 
 #[test]
-fn weather_filter_toggle() {
+fn weather_browse_stays_full() {
     let mut app = test_app();
-    app.on_result(Pending::Weather, &json!({"weather": ["rainy", "windy"]}));
-    assert!(app.library_session.filters.weather_active);
-    assert_eq!(
-        app.library_session.filters.current_weather,
-        vec!["rainy".to_string(), "windy".to_string()]
+    seed(&mut app, &[wall("rain.png", "static", 1, 0), wall("sun.png", "static", 2, 0)]);
+    app.config.set_key(skwd_config::keys::general::WEATHER_MATCH, json!(true));
+    app.config.set_key(skwd_config::keys::weather::SOURCE, json!("outdoors"));
+    app.config.set_key(skwd_config::keys::weather::ENABLED, json!(true));
+    app.refilter();
+    assert_eq!(filtered_names(&app), ["rain.png", "sun.png"]);
+
+    let location_key = app.outdoor_location_key();
+    let active = json!({
+        "weather": ["rainy"], "enabled": true, "source": "outdoors",
+        "status": "active", "location_key": location_key,
+        "member_keys": ["rain.png"],
+        "outdoors": {"generation": 2, "season": "autumn", "light": "dusk",
+            "match_kind": "library", "location": "Stockholm", "stale": false,
+            "outputs": [{"output": "DP-1", "key": "rain.png", "name": "Rain",
+                "preview": "/walls/rain-thumb.png", "held": false}]}
+    });
+    app.on_result(Pending::Weather, &active);
+    assert_eq!(filtered_names(&app), ["rain.png", "sun.png"]);
+    let state: serde_json::Value = super::update::ui_state_json(&app).parse().unwrap();
+    assert_eq!(state["outdoors"]["active"], true);
+    assert_eq!(state["outdoors"]["context"]["outputs"][0]["key"], "rain.png");
+
+    app.scene.set_current(1, 2);
+    let mut old = active.clone();
+    old["outdoors"]["generation"] = json!(1);
+    old["member_keys"] = json!(["sun.png"]);
+    app.on_result(Pending::Weather, &old);
+    assert_eq!(app.scene.current, 1);
+
+    let mut unavailable = active.clone();
+    unavailable["outdoors"]["generation"] = json!(3);
+    unavailable["outdoors"]["stale"] = json!(true);
+    unavailable["status"] = json!("unavailable");
+    unavailable["member_keys"] = json!([]);
+    app.on_result(Pending::Weather, &unavailable);
+    assert_eq!(filtered_names(&app), ["rain.png", "sun.png"]);
+    assert_eq!(app.scene.current, 1);
+
+    let _ = update(
+        &mut app,
+        Message::Settings(crate::frontend::settings::SettingsMsg::Input(
+            skwd_config::keys::schedule::LATITUDE.into(),
+            "60.0".into(),
+        )),
     );
+    assert!(app.daemon.weather.is_none());
+    assert_eq!(filtered_names(&app), ["rain.png", "sun.png"]);
+    assert_eq!(app.scene.current, 1);
+    app.on_result(Pending::Weather, &active);
+    assert!(app.daemon.weather.is_none());
+}
 
-    app.on_result(Pending::Weather, &json!({"weather": []}));
-    assert!(!app.library_session.filters.weather_active);
+#[test]
+fn weather_playlist_stays_manual() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("rain.png", "static", 1, 0), wall("sun.png", "static", 2, 0)]);
+    app.config.set_key(skwd_config::keys::general::WEATHER_MATCH, json!(true));
+    app.on_result(
+        Pending::Weather,
+        &json!({
+            "weather": ["rainy"], "status": "active", "category": "rainy",
+            "playlist_id": 7, "playlist_name": "Rain", "member_keys": ["rain.png"]
+        }),
+    );
+    assert_eq!(filtered_names(&app), ["rain.png", "sun.png"]);
+    app.library_session.playlist_filter = Some((8, "Manual".into(), ["sun.png".into()].into()));
+    app.refilter();
+    assert_eq!(filtered_names(&app), ["sun.png"]);
+    let _ = update(&mut app, Message::Pl(crate::frontend::playlists::PlMsg::Browse(None)));
+    assert_eq!(filtered_names(&app), ["rain.png", "sun.png"]);
 
-    app.on_result(Pending::Weather, &json!({"ok": true}));
-    assert!(!app.library_session.filters.weather_active);
+    edit_catalog(&mut app, |catalog| {
+        catalog.tags.insert("sun.png".into(), vec!["bright".into()]);
+    });
+    app.library_session.filters.tags.push("bright".into());
+    app.refilter();
+    assert_eq!(filtered_names(&app), ["sun.png"]);
+}
+
+#[test]
+fn weather_stale_requests() {
+    use crate::frontend::settings::SettingsMsg;
+
+    let mut app = test_app();
+    app.daemon.pending.insert(10, Pending::Weather);
+    let _ = update(
+        &mut app,
+        Message::Settings(SettingsMsg::Input(
+            skwd_config::keys::weather::SEMANTIC_MAX_RESULTS.into(),
+            "24".into(),
+        )),
+    );
+    assert!(!app.daemon.pending.contains_key(&10));
+
+    app.daemon.pending.insert(11, Pending::Weather);
+    let _ = update(
+        &mut app,
+        Message::Settings(SettingsMsg::Input(
+            skwd_config::keys::schedule::LATITUDE.into(),
+            "59".into(),
+        )),
+    );
+    assert!(!app.daemon.pending.contains_key(&11));
+}
+
+#[test]
+fn semantic_disable_stale() {
+    use crate::frontend::settings::SettingsMsg;
+
+    let mut app = test_app();
+    seed(&mut app, &[wall("rain.png", "static", 1, 0), wall("sun.png", "static", 2, 0)]);
+    app.config.set_key(skwd_config::keys::general::WEATHER_MATCH, json!(true));
+    app.config.set_key(skwd_config::keys::weather::SOURCE, json!("semantic"));
+    app.config.set_key(skwd_config::keys::weather::SEMANTIC_RAINY, json!("rainy streets"));
+    let active = json!({
+        "weather": ["rainy"], "source": "semantic", "status": "active", "category": "rainy",
+        "query": "rainy streets", "member_keys": ["rain.png"]
+    });
+    app.on_result(Pending::Weather, &active);
+    assert_eq!(filtered_names(&app), ["rain.png", "sun.png"]);
+    drain_calls(&app);
+
+    let _ = update(
+        &mut app,
+        Message::Settings(SettingsMsg::Toggle(skwd_config::keys::semantic::ENABLED.into(), false)),
+    );
+    assert_eq!(filtered_names(&app), ["rain.png", "sun.png"]);
+    assert!(drain_calls(&app).iter().any(|(method, _)| method == wall_proto::rpc::WALL_WEATHER));
+    app.on_result(Pending::Weather, &active);
+    assert!(app.daemon.weather.is_none());
+}
+
+#[test]
+fn initial_error_keeps_wallpaper() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("rain.png", "static", 1, 0)]);
+    app.config.set_key(skwd_config::keys::weather::SOURCE, json!("outdoors"));
+    app.config.set_key(skwd_config::keys::weather::ENABLED, json!(true));
+    app.rpc_error(Pending::Weather, String::from("offline"));
+
+    let status = app.daemon.weather.as_ref().unwrap();
+    assert_eq!(status.status, crate::contracts::daemon::WeatherState::Unavailable);
+    assert!(!status.outdoors.as_ref().unwrap().stale);
+    assert_eq!(status.outdoors.as_ref().unwrap().outputs.len(), 0);
+    let state: serde_json::Value = super::update::ui_state_json(&app).parse().unwrap();
+    assert_eq!(state["outdoors"]["status"], "unavailable");
 }
 
 #[test]

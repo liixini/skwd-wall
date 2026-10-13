@@ -10,6 +10,13 @@ use super::common::{
     strings, typed,
 };
 
+const RESULT_FIELD: &str = "result";
+const REMOVE_SHAPE: &str = "wall removal result";
+const BOOLEAN_SHAPE: &str = "boolean";
+const LOCKSCREEN_OK_FIELD: &str = "ok";
+const LOCKSCREEN_SHAPE: &str = "lockscreen result";
+const TRUE_SHAPE: &str = "true";
+
 pub fn decode_status(value: &Value) -> DecodeResult<StatusResult> {
     let object = envelope("status", value)?;
     let library_watch_present = object.contains_key("library_watch");
@@ -37,6 +44,12 @@ pub fn decode_status(value: &Value) -> DecodeResult<StatusResult> {
             object,
             "steam_helper_available",
             "boolean",
+        )?,
+        steam_client_available: typed(
+            wall_proto::rpc::STATUS,
+            object,
+            wall_proto::STEAM_CLIENT_AVAILABLE_FIELD,
+            BOOLEAN_SHAPE,
         )?,
         library_watch_present,
         library_watch,
@@ -72,6 +85,23 @@ pub fn decode_thumbnail_reset(value: &Value) -> DecodeResult<bool> {
     let family = "wall.reset_thumbnail";
     let object = envelope(family, value)?;
     required_typed(family, object, "scheduled", "boolean")
+}
+
+pub fn decode_wall_remove(value: &Value) -> DecodeResult<wall_proto::WallRemoveResult> {
+    envelope(wall_proto::rpc::WALL_REMOVE, value)?;
+    serde_json::from_value(value.clone())
+        .map_err(|_| invalid(wall_proto::rpc::WALL_REMOVE, RESULT_FIELD, REMOVE_SHAPE))
+}
+
+pub fn decode_lockscreen_set(value: &Value) -> DecodeResult<(wall_proto::LockScreenTarget, bool)> {
+    let family = wall_proto::rpc::LOCKSCREEN_SET;
+    envelope(family, value)?;
+    let response: wall_proto::LockScreenSetResult = serde_json::from_value(value.clone())
+        .map_err(|_| invalid(family, RESULT_FIELD, LOCKSCREEN_SHAPE))?;
+    if !response.ok {
+        return Err(invalid(family, LOCKSCREEN_OK_FIELD, TRUE_SHAPE));
+    }
+    Ok((response.target, response.enabled))
 }
 
 pub fn decode_library_watch(value: &Value) -> DecodeResult<LibraryWatchStatus> {

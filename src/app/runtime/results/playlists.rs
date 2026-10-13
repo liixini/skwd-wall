@@ -5,6 +5,9 @@ use crate::app::*;
 
 impl App {
     pub(super) fn on_pl_list(&mut self, result: crate::contracts::daemon::PlaylistListResult) {
+        if let Some(rows) = &result.playlists {
+            self.daemon.weather_playlists = rows.clone();
+        }
         if self.panels.playlists.as_ref().is_some_and(|playlists| playlists.demo) {
             return;
         }
@@ -28,6 +31,16 @@ impl App {
             self.refresh_playlist_members(id);
         }
         self.retick();
+    }
+
+    pub(super) fn on_weather_playlists(
+        &mut self,
+        result: crate::contracts::daemon::PlaylistListResult,
+    ) {
+        if let Some(rows) = result.playlists {
+            self.daemon.weather_playlists = rows;
+            self.retick();
+        }
     }
 
     pub(super) fn on_pl_members(

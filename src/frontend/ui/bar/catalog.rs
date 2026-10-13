@@ -92,6 +92,7 @@ pub fn resolution_label(current: &str, presets: &[ResolutionPreset]) -> String {
 pub(crate) const ICON_FAV: &str = "\u{f02d1}";
 pub(super) const ICON_RANDOM: &str = "\u{f076e}";
 pub(super) const ICON_FOLDER: &str = "\u{f024b}";
+pub(crate) const ICON_HIDDEN: &str = "\u{f05f9}";
 
 pub const MENU_MAX_ROWS: usize = 12;
 pub const MENU_ROW_H: f32 = 26.0;

@@ -41,6 +41,7 @@ impl Effects {
         palette: &'a Palette,
     ) -> Element<'a, Message> {
         let selected = self.displays.selected_outputs.contains(&monitor.target);
+        let inactive = self.activity.inactive();
         let mut controls = vec![
             column![
                 Self::placement_row(monitor, scale, palette),
@@ -54,14 +55,18 @@ impl Effects {
             .into(),
             Self::lock_row(monitor, scale, palette),
         ];
-        if monitor.connected {
+        if inactive {
+            controls.clear();
+        }
+        if monitor.connected && !inactive {
             controls.push(Self::theme_row(monitor, scale, palette));
         }
         let audio = self.tile_audio(monitor, selected);
-        if audio != TileAudio::None {
+        if audio != TileAudio::None && !inactive {
             controls.push(self.audio_row(monitor, audio == TileAudio::PreApply, scale, palette));
         }
         if monitor.connected
+            && !inactive
             && matches!(
                 monitor.kind,
                 crate::domain::library::catalog::WallpaperKind::Video
@@ -78,6 +83,7 @@ impl Effects {
             );
         }
         let rows = controls.len();
+        let wide = wide && !inactive;
         let selection = self.selection(monitor, selected, wide.then_some(rows), scale, palette);
         let stack = iced::widget::Column::with_children(controls)
             .spacing(ROW_SPACING * scale)
@@ -172,10 +178,10 @@ impl Effects {
                 with_alpha(palette.surface_text, 0.5),
             ),
             label(
-                if selected {
-                    tr("effects-incoming-preview")
-                } else {
-                    tr("effects-current-wallpaper")
+                match (selected, self.activity.supported && monitor.current.is_empty()) {
+                    (true, _) => tr("effects-incoming-preview"),
+                    (false, true) => tr("effects-activity-unassigned"),
+                    _ => tr("effects-current-wallpaper"),
                 },
                 9.0,
                 scale,

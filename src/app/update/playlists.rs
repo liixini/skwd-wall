@@ -80,6 +80,7 @@ pub(super) fn update(app: &mut App, msg: PlMsg) -> Task<Message> {
             Task::none()
         }
         PlMsg::ColorPick(id, bucket) => pl_color_pick(app, id, bucket),
+        PlMsg::ToggleFolder(id, folder) => pl_folder_toggle(app, id, &folder),
         PlMsg::MoveMember(id, key, delta) => pl_member_move(app, id, &key, delta),
         PlMsg::RemoveMember(id, key) => pl_member_remove(app, id, &key),
         PlMsg::Delete(id) => pl_delete(app, id),
@@ -154,8 +155,16 @@ pub(super) fn pl_edit(
 }
 
 pub(super) fn pl_color_pick(app: &mut App, id: i64, bucket: i64) -> Task<Message> {
+    edit_source(app, id, |source| crate::frontend::playlists::toggle_color_clause(source, bucket))
+}
+
+fn pl_folder_toggle(app: &mut App, id: i64, folder: &str) -> Task<Message> {
+    edit_source(app, id, |source| crate::frontend::playlists::toggle_folder_clause(source, folder))
+}
+
+fn edit_source(app: &mut App, id: i64, edit: impl FnOnce(&str) -> String) -> Task<Message> {
     let cur = app.panels.playlists.as_ref().map(|pl| pl.source_buf.clone()).unwrap_or_default();
-    let next = crate::frontend::playlists::toggle_color_clause(&cur, bucket);
+    let next = edit(&cur);
     app.playlist_set(id, "source", &next);
     if let Some(pl) = app.panels.playlists.as_mut() {
         pl.source_buf = next;

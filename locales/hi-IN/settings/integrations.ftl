@@ -1,5 +1,4 @@
 settings-integrations-plasma-card = KDE Plasma
-settings-integrations-plasma-card-desc = skwd-wall को Plasma डेस्कटॉप से जोड़ें। लॉक स्क्रीन वॉलपेपर के विकल्प नीचे सेट होते हैं।
 settings-integrations-lock-mode-label = लॉक स्क्रीन वॉलपेपर
 settings-integrations-lock-mode-desc = अप्रबंधित Plasma को छेड़ता नहीं। स्थिर हमेशा नीचे की छवि उपयोग करता है। अनुसरण सबसे हाल में लागू वॉलपेपर के साथ चलता है।
 settings-integrations-lock-off = अप्रबंधित
@@ -31,3 +30,34 @@ settings-integrations-dms-hover-desc = किसी वॉलपेपर पर
 
 settings-integrations-follow-label = Skwd के रंगों का अनुसरण
 settings-integrations-follow-desc = जब Skwd रंग नियंत्रित करे तो उसका अनुसरण करें। बंद होने पर वर्तमान रंग बने रहते हैं।
+
+settings-section-lockscreens = लॉक स्क्रीन
+settings-lockscreens-source-label = छवि स्रोत
+settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-image-label = स्थिर छवि
+settings-lockscreens-image-desc = पहले से मौजूद छवि का पूरा पथ दें, जैसे ~/Pictures/lockscreen.jpg। चालू लॉक स्क्रीन के लिए Skwd इसकी प्रति बनाता है। यहाँ वीडियो फ़ाइल इस्तेमाल नहीं की जा सकती।
+settings-lockscreens-hyprlock-card = Hyprlock
+settings-lockscreens-swaylock-card = Swaylock
+settings-lockscreens-sddm-card = SDDM
+
+settings-lockscreens-action-desc = इस लॉक स्क्रीन की छवि के रूप में मौजूदा वॉलपेपर इस्तेमाल करें।
+settings-lockscreens-static-action-desc = इस लॉक स्क्रीन की पृष्ठभूमि के रूप में चुनी गई छवि इस्तेमाल करें।
+settings-lockscreens-sddm-static-action-desc = साइन-इन स्क्रीन पर चुनी गई छवि इस्तेमाल करें। इसके लिए व्यवस्थापक की अनुमति ज़रूरी है।
+settings-lockscreens-sddm-action-desc = साइन-इन स्क्रीन पर मौजूदा वॉलपेपर इस्तेमाल करें। इसके लिए व्यवस्थापक की अनुमति ज़रूरी है।
+settings-lockscreens-choose-theme-desc = SDDM में कोई थीम नहीं चुनी गई है। मौजूदा वॉलपेपर इस्तेमाल करने के लिए इंस्टॉल की गई थीम चुनें।
+settings-lockscreens-error = लॉक स्क्रीन अपडेट नहीं हो सकी: { $error }
+settings-lockscreens-rollback-error = लॉक स्क्रीन अपडेट नहीं हो सकी: { $error } SDDM को बहाल करना भी विफल रहा: { $rollback }
+settings-lockscreens-enabled = { settings-control-enabled }.
+settings-lockscreens-disabled = { settings-control-disabled }.
+settings-lockscreens-enable = चालू करें
+settings-lockscreens-disable = बंद करें
+settings-lockscreens-advanced-label = उन्नत
+settings-lockscreens-choose-theme = SDDM थीम चुनें
+settings-lockscreens-pending = लॉक स्क्रीन अपडेट हो रही है…
+settings-lockscreens-no-sddm-theme = कोई स्थापित SDDM थीम उपलब्ध नहीं है।
+
+settings-app-themes-profile-label = रंग प्रोफ़ाइल
+settings-app-themes-profile-desc = इस ऐप के लिए स्थिर प्रोफ़ाइल का उपयोग करें। वर्तमान थीम का अनुसरण सक्रिय वॉलपेपर या स्थिर थीम के रंगों का उपयोग करता है।
+settings-app-themes-profile-follow = वर्तमान थीम का अनुसरण
+settings-app-themes-profile-missing = अनुपलब्ध: { $name }
+settings-app-themes-profile-in-use = हटाने से पहले { $name } का उपयोग करने वाले ऐप के लिए दूसरी रंग प्रोफ़ाइल चुनें।

@@ -32,7 +32,6 @@ pub struct Config {
 impl Config {
     skwd_config::getters! {
         close_on_selection: bool_setting(skwd_config::schema::setting::general::CLOSE_ON_SELECTION);
-        default_folder: text_setting(skwd_config::schema::setting::filter_bar::DEFAULT_FOLDER);
         display_mode: text_setting(skwd_config::schema::setting::selector::DISPLAY_MODE);
         filter_bar_always_visible: bool_setting(skwd_config::schema::setting::general::FILTER_BAR_ALWAYS_VISIBLE);
         filter_bar_sticky: bool_setting(skwd_config::schema::setting::filter_bar::STICKY);
@@ -51,7 +50,15 @@ impl Config {
         slice_parallax: off_unless_on(skwd_config::keys::selector::SLICE_PARALLAX);
         hex_parallax: off_unless_on(skwd_config::keys::selector::HEX_PARALLAX);
         slice_wobble: off_unless_on(skwd_config::keys::selector::SLICE_WOBBLE);
-        weather_match: off_unless_on(skwd_config::keys::general::WEATHER_MATCH);
+    }
+
+    pub fn default_folder(&self) -> String {
+        let folder = skwd_config::schema::setting::filter_bar::DEFAULT_FOLDER.read(self.root());
+        if folder.is_empty() {
+            String::from(crate::domain::library::filter::ALL_WALLPAPERS)
+        } else {
+            folder
+        }
     }
 
     #[cfg(test)]

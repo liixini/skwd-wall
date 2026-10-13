@@ -73,3 +73,12 @@ effects-name-topographic = 地形线
 effects-name-tonal-layers = 色调分层
 
 effects-saved-palette = { $name }（已保存）
+
+effects-activity-label = 活动
+effects-activity-desc = 选择要接收壁纸的 Plasma 活动。桌面会留在当前活动。
+effects-activity-current = 当前
+effects-activity-inactive-desc = 对于非当前活动，只能更改壁纸分配。显示设置和播放控制作用于当前桌面。
+effects-activity-unavailable = 所选活动不可用。请选择现有活动后重试。
+effects-activity-saved = 已为 { $activity } 保存。
+effects-activity-unassigned = 未分配 Skwd 壁纸
+effects-activity-preparing = 正在为 { $activity } 准备壁纸。

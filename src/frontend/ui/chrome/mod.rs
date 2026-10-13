@@ -9,7 +9,9 @@ mod signature;
 pub(crate) use back::back_layout_for;
 #[cfg(test)]
 use back::back_rise;
-pub use back::{BackLayout, back_bounds, back_contains, back_layout};
+pub use back::{
+    BACK_TOGGLE_GAP, BACK_TOGGLE_INSET, BackLayout, back_bounds, back_contains, back_layout,
+};
 pub use canvas::ChromeCanvas;
 pub use panel::{ChamferPanel, PANEL_SKEW};
 pub use selection::SelectionMarks;

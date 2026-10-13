@@ -3,18 +3,18 @@ use std::cmp::Ordering;
 use crate::domain::library::catalog::{Catalog, Wallpaper, WallpaperKind};
 use crate::domain::library::search::NumericQuery;
 
+pub const ALL_WALLPAPERS: &str = "*";
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Filters {
     pub color: i64,
     pub kind: String,
     pub folder: String,
-    pub show_hidden_folders: bool,
+    pub reveal: bool,
     pub tags: Vec<String>,
     pub numeric: NumericQuery,
     pub tags_match_any: bool,
     pub favourites_only: bool,
-    pub weather_active: bool,
-    pub current_weather: Vec<String>,
     pub sort: String,
     pub orient: String,
     pub resolution: String,
@@ -25,24 +25,16 @@ impl Default for Filters {
         Self {
             color: -1,
             kind: String::new(),
-            folder: String::from("*"),
-            show_hidden_folders: true,
+            folder: String::from(ALL_WALLPAPERS),
+            reveal: false,
             tags: Vec::new(),
             numeric: NumericQuery::default(),
             tags_match_any: false,
             favourites_only: false,
-            weather_active: false,
-            current_weather: Vec::new(),
             sort: String::from("color"),
             orient: String::new(),
             resolution: String::new(),
         }
-    }
-}
-
-impl Filters {
-    pub fn folder_visible(&self, folder: &str) -> bool {
-        self.show_hidden_folders || !folder.split('/').any(|part| part.starts_with('.'))
     }
 }
 
@@ -88,18 +80,13 @@ pub fn filter_sort(catalog: &Catalog, filters: &Filters) -> Vec<u32> {
             out.push(idx as u32);
         }
     }
-    if filters.weather_active
-        && !filters.current_weather.is_empty()
-        && out.iter().any(|&idx| weather_matches(catalog, filters, &catalog.items[idx as usize]))
-    {
-        out.retain(|&idx| weather_matches(catalog, filters, &catalog.items[idx as usize]));
-    }
     sort_indices(catalog, filters, &mut out);
     out
 }
 
 fn keep(catalog: &Catalog, filters: &Filters, item: &Wallpaper) -> bool {
-    folder_ok(filters, item)
+    catalog.is_shown(item, filters.reveal)
+        && folder_ok(filters, item)
         && (filters.kind.is_empty() || item.effective_kind().as_str() == filters.kind)
         && color_ok(filters, item)
         && (!filters.favourites_only || catalog.is_favourite(item))
@@ -212,16 +199,15 @@ fn orient_ok(filters: &Filters, item: &Wallpaper) -> bool {
 }
 
 fn folder_ok(filters: &Filters, item: &Wallpaper) -> bool {
-    let directory = item.name.rsplit_once('/').map_or("", |(folder, _)| folder);
-    if item.kind != WallpaperKind::We && !filters.folder_visible(directory) {
-        return false;
-    }
-    if filters.folder == "*" {
+    if filters.folder.is_empty() || filters.folder == "*" {
         return true;
     }
     let fp = item.folder_path();
-    if filters.folder.is_empty() {
-        return fp.is_empty();
+    if std::path::Path::new(&filters.folder).is_absolute()
+        && item.kind != WallpaperKind::We
+        && std::path::Path::new(&item.path).starts_with(&filters.folder)
+    {
+        return true;
     }
     fp == filters.folder
         || fp.strip_prefix(filters.folder.as_str()).is_some_and(|rest| rest.starts_with('/'))
@@ -263,13 +249,6 @@ fn tags_ok(catalog: &Catalog, filters: &Filters, item: &Wallpaper) -> bool {
         return false;
     }
     if filters.tags_match_any { any_matched } else { all_matched }
-}
-
-fn weather_matches(catalog: &Catalog, filters: &Filters, item: &Wallpaper) -> bool {
-    match catalog.weather.get(&item.key) {
-        Some(wp) if !wp.is_empty() => filters.current_weather.iter().any(|cur| wp.contains(cur)),
-        _ => false,
-    }
 }
 
 fn sort_indices(catalog: &Catalog, filters: &Filters, indices: &mut [u32]) {

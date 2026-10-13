@@ -2,6 +2,125 @@
 use super::*;
 use crate::i18n::{settings_keybind_conflict, tr, tr_args};
 
+const SECONDS_PER_MINUTE: u64 = 60;
+const WEATHER_PLAYLIST_SOURCE: &str = "playlists";
+const WEATHER_SEMANTIC_SOURCE: &str = "semantic";
+const WEATHER_ADVANCED: &str = "weather.advanced";
+const OUTDOOR_CONTEXT_VALUE: &str = "settings-outdoors-context-value";
+const SECONDS_UNIT: &str = "s";
+const WEATHER_SEMANTIC_ACTIVE: &str = "settings-weather-state-semantic-active";
+const WEATHER_SEMANTIC_EMPTY: &str = "settings-weather-state-semantic-empty";
+const WEATHER_SEMANTIC_UNMAPPED: &str = "settings-weather-state-semantic-unmapped";
+const WEATHER_APPROVED_ACTIVE: &str = "settings-weather-state-approved-active";
+const WEATHER_APPROVED_EMPTY: &str = "settings-weather-state-approved-empty";
+const WEATHER_CATEGORIES: [(&str, &str, &str); 7] = [
+    ("clear", keys::weather::CLEAR, "schedule-weather-clear"),
+    ("cloudy", keys::weather::CLOUDY, "schedule-weather-cloudy"),
+    ("rainy", keys::weather::RAINY, "schedule-weather-rainy"),
+    ("snowy", keys::weather::SNOWY, "schedule-weather-snowy"),
+    ("stormy", keys::weather::STORMY, "schedule-weather-stormy"),
+    ("foggy", keys::weather::FOGGY, "schedule-weather-foggy"),
+    ("windy", keys::weather::WINDY, "schedule-weather-windy"),
+];
+const WEATHER_QUERIES: [(&str, &str); 7] = [
+    (keys::weather::SEMANTIC_CLEAR, "schedule-weather-clear"),
+    (keys::weather::SEMANTIC_CLOUDY, "schedule-weather-cloudy"),
+    (keys::weather::SEMANTIC_RAINY, "schedule-weather-rainy"),
+    (keys::weather::SEMANTIC_SNOWY, "schedule-weather-snowy"),
+    (keys::weather::SEMANTIC_STORMY, "schedule-weather-stormy"),
+    (keys::weather::SEMANTIC_FOGGY, "schedule-weather-foggy"),
+    (keys::weather::SEMANTIC_WINDY, "schedule-weather-windy"),
+];
+const WEATHER_STATES: [(crate::contracts::daemon::WeatherState, &str); 10] = [
+    (crate::contracts::daemon::WeatherState::Disabled, "settings-weather-state-disabled"),
+    (crate::contracts::daemon::WeatherState::Loading, "settings-weather-state-loading"),
+    (crate::contracts::daemon::WeatherState::NoLocation, "settings-weather-state-no-location"),
+    (crate::contracts::daemon::WeatherState::Unavailable, "settings-weather-state-unavailable"),
+    (crate::contracts::daemon::WeatherState::Unmapped, "settings-weather-state-unmapped"),
+    (crate::contracts::daemon::WeatherState::Missing, "settings-weather-state-missing"),
+    (crate::contracts::daemon::WeatherState::Empty, "settings-weather-state-empty"),
+    (
+        crate::contracts::daemon::WeatherState::SearchUnavailable,
+        "settings-weather-state-search-unavailable",
+    ),
+    (crate::contracts::daemon::WeatherState::Active, "settings-weather-state-active"),
+    (crate::contracts::daemon::WeatherState::Paused, "settings-weather-state-paused"),
+];
+const OUTDOOR_STATES: [(crate::contracts::daemon::WeatherState, &str); 2] = [
+    (crate::contracts::daemon::WeatherState::Active, "settings-weather-state-loading"),
+    (crate::contracts::daemon::WeatherState::Unavailable, "settings-outdoors-unavailable"),
+];
+const OUTDOOR_MATCH_LABELS: [(crate::contracts::daemon::OutdoorMatch, &str); 3] = [
+    (crate::contracts::daemon::OutdoorMatch::Library, "settings-outdoors-match-library"),
+    (crate::contracts::daemon::OutdoorMatch::Starter, "settings-outdoors-match-starter"),
+    (crate::contracts::daemon::OutdoorMatch::Ambient, "settings-outdoors-match-ambient"),
+];
+const WEATHER_MISSING_ID: &str = "settings-weather-missing-id";
+const WEATHER_SUNNY: &str = "sunny";
+const WEATHER_SUNNY_LABEL: &str = "schedule-weather-sunny";
+const WEATHER_COUNT_VALUE: &str = "settings-weather-count-value";
+const WEATHER_FETCHED_AGO: &str = "settings-weather-fetched-ago";
+const OUTPUT_SEPARATOR: &str = ", ";
+
+pub(crate) fn weather_category_label(category: &str) -> &'static str {
+    WEATHER_CATEGORIES
+        .iter()
+        .find(|(key, _, _)| *key == category)
+        .map_or(tr("settings-weather-review-label"), |(_, _, label)| tr(label))
+}
+
+pub(crate) fn weather_status_key(
+    status: crate::contracts::daemon::WeatherState,
+    source: crate::contracts::daemon::WeatherSource,
+    selection: crate::contracts::daemon::WeatherSelection,
+) -> &'static str {
+    match (source, selection, status) {
+        (
+            crate::contracts::daemon::WeatherSource::Semantic,
+            crate::contracts::daemon::WeatherSelection::Approved,
+            crate::contracts::daemon::WeatherState::Active,
+        ) => return WEATHER_APPROVED_ACTIVE,
+        (
+            crate::contracts::daemon::WeatherSource::Semantic,
+            crate::contracts::daemon::WeatherSelection::Approved,
+            crate::contracts::daemon::WeatherState::Empty,
+        ) => return WEATHER_APPROVED_EMPTY,
+        (
+            crate::contracts::daemon::WeatherSource::Semantic,
+            _,
+            crate::contracts::daemon::WeatherState::Active,
+        ) => return WEATHER_SEMANTIC_ACTIVE,
+        (
+            crate::contracts::daemon::WeatherSource::Semantic,
+            _,
+            crate::contracts::daemon::WeatherState::Empty,
+        ) => return WEATHER_SEMANTIC_EMPTY,
+        (
+            crate::contracts::daemon::WeatherSource::Semantic,
+            _,
+            crate::contracts::daemon::WeatherState::Unmapped,
+        ) => return WEATHER_SEMANTIC_UNMAPPED,
+        (crate::contracts::daemon::WeatherSource::Outdoors, _, state) => {
+            if let Some((_, key)) = OUTDOOR_STATES.iter().find(|(kind, _)| *kind == state) {
+                return key;
+            }
+        }
+        _ => {}
+    }
+    WEATHER_STATES
+        .iter()
+        .find(|(state, _)| *state == status)
+        .map_or(WEATHER_STATES[0].1, |(_, label)| *label)
+}
+
+fn outdoor_match_key(kind: crate::contracts::daemon::OutdoorMatch) -> &'static str {
+    OUTDOOR_MATCH_LABELS
+        .iter()
+        .find(|(candidate, _)| *candidate == kind)
+        .map(|(_, key)| *key)
+        .expect("outdoor match label")
+}
+
 pub(super) fn tab_general(
     builder: &mut Builder<'_>,
     themes: &[String],
@@ -155,6 +274,12 @@ pub(super) fn tab_schedule(builder: &mut Builder<'_>) {
     );
     builder.card(tr("settings-schedule-location-card"), tr("settings-schedule-location-card-desc"));
     builder.text_field(
+        tr("settings-filter-location-label"),
+        tr("settings-filter-location-desc"),
+        keys::general::LOCALE,
+        tr("settings-filter-location-placeholder"),
+    );
+    builder.text_field(
         tr("settings-schedule-latitude-label"),
         tr("settings-schedule-latitude-desc"),
         keys::schedule::LATITUDE,
@@ -168,20 +293,363 @@ pub(super) fn tab_schedule(builder: &mut Builder<'_>) {
     );
 }
 
-pub(super) fn tab_paths(builder: &mut Builder<'_>) {
-    builder.card(tr("settings-paths-directories-card"), tr("settings-paths-directories-card-desc"));
-    builder.text_field(
-        tr("settings-paths-wallpaper-dir-label"),
-        tr("settings-paths-wallpaper-dir-desc"),
-        keys::paths::WALLPAPER,
-        "~/Pictures/Wallpapers",
+pub(super) fn tab_weather(
+    builder: &mut Builder<'_>,
+    weather: Option<&crate::contracts::daemon::WeatherStatus>,
+    playlists: &[crate::contracts::playlists::Playlist],
+    pending: bool,
+) {
+    builder.card(tr("settings-weather-card"), tr("settings-weather-card-desc"));
+    let active = weather.is_some_and(|status| {
+        status.enabled && status.source == crate::contracts::daemon::WeatherSource::Outdoors
+    }) || (builder.cfg.flag(keys::weather::ENABLED)
+        && builder.cfg.text(keys::weather::SOURCE) == keys::weather::SOURCE_OUTDOORS);
+    builder.action(
+        tr("settings-outdoors-follow-label"),
+        tr(if pending {
+            "settings-outdoors-pending-desc"
+        } else {
+            "settings-outdoors-follow-desc"
+        }),
+        ActionId::FollowOutdoors(!active),
+        tr(if pending {
+            "settings-outdoors-pending-action"
+        } else if active {
+            "settings-outdoors-stop-action"
+        } else {
+            "settings-outdoors-follow-action"
+        }),
     );
-    builder.text_field(
-        tr("settings-paths-video-dir-label"),
-        tr("settings-paths-video-dir-desc"),
-        keys::paths::VIDEO_WALLPAPER,
-        tr("settings-paths-video-dir-placeholder"),
+    builder.dynamic_dropdown(
+        tr("settings-outdoors-transition-label"),
+        tr("settings-outdoors-transition-desc"),
+        keys::weather::OUTDOORS_TRANSITION_SHADER,
+        super::super::tables::SHADERS
+            .iter()
+            .map(|shader| (shader.to_string(), super::transition_tab::pretty(shader)))
+            .collect(),
     );
+    builder.toggle(
+        tr("settings-outdoors-retheme-label"),
+        tr("settings-outdoors-retheme-desc"),
+        keys::weather::OUTDOORS_RETHEME,
+    );
+    if builder.cfg.text(keys::general::LOCALE).trim().is_empty()
+        && builder.cfg.text(keys::schedule::LATITUDE).trim().is_empty()
+        && builder.cfg.text(keys::schedule::LONGITUDE).trim().is_empty()
+    {
+        builder.info(tr("settings-outdoors-location-label"), tr("settings-outdoors-add-city"));
+    }
+    if let Some(status) =
+        weather.filter(|status| status.source == crate::contracts::daemon::WeatherSource::Outdoors)
+    {
+        outdoor_status(builder, status, pending);
+    } else if active {
+        builder.info(tr("settings-weather-status-label"), tr("settings-weather-state-loading"));
+    }
+    builder.details(
+        tr("settings-outdoors-advanced-label"),
+        tr("settings-outdoors-advanced-desc"),
+        WEATHER_ADVANCED.to_string(),
+        tr("settings-outdoors-advanced-summary").to_string(),
+        |builder| weather_advanced(builder, weather, playlists),
+    );
+}
+
+fn outdoor_status(
+    builder: &mut Builder<'_>,
+    status: &crate::contracts::daemon::WeatherStatus,
+    pending: bool,
+) {
+    use crate::contracts::daemon::{LightPhase, OutdoorSeason, WeatherState};
+
+    let Some(outdoors) = status.outdoors.as_ref() else {
+        builder.info(
+            tr("settings-weather-status-label"),
+            tr(weather_status_key(status.status, status.source, status.selection)),
+        );
+        return;
+    };
+    let season = tr(match outdoors.season {
+        OutdoorSeason::Neutral => "settings-outdoors-season-neutral",
+        OutdoorSeason::Spring => "settings-outdoors-season-spring",
+        OutdoorSeason::Summer => "settings-outdoors-season-summer",
+        OutdoorSeason::Autumn => "settings-outdoors-season-autumn",
+        OutdoorSeason::Winter => "settings-outdoors-season-winter",
+    });
+    let light = tr(match outdoors.light {
+        LightPhase::Dawn => "settings-outdoors-light-dawn",
+        LightPhase::Day => "settings-outdoors-light-day",
+        LightPhase::Dusk => "settings-outdoors-light-dusk",
+        LightPhase::Night => "settings-outdoors-light-night",
+    });
+    let condition =
+        status.weather.first().map_or(tr("settings-outdoors-weather-unknown"), |category| {
+            if category == WEATHER_SUNNY {
+                tr(WEATHER_SUNNY_LABEL)
+            } else {
+                WEATHER_CATEGORIES
+                    .iter()
+                    .find(|(key, _, _)| *key == category)
+                    .map_or(tr("settings-outdoors-weather-unknown"), |(_, _, label)| tr(label))
+            }
+        });
+    builder.info(
+        tr("settings-outdoors-context-label"),
+        &tr_args!(OUTDOOR_CONTEXT_VALUE, season => season, weather => condition, light => light),
+    );
+    builder.info(
+        tr("settings-weather-status-label"),
+        tr(match status.status {
+            WeatherState::NoLocation => "settings-outdoors-no-location",
+            WeatherState::Loading if outdoors.stale => "settings-outdoors-loading-held",
+            WeatherState::Loading => "settings-weather-state-loading",
+            WeatherState::Unavailable if outdoors.stale => "settings-outdoors-unavailable-held",
+            WeatherState::Unavailable => "settings-outdoors-unavailable",
+            WeatherState::Disabled => "settings-weather-state-disabled",
+            _ if outdoors.stale => "settings-outdoors-stale",
+            _ => outdoor_match_key(outdoors.match_kind),
+        }),
+    );
+    if !outdoors.location.is_empty() {
+        builder.info(tr("settings-outdoors-location-label"), &outdoors.location);
+    }
+    for output in &outdoors.outputs {
+        outdoor_output(builder, output, outdoors, pending);
+    }
+}
+
+fn outdoor_output(
+    builder: &mut Builder<'_>,
+    output: &crate::contracts::daemon::OutdoorOutput,
+    outdoors: &crate::contracts::daemon::OutdoorStatus,
+    pending: bool,
+) {
+    let held = output.held;
+    let mut actions = Vec::new();
+    if held {
+        actions.push((
+            ActionId::OutdoorResume(output.output.clone()),
+            tr("settings-outdoors-resume-action"),
+        ));
+    } else {
+        if !outdoors.stale {
+            actions.push((
+                ActionId::OutdoorNext(output.output.clone()),
+                tr("settings-outdoors-next-action"),
+            ));
+        }
+        actions.extend([
+            (
+                ActionId::OutdoorExclude { output: output.output.clone(), key: output.key.clone() },
+                tr("settings-outdoors-exclude-action"),
+            ),
+            (ActionId::OutdoorPin(output.output.clone()), tr("settings-outdoors-pin-action")),
+        ]);
+    }
+    let controls = vec![Row {
+        title: tr("settings-outdoors-display-actions").to_string(),
+        desc: tr(if pending {
+            "settings-outdoors-pending-desc"
+        } else if held {
+            "settings-outdoors-held-desc"
+        } else {
+            "settings-outdoors-actions-desc"
+        })
+        .to_string(),
+        control: if pending || output.key.is_empty() {
+            Control::Static
+        } else {
+            Control::ActionChips {
+                items: actions.into_iter().map(|(id, label)| (id, label.to_string())).collect(),
+            }
+        },
+    }];
+    builder.row(
+        &output.output,
+        tr(if held {
+            "settings-outdoors-held-label"
+        } else {
+            outdoor_match_key(outdoors.match_kind)
+        }),
+        Control::StackBar {
+            id: format!("outdoors:{}", output.output),
+            summary: output.name.clone(),
+            preview: output.preview.clone(),
+            rows: controls,
+        },
+    );
+}
+
+fn weather_advanced(
+    builder: &mut Builder<'_>,
+    weather: Option<&crate::contracts::daemon::WeatherStatus>,
+    playlists: &[crate::contracts::playlists::Playlist],
+) {
+    if builder.cfg.text(keys::weather::SOURCE) != keys::weather::SOURCE_OUTDOORS {
+        builder.toggle(
+            tr("settings-weather-enable-label"),
+            tr("settings-weather-enable-desc"),
+            keys::weather::ENABLED,
+        );
+        builder.dropdown(
+            tr("settings-weather-source-label"),
+            tr("settings-weather-source-desc"),
+            keys::weather::SOURCE,
+            &[
+                (WEATHER_PLAYLIST_SOURCE, tr("settings-weather-source-playlists")),
+                (WEATHER_SEMANTIC_SOURCE, tr("settings-weather-source-semantic")),
+            ],
+        );
+    }
+    if builder.cfg.text(keys::weather::SOURCE) == WEATHER_SEMANTIC_SOURCE {
+        builder.dropdown(
+            tr("settings-weather-selection-label"),
+            tr("settings-weather-selection-desc"),
+            keys::weather::SEMANTIC_SELECTION,
+            &[
+                (keys::weather::SELECTION_AUTOMATIC, tr("settings-weather-selection-automatic")),
+                (keys::weather::SELECTION_APPROVED, tr("settings-weather-selection-approved")),
+            ],
+        );
+        for (index, (path, label)) in WEATHER_QUERIES.into_iter().enumerate() {
+            builder.text_field(tr(label), tr("settings-weather-query-desc"), path, "");
+            builder.action(
+                tr("settings-weather-review-label"),
+                tr("settings-weather-review-desc"),
+                ActionId::ReviewWeather(WEATHER_CATEGORIES[index].0),
+                tr("settings-weather-review-action"),
+            );
+        }
+        builder.num(
+            tr("settings-weather-max-results-label"),
+            tr("settings-weather-max-results-desc"),
+            keys::weather::SEMANTIC_MAX_RESULTS,
+            "",
+        );
+        builder.num(
+            tr("settings-weather-dwell-label"),
+            tr("settings-weather-dwell-desc"),
+            keys::weather::SEMANTIC_DWELL_SECONDS,
+            SECONDS_UNIT,
+        );
+    } else if builder.cfg.text(keys::weather::SOURCE) == WEATHER_PLAYLIST_SOURCE {
+        let mut options = vec![(String::new(), tr("settings-weather-unmapped").to_string())];
+        options.extend(
+            playlists
+                .iter()
+                .filter(|playlist| {
+                    matches!(
+                        &playlist.kind,
+                        crate::contracts::playlists::PlaylistKind::Curated
+                            | crate::contracts::playlists::PlaylistKind::Smart
+                    )
+                })
+                .map(|playlist| {
+                    (playlist.id.to_string(), format!("{} ({})", playlist.name, playlist.id))
+                }),
+        );
+        for (_, path, label) in WEATHER_CATEGORIES {
+            let saved = builder.cfg.text(path);
+            let mut choices = options.clone();
+            if !saved.is_empty() && !choices.iter().any(|(id, _)| id == &saved) {
+                choices.push((saved.clone(), tr_args!(WEATHER_MISSING_ID, id => saved)));
+            }
+            builder.dynamic_dropdown(tr(label), tr("settings-weather-map-desc"), path, choices);
+        }
+    }
+    builder.action(
+        tr("settings-weather-refresh-label"),
+        tr("settings-weather-refresh-desc"),
+        ActionId::RefreshWeather,
+        tr("settings-weather-refresh-action"),
+    );
+    if let Some(weather) = weather {
+        weather_advanced_status(builder, weather);
+    }
+}
+
+fn weather_advanced_status(
+    builder: &mut Builder<'_>,
+    weather: &crate::contracts::daemon::WeatherStatus,
+) {
+    if let Some(credits) = weather.outdoors.as_ref().and_then(|outdoors| outdoors.credits.as_ref())
+    {
+        builder.action(
+            tr("settings-outdoors-credits-label"),
+            tr("settings-outdoors-credits-desc"),
+            ActionId::OutdoorCredits(credits.clone()),
+            tr("settings-outdoors-credits-action"),
+        );
+    }
+    builder.info(
+        tr("settings-weather-status-label"),
+        tr(weather_status_key(weather.status, weather.source, weather.selection)),
+    );
+    if !weather.weather.is_empty() {
+        let sunny = weather.weather.iter().any(|category| category == WEATHER_SUNNY);
+        let conditions = weather
+            .weather
+            .iter()
+            .filter(|category| !(sunny && category.as_str() == WEATHER_CATEGORIES[0].0))
+            .map(|category| {
+                if category == WEATHER_SUNNY {
+                    return tr(WEATHER_SUNNY_LABEL);
+                }
+                WEATHER_CATEGORIES
+                    .iter()
+                    .find(|(key, _, _)| *key == category)
+                    .map_or(category.as_str(), |(_, _, label)| tr(label))
+            })
+            .collect::<Vec<_>>()
+            .join(OUTPUT_SEPARATOR);
+        builder.info(tr("settings-weather-current-label"), &conditions);
+    }
+    if let Some(query) = weather.query.as_deref() {
+        builder.info(tr("settings-weather-query-label"), query);
+        builder.info(
+            tr("settings-weather-count-label"),
+            &tr_args!(WEATHER_COUNT_VALUE, count => weather.resolved_count),
+        );
+    } else if let Some(name) = weather.playlist_name.as_deref() {
+        builder.info(tr("settings-weather-playlist-label"), name);
+        builder.info(
+            tr("settings-weather-count-label"),
+            &tr_args!(WEATHER_COUNT_VALUE, count => weather.resolved_count),
+        );
+    } else if weather.source == crate::contracts::daemon::WeatherSource::Semantic
+        && weather.selection == crate::contracts::daemon::WeatherSelection::Approved
+    {
+        builder.info(
+            tr("settings-weather-count-label"),
+            &tr_args!(WEATHER_COUNT_VALUE, count => weather.resolved_count),
+        );
+    }
+    if let Some(fetched_at) = weather.fetched_at {
+        let age = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |now| now.as_secs().saturating_sub(fetched_at));
+        builder.info(
+            tr("settings-weather-fetched-label"),
+            &tr_args!(WEATHER_FETCHED_AGO, minutes => age / SECONDS_PER_MINUTE),
+        );
+    }
+    if !weather.paused_outputs.is_empty() {
+        builder.info(
+            tr("settings-weather-paused-label"),
+            &weather.paused_outputs.join(OUTPUT_SEPARATOR),
+        );
+    }
+    if weather.resume_available
+        && weather.source != crate::contracts::daemon::WeatherSource::Outdoors
+    {
+        builder.action(
+            tr("settings-weather-resume-label"),
+            tr("settings-weather-resume-desc"),
+            ActionId::ResumeWeather,
+            tr("settings-weather-resume-action"),
+        );
+    }
 }
 
 pub(super) fn tab_performance(builder: &mut Builder<'_>) {

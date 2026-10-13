@@ -8,6 +8,11 @@ use crate::contracts::browser::{
 const STEAM_NSFW_TAGS: [&str; 6] =
     ["Mature", "Questionable", "NSFW", "Partial Nudity", "Nudity", "Gore"];
 const STEAM_UNSUPPORTED_TYPES: [&str; 2] = ["Web", "Application"];
+const STEAM_RESOLUTION_TAGS: [(&str, &str); 3] = [
+    ("2560 x 1080", "Ultrawide 2560 x 1080"),
+    ("3440 x 1440", "Ultrawide 3440 x 1440"),
+    ("3840 x 1080", "Dual 3840 x 1080"),
+];
 
 pub struct RpcCall {
     pub method: &'static str,
@@ -46,9 +51,12 @@ fn encode_wallhaven_search(request: &WallhavenSearch) -> RpcCall {
 }
 
 fn encode_steam_search(request: &SteamSearch) -> RpcCall {
-    let tags: Vec<&str> = [&request.request_type, &request.category, &request.resolution]
+    let resolution = STEAM_RESOLUTION_TAGS
+        .iter()
+        .find_map(|(choice, tag)| (request.resolution == *choice).then_some(*tag))
+        .unwrap_or(&request.resolution);
+    let tags: Vec<&str> = [request.request_type.as_str(), request.category.as_str(), resolution]
         .into_iter()
-        .map(String::as_str)
         .filter(|tag| !tag.is_empty())
         .collect();
     let excluded_tags: Vec<&str> = STEAM_UNSUPPORTED_TYPES
@@ -196,8 +204,8 @@ fn bool_bits(values: [bool; 3]) -> String {
 
 fn wallhaven_color(hue: Option<u8>) -> &'static str {
     const COLORS: [&str; 13] = [
-        "cc0000", "cc6600", "999900", "669900", "009900", "00cc66", "00cccc", "0066cc", "0000cc",
-        "6600cc", "cc00cc", "cc0066", "808080",
+        "cc0000", "ff6600", "999900", "669900", "336600", "66cccc", "0099cc", "0066cc", "333399",
+        "663399", "993399", "ea4c88", "999999",
     ];
     hue.and_then(|index| COLORS.get(usize::from(index))).copied().unwrap_or("")
 }

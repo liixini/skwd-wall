@@ -81,3 +81,12 @@ effects-name-topographic = ٹوپوگرافک
 effects-name-tonal-layers = ٹونل تہیں
 
 effects-saved-palette = { $name } (محفوظ)
+
+effects-activity-label = سرگرمی
+effects-activity-desc = منتخب کریں کہ وال پیپر کس Plasma سرگرمی میں لگے۔ ڈیسک ٹاپ موجودہ سرگرمی میں رہے گا۔
+effects-activity-current = موجودہ
+effects-activity-inactive-desc = غیر فعال سرگرمی کے لیے صرف وال پیپر کی تفویض بدلی جا سکتی ہے۔ ڈسپلے کی ترتیبات اور پلے بیک کنٹرول موجودہ ڈیسک ٹاپ پر لاگو ہوتے ہیں۔
+effects-activity-unavailable = منتخب کردہ سرگرمی دستیاب نہیں ہے۔ موجودہ سرگرمی منتخب کرکے دوبارہ کوشش کریں۔
+effects-activity-saved = { $activity } کے لیے محفوظ کر دیا گیا۔
+effects-activity-unassigned = کوئی Skwd وال پیپر تفویض نہیں کیا گیا
+effects-activity-preparing = { $activity } کے لیے وال پیپر تیار کیا جا رہا ہے۔

@@ -7,6 +7,7 @@ pub enum BarAction {
     Favs,
     Color(i64),
     FolderToggle,
+    ShowHidden,
     Settings,
     Stash,
     Download,

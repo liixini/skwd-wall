@@ -81,3 +81,12 @@ effects-name-topographic = Topographic
 effects-name-tonal-layers = Tonal Layers
 
 effects-saved-palette = { $name } (saved)
+
+effects-activity-label = Activity
+effects-activity-desc = Choose which Plasma Activity receives the wallpaper. Your desktop stays on its current Activity.
+effects-activity-current = Current
+effects-activity-inactive-desc = Only wallpaper assignments can be changed for an inactive Activity. Display settings and playback controls apply to the current desktop.
+effects-activity-unavailable = The selected Activity is unavailable. Choose an existing Activity and try again.
+effects-activity-saved = Saved for { $activity }.
+effects-activity-unassigned = No Skwd wallpaper assigned
+effects-activity-preparing = Preparing wallpaper for { $activity }.

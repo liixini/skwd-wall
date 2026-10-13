@@ -63,8 +63,8 @@ keybind-scene-properties = Propriétés de la scène
 
 keybind-folder-prev = Dossier précédent
 keybind-folder-next = Dossier suivant
-keybind-folder-toggle = Basculer Tout/Principal
-keybind-hidden-folders = Afficher/masquer les dossiers cachés
+keybind-folder-toggle = Afficher tous les fonds d’écran
+keybind-hidden-folders = Afficher/masquer les fonds d’écran cachés
 keybind-type-prev = Type de fond d'écran précédent
 keybind-type-next = Type de fond d'écran suivant
 keybind-sort-prev = Tri précédent

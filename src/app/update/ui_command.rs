@@ -7,6 +7,48 @@ use super::*;
 use super::settings::settings_toggle;
 use crate::frontend::scene::layout::Mode;
 
+const REMOVAL_FIELD: &str = "removal";
+const OUTDOORS_FIELD: &str = "outdoors";
+const COPY_IMAGE_FIELD: &str = "copy_image";
+const COPY_PATH_FIELD: &str = "copy_path";
+const SETTINGS_FIELD: &str = "settings";
+const WEATHER_REVIEW_FIELD: &str = "weather_review";
+
+#[derive(serde::Serialize)]
+struct RemovalState {
+    label: &'static str,
+    enabled: bool,
+    bounds: (f32, f32, f32, f32),
+}
+
+#[derive(serde::Serialize)]
+struct OutdoorUiState<'a> {
+    active: bool,
+    pending: bool,
+    status: Option<crate::contracts::daemon::WeatherState>,
+    weather: Option<&'a Vec<String>>,
+    context: Option<&'a crate::contracts::daemon::OutdoorStatus>,
+    member_keys: Option<&'a Vec<String>>,
+}
+
+#[derive(serde::Serialize)]
+struct WeatherReviewUiItem {
+    key: String,
+    approved: bool,
+}
+
+#[derive(serde::Serialize)]
+struct WeatherReviewUiState {
+    category: &'static str,
+    tab: String,
+    filter: String,
+    pending: bool,
+    error: Option<String>,
+    suggested: Vec<String>,
+    visible: Vec<WeatherReviewUiItem>,
+    focused: Option<String>,
+}
+
 pub(crate) fn ui_state_json(app: &App) -> String {
     let mode = app.scene.mode.as_key();
     let (vis_lo, vis_hi) = app.scene.visible_range();
@@ -34,9 +76,14 @@ pub(crate) fn ui_state_json(app: &App) -> String {
     };
     let card_back = app.scene.render.back.as_ref().map(|panel| {
         let layout = crate::frontend::ui::back_layout(panel);
-        let action_count =
-            3 + usize::from(layout.overview.is_some()) + usize::from(layout.effects.is_some())
-                + usize::from(layout.reset_thumbnail.is_some());
+        let actions = layout.actions;
+        let action_count = 3
+            + usize::from(actions.overview.is_some())
+            + usize::from(actions.effects.is_some())
+            + usize::from(actions.reset_thumbnail.is_some())
+            + usize::from(actions.reveal.is_some())
+            + usize::from(actions.copy_image.is_some())
+            + usize::from(actions.copy_path.is_some());
         json!({
             "presentation": if panel.embedded { "embedded" } else { "external" },
             "card": { "x": layout.card.0, "y": layout.card.1,
@@ -48,7 +95,11 @@ pub(crate) fn ui_state_json(app: &App) -> String {
             "action_deck": { "x": layout.action_deck.0, "y": layout.action_deck.1,
                 "w": layout.action_deck.2, "h": layout.action_deck.3 },
             "actions": action_count,
-            "reset_thumbnail": layout.reset_thumbnail.map(|rect| crate::frontend::ui::back_bounds(panel, &layout, rect)),
+            (REMOVAL_FIELD): RemovalState {label: panel.removal.label(), enabled: panel.removal.enabled(), bounds: crate::frontend::ui::back_bounds(panel, &layout, layout.actions.delete)},
+            "reset_thumbnail": layout.actions.reset_thumbnail.map(|rect| crate::frontend::ui::back_bounds(panel, &layout, rect)),
+            "reveal": layout.actions.reveal.map(|rect| crate::frontend::ui::back_bounds(panel, &layout, rect)),
+            (COPY_IMAGE_FIELD): actions.copy_image.map(|rect| crate::frontend::ui::back_bounds(panel, &layout, rect)),
+            (COPY_PATH_FIELD): actions.copy_path.map(|rect| crate::frontend::ui::back_bounds(panel, &layout, rect)),
             "tags": panel.tags,
             "tag_chips": layout.tags.len(),
             "tag_hidden": layout.tag_overflow.map_or(0, |overflow| overflow.4),
@@ -68,7 +119,11 @@ pub(crate) fn ui_state_json(app: &App) -> String {
             },
             "monitors": monitors,
             "selected": selected,
-            "targets": effects.apply_targets(),
+            "targets": if effects.activity.supported {
+                effects.selected_targets()
+            } else {
+                effects.apply_targets()
+            },
         })
     });
     let playlist_state = app.panels.playlists.as_ref().map(|playlists| {
@@ -81,6 +136,11 @@ pub(crate) fn ui_state_json(app: &App) -> String {
             "filter_help": playlists.filter_help,
         })
     });
+    let outdoor = app
+        .daemon
+        .weather
+        .as_ref()
+        .filter(|weather| weather.source == crate::contracts::daemon::WeatherSource::Outdoors);
     let mut state = json!({
         "demo_protocol": 18,
         "views": crate::app::view::view_count(),
@@ -149,7 +209,8 @@ pub(crate) fn ui_state_json(app: &App) -> String {
         },
         "filter": {
             "folder": app.library_session.filters.folder,
-            "show_hidden_folders": app.library_session.filters.show_hidden_folders,
+            "reveal": app.library_session.filters.reveal,
+            "profile": app.library_session.profile_override,
             "tags": app.library_session.filters.tags,
             "kind": app.library_session.filters.kind,
             "sort": app.library_session.filters.sort,
@@ -232,6 +293,44 @@ pub(crate) fn ui_state_json(app: &App) -> String {
             "search_query": app.panels.settings.search_query,
             "search_results": app.panels.settings.search_results.len(),
         },
+    });
+    state[SETTINGS_FIELD][WEATHER_REVIEW_FIELD] =
+        app.panels.settings.weather_review_category.map_or(serde_json::Value::Null, |category| {
+            let review = &app.panels.settings;
+            let approved = super::weather_review::approved(app, category);
+            let visible = super::weather_review::visible_keys(app);
+            json!(WeatherReviewUiState {
+                category,
+                tab: format!("{:?}", review.weather_review_tab).to_lowercase(),
+                filter: review.weather_review_query.clone(),
+                pending: review.weather_review_loading,
+                error: review.weather_review_error.clone(),
+                suggested: review.weather_review_candidates.clone(),
+                visible: visible
+                    .iter()
+                    .map(|key| WeatherReviewUiItem {
+                        key: key.clone(),
+                        approved: approved.contains(key),
+                    })
+                    .collect(),
+                focused: visible
+                    .get(
+                        review
+                            .weather_review_focus
+                            .saturating_sub(super::weather_review::TAB_COUNT)
+                    )
+                    .cloned(),
+            })
+        });
+    state[OUTDOORS_FIELD] = json!(OutdoorUiState {
+        active: app.config.flag_default_config(skwd_config::keys::weather::ENABLED)
+            && app.config.str_path(skwd_config::keys::weather::SOURCE)
+                == skwd_config::keys::weather::SOURCE_OUTDOORS,
+        pending: app.daemon.pending.values().any(|pending| *pending == Pending::WeatherAction),
+        status: outdoor.map(|weather| weather.status),
+        weather: outdoor.map(|weather| &weather.weather),
+        context: outdoor.and_then(|weather| weather.outdoors.as_ref()),
+        member_keys: outdoor.map(|weather| &weather.member_keys),
     });
     state["stashed"] = json!(app.runtime_state.stashed);
     state["playlist_filter"] = app.library_session.playlist_filter.as_ref().map_or(
@@ -451,6 +550,11 @@ pub(super) fn run_ui_command(app: &mut App, cmd: &str) -> Task<Message> {
             super::update_inner(app, Message::SetResolution(resolution))
         }
         "open" => Task::batch([crate::app::warm::unstash(app), ui_open(app, &arg)]),
+        crate::infrastructure::runtime::PROFILE_COMMAND => {
+            let task = crate::app::warm::unstash(app);
+            app.show_profile((!arg.is_empty()).then_some(arg));
+            task
+        }
         "display" => ui_display(app, &arg),
         "playlist" => arg.parse::<i64>().map_or_else(
             |_| {
@@ -1684,14 +1788,9 @@ fn ui_demo_display_stage(app: &mut App, target: &str, key: &str) -> Task<Message
         log::warn!("ui command: 'display stage' needs an open displays desk");
         return Task::none();
     };
-    effects.replace_source(
-        path.clone(),
-        thumb.clone(),
-        card,
-        kind,
-        app.config.wallpaper_mute(),
-        app.config.wallpaper_volume(),
-    );
+    effects.replace_source(path.clone(), thumb.clone(), card, kind, key.to_string());
+    effects.set_source_mute(app.config.wallpaper_mute());
+    effects.set_source_volume(app.config.wallpaper_volume());
     effects.select_only_output(&output);
     effects.record_output_source(&output, kind, path.clone(), we_id.clone(), thumb);
     app.scene.set_current(card, app.library_session.filtered.len());

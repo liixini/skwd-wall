@@ -422,7 +422,8 @@ fn sticky_filter_bar_getters() {
 fn default_folder_all() {
     assert_eq!(cfg(json!({})).default_folder(), "*");
     assert_eq!(cfg(json!({"filterBar": {"defaultFolder": "anime"}})).default_folder(), "anime");
-    assert_eq!(cfg(json!({"filterBar": {"defaultFolder": ""}})).default_folder(), "");
+    assert_eq!(cfg(json!({"filterBar": {"defaultFolder": ""}})).default_folder(), "*");
+    assert_eq!(cfg(json!({"filterBar": {"last": {"folder": ""}}})).last_filter_folder(), "*");
 }
 
 #[test]

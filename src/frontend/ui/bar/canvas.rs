@@ -16,6 +16,8 @@ pub struct FilterBar<'a> {
     pub backend_options: Vec<(&'static str, &'static str)>,
     pub menu_hover: Option<usize>,
     pub folder_options: &'a [String],
+    pub folder_hidden: &'a [bool],
+    pub folder_roots: &'a [String],
     pub selected_folder: &'a str,
     pub menu_scroll: f32,
     pub theme_swatch: &'a [iced::Color],

@@ -4,9 +4,81 @@ use super::common::{
     DecodeResult, array, envelope, required_array, required_string, required_typed, strings,
 };
 use crate::contracts::daemon::{
+    ActivitiesResult, Activity, ActivityApplyEvent, ActivityApplyResult, ActivityCompletion,
     AudioOutputsResult, OutputStatus, OutputsResult, ThemeAuditionPreview, ThemeBackendsResult,
     ThemePreviewResult, ThemePreviewsResult,
 };
+
+pub fn decode_activities(value: &Value) -> DecodeResult<ActivitiesResult> {
+    const FIELD: &str = "result";
+    const EXPECTED: &str = "activities";
+    let object = envelope(wall_proto::rpc::WALL_ACTIVITIES, value)?;
+    let decoded: wall_proto::ActivitiesResult =
+        serde_json::from_value(Value::Object(object.clone())).map_err(|_| {
+            super::common::invalid(wall_proto::rpc::WALL_ACTIVITIES, FIELD, EXPECTED)
+        })?;
+    Ok(ActivitiesResult {
+        supported: decoded.supported,
+        current: decoded.current,
+        activities: decoded
+            .activities
+            .into_iter()
+            .map(|activity| Activity {
+                id: activity.id,
+                name: activity.name,
+                current: activity.current,
+            })
+            .collect(),
+    })
+}
+
+pub fn decode_activity_apply(value: &Value) -> DecodeResult<ActivityApplyResult> {
+    const FIELD: &str = "result";
+    const EXPECTED: &str = "activity apply";
+    let object = envelope(wall_proto::rpc::WALL_APPLY, value)?;
+    serde_json::from_value(Value::Object(object.clone()))
+        .map_err(|_| super::common::invalid(wall_proto::rpc::WALL_APPLY, FIELD, EXPECTED))
+}
+
+pub fn decode_activity_event(value: &Value) -> DecodeResult<Option<ActivityApplyEvent>> {
+    const FIELD: &str = "result";
+    const EXPECTED: &str = "activity apply event";
+    let object = envelope(wall_proto::ev::APPLY_RESULT, value)?;
+    let payload: wall_proto::ev::ApplyResult =
+        serde_json::from_value(Value::Object(object.clone()))
+            .map_err(|_| super::common::invalid(wall_proto::ev::APPLY_RESULT, FIELD, EXPECTED))?;
+    let Some(activity) = payload.activity else { return Ok(None) };
+    let token = payload.apply_token.unwrap_or_default();
+    let ok = required_typed::<bool>(
+        wall_proto::ev::APPLY_RESULT,
+        object,
+        wall_proto::apply_fields::OK,
+        EXPECTED,
+    )?;
+    let visible = payload.visible.ok_or_else(|| {
+        super::common::invalid(
+            wall_proto::ev::APPLY_RESULT,
+            wall_proto::apply_fields::VISIBLE,
+            EXPECTED,
+        )
+    })?;
+    let completion = if payload.queued == Some(true) {
+        None
+    } else if payload.cancelled == Some(true) || payload.superseded == Some(true) {
+        Some(ActivityCompletion::Cancelled)
+    } else if ok {
+        Some(ActivityCompletion::Applied { visible })
+    } else {
+        Some(ActivityCompletion::Failed(payload.detail.unwrap_or_default()))
+    };
+    Ok(Some(ActivityApplyEvent {
+        token,
+        request_id: payload.request_id,
+        activity,
+        output: payload.output,
+        completion,
+    }))
+}
 use crate::contracts::media::MediaKind;
 
 pub fn decode_outputs(value: &Value) -> DecodeResult<OutputsResult> {

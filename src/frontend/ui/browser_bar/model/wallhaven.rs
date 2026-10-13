@@ -5,6 +5,9 @@ use super::super::super::bar::BarItem;
 use super::item::push_item;
 use super::types::BrowserAct;
 
+const FILTER_ROW_HEIGHT: f32 = 30.0;
+const COLLECTION_MAX_ROW: f32 = 2.0;
+
 pub(crate) fn sort_label_key(key: &str) -> &'static str {
     match key {
         "toplist" => "browser-top",
@@ -39,6 +42,12 @@ pub(super) fn build_rows(
     start_x: f32,
     output: &mut Vec<(BarItem, BrowserAct)>,
 ) {
+    if !browser.request.wallhaven.collection.is_empty() {
+        build_purity_row(browser, scale, start_x, output);
+        build_max_row(browser, scale, COLLECTION_MAX_ROW * FILTER_ROW_HEIGHT * scale, output);
+        build_collections_row(browser, scale, output);
+        return;
+    }
     let second_row_x = build_top_row(browser, scale, start_x, output);
     build_purity_row(browser, scale, second_row_x, output);
     build_resolution_rows(browser, scale, output);
@@ -129,6 +138,9 @@ fn build_purity_row(
             active,
             BrowserAct::Purity(bit),
         );
+    }
+    if !browser.request.wallhaven.collection.is_empty() {
+        return;
     }
     x += 10.0 * scale;
     for index in 0..13usize {
@@ -221,7 +233,15 @@ fn build_resolution_rows(browser: &Browser, scale: f32, output: &mut Vec<(BarIte
         return;
     }
 
-    let max_y = 3.0 * height + 18.0 * scale;
+    build_max_row(browser, scale, 3.0 * height + 18.0 * scale, output);
+}
+
+fn build_max_row(
+    browser: &Browser,
+    scale: f32,
+    max_y: f32,
+    output: &mut Vec<(BarItem, BrowserAct)>,
+) {
     let mut max_x = 0.0;
     push_item(
         output,
@@ -260,7 +280,9 @@ fn build_collections_row(browser: &Browser, scale: f32, output: &mut Vec<(BarIte
         return;
     }
     let height = 24.0 * scale;
-    let y = if browser.request.wallhaven.res_exact {
+    let y = if !browser.request.wallhaven.collection.is_empty()
+        || browser.request.wallhaven.res_exact
+    {
         3.0 * height + 18.0 * scale
     } else {
         4.0 * height + 24.0 * scale

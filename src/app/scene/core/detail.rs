@@ -75,6 +75,13 @@ fn build_item_fields(item: &Wallpaper) -> Vec<(String, String)> {
 }
 
 impl SceneCore {
+    pub fn set_removal_action(&mut self, action: crate::frontend::scene::RemovalAction) {
+        if self.card.removal != action {
+            self.card.removal = action;
+            self.motion.needs_frame = true;
+        }
+    }
+
     pub fn flipped(&self) -> Option<usize> {
         self.card.flipped
     }
@@ -179,6 +186,7 @@ impl SceneCore {
             tags: ctx.catalog.tags_for(item).to_vec(),
             favourite: is_fav,
             fav_fill,
+            hidden: ctx.catalog.hidden.contains(&item.key),
             add_open: self.card.tag_open.x.clamp(0.0, 1.0),
             chip_pop: self.card.chip_pop.x.clamp(0.0, 1.0),
             pop_idx: self.card.pop_idx,
@@ -186,7 +194,9 @@ impl SceneCore {
             overview_available: crate::infrastructure::runtime::is_niri(),
             scene_properties: item.effective_kind() == WallpaperKind::We && !item.we_id.is_empty(),
             reset_thumbnail: item.kind == WallpaperKind::We && !item.we_id.is_empty(),
+            revealable: !item.path.is_empty(),
             picture_behind: self.mode == Mode::Hand,
+            removal: self.card.removal,
         }
     }
 

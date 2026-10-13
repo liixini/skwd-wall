@@ -33,3 +33,44 @@ settings-library-watch-convergence-hours = { $value ->
     [one] { $value } گھنٹہ پہلے
    *[other] { $value } گھنٹے پہلے
     }
+settings-profiles-card = پروفائلز
+settings-profiles-card-desc = طے کریں کہ پِکر، فولڈر فلٹر، بے ترتیب وال پیپر اور شیڈول کون سے فولڈر استعمال کریں۔ چھپے فولڈر بار میں چھپے ہوئے ٹوگل یا اس کی شارٹ کٹ سے واپس آتے ہیں، اور ہر بار کھلنے پر وہ دوبارہ چھپے ہوتے ہیں۔
+settings-profiles-everything = سب
+settings-profiles-name-label = نام
+settings-profiles-name-placeholder = پروفائل کا نام
+settings-profiles-state-show = دکھائیں
+settings-profiles-state-hide = چھپائیں
+settings-profiles-state-exclude = خارج کریں
+settings-profiles-workshop = Wallpaper Engine
+settings-profiles-workshop-desc = Workshop آئٹمز کے فولڈر نہیں ہوتے، اس لیے یہ سب پر لاگو ہوتا ہے۔ کسی ایک وال پیپر کو اس کے کارڈ کی پشت سے چھپائیں۔
+settings-profiles-summary = { $hidden } چھپے، { $excluded } خارج
+settings-profiles-summary-none = تمام فولڈر دکھاتا ہے
+settings-profiles-delete-action = پروفائل حذف کریں
+settings-profiles-add-label = نیا پروفائل
+settings-profiles-new-name = نیا پروفائل
+settings-profiles-tree-label = اس پروفائل کے فولڈر
+settings-profiles-tree-desc = دکھائیں فولڈر کو پِکر اور بے ترتیب میں رکھتا ہے۔ چھپائیں اسے بار کے چھپے ہوئے ٹوگل یا اس کی شارٹ کٹ دبانے تک نظروں سے دور رکھتا ہے۔ خارج کریں اسے پروفائل سے باہر رکھتا ہے، اس لیے ٹوگل اسے چھوڑ دیتا ہے۔ فولڈر اپنے ذیلی فولڈر بھی طے کرتا ہے؛ استثنا کے لیے بعد میں کوئی ذیلی فولڈر بدلیں۔
+settings-profiles-never-scanned = کبھی اسکین نہیں ہوتا
+settings-profiles-mixed = اندر ملا جلا
+settings-profiles-hidden-inside = { $count ->
+    [one] اندر { $count } چھپا
+   *[other] اندر { $count } چھپے
+    }
+settings-profiles-copy-action = کاپی کریں
+settings-profiles-helm-desc = اسے فعال پروفائل بناتا ہے، اس لیے گردش اور شیڈول اس پر چلتے ہیں۔
+settings-profiles-flag-desc = اس پروفائل میں ایک پِکر کھولتا ہے اور فعال پروفائل کو ویسا ہی رہنے دیتا ہے۔
+settings-profiles-make-active = فعال کریں
+settings-profiles-active-tag = فعال
+settings-profiles-builtin-tag = بلٹ اِن
+settings-profiles-filter-placeholder = فولڈر چھانٹیں
+settings-profiles-no-match = کوئی فولڈر مماثل نہیں۔
+settings-profiles-switch-label = اس پروفائل پر جائیں
+settings-profiles-switch-desc = skwd-helm محفوظ شدہ پروفائل بدلتا ہے، اس لیے روٹیشن اور شیڈول اسی کی پیروی کرتے ہیں۔ لانچ فلیگ اس پروفائل میں ایک پکر کھولتا ہے اور محفوظ شدہ پروفائل کو ویسا ہی رہنے دیتا ہے۔
+settings-profiles-hidden-note-label = چھپے وال پیپر
+settings-profiles-hidden-note-desc = بار کا چھپائیں ٹوگل (Ctrl+H) فعال پروفائل کے چھپے فولڈر اور کارڈ کی پشت سے چھپایا گیا ہر وال پیپر دکھاتا ہے۔ ہر لانچ پر وہ دوبارہ چھپ جاتے ہیں۔
+settings-profiles-tree-note = کبھی اسکین نہیں، لائبریری › فولڈر کے خارج کردہ فولڈروں سے آتا ہے، اس لیے کوئی پروفائل اسے نہیں دکھا سکتا۔ یہاں خارج کرنا صرف فولڈر کو اس پروفائل سے باہر رکھتا ہے۔ کارڈ سے چھپائے گئے وال پیپر ہر پروفائل میں، سب کچھ سمیت، چھپے دکھائیں تک چھپے رہتے ہیں۔ .private جیسے ڈاٹ فولڈر یہاں عام فولڈر ہیں۔
+settings-profiles-legend-show = پکر اور رینڈم میں۔
+settings-profiles-legend-hide = بار کے چھپائیں ٹوگل یا Ctrl+H تک۔ کبھی رینڈم نہیں۔
+settings-profiles-legend-exclude = اس پروفائل سے باہر۔ چھپے دکھائیں اسے چھوڑ دیتا ہے۔
+settings-profiles-everything-desc = سب کچھ ہر اسکین شدہ فولڈر اور ہر Workshop آئٹم دکھاتا ہے۔ کچھ چھپانے یا خارج کرنے کے لیے نیا پروفائل بنائیں۔
+settings-profiles-delete-hint = حذف کرنے کے لیے دوبارہ کلک کریں۔ وال پیپر اور فولڈر اپنی جگہ رہتے ہیں۔

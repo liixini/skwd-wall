@@ -7,6 +7,8 @@ use crate::frontend::theme::Palette;
 use super::super::with_alpha;
 use super::style::bg_style;
 
+#[cfg(test)]
+pub const MIN_VIEWPORT: (f32, f32) = (1366.0, 768.0);
 const FOLIO_SHEET_WIDTH: f32 = 1390.0;
 const FOLIO_SHEET_HEIGHT: f32 = 870.0;
 const FOLIO_SHEET_MARGIN: f32 = 22.0;

@@ -67,9 +67,13 @@ class PrivateSourcePolicyTests(unittest.TestCase):
             self.assertNotIn(f"repository: liixini/skwd-{name.replace('_', '-')}", workflow)
         self.assertNotIn("GIT_CONFIG_COUNT", workflow)
         self.assertNotIn("insteadOf", workflow)
-        verify_revision = "09f2b56581b4e817b1f17d3c4291c83484c90175"
-        self.assertIn("repository: liixini/skwd-verify", workflow)
-        self.assertIn(f"ref: {verify_revision}", workflow)
+        for repository, revision in (
+            ("skwd-deck", "ebc5580b34cd55e5110497de325017da154b0912"),
+            ("skwd-lens", "d1c985756d8e0be37af80c34cb263da3a2259775"),
+            ("skwd-verify", "1939cb1f3b7aa10c61a321b5859dcc62d9fa2ad9"),
+        ):
+            self.assertIn(f"repository: liixini/{repository}", workflow)
+            self.assertIn(f"ref: {revision}", workflow)
         verifier_step = workflow.split("      - name: Verify system-test repository\n", 1)[1]
         verifier_step = verifier_step.split("\n      - name: ", 1)[0]
         for required in (

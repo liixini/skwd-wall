@@ -63,8 +63,8 @@ keybind-scene-properties = Scenegenskaper
 
 keybind-folder-prev = Föregående mapp
 keybind-folder-next = Nästa mapp
-keybind-folder-toggle = Växla mellan Alla och Huvudmapp
-keybind-hidden-folders = Visa/dölj dolda mappar
+keybind-folder-toggle = Visa alla bakgrunder
+keybind-hidden-folders = Visa/dölj dolda bakgrunder
 keybind-type-prev = Föregående bakgrundstyp
 keybind-type-next = Nästa bakgrundstyp
 keybind-sort-prev = Föregående sortering

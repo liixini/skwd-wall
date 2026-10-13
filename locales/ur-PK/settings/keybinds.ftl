@@ -63,8 +63,8 @@ keybind-scene-properties = منظر کی خصوصیات
 
 keybind-folder-prev = پچھلا فولڈر
 keybind-folder-next = اگلا فولڈر
-keybind-folder-toggle = سب/مرکزی ٹوگل کریں
-keybind-hidden-folders = چھپے فولڈر دکھائیں/چھپائیں
+keybind-folder-toggle = تمام وال پیپر دکھائیں
+keybind-hidden-folders = چھپے وال پیپر دکھائیں/چھپائیں
 keybind-type-prev = پچھلی وال پیپر قسم
 keybind-type-next = اگلی وال پیپر قسم
 keybind-sort-prev = پچھلی ترتیب

@@ -152,6 +152,7 @@ impl App {
             || (self.panels.settings.open && !self.panels.settings.tab_anim.settled())
             || (self.panels.settings.open && !self.panels.settings.section_anim.settled())
             || (self.panels.settings.open && !self.panels.settings.control_anim.settled())
+            || (self.panels.settings.open && self.panels.settings.profile_animating())
             || ((self.panels.settings.open || self.panels.effects.is_some())
                 && self.panels.settings.bars_animating())
             || self
@@ -371,6 +372,34 @@ impl App {
             crate::zone!("theme_preview");
             self.update_theme_preview(now, dt);
         }
+        if let Some(item) = self
+            .scene
+            .flipped()
+            .and_then(|index| self.library_session.filtered.get(index))
+            .and_then(|&index| self.library_session.library.catalog().items.get(index as usize))
+        {
+            use crate::frontend::scene::RemovalAction;
+            let pending = self.daemon.pending.values().find_map(|request| {
+                if let Pending::RemoveWallpaper { key, unsubscribe } = request
+                    && key == &item.key
+                {
+                    Some(*unsubscribe)
+                } else {
+                    None
+                }
+            });
+            let action = match pending {
+                Some(true) => RemovalAction::Unsubscribing,
+                Some(false) => RemovalAction::Deleting,
+                None if item.steam_subscribed && self.unsubscribe_available() => {
+                    RemovalAction::Unsubscribe
+                }
+                None if item.steam_subscribed => RemovalAction::UnsubscribeUnavailable,
+                None if item.steam_confirmation_required => RemovalAction::SteamStatusUnknown,
+                None => RemovalAction::Delete,
+            };
+            self.scene.set_removal_action(action);
+        }
         {
             crate::zone!("scene_tick");
             self.scene.tick(
@@ -496,6 +525,7 @@ impl App {
         if self.panels.settings.open {
             self.panels.settings.section_anim.tick(dt);
             self.panels.settings.control_anim.tick(dt);
+            self.panels.settings.tick_profile(dt);
         }
         if self.panels.settings.open || self.panels.effects.is_some() {
             self.panels.settings.tick_bars(dt);

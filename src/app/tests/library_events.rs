@@ -390,6 +390,22 @@ fn scan_done_refetch() {
 }
 
 #[test]
+fn same_count_exclusion_refetch() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("nature/a.png", "static", 1, 0)]);
+    drain_calls(&app);
+    app.daemon.pending.insert(999, Pending::List);
+    app.config.save_key(skwd_config::keys::library::EXCLUDED_FOLDERS, json!(["nature"]));
+    app.on_event("skwd.wall.config_changed", &json!({"library_changed": true}));
+    assert!(!app.daemon.pending.contains_key(&999));
+    assert!(drain_calls(&app).iter().any(|(method, _)| method == "wall.list"));
+    app.on_result(Pending::List, &json!({"wallpapers": [wall("city/b.png", "static", 1, 0)]}));
+    assert_eq!(filtered_names(&app), ["city/b.png"]);
+    app.on_event("skwd.wall.config_changed", &json!({}));
+    assert!(drain_calls(&app).iter().all(|(method, _)| method != "wall.list"));
+}
+
+#[test]
 fn semantic_index_refresh_drops_worker() {
     let mut app = test_app();
     app.tags.search_mode = SearchMode::Tags;

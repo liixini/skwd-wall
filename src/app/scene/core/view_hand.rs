@@ -360,6 +360,7 @@ impl SceneCore {
                 kind: chrome_kind(item.kind.as_str()),
                 has_video: item.effective_kind() == WallpaperKind::Video,
                 favourite: ctx.catalog.is_favourite(item),
+                hidden: ctx.catalog.is_hidden(item),
                 radius: 0.0,
                 opacity,
             });

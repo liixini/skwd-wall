@@ -197,6 +197,20 @@ impl LibraryState {
         }
     }
 
+    pub fn toggle_hidden(&mut self, key: &str) -> bool {
+        if self.catalog.hidden.remove(key) {
+            false
+        } else {
+            self.catalog.hidden.insert(key.to_string());
+            true
+        }
+    }
+
+    pub fn set_profile_sets(&mut self, hidden: HashSet<String>, excluded: HashSet<String>) {
+        self.catalog.profile_hidden = hidden;
+        self.catalog.profile_excluded = excluded;
+    }
+
     fn mark_tags_changed(&mut self) {
         self.tag_revision = self.tag_revision.wrapping_add(1);
     }

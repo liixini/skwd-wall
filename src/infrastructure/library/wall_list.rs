@@ -52,6 +52,9 @@ pub fn decode_rows(rows: &[wall_proto::WallpaperItem], paths: LibraryPaths<'_>) 
                 values.into_iter().filter_map(|value| value.as_str().map(String::from)).collect();
             catalog.weather.insert(key.clone(), weather);
         }
+        if row.hidden {
+            catalog.hidden.insert(key.clone());
+        }
         if row.favourite == Some(1) {
             catalog.favourites.insert(key);
         }
@@ -107,7 +110,7 @@ fn decode_row(row: &wall_proto::WallpaperItem, paths: LibraryPaths<'_>) -> Optio
             format!("{}/{name}", paths.video_dir)
         }
         wall_proto::kind::VIDEO => video_file.clone(),
-        _ => String::new(),
+        _ => row.path.clone().unwrap_or_default(),
     };
 
     Some(Wallpaper {
@@ -116,6 +119,8 @@ fn decode_row(row: &wall_proto::WallpaperItem, paths: LibraryPaths<'_>) -> Optio
         kind,
         thumb,
         thumbnail_generated: row.thumbnail_generated,
+        steam_subscribed: row.steam_subscribed,
+        steam_confirmation_required: row.steam_confirmation_required,
         path,
         preview: row.preview.clone().unwrap_or_default(),
         we_id,

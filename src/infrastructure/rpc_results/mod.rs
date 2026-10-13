@@ -12,7 +12,9 @@ mod status;
 pub use browser::{decode_browser_collections, decode_browser_download, decode_browser_search};
 #[allow(unused_imports)]
 pub use common::{DecodeError, DecodeResult};
-pub use diagnostics::{decode_bug_report, decode_diagnostic, decode_weather};
+pub use diagnostics::{
+    decode_bug_report, decode_diagnostic, decode_weather, decode_weather_candidates,
+};
 pub use effects::{decode_effect_operation, decode_effects_list};
 pub use library::decode_library_list;
 pub use playlists::{
@@ -20,12 +22,13 @@ pub use playlists::{
     decode_playlist_members, decode_playlist_outputs,
 };
 pub use presentation::{
-    decode_audio_outputs, decode_current_theme, decode_outputs, decode_running_processes,
-    decode_theme_backends, decode_theme_preview, decode_theme_previews,
+    decode_activities, decode_activity_apply, decode_activity_event, decode_audio_outputs,
+    decode_current_theme, decode_outputs, decode_running_processes, decode_theme_backends,
+    decode_theme_preview, decode_theme_previews,
 };
 pub use status::{
-    decode_library_watch, decode_scene_properties, decode_status, decode_task_list,
-    decode_task_status, decode_thumbnail_reset,
+    decode_library_watch, decode_lockscreen_set, decode_scene_properties, decode_status,
+    decode_task_list, decode_task_status, decode_thumbnail_reset, decode_wall_remove,
 };
 
 #[cfg(test)]

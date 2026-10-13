@@ -1,10 +1,14 @@
+use std::collections::HashSet;
+
 use super::ActionId;
+use crate::contracts::settings::ProfileState;
 
 #[derive(Debug, Clone)]
 pub enum Control {
     Display(crate::frontend::display_control::DisplayControl),
     AppTheme {
         app: crate::contracts::daemon::AppThemeStatus,
+        index: usize,
     },
     Toggle {
         path: String,
@@ -111,7 +115,11 @@ impl Control {
     pub fn is_wide_field(&self) -> bool {
         matches!(
             self,
-            Self::StackBar { .. } | Self::Segment | Self::Code { .. } | Self::AppTheme { .. }
+            Self::StackBar { .. }
+                | Self::Segment
+                | Self::Code { .. }
+                | Self::AppTheme { .. }
+                | Self::Details { .. }
         )
     }
 
@@ -131,4 +139,85 @@ pub struct Row {
 pub struct Card {
     pub title: &'static str,
     pub subtitle: &'static str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TagTone {
+    Quiet,
+    Info,
+    Warn,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FolderRow {
+    pub index: usize,
+    pub key: String,
+    pub path: String,
+    pub tag: Option<(String, TagTone)>,
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FolderLedger {
+    pub kind: crate::contracts::settings::FolderKind,
+    pub rows: Vec<FolderRow>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProfileEntry {
+    pub index: Option<usize>,
+    pub id: String,
+    pub name: String,
+    pub active: bool,
+}
+
+impl ProfileEntry {
+    pub fn builtin(&self) -> bool {
+        self.index.is_none()
+    }
+
+    pub fn name_key(&self) -> Option<String> {
+        use crate::contracts::settings::keys::library;
+        self.index.map(|index| format!("{}.{index}.{}", library::PROFILES, library::profile::NAME))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ProfilesPage {
+    pub profiles: Vec<ProfileEntry>,
+    pub selected: usize,
+    pub summary: String,
+    pub tree: Vec<TreeNode>,
+    pub no_match: bool,
+}
+
+impl ProfilesPage {
+    pub fn current(&self) -> &ProfileEntry {
+        &self.profiles[self.selected.min(self.profiles.len() - 1)]
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TreeNode {
+    pub id: String,
+    pub path: String,
+    pub label: String,
+    pub depth: u8,
+    pub state: Option<ProfileState>,
+    pub mixed: bool,
+    pub hidden_inside: usize,
+    pub children: bool,
+    pub collapsed: bool,
+}
+
+impl TreeNode {
+    pub fn open_by_default(&self) -> bool {
+        self.depth == 0
+    }
+}
+
+pub fn mark_folds(nodes: &mut [TreeNode], toggled: &HashSet<String>) {
+    for node in nodes.iter_mut() {
+        node.collapsed = node.children && (node.open_by_default() == toggled.contains(&node.id));
+    }
 }

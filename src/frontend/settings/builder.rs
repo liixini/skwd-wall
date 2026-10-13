@@ -202,6 +202,17 @@ impl Builder<'_> {
         options: Vec<(String, String)>,
     ) {
         let current = self.cfg.text(path);
+        self.chips_current(title, desc, path, options, current);
+    }
+
+    pub(super) fn chips_current(
+        &mut self,
+        title: &str,
+        desc: &str,
+        path: &str,
+        options: Vec<(String, String)>,
+        current: String,
+    ) {
         self.row(
             title,
             desc,
@@ -225,7 +236,7 @@ impl Builder<'_> {
             title,
             desc,
             Control::ActionChips {
-                items: items.iter().map(|(id, label)| (*id, (*label).to_string())).collect(),
+                items: items.iter().map(|(id, label)| (id.clone(), (*label).to_string())).collect(),
             },
         );
     }

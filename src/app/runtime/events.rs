@@ -158,10 +158,33 @@ impl App {
                 }
             }
             ev::CONFIG_CHANGED => {
+                let outdoor_mode = self.outdoor_mode();
+                let location_key = self.outdoor_location_key();
                 self.adopt_external_config();
+                let context_changed = outdoor_mode != self.outdoor_mode()
+                    || (self.outdoor_mode() && location_key != self.outdoor_location_key());
+                if context_changed {
+                    self.daemon.weather = None;
+                }
+                self.call_tracked(wall_proto::rpc::WALL_WEATHER, json!({}), Pending::Weather);
+                self.call_tracked(
+                    wall_proto::rpc::PLAYLIST_LIST,
+                    json!({}),
+                    Pending::WeatherPlaylists,
+                );
+                if ev::ConfigChanged::deserialize(data).unwrap_or_default().library_changed
+                    && outdoor_mode == self.outdoor_mode()
+                {
+                    self.daemon.pending.retain(|_, pending| *pending != Pending::List);
+                    self.request_library_list();
+                }
+            }
+            ev::WEATHER_CHANGED => {
+                self.call_tracked(wall_proto::rpc::WALL_WEATHER, json!({}), Pending::Weather);
             }
             ev::OUTPUTS_CHANGED => {
                 self.call_tracked("wall.outputs", json!({}), Pending::Outputs);
+                crate::app::helpers::request_activities(self);
                 if self.panels.audio.is_some() {
                     self.call_tracked("wall.outputs", json!({}), Pending::AudioOutputs);
                 }
@@ -388,6 +411,14 @@ impl App {
     }
 
     fn on_apply_result(&mut self, data: &Value) {
+        match crate::infrastructure::rpc_results::decode_activity_event(data) {
+            Ok(Some(event)) => {
+                self.on_activity_apply_event(event);
+                return;
+            }
+            Err(_) => return,
+            Ok(None) => {}
+        }
         let Ok(payload) = ev::ApplyResult::deserialize(data) else {
             return;
         };
@@ -413,7 +444,11 @@ impl App {
             return;
         }
         info!("scan_done: scanner has {count} items, catalog has {have}; refreshing list");
-        self.call_tracked("wall.list", json!({"favourites": false}), Pending::List);
+        self.request_library_list();
+    }
+
+    pub(in crate::app) fn request_library_list(&mut self) {
+        self.call_tracked(wall_proto::rpc::WALL_LIST, json!({"favourites": false}), Pending::List);
     }
 }
 

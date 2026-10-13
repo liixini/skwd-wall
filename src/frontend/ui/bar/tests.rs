@@ -317,11 +317,29 @@ fn random_chip_state() {
 
 #[test]
 fn folder_depth_leaf() {
-    assert_eq!(super::folder_depth("anime"), 0);
-    assert_eq!(super::folder_depth("anime/seasonal"), 1);
-    assert_eq!(super::folder_depth("anime/seasonal/2024"), 2);
+    assert_eq!(super::folder_depth("anime", &[]), 0);
+    assert_eq!(super::folder_depth("anime/seasonal", &[]), 1);
+    assert_eq!(super::folder_depth("anime/seasonal/2024", &[]), 2);
     assert_eq!(super::folder_leaf("anime/seasonal/2024"), "2024");
     assert_eq!(super::folder_leaf("anime"), "anime");
+}
+
+#[test]
+fn folder_root_labels() {
+    let roots = ["/first/photos", "/second/photos", "/first/photos/nested"].map(str::to_string);
+    assert_eq!(super::folder_depth("/first/photos", &roots), 0);
+    assert_eq!(super::folder_depth("/first/photos/nested", &roots), 0);
+    assert_eq!(super::folder_depth("/first/photos/nested/deep", &roots), 1);
+    assert_eq!(super::menu::folder_label("/first/photos", &roots), "first/photos");
+    assert_eq!(super::menu::folder_label("/second/photos", &roots), "second/photos");
+    assert_eq!(super::menu::folder_label("/first/photos/nested/deep", &roots), "deep");
+    assert_eq!(
+        super::menu::folder_short_label(
+            "/first/photos/nested/deep",
+            &["/second/photos/nested/deep".into(), "/first/photos/nested/deep".into()]
+        ),
+        "first/photos/nested/deep"
+    );
 }
 
 #[test]
@@ -740,6 +758,8 @@ fn touchpad_audio_accumulates() {
         backend_options: Vec::new(),
         menu_hover: None,
         folder_options: &[],
+        folder_hidden: &[],
+        folder_roots: &[],
         selected_folder: "",
         menu_scroll: 0.0,
         theme_swatch: &[],
@@ -806,7 +826,7 @@ fn menu_index_upward() {
     );
     let pal = crate::frontend::theme::Palette::default();
     let cache = iced::widget::canvas::Cache::new();
-    let bar = super::FilterBar {
+    let mut bar = super::FilterBar {
         model,
         hover: None,
         menu_open: true,
@@ -815,6 +835,8 @@ fn menu_index_upward() {
         backend_options: Vec::new(),
         menu_hover: None,
         folder_options: &folders,
+        folder_hidden: &[],
+        folder_roots: &[],
         selected_folder: "*",
         menu_scroll: 0.0,
         theme_swatch: &[],
@@ -829,6 +851,12 @@ fn menu_index_upward() {
     let below = rect.y + rect.height + 20.0;
     assert!(bar.menu_index_at(rect.x + 5.0, below).is_none());
     assert!(bar.menu_index_at(rect.x + 5.0, rect.y + rect.height * 0.5).is_some());
+    let roots = ["/first/photos", "/second/photos"].map(str::to_string);
+    bar.folder_options = &roots;
+    bar.folder_roots = &roots;
+    let label = super::menu::folder_label(&roots[0], &roots);
+    let needed = super::super::misc::text_width(&label, 10.0, false);
+    assert!(bar.menu_rect().unwrap().width > needed);
 }
 
 #[test]
@@ -882,6 +910,8 @@ fn audio_residue_resets() {
         backend_options: Vec::new(),
         menu_hover: None,
         folder_options: &[],
+        folder_hidden: &[],
+        folder_roots: &[],
         selected_folder: "",
         menu_scroll: 0.0,
         theme_swatch: &[],
@@ -1165,6 +1195,8 @@ fn filter_bar<'a>(
         backend_options: Vec::new(),
         menu_hover: None,
         folder_options: &[],
+        folder_hidden: &[],
+        folder_roots: &[],
         selected_folder: "",
         menu_scroll: 0.0,
         theme_swatch: &[],
@@ -1327,5 +1359,43 @@ fn smart_choices_are_matugen_only() {
                 assert!(choice.active);
             }
         }
+    }
+}
+
+#[test]
+fn hidden_toggle_after_folder() {
+    let folders = [String::from("*"), String::from("/wp/anime")];
+    for hidden in [None, Some(false), Some(true)] {
+        let show = BarShow { hidden, ..BarShow::all() };
+        let model = build_bar(
+            &Filters::default(),
+            &folders,
+            false,
+            0,
+            0,
+            1.0,
+            false,
+            true,
+            false,
+            false,
+            false,
+            None,
+            "",
+            &show,
+            0.0,
+            false,
+            false,
+            None,
+        );
+        let folder = model
+            .items
+            .iter()
+            .position(|item| matches!(item.action, Some(BarAction::FolderToggle)))
+            .expect("folder item");
+        let toggle = model
+            .items
+            .get(folder + 1)
+            .filter(|item| matches!(item.action, Some(BarAction::ShowHidden)));
+        assert_eq!(toggle.map(|item| item.active), hidden);
     }
 }

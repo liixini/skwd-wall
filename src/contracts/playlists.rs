@@ -1,3 +1,5 @@
+pub use wall_proto::playlist_source;
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum PlaylistKind {
     #[default]

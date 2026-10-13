@@ -6,8 +6,8 @@ use super::super::super::rtl;
 use super::super::super::theme_bar::ThemeBar;
 use super::super::action::BarAction;
 use super::super::catalog::{
-    ICON_FAV, ICON_FOLDER, ICON_RANDOM, SORTS, TYPES, next_orient, next_resolution, orient_label,
-    resolution_label, type_label_key,
+    ICON_FAV, ICON_FOLDER, ICON_HIDDEN, ICON_RANDOM, SORTS, TYPES, next_orient, next_resolution,
+    orient_label, resolution_label, type_label_key,
 };
 use super::layout::{menu_rows, menu_space, theme_rows, wrap_items};
 use super::types::{BarItem, BarModel, BarNotice, BarShow, dropdown_item};
@@ -67,9 +67,18 @@ pub fn build_bar_with_tasks(
     let has_folders =
         show.folder && folder_options.iter().any(|folder| !matches!(folder.as_str(), "" | "*"));
     if has_folders {
-        folder_item(&mut items, &mut x, scale, &filters.folder, menu_up, folder_menu_open);
+        folder_item(
+            &mut items,
+            &mut x,
+            scale,
+            &filters.folder,
+            folder_options,
+            menu_up,
+            folder_menu_open,
+        );
     }
 
+    hidden_item(&mut items, &mut x, scale, show.hidden);
     sort_items(&mut items, &mut x, scale, &filters.sort, &show.sorts);
 
     if show.favourites {
@@ -347,6 +356,13 @@ fn type_items(
     }
 }
 
+fn hidden_item(items: &mut Vec<BarItem>, x: &mut f32, scale: f32, revealed: Option<bool>) {
+    if let Some(revealed) = revealed {
+        let action = Some(BarAction::ShowHidden);
+        push_item(items, x, scale, ICON_HIDDEN, true, revealed, action);
+    }
+}
+
 fn sort_items(
     items: &mut Vec<BarItem>,
     x: &mut f32,
@@ -368,13 +384,14 @@ fn folder_item(
     x: &mut f32,
     scale: f32,
     folder: &str,
+    folder_options: &[String],
     menu_up: bool,
     open: bool,
 ) {
-    let current = match folder {
-        "*" => tr("filter-bar-folder-all"),
-        "" => tr("filter-bar-folder-main"),
-        name => name,
+    let current = if folder == crate::domain::library::filter::ALL_WALLPAPERS {
+        tr("filter-bar-folder-all").to_string()
+    } else {
+        super::super::menu::folder_short_label(folder, folder_options)
     }
     .to_uppercase();
     dropdown_item(
@@ -384,7 +401,7 @@ fn folder_item(
         ICON_FOLDER,
         &current,
         menu_up,
-        !folder.is_empty() || open,
+        folder != "*" || open,
         BarAction::FolderToggle,
     );
 }

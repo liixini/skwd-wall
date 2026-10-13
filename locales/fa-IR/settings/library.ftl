@@ -33,3 +33,44 @@ settings-library-watch-convergence-hours = { $value ->
     [one] { $value } ساعت پیش
    *[other] { $value } ساعت پیش
     }
+settings-profiles-card = نمایه‌ها
+settings-profiles-card-desc = تعیین کنید انتخابگر، فیلتر پوشه، تصاویر زمینه تصادفی و زمان‌بندی‌ها از کدام پوشه‌ها استفاده کنند. پوشه‌های پنهان با کلید پنهان‌ها در نوار یا میانبر آن برمی‌گردند و هر اجرا دوباره با پنهان بودن آن‌ها شروع می‌شود.
+settings-profiles-everything = همه
+settings-profiles-name-label = نام
+settings-profiles-name-placeholder = نام نمایه
+settings-profiles-state-show = نمایش
+settings-profiles-state-hide = پنهان
+settings-profiles-state-exclude = کنار گذاشتن
+settings-profiles-workshop = Wallpaper Engine
+settings-profiles-workshop-desc = موارد Workshop پوشه ندارند، پس این برای همه آن‌ها اعمال می‌شود. یک تصویر زمینه را از پشت کارتش پنهان کنید.
+settings-profiles-summary = { $hidden } پنهان، { $excluded } کنارگذاشته
+settings-profiles-summary-none = همه پوشه‌ها نمایش داده می‌شوند
+settings-profiles-delete-action = حذف نمایه
+settings-profiles-add-label = نمایه جدید
+settings-profiles-new-name = نمایه جدید
+settings-profiles-tree-label = پوشه‌های این نمایه
+settings-profiles-tree-desc = نمایش پوشه را در انتخابگر و تصادفی نگه می‌دارد. پنهان آن را تا زدن کلید پنهان‌ها در نوار یا میانبر آن از دید دور نگه می‌دارد. کنار گذاشتن آن را از نمایه بیرون می‌گذارد، پس کلید از آن می‌گذرد. پوشه زیرپوشه‌هایش را هم تنظیم می‌کند؛ برای استثنا بعداً یک زیرپوشه را تغییر دهید.
+settings-profiles-never-scanned = هرگز پویش نمی‌شود
+settings-profiles-mixed = درونش مخلوط است
+settings-profiles-hidden-inside = { $count ->
+    [one] { $count } پنهان درون
+   *[other] { $count } پنهان درون
+    }
+settings-profiles-copy-action = کپی
+settings-profiles-helm-desc = این را نمایه فعال می‌کند تا چرخش و زمان‌بندی‌ها از آن پیروی کنند.
+settings-profiles-flag-desc = یک انتخابگر در این نمایه باز می‌کند و نمایه فعال را دست نمی‌زند.
+settings-profiles-make-active = فعال کردن
+settings-profiles-active-tag = فعال
+settings-profiles-builtin-tag = داخلی
+settings-profiles-filter-placeholder = فیلتر پوشه‌ها
+settings-profiles-no-match = هیچ پوشه‌ای مطابقت ندارد.
+settings-profiles-switch-label = رفتن به این نمایه
+settings-profiles-switch-desc = skwd-helm نمایهٔ ذخیره‌شده را عوض می‌کند، پس چرخش و زمان‌بندی‌ها از آن پیروی می‌کنند. پرچم راه‌اندازی یک انتخابگر در این نمایه باز می‌کند و نمایهٔ ذخیره‌شده را دست نمی‌زند.
+settings-profiles-hidden-note-label = تصاویر پنهان
+settings-profiles-hidden-note-desc = دکمهٔ پنهان در نوار (Ctrl+H) پوشه‌های پنهان نمایهٔ فعال و هر تصویری را که از پشت کارتش پنهان شده نشان می‌دهد. هر راه‌اندازی دوباره آن‌ها را پنهان می‌کند.
+settings-profiles-tree-note = «هرگز پویش نشده» از پوشه‌های مستثنا در کتابخانه › پوشه‌ها می‌آید، پس هیچ نمایه‌ای نمی‌تواند آن را نشان دهد. مستثنا کردن در اینجا فقط پوشه را از این نمایه بیرون می‌گذارد. تصاویری که از کارتشان پنهان شده‌اند در هر نمایه، از جمله «همه»، تا «نمایش پنهان‌ها» پنهان می‌مانند. پوشه‌های نقطه‌دار مانند .private اینجا پوشه‌های معمولی‌اند.
+settings-profiles-legend-show = در انتخابگر و تصادفی.
+settings-profiles-legend-hide = تا دکمهٔ پنهان در نوار یا Ctrl+H. هرگز تصادفی نیست.
+settings-profiles-legend-exclude = از این نمایه. «نمایش پنهان‌ها» از آن می‌گذرد.
+settings-profiles-everything-desc = «همه» هر پوشهٔ پویش‌شده و هر مورد Workshop را نشان می‌دهد. برای پنهان یا مستثنا کردن برخی، نمایهٔ جدیدی بسازید.
+settings-profiles-delete-hint = برای حذف دوباره کلیک کنید. تصاویر و پوشه‌ها سر جایشان می‌مانند.
