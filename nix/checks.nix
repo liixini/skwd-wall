@@ -1,8 +1,21 @@
 { pkgs, packages, nixosModule, release }:
+let
+  scratch = "/var/lib/skwd-test";
+  scratchEnvironment = { TMPDIR = scratch; TMP = scratch; TEMP = scratch; };
+  scratchModule = {
+    environment.variables = scratchEnvironment;
+    systemd.globalEnvironment = scratchEnvironment;
+    systemd.user.settings.Manager.DefaultEnvironment =
+      pkgs.lib.mapAttrsToList (name: value: "${name}=${value}") scratchEnvironment;
+    systemd.tmpfiles.rules = [ "d ${scratch} 1777 root root -" ];
+    virtualisation.diskImage = "skwd-test.qcow2";
+  };
+in
 {
   profile-install = pkgs.testers.runNixOSTest {
     name = "skwd-profile-install";
     nodes.machine = { ... }: {
+      imports = [ scratchModule ];
       users.users.alice = { isNormalUser = true; uid = 1000; };
       nix.settings.experimental-features = [ ];
       virtualisation.additionalPaths = [ packages.default ];
@@ -13,10 +26,11 @@
       import shlex
 
       def user(command):
-          return "su - alice -c " + shlex.quote("export XDG_RUNTIME_DIR=/run/user/1000; " + command)
+          return "su - alice -c " + shlex.quote("export TMPDIR=${scratch} TMP=${scratch} TEMP=${scratch} XDG_RUNTIME_DIR=/run/user/1000; " + command)
 
       start_all()
       machine.wait_for_unit("multi-user.target")
+      machine.succeed("case $(findmnt -n -o FSTYPE -T ${scratch}) in \"\"|tmpfs|ramfs) exit 1;; esac; df -h ${scratch}")
       machine.succeed("loginctl enable-linger alice")
       machine.wait_for_unit("user@1000.service")
       machine.fail(user("command -v skwd-wall-v2"))
@@ -49,13 +63,16 @@
   release-install = pkgs.testers.runNixOSTest {
     name = "skwd-release-install";
     nodes.machine = { lib, ... }: {
-      imports = [ nixosModule ];
+      imports = [ nixosModule scratchModule ];
       services.skwd-deck.enable = true;
       users.users.alice = { isNormalUser = true; uid = 1000; extraGroups = [ "video" "render" ]; };
       services.getty.autologinUser = "alice";
       programs.sway.enable = true;
       programs.bash.loginShellInit = ''
         if [ "$(tty)" = /dev/tty1 ]; then
+          case "$(findmnt -n -o FSTYPE -T "$TMPDIR")" in
+            ""|tmpfs|ramfs) exit 1 ;;
+          esac
           exec sway
         fi
       '';
@@ -76,6 +93,7 @@
 
       start_all()
       machine.wait_for_unit("multi-user.target")
+      machine.succeed("case $(findmnt -n -o FSTYPE -T ${scratch}) in \"\"|tmpfs|ramfs) exit 1;; esac; df -h ${scratch}")
       machine.succeed("${packages.wall}/bin/skwd-wall-v2 --version")
       machine.succeed("${packages.deck}/bin/skwd-walld --version")
       machine.succeed("${packages.deck}/bin/skwd-helm --version")
@@ -96,13 +114,13 @@
             png += chunk(b"IHDR", struct.pack(">IIBBBBB", 224, 224, 8, 2, 0, 0, 0))
             png += chunk(b"IDAT", zlib.compress((bytes([0]) + color * 224) * 224))
             png += chunk(b"IEND", b"")
-            path = "/tmp/" + key + ".png"
+            path = "${scratch}/" + key + ".png"
             machine.succeed("echo " + base64.b64encode(png).decode() + " | base64 -d > " + path)
             entries.append({"key": key, "path": path, "fingerprint": 1})
 
         model = "${packages.skwd-lens-model}/share/skwd-lens/models/semantic"
         lens = "${packages.lens}/bin/skwd-lens --manifest " + model + "/semantic-pack.json"
-        lens += " --runtime " + model + "/runtime/libonnxruntime.so.1.27.0 --index /tmp/lens.sidx --threads 2"
+        lens += " --runtime " + model + "/runtime/libonnxruntime.so.1.27.0 --index ${scratch}/lens.sidx --threads 2"
         catalog = shlex.quote(json.dumps({"fingerprint": 1, "entries": entries}))
         machine.succeed("echo " + catalog + " | " + lens + " --build-index")
         for color in ["red", "blue"]:
@@ -110,13 +128,13 @@
             result = json.loads(response)
             assert result.get("error") is None, result
             assert result["matches"][0]["key"] == color, result
-        machine.succeed("test -s /tmp/lens.sidx")
+        machine.succeed("test -s ${scratch}/lens.sidx")
         def user(command):
-            return "su - alice -c " + shlex.quote("export XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-1; " + command)
+            return "su - alice -c " + shlex.quote("export TMPDIR=${scratch} TMP=${scratch} TEMP=${scratch} XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-1; " + command)
 
         machine.wait_for_file("/run/user/1000/wayland-1")
         machine.wait_until_succeeds(user("systemctl --user is-active skwd-walld"))
-        machine.succeed(user("mkdir -p ~/Pictures/Wallpapers; cp /tmp/red.png /tmp/blue.png ~/Pictures/Wallpapers/"))
+        machine.succeed(user("mkdir -p ~/Pictures/Wallpapers; cp ${scratch}/red.png ${scratch}/blue.png ~/Pictures/Wallpapers/"))
         machine.wait_until_succeeds(user("test -s ~/.cache/skwd-wall-v2/semantic/index-siglip2.sidx"))
         machine.succeed(user("systemd-run --user --unit=skwd-picker-test --collect env -u SKWD_LENS_HOME /run/current-system/sw/bin/skwd-wall-v2"))
         machine.wait_until_succeeds(user("skwd-helm ui state | jq -e '.shown and .viewport.w > 0'"))
@@ -135,8 +153,8 @@
         machine.succeed("test -f ${packages.skwd-paper-plasma}/share/plasma/wallpapers/org.skwd.wall.plasma/metadata.json")
         machine.succeed("test -f ${packages.skwd-paper-plasma}/${pkgs.qt6.qtbase.qtQmlPrefix}/org/skwd/wallpaper/qmldir")
         probe = "import QtQuick; import QtQuick.Window; import org.skwd.wallpaper 1.0; Window { width: 64; height: 64; visible: true; SkwdVideoItem {} Timer { interval: 100; running: true; onTriggered: Qt.quit() } }"
-        machine.succeed("echo " + shlex.quote(probe) + " > /tmp/plasma-probe.qml")
-        machine.succeed("QT_QPA_PLATFORM=offscreen ${pkgs.qt6.qtdeclarative}/bin/qml -I ${packages.skwd-paper-plasma}/${pkgs.qt6.qtbase.qtQmlPrefix} -I ${pkgs.qt6.qtdeclarative}/${pkgs.qt6.qtbase.qtQmlPrefix} /tmp/plasma-probe.qml")
+        machine.succeed("echo " + shlex.quote(probe) + " > ${scratch}/plasma-probe.qml")
+        machine.succeed("QT_QPA_PLATFORM=offscreen ${pkgs.qt6.qtdeclarative}/bin/qml -I ${packages.skwd-paper-plasma}/${pkgs.qt6.qtbase.qtQmlPrefix} -I ${pkgs.qt6.qtdeclarative}/${pkgs.qt6.qtbase.qtQmlPrefix} ${scratch}/plasma-probe.qml")
       ''}
     '';
   };
@@ -145,7 +163,7 @@
   steamworks-install = pkgs.testers.runNixOSTest {
     name = "skwd-steamworks-install";
     nodes.machine = { ... }: {
-      imports = [ nixosModule ];
+      imports = [ nixosModule scratchModule ];
       services.skwd-deck = {
         enable = true;
         extraPackages = [ packages.skwd-deck-steamworks ];
@@ -160,10 +178,11 @@
       import shlex
 
       def user(command):
-          return "su - alice -c " + shlex.quote("export XDG_RUNTIME_DIR=/run/user/1000; " + command)
+          return "su - alice -c " + shlex.quote("export TMPDIR=${scratch} TMP=${scratch} TEMP=${scratch} XDG_RUNTIME_DIR=/run/user/1000; " + command)
 
       start_all()
       machine.wait_for_unit("multi-user.target")
+      machine.succeed("case $(findmnt -n -o FSTYPE -T ${scratch}) in \"\"|tmpfs|ramfs) exit 1;; esac; df -h ${scratch}")
       machine.succeed("loginctl enable-linger alice")
       machine.wait_for_unit("user@1000.service")
       machine.fail("test -e ${packages.default}/bin/skwd-steam")

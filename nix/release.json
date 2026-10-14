@@ -1,43 +1,43 @@
 {
-  "version": "1.0.0-beta.24",
+  "version": "1.0.0-beta.25",
   "hasModel": true,
   "hasPlasma": true,
   "binaries": {
     "wall": {
-      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.24/skwd-wall-nixos-x86_64-1.0.0-beta.24.tar.gz",
-      "hash": "sha256-BNT0bpEB1BN8Q0j2DMLWtJ9g3Nn16ufVu1bRDaonVoQ=",
-      "version": "1.0.0-beta.24"
+      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.25/skwd-wall-nixos-x86_64-1.0.0-beta.25.tar.gz",
+      "hash": "sha256-6tkroP1SpQgA53cmdQryjwz9TvJG2q4XJB183Fxhctk=",
+      "version": "1.0.0-beta.25"
     },
     "deck": {
-      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.24/skwd-deck-nixos-x86_64-1.0.0-beta.24.tar.gz",
-      "hash": "sha256-mB3PCAmpXtaLVM9jGbXLcOs/oKDYs7SHRFfyRlyJAP0=",
-      "version": "1.0.0-beta.24"
+      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.25/skwd-deck-nixos-x86_64-1.0.0-beta.25.tar.gz",
+      "hash": "sha256-RGhF7Z9IGLP/5jETzUbGa08NxqLrF0BqDeNy5biRrjI=",
+      "version": "1.0.0-beta.25"
     },
     "paper": {
-      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.24/skwd-paper-nixos-x86_64-1.0.0-beta.24.tar.gz",
-      "hash": "sha256-ShGocPTmruWIYwi60DHzqg5gf8gPbc27YWFRyRbvkyk=",
-      "version": "1.0.0-beta.24"
+      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.25/skwd-paper-nixos-x86_64-1.0.0-beta.25.tar.gz",
+      "hash": "sha256-sbxDVyy9Klz+iBbo6I/bC2gqFXH0NGAE3y2j2AqTI30=",
+      "version": "1.0.0-beta.25"
     },
     "lens": {
-      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.24/skwd-lens-nixos-x86_64-1.0.0-beta.24.tar.gz",
-      "hash": "sha256-Mibhb4OGjxMNwfPW4FHWjqdFzhmRvw7dR714rEvSjoM=",
-      "version": "1.0.0-beta.24"
+      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.25/skwd-lens-nixos-x86_64-1.0.0-beta.25.tar.gz",
+      "hash": "sha256-yla2KlQMbacrdcblycYj1H8ZaYeL/OECtxcHmDBGNUM=",
+      "version": "1.0.0-beta.25"
     },
     "model": {
-      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.24/skwd-model-nixos-x86_64-1.0.0-beta.24.tar.gz",
+      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.25/skwd-model-nixos-x86_64-1.0.0-beta.25.tar.gz",
       "hash": "sha256-s9en+M1rb2KPQz3/T7MVexO4+ZxvZqZetZEfEJVlZSU=",
       "version": "1.0.0"
     },
     "plasma": {
-      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.24/skwd-plasma-nixos-x86_64-1.0.0-beta.24.tar.gz",
-      "hash": "sha256-7VsI1WPljXnl0NDuiCWYvfE30GyCc035UNfFn5qtMwY=",
-      "version": "1.0.0-beta.24"
+      "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.25/skwd-plasma-nixos-x86_64-1.0.0-beta.25.tar.gz",
+      "hash": "sha256-LKennNLxvjkb70U8CbK2mby/AsPssPx7tBkvLEBAcmo=",
+      "version": "1.0.0-beta.25"
     }
   },
   "steamworks": {
-    "version": "1.0.0-beta.24",
-    "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.24/skwd-deck-steamworks-1.0.0_beta.24-1-x86_64.pkg.tar.zst",
-    "hash": "sha256-1OVwKF99g7uTnz4F9v1hBSn76MU5BLGYYbf7uV+z4+c=",
-    "size": 444038
+    "version": "1.0.0-beta.25",
+    "url": "https://github.com/liixini/skwd-wall/releases/download/v1.0.0-beta.25/skwd-deck-steamworks-1.0.0_beta.25-1-x86_64.pkg.tar.zst",
+    "hash": "sha256-C+bIOuBI+dcuwJMfELHROsHu9n89vEEmHhqWEHCd2M0=",
+    "size": 437352
   }
 }
