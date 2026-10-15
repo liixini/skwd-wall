@@ -1,12 +1,12 @@
 { pkgs, release }:
 let
   graphicsRuntime = with pkgs; [ libglvnd libxkbcommon vulkan-loader wayland ];
-  names = { wall = "skwd-wall-v2"; deck = "skwd-deck"; paper = "skwd-paper"; lens = "skwd-lens"; model = "skwd-lens-model"; plasma = "skwd-paper-plasma"; };
+  names = { wall = "skwd-wall-v2"; deck = "skwd-deck"; paper = "skwd-paper"; lens = "skwd-lens"; model = "skwd-lens-model"; drawing = "skwd-drawing-model"; plasma = "skwd-paper-plasma"; };
   components = pkgs.lib.mapAttrs (component: source: pkgs.stdenvNoCC.mkDerivation {
     pname = names.${component};
     version = source.version;
     src = pkgs.fetchurl { inherit (source) url hash; };
-    nativeBuildInputs = with pkgs; [ autoPatchelfHook zstd ];
+    nativeBuildInputs = with pkgs; [ autoPatchelfHook jq zstd ];
     buildInputs = with pkgs; [
       alsa-lib dav1d libdrm libpulseaudio libva-minimal libyuv shaderc
       stdenv.cc.cc.lib zlib
@@ -15,6 +15,7 @@ let
       ++ pkgs.lib.optionals (component == "plasma") [ pkgs.qt6.qtbase pkgs.qt6.qtdeclarative ]
       ++ pkgs.lib.optional (component == "deck") components.paper;
     runtimeDependencies = pkgs.lib.optionals (builtins.elem component [ "wall" "deck" "paper" ]) graphicsRuntime
+      ++ pkgs.lib.optional (component == "drawing") pkgs.vulkan-loader
       ++ pkgs.lib.optional (component == "wall") pkgs.fontconfig.lib;
     preFixup = ''
       while IFS= read -r -d "" file; do
@@ -37,7 +38,8 @@ let
     dontMoveSystemdUserUnits = true;
     dontWrapQtApps = true;
     propagatedBuildInputs = pkgs.lib.optional (component == "plasma") components.paper
-      ++ pkgs.lib.optional (component == "lens") components.model;
+      ++ pkgs.lib.optional (component == "lens") components.model
+      ++ pkgs.lib.optional (component == "drawing") components.model;
     unpackPhase = ''
       export HOME="$TMPDIR/skwd-home"
       mkdir -p "$HOME"
@@ -51,6 +53,12 @@ let
       mkdir -p "$out"
       cp -a package/usr/. "$out/"
       chmod -R u+w "$out"
+      ${pkgs.lib.optionalString (component == "drawing") ''
+        pack="$out/share/skwd-deck/models/drawing/pack.json"
+        jq --arg runtime ${components.model}/share/skwd-lens/models/semantic/runtime/libonnxruntime.so.1.27.0 \
+          '.runtime = $runtime' "$pack" > "$pack.next"
+        mv "$pack.next" "$pack"
+      ''}
       ${pkgs.lib.optionalString (component == "plasma") ''
         if [ -d "$out/lib/qt6/qml" ]; then
           mkdir -p "$out/${pkgs.qt6.qtbase.qtQmlPrefix}"
@@ -86,6 +94,8 @@ in components // {
   };
 } // pkgs.lib.optionalAttrs release.hasModel {
   skwd-lens-model = components.model;
+} // pkgs.lib.optionalAttrs (release.hasDrawingModel or false) {
+  skwd-drawing-model = components.drawing;
 } // pkgs.lib.optionalAttrs release.hasPlasma {
   skwd-paper-plasma = components.plasma;
 }

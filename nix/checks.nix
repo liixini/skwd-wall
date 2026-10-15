@@ -65,6 +65,8 @@ in
     nodes.machine = { lib, ... }: {
       imports = [ nixosModule scratchModule ];
       services.skwd-deck.enable = true;
+      services.skwd-deck.drawingModelPackage =
+        lib.mkIf (release.hasDrawingModel or false) packages.skwd-drawing-model;
       users.users.alice = { isNormalUser = true; uid = 1000; extraGroups = [ "video" "render" ]; };
       services.getty.autologinUser = "alice";
       programs.sway.enable = true;
@@ -97,11 +99,18 @@ in
       machine.succeed("${packages.wall}/bin/skwd-wall-v2 --version")
       machine.succeed("${packages.deck}/bin/skwd-walld --version")
       machine.succeed("${packages.deck}/bin/skwd-helm --version")
+      machine.succeed("test -x ${packages.deck}/bin/skwd-wall-draw")
       machine.succeed("${packages.lens}/bin/skwd-lens --version")
       machine.succeed("test -x ${packages.paper}/bin/skwd-paper-v2")
       machine.succeed("grep -F ${packages.deck}/bin/skwd-walld /etc/systemd/user/skwd-walld.service")
       machine.succeed("grep -F ${packages.paper}/bin /etc/systemd/user/skwd-walld.service")
       machine.succeed("grep -F ${packages.lens}/bin /etc/systemd/user/skwd-walld.service")
+      ${pkgs.lib.optionalString (release.hasDrawingModel or false) ''
+        drawing = "${packages.skwd-drawing-model}/share/skwd-deck/models/drawing"
+        machine.succeed("grep -F SKWD_DRAWING_HOME=" + drawing + " /etc/systemd/user/skwd-walld.service")
+        machine.succeed("test -f \"$(jq -r .runtime " + drawing + "/pack.json)\"")
+        machine.succeed("test -f " + drawing + "/libonnxruntime_providers_webgpu.so")
+      ''}
       ${pkgs.lib.optionalString release.hasModel ''
         machine.succeed("test -d ${packages.skwd-lens-model}/share/skwd-lens/models/semantic")
         machine.succeed("grep -F ${packages.skwd-lens-model}/share/skwd-lens/models/semantic /etc/systemd/user/skwd-walld.service")
