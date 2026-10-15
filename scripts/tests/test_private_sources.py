@@ -65,8 +65,7 @@ class PrivateSourcePolicyTests(unittest.TestCase):
             self.assertIn(url, (ROOT / "Cargo.toml").read_text())
             self.assertIn(revision, (ROOT / "Cargo.toml").read_text())
             self.assertNotIn(f"repository: liixini/skwd-{name.replace('_', '-')}", workflow)
-        self.assertNotIn("GIT_CONFIG_COUNT", workflow)
-        self.assertNotIn("insteadOf", workflow)
+        self.assertNotIn("skwd-iced-graphics", workflow)
         for repository, revision in (
             ("skwd-deck", "ebc5580b34cd55e5110497de325017da154b0912"),
             ("skwd-lens", "d1c985756d8e0be37af80c34cb263da3a2259775"),

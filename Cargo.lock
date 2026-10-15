@@ -821,6 +821,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fontconfig"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d0e1eb4148faaf675053b7299bc5b4c041c8c0c724cf77844d6be8dd0ac5b9d"
+dependencies = [
+ "yeslogic-fontconfig-sys",
+]
+
+[[package]]
 name = "fontconfig-parser"
 version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3072,6 +3081,7 @@ dependencies = [
  "bytemuck",
  "dhat",
  "fluent",
+ "fontconfig",
  "futures-channel",
  "getrandom 0.3.4",
  "glam",
@@ -3092,6 +3102,7 @@ dependencies = [
  "skwd-lens-proto",
  "skwd-log",
  "skwd-palette",
+ "sys-locale",
  "tempfile",
  "texpresso",
  "tracing",
@@ -3103,6 +3114,7 @@ dependencies = [
  "wayland-client",
  "wgpu",
  "wl-clipboard-rs",
+ "yeslogic-fontconfig-sys",
 ]
 
 [[package]]
@@ -4668,6 +4680,17 @@ name = "yazi"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e01738255b5a16e78bbb83e7fbba0a1e7dd506905cfc53f4622d89015a03fbb5"
+
+[[package]]
+name = "yeslogic-fontconfig-sys"
+version = "6.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d8b8abf912b9a29ff112e1671c97c33636903d13a69712037190e6805af4f76"
+dependencies = [
+ "dlib",
+ "once_cell",
+ "pkg-config",
+]
 
 [[package]]
 name = "yoke"

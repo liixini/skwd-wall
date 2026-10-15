@@ -9,8 +9,8 @@ use super::shell::{
     NERD_FONT_BYTES, NVIDIA_COMPILER_RECLAIM_ADVICE, SIMPLIFIED_UI_FONT_BYTES, UI_FONT_BYTES,
     attach_reply, cold_nvidia_compiler_mapping, compressed_thumbnail_profile,
     layer_shell_global_usable, layershell_error_message, layershell_run_error_message,
-    parse_control_command, picker_power_preference, remove_embedded_ui_faces,
-    startup_control_command, ui_font_bytes,
+    parse_control_command, picker_power_preference, remove_ui_faces, startup_control_command,
+    startup_fonts, ui_font_bytes,
 };
 
 #[test]
@@ -152,14 +152,14 @@ fn ui_faces_shape_persian_and_turkish_language_labels() {
 }
 
 #[test]
-fn ui_face_swap_keeps_system_and_icon_faces() {
+fn ui_swap_preserves_icons() {
     use iced_wgpu::graphics::text::cosmic_text::fontdb::{Database, Source};
     let mut db = Database::new();
     db.load_font_data(UI_FONT_BYTES.to_vec());
     db.load_font_data(NERD_FONT_BYTES.to_vec());
     db.load_font_file(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/RobotoCondensed-Bold.ttf"))
         .expect("load file-backed UI family face");
-    remove_embedded_ui_faces(&mut db);
+    remove_ui_faces(&mut db);
     let remaining: Vec<(bool, bool)> = db
         .faces()
         .map(|face| {
@@ -170,39 +170,8 @@ fn ui_face_swap_keeps_system_and_icon_faces() {
         })
         .collect();
     assert!(!remaining.contains(&(true, true)));
-    assert!(remaining.contains(&(false, true)));
+    assert!(!remaining.contains(&(false, true)));
     assert!(remaining.contains(&(true, false)));
-}
-
-#[test]
-fn ui_fonts_cover_their_catalogs() {
-    use iced_wgpu::graphics::text::cosmic_text::{Font, fontdb};
-    for language in crate::i18n::LANGUAGES {
-        let mut db = fontdb::Database::new();
-        db.load_font_data(ui_font_bytes(language.script).to_vec());
-        let face = db.faces().next().expect("embedded UI face");
-        assert!(
-            face.families.iter().any(|(name, _)| name == crate::frontend::ui::UI_FONT_FAMILY),
-            "{}",
-            language.tag
-        );
-        assert_eq!(face.weight, fontdb::Weight::BOLD, "{}", language.tag);
-        assert_eq!(face.stretch, fontdb::Stretch::Condensed, "{}", language.tag);
-        let font = Font::new(&db, face.id, face.weight).expect("parse UI face");
-        let charmap = font.as_swash().charmap();
-        let missing: std::collections::BTreeSet<char> = language
-            .resources
-            .iter()
-            .flat_map(|resource| resource.chars())
-            .filter(|ch| {
-                ch.is_alphanumeric()
-                    || ('\u{3000}'..='\u{303f}').contains(ch)
-                    || ('\u{ff00}'..='\u{ffef}').contains(ch)
-            })
-            .filter(|ch| charmap.map(*ch) == 0)
-            .collect();
-        assert!(missing.is_empty(), "{} {missing:?}", language.tag);
-    }
 }
 
 #[test]
@@ -270,6 +239,29 @@ fn abstract_socket_single() {
 }
 
 #[test]
+fn queued_control_before_listener() {
+    use std::io::Write;
+
+    let name = format!("skwd-wall-queue.{}.{}", unsafe { libc::getuid() }, std::process::id());
+    let addr = SocketAddr::from_abstract_name(name.as_bytes()).unwrap();
+    let listener = UnixListener::bind_addr(&addr).unwrap();
+    for command in ["", "open mixer\n", "profile games\n", "state\n"] {
+        let mut conn = UnixStream::connect_addr(&addr).unwrap();
+        conn.write_all(command.as_bytes()).unwrap();
+    }
+    for expected in ["", "open mixer", "profile games", "state"] {
+        let (conn, _) = listener.accept().unwrap();
+        let wake = super::shell::read_control_command(conn);
+        match wake {
+            crate::infrastructure::runtime::Wake::Toggle => assert_eq!(expected, ""),
+            crate::infrastructure::runtime::Wake::Command(line)
+            | crate::infrastructure::runtime::Wake::Query(line, _) => assert_eq!(line, expected),
+            other => panic!("unexpected wake: {other:?}"),
+        }
+    }
+}
+
+#[test]
 fn gpu_preference_battery() {
     let auto = serde_json::json!({});
     assert_eq!(picker_power_preference(&auto, false), "none");
@@ -305,5 +297,128 @@ fn cold_reclaim_ro_pages() {
     assert!(
         cold_nvidia_compiler_mapping("7f100000-7f200000 r-xp 0 00:01 42 /usr/lib/libavcodec.so")
             .is_none()
+    );
+}
+
+#[test]
+fn startup_fonts_match_language() {
+    if std::env::var_os("SKWD_FONT_STARTUP_TEST").is_none() {
+        for locale in ["en-US", "ja-JP"] {
+            let root = tempfile::tempdir().unwrap();
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", "shell::tests::startup_fonts_match_language", "--nocapture"])
+                .env("SKWD_FONT_STARTUP_TEST", locale)
+                .env("SKWD_WALL_LOCALE", locale)
+                .env("SKWD_WALL_V2_CONFIG", root.path())
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{locale}: {} {}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        return;
+    }
+    for language in crate::i18n::LANGUAGES {
+        let config = serde_json::json!({ "general": { "language": language.tag } });
+        std::fs::write(skwd_config::config_path(), config.to_string()).unwrap();
+        let fonts = startup_fonts();
+        assert_eq!(crate::i18n::active_tag(), language.tag);
+        assert_eq!(fonts[0].as_ref(), ui_font_bytes(language.script), "{}", language.tag);
+        assert_eq!(fonts[1].as_ref(), NERD_FONT_BYTES);
+    }
+    std::fs::write(skwd_config::config_path(), r#"{"general":{"language":"auto"}}"#).unwrap();
+    startup_fonts();
+    assert_eq!(crate::i18n::active_tag(), std::env::var("SKWD_FONT_STARTUP_TEST").unwrap());
+}
+
+#[test]
+fn ui_faces_shape_symbols() {
+    for language in crate::i18n::LANGUAGES {
+        assert_eq!(shaped_glyphs(language.script, "✓ ⚠ ◆ ◇").len(), 7);
+    }
+}
+
+#[test]
+fn initialized_face_wins() {
+    use iced_wgpu::graphics::text::{cosmic_text::fontdb, font_system};
+
+    if std::env::var_os("SKWD_FONT_PRIORITY_TEST").is_none() {
+        for cached in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            let fonts = root.path().join("fonts");
+            std::fs::create_dir(&fonts).unwrap();
+            if cached {
+                std::fs::write(
+                    fonts.join("system.ttf"),
+                    include_bytes!("../../assets/RobotoCondensed-Bold.ttf"),
+                )
+                .unwrap();
+                std::fs::write(fonts.join("symbols.ttf"), NERD_FONT_BYTES).unwrap();
+            }
+            let config = root.path().join("fonts.conf");
+            std::fs::write(
+                &config,
+                format!(
+                    "<fontconfig><dir>{}</dir><cachedir>{}</cachedir></fontconfig>",
+                    fonts.display(),
+                    root.path().display()
+                ),
+            )
+            .unwrap();
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", "shell::tests::initialized_face_wins", "--nocapture"])
+                .env("SKWD_FONT_PRIORITY_TEST", "1")
+                .env("FONTCONFIG_FILE", config)
+                .env("SKWD_WALL_V2_CONFIG", root.path())
+                .env("SKWD_WALL_V2_CACHE", root.path())
+                .env("SKWD_FONT_CACHED_TEST", if cached { "1" } else { "0" })
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "cached={cached}: {} {}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        return;
+    }
+    let mut system = font_system().write().unwrap();
+    match super::fonts::database() {
+        Ok(catalog) => super::shell::merge_catalog(&mut system, catalog),
+        Err(_) => remove_ui_faces(system.raw().db_mut()),
+    }
+    for font in startup_fonts() {
+        system.load_font(font);
+    }
+    let db = system.raw().db();
+    assert_eq!(
+        db.faces().filter(|face| matches!(face.source, fontdb::Source::File(_))).count(),
+        usize::from(std::env::var("SKWD_FONT_CACHED_TEST").unwrap() == "1")
+    );
+    assert!(db.faces().any(|face| {
+        matches!(face.source, fontdb::Source::Binary(_))
+            && face.families.iter().any(|(name, _)| name == "Iced-Icons")
+    }));
+    let id = db
+        .query(&fontdb::Query {
+            families: &[fontdb::Family::Name(crate::frontend::ui::UI_FONT_FAMILY)],
+            weight: fontdb::Weight::BOLD,
+            stretch: fontdb::Stretch::Condensed,
+            ..fontdb::Query::default()
+        })
+        .unwrap();
+    assert!(matches!(db.face(id).unwrap().source, fontdb::Source::Binary(_)));
+    assert_eq!(
+        db.faces()
+            .filter(|face| face
+                .families
+                .iter()
+                .any(|(name, _)| name == crate::frontend::ui::UI_FONT_FAMILY))
+            .count(),
+        1
     );
 }

@@ -14,6 +14,9 @@ from fontTools.ttLib.scaleUpem import scale_upem
 ROOT = Path(__file__).resolve().parents[1]
 CJK_SOURCE = Path("/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc")
 NOTO_DIR = Path("/usr/share/fonts/noto")
+UI_SYMBOLS = {0x25C6, 0x25C7, 0x26A0, 0x2713}
+SYMBOLS_SOURCE = "NotoSansSymbols2-Regular.ttf"
+SUBSET_COMMAND = (sys.executable, "-m", "fontTools.subset")
 UI_FONT = ROOT / "assets" / "RobotoCondensed-Bold.ttf"
 LANGUAGE_LABELS = ROOT / "locales" / "en-US" / "settings" / "language.ftl"
 
@@ -102,7 +105,7 @@ def ranges(pairs):
 def subset(full, codepoints, output, layout):
     subprocess.run(
         [
-            "pyftsubset",
+            *SUBSET_COMMAND,
             str(full),
             f"--unicodes={','.join(f'{cp:04X}' for cp in sorted(codepoints))}",
             f"--output-file={output}",
@@ -169,10 +172,14 @@ class ShapedSource:
         self.full = path
         self.work = work
         self.upem = template["head"].unitsPerEm
+        self.tables = template.keys()
 
     def part(self, codepoints, name):
         output = subset(self.full, codepoints, self.work / f"{name}.ttf", "*")
         font = TTFont(output)
+        for tag in list(font.keys()):
+            if tag not in self.tables:
+                del font[tag]
         scale_upem(font, self.upem)
         font.save(output)
         return output
@@ -211,6 +218,7 @@ def main():
         wanted[face] = ranges(blocks) | catalog_codepoints(locales)
         labels[face] = label_codepoints(label_keys)
 
+    symbols = ShapedSource(args.noto_dir / SYMBOLS_SOURCE, work, template)
     for face in ["UI", *sources]:
         covered = set(base)
         parts = []
@@ -225,6 +233,9 @@ def main():
             part = sources[script].part(missing, f"{face}-label-{script}")
             parts.append(part)
             covered |= set(TTFont(part).getBestCmap())
+        missing = UI_SYMBOLS - covered
+        if missing:
+            parts.append(symbols.part(missing, f"{face}-symbols"))
         merge(parts, ROOT / "assets" / f"RobotoCondensed-Bold-{face}.ttf")
 
 

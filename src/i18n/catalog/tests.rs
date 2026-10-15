@@ -586,3 +586,31 @@ fn persian_and_turkish_preserve_message_arguments() {
         }
     }
 }
+
+#[test]
+fn ui_fonts_cover_catalogs() {
+    use iced_wgpu::graphics::text::cosmic_text::{Font, fontdb};
+    for (tag, resources) in locales() {
+        let language = super::language(tag);
+        let mut db = fontdb::Database::new();
+        db.load_font_data(crate::shell::ui_font_bytes(language.script).to_vec());
+        let face = db.faces().next().expect("embedded UI face");
+        assert!(
+            face.families.iter().any(|(name, _)| name == crate::frontend::ui::UI_FONT_FAMILY),
+            "{}",
+            language.tag
+        );
+        assert_eq!(face.weight, fontdb::Weight::BOLD, "{}", language.tag);
+        assert_eq!(face.stretch, fontdb::Stretch::Condensed, "{}", language.tag);
+        let font = Font::new(&db, face.id, face.weight).expect("parse UI face");
+        let charmap = font.as_swash().charmap();
+        let missing: BTreeSet<char> = resources
+            .iter()
+            .flat_map(|resource| resource.chars())
+            .filter(|ch| !ch.is_whitespace() && !ch.is_control())
+            .filter(|ch| !('\u{200c}'..='\u{200f}').contains(ch))
+            .filter(|ch| charmap.map(*ch) == 0)
+            .collect();
+        assert!(missing.is_empty(), "{} {missing:?}", language.tag);
+    }
+}

@@ -17,7 +17,10 @@ pub(super) static DEVANAGARI_UI_FONT_BYTES: &[u8] =
     include_bytes!("../../assets/RobotoCondensed-Bold-HI.ttf");
 const CTRL_IO_TIMEOUT: Duration = Duration::from_secs(2);
 const CTRL_READ_TIMEOUT: Duration = Duration::from_millis(300);
-
+#[cfg(target_os = "linux")]
+const FONT_LOCALE_FALLBACK: &str = "en-US";
+#[cfg(target_os = "linux")]
+const FULL_FONT_SCAN: bool = cfg!(any(feature = "obs-tracy", feature = "obs-chrome"));
 #[cfg(target_os = "linux")]
 static DRIVER_RECLAIM_SCHEDULED: std::sync::Once = std::sync::Once::new();
 #[cfg(target_os = "linux")]
@@ -57,6 +60,61 @@ pub fn run() -> Result<(), String> {
     }
     #[cfg(not(target_os = "linux"))]
     run_winit()
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn initialize_fonts() -> Result<(), String> {
+    use iced_wgpu::graphics::text::font_system;
+
+    let catalog = super::fonts::database();
+    let system = if FULL_FONT_SCAN {
+        font_system()
+    } else if catalog.is_ok() {
+        match slim_font_system() {
+            Ok(system) => system,
+            Err(err) => {
+                log::warn!("font scan fallback: {err}");
+                font_system()
+            }
+        }
+    } else {
+        font_system()
+    };
+    let mut system = system.write().map_err(|err| err.to_string())?;
+    match catalog {
+        Ok(catalog) => merge_catalog(&mut system, catalog),
+        Err(err) => {
+            log::warn!("font cache unavailable: {err}");
+            remove_ui_faces(system.raw().db_mut());
+        }
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+pub(super) fn merge_catalog(
+    system: &mut iced_wgpu::graphics::text::FontSystem,
+    mut catalog: iced_wgpu::graphics::text::cosmic_text::fontdb::Database,
+) {
+    use iced_wgpu::graphics::text::cosmic_text;
+
+    for face in system.raw().db().faces() {
+        if let cosmic_text::fontdb::Source::Binary(_) = &face.source {
+            catalog.load_font_source(face.source.clone());
+        }
+    }
+    remove_ui_faces(&mut catalog);
+    let locale = sys_locale::get_locale().unwrap_or_else(|| String::from(FONT_LOCALE_FALLBACK));
+    *system.raw() = cosmic_text::FontSystem::new_with_locale_and_db(locale, catalog);
+}
+
+#[cfg(target_os = "linux")]
+fn slim_font_system()
+-> Result<&'static std::sync::RwLock<iced_wgpu::graphics::text::FontSystem>, String> {
+    use iced_wgpu::graphics::text::font_system;
+
+    let cache = std::path::PathBuf::from(skwd_config::cache_dir());
+    super::fontconfig_env::with_empty_config(&cache, font_system)
 }
 
 fn configure_thumbnail_profile() {
@@ -161,42 +219,17 @@ pub(super) fn control_socket_name() -> String {
 }
 
 #[cfg(target_os = "linux")]
-pub fn acquire_single_instance() {
+pub fn acquire_single_instance() -> Option<std::os::unix::net::UnixListener> {
     use std::io::ErrorKind;
     use std::os::linux::net::SocketAddrExt;
     use std::os::unix::net::{SocketAddr, UnixListener, UnixStream};
 
     let name = control_socket_name();
     let Ok(addr) = SocketAddr::from_abstract_name(name.as_bytes()) else {
-        return;
+        return None;
     };
     match UnixListener::bind_addr(&addr) {
-        Ok(listener) => {
-            std::thread::Builder::new()
-                .name("toggle-listener".into())
-                .spawn(move || {
-                    for stream in listener.incoming() {
-                        let wake = match stream {
-                            Ok(conn) => read_control_command(conn),
-                            Err(_) => crate::infrastructure::runtime::Wake::Toggle,
-                        };
-                        log::info!("control: {wake:?}");
-                        if matches!(wake, crate::infrastructure::runtime::Wake::Toggle)
-                            && crate::app::wake_sender().is_none()
-                        {
-                            crate::hard_exit(0);
-                        }
-                        loop {
-                            if let Some(tx) = crate::app::wake_sender() {
-                                let _ = tx.unbounded_send(wake);
-                                break;
-                            }
-                            std::thread::sleep(Duration::from_millis(5));
-                        }
-                    }
-                })
-                .ok();
-        }
+        Ok(listener) => Some(listener),
         Err(err) if err.kind() == ErrorKind::AddrInUse => {
             let startup = crate::infrastructure::runtime::startup_panel();
             let profile = crate::infrastructure::runtime::startup_profile();
@@ -210,12 +243,44 @@ pub fn acquire_single_instance() {
             log::info!("toggle: signaled running instance, exiting");
             crate::hard_exit(0);
         }
-        Err(err) => log::warn!("single-instance guard unavailable: {err}"),
+        Err(err) => {
+            log::warn!("single-instance guard unavailable: {err}");
+            None
+        }
     }
 }
 
 #[cfg(target_os = "linux")]
-fn read_control_command(
+pub fn activate_single_instance(listener: Option<std::os::unix::net::UnixListener>) {
+    let Some(listener) = listener else { return };
+    std::thread::Builder::new()
+        .name("toggle-listener".into())
+        .spawn(move || {
+            for stream in listener.incoming() {
+                let wake = match stream {
+                    Ok(conn) => read_control_command(conn),
+                    Err(_) => crate::infrastructure::runtime::Wake::Toggle,
+                };
+                log::info!("control: {wake:?}");
+                if matches!(wake, crate::infrastructure::runtime::Wake::Toggle)
+                    && crate::app::wake_sender().is_none()
+                {
+                    crate::hard_exit(0);
+                }
+                loop {
+                    if let Some(tx) = crate::app::wake_sender() {
+                        let _ = tx.unbounded_send(wake);
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(5));
+                }
+            }
+        })
+        .ok();
+}
+
+#[cfg(target_os = "linux")]
+pub(super) fn read_control_command(
     stream: std::os::unix::net::UnixStream,
 ) -> crate::infrastructure::runtime::Wake {
     use std::io::Read;
@@ -286,6 +351,9 @@ pub(super) fn attach_reply(
 
 #[cfg(not(target_os = "linux"))]
 pub fn acquire_single_instance() {}
+
+#[cfg(not(target_os = "linux"))]
+pub fn activate_single_instance((): ()) {}
 
 #[cfg(target_os = "linux")]
 pub fn trim_heap() {
@@ -472,7 +540,7 @@ fn namespace() -> String {
     String::from("skwd-wall")
 }
 
-pub(super) fn ui_font_bytes(script: crate::i18n::Script) -> &'static [u8] {
+pub(crate) fn ui_font_bytes(script: crate::i18n::Script) -> &'static [u8] {
     match script {
         crate::i18n::Script::Latin | crate::i18n::Script::Cyrillic => UI_FONT_BYTES,
         crate::i18n::Script::Simplified => SIMPLIFIED_UI_FONT_BYTES,
@@ -490,37 +558,33 @@ pub fn reload_ui_font(previous: crate::i18n::Script) {
     }
     let mut font_system =
         iced_wgpu::graphics::text::font_system().write().expect("font system poisoned");
-    remove_embedded_ui_faces(font_system.raw().db_mut());
+    remove_ui_faces(font_system.raw().db_mut());
     font_system.load_font(std::borrow::Cow::Owned(bytes.to_vec()));
 }
 
-pub(super) fn remove_embedded_ui_faces(
-    db: &mut iced_wgpu::graphics::text::cosmic_text::fontdb::Database,
-) {
-    use iced_wgpu::graphics::text::cosmic_text::fontdb::Source;
-
-    let embedded: Vec<_> = db
+pub(super) fn remove_ui_faces(db: &mut iced_wgpu::graphics::text::cosmic_text::fontdb::Database) {
+    let faces: Vec<_> = db
         .faces()
-        .filter(|face| matches!(face.source, Source::Binary(_)))
         .filter(|face| {
             face.families.iter().any(|(family, _)| family == crate::frontend::ui::UI_FONT_FAMILY)
         })
         .map(|face| face.id)
         .collect();
-    for id in embedded {
+    for id in faces {
         db.remove_face(id);
     }
 }
 
-fn startup_fonts() -> Vec<std::borrow::Cow<'static, [u8]>> {
+pub(super) fn startup_fonts() -> Vec<std::borrow::Cow<'static, [u8]>> {
+    let config = crate::infrastructure::config::Config::load();
+    crate::i18n::set_language(&config.str_path(skwd_config::keys::general::LANGUAGE));
     vec![ui_font_bytes(crate::i18n::active_script()).into(), NERD_FONT_BYTES.into()]
 }
 
 fn run_winit() -> Result<(), String> {
     log::info!("shell mode: winit");
     iced::application(app::App::default, app::update, app::view_single)
-        .font(ui_font_bytes(crate::i18n::active_script()))
-        .font(NERD_FONT_BYTES)
+        .settings(iced::Settings { fonts: startup_fonts(), ..iced::Settings::default() })
         .default_font(crate::frontend::ui::UI_FONT)
         .antialiasing(true)
         .window(iced::window::Settings {

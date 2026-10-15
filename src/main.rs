@@ -33,6 +33,8 @@ static DHAT: OnceLock<std::sync::Mutex<Option<dhat::Profiler>>> = OnceLock::new(
 const MALLOC_ARENA_MAX: libc::c_int = 2;
 #[cfg(target_env = "gnu")]
 const MALLOC_MMAP_THRESHOLD: libc::c_int = 512 * 1024;
+#[cfg(target_os = "linux")]
+const FONT_CACHE_CHECKPOINT: &str = "font_cache_ready";
 
 struct Args {
     arguments: Vec<String>,
@@ -96,6 +98,11 @@ fn main() {
         std::process::exit(code);
     }
 
+    if args.version {
+        println!("skwd-wall-v2 {}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
+
     #[cfg(all(feature = "obs-dhat", not(feature = "obs-heap")))]
     let _ = DHAT.set(std::sync::Mutex::new(Some(dhat::Profiler::new_heap())));
     #[cfg(feature = "obs-tracy")]
@@ -105,17 +112,23 @@ fn main() {
     #[cfg(not(feature = "obs-trace"))]
     logging::init(args.debug);
 
-    if args.version {
-        println!("skwd-wall-v2 {}", env!("CARGO_PKG_VERSION"));
-        return;
-    }
-
     if args.debug {
         metrics::force_on();
         log_diag();
     }
 
-    shell::acquire_single_instance();
+    let listener = shell::acquire_single_instance();
+
+    #[cfg(target_os = "linux")]
+    if let Err(err) = shell::initialize_fonts() {
+        log::error!("{err}");
+        std::process::exit(1);
+    }
+
+    #[cfg(target_os = "linux")]
+    log_startup_checkpoint(FONT_CACHE_CHECKPOINT);
+
+    shell::activate_single_instance(listener);
 
     if let Ok(ms) = std::env::var("SKWD_WALL_AUTO_EXIT_MS")
         && let Ok(ms) = ms.parse::<u64>()

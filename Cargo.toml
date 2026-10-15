@@ -62,6 +62,7 @@ tracing-subscriber = { workspace = true, optional = true }
 tracing-tracy = { workspace = true, optional = true }
 tracing-chrome = { workspace = true, optional = true }
 dhat = { workspace = true, optional = true }
+tempfile.workspace = true
 
 [features]
 default = []
@@ -74,6 +75,9 @@ obs-chrome = ["obs-trace", "dep:tracing-chrome"]
 obs-dhat = ["dep:dhat"]
 
 [target.'cfg(target_os = "linux")'.dependencies]
+fontconfig = { version = "0.11", features = ["dlopen"] }
+fontconfig-sys = { package = "yeslogic-fontconfig-sys", version = "6", features = ["dlopen"] }
+sys-locale = "0.3"
 iced_layershell = { version = "0.19.1", default-features = false }
 wayland-client = "0.31"
 wl-clipboard-rs = "=0.9.4"
@@ -103,7 +107,11 @@ opt-level = 1
 [dev-dependencies]
 naga = { version = "27", features = ["wgsl-in"] }
 proptest = "1"
-tempfile.workspace = true
+
+[[test]]
+name = "fontconfig_env"
+path = "tests/fontconfig_env.rs"
+harness = false
 
 [build-dependencies]
 serde_json.workspace = true
