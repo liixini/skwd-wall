@@ -1,20 +1,20 @@
 {
   "format": 1,
   "name": "skwd-wall-nix-channel",
-  "nix_channel_manifest_sha256": "726cae918014c53c1b70b99c5e3b5013a1c4cc6dfedc461b03391bb805ec022a",
+  "nix_channel_manifest_sha256": "caf6427214c4c625701ddd5e446b65a32bf85b045c14cac05f86cd00d51b55ad",
   "nix_store_paths": [
-    "/nix/store/q9lsjhc05hnaah1gk2mqbhl29dpzd6f2-skwd-wall-v2-1.0.0-beta.28",
-    "/nix/store/4y0zrk5ll9v0qz6bk0yjf9cxkk7i4aw0-skwd-deck-1.0.0-beta.28",
-    "/nix/store/n02vm33xfz5s8p68ackgj74n0jd88x9n-skwd-paper-1.0.0-beta.28",
-    "/nix/store/lz9q331kpb3ihwl0hv3vjrzrzydakdb3-skwd-lens-1.0.0-beta.28",
-    "/nix/store/jkfdrrhk5cx8dw06f7635m25bxkpr0fg-skwd-suite-binary-1.0.0-beta.28",
-    "/nix/store/njl638slpcqs6m2scyq2fahq4s6np0ai-skwd-lens-model-1.0.0",
-    "/nix/store/a7n6f5n5gav96iimjhr7vx574zswrww7-skwd-paper-plasma-1.0.0-beta.28",
-    "/nix/store/wkz3qqiy53f6mjp1x1g0yh2q1d8f5m9c-skwd-drawing-model-1.0.0",
-    "/nix/store/al8c7ialgg5vklbs0ywl3a5sayckqmz5-skwd-deck-steamworks-1.0.0-beta.28"
+    "/nix/store/82vmmcbwjs778md9gz11zj5dqgj44p25-skwd-wall-v2-1.0.0-beta.29",
+    "/nix/store/k2ivrm3vk9qsgbk47p876y01jk00hh0v-skwd-deck-1.0.0-beta.29",
+    "/nix/store/62x4yb57q4yhh3b6ar10bciwq8hq64g9-skwd-paper-1.0.0-beta.29",
+    "/nix/store/pb0y0rs9dmy5ycja5mbnpvj1bmqlh4a0-skwd-lens-1.0.0-beta.29",
+    "/nix/store/j7xi9x675k50mzvkbww9pp4kxv6dz64q-skwd-suite-binary-1.0.0-beta.29",
+    "/nix/store/c08203slxla9bxjajvhcczgca05lklw2-skwd-lens-model-1.0.0",
+    "/nix/store/8mmhifb813mk2rh8xad07x9nly34h718-skwd-paper-plasma-1.0.0-beta.29",
+    "/nix/store/7b2xb4iblvfgqz1rhpq4khqfc7n7lp7c-skwd-drawing-model-1.0.0",
+    "/nix/store/4bqahwypjdvaw8q8p7dq49f9j36dw876-skwd-deck-steamworks-1.0.0-beta.29"
   ],
-  "release_revision": "0fdf66732581b1c3d241148f742c011a94ec1c36",
-  "release_tag": "v1.0.0-beta.28",
-  "release_url": "https://github.com/liixini/skwd-wall/releases/tag/v1.0.0-beta.28",
-  "version": "1.0.0-beta.28"
+  "release_revision": "92202807ba4edc239ef723edeed2026b832bbc62",
+  "release_tag": "v1.0.0-beta.29",
+  "release_url": "https://github.com/liixini/skwd-wall/releases/tag/v1.0.0-beta.29",
+  "version": "1.0.0-beta.29"
 }
