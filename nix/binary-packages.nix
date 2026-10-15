@@ -11,9 +11,11 @@ let
       alsa-lib dav1d libdrm libpulseaudio libva-minimal libyuv shaderc
       stdenv.cc.cc.lib zlib
     ] ++ graphicsRuntime
+      ++ pkgs.lib.optional (component == "wall") pkgs.fontconfig.lib
       ++ pkgs.lib.optionals (component == "plasma") [ pkgs.qt6.qtbase pkgs.qt6.qtdeclarative ]
       ++ pkgs.lib.optional (component == "deck") components.paper;
-    runtimeDependencies = pkgs.lib.optionals (builtins.elem component [ "wall" "deck" "paper" ]) graphicsRuntime;
+    runtimeDependencies = pkgs.lib.optionals (builtins.elem component [ "wall" "deck" "paper" ]) graphicsRuntime
+      ++ pkgs.lib.optional (component == "wall") pkgs.fontconfig.lib;
     preFixup = ''
       while IFS= read -r -d "" file; do
         if isELF "$file"; then
