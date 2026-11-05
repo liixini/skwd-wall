@@ -94,8 +94,13 @@ pub(super) const ICON_RANDOM: &str = "\u{f076e}";
 pub(super) const ICON_FOLDER: &str = "\u{f024b}";
 pub(crate) const ICON_HIDDEN: &str = "\u{f05f9}";
 
+pub(super) const SWATCH_CELL_SIZE: f32 = 14.0;
+pub(super) const SWATCH_RADIUS: f32 = 3.0;
+pub(super) const SWATCH_GAP: f32 = 10.0;
+
 pub const MENU_MAX_ROWS: usize = 12;
 pub const MENU_ROW_H: f32 = 26.0;
+pub const MENU_CHROME_H: f32 = 14.0;
 
 pub const DROP_ARROW: &str = "\u{25be}";
 pub const DROP_ARROW_UP: &str = "\u{25b4}";

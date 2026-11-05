@@ -2,14 +2,8 @@
 use super::super::*;
 
 impl App {
-    pub(in crate::app) fn clear_browser_previews(&self) {
-        for browser in self.source_browser.browser.iter().chain(self.source_browser.tabs.values()) {
-            for item in &browser.session.items {
-                if let Some(path) = item.preview_path.as_ref() {
-                    let _ = std::fs::remove_file(path);
-                }
-            }
-        }
+    pub(in crate::app) fn clear_browser_previews(&mut self) {
+        self.reset_browser_media(None, std::time::Instant::now());
     }
 
     pub(in crate::app) fn run_browser_search(&mut self, append: bool) {

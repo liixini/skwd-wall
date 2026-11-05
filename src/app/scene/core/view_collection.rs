@@ -1,5 +1,6 @@
 use glam::Mat4;
 
+use crate::contracts::rendering::{CHAMFER, INSTANCE_FLAGS};
 use crate::frontend::scene::hand::{self, Camera, PAD, Quad};
 use crate::frontend::scene::layout::Mode;
 use crate::rendering::scene::PROJECTED;
@@ -100,6 +101,7 @@ impl SceneCore {
             );
             let [cx, cy, hit_hw, hit_hh] = quad.bounds();
             let chrome_opacity = if selected && open > 0.99 { opacity } else { 0.0 };
+            let corners = self.xp.collection.corners.clamped(hw.min(hh));
             let (mut body, mut hit) = self.place_card(
                 ctx,
                 sinks.wanted,
@@ -113,10 +115,10 @@ impl SceneCore {
                     hh,
                     skew: 0.0,
                     edge_tilt: 0.0,
-                    radii: [self.xp.collection.corners; 4],
+                    corners,
                     hex: false,
                     view: 0,
-                    chrome_radius: self.xp.collection.corners,
+                    chrome_radius: corners.sizes[0],
                     opacity,
                     chrome_opacity,
                     body_inset: 0.0,
@@ -130,7 +132,7 @@ impl SceneCore {
             body.quad_w = [tl[2], tr[2], br[2], bl[2]];
             body.quad_l = hand::card_locals(hh, PAD);
             let mut shadow = body;
-            shadow.misc = [0, 0, 0, PROJECTED];
+            shadow.misc = [0, 0, 0, PROJECTED | (body.misc[INSTANCE_FLAGS] & CHAMFER)];
             shadow.fill = [0.0, 0.0, 0.0, 0.24];
             shadow.quad_a[1] += 5.0;
             shadow.quad_a[3] += 5.0;

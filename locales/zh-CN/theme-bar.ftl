@@ -5,6 +5,7 @@ theme-bar-custom = 自定义
 theme-bar-skwd-iris = Skwd-Iris
 theme-bar-skwd-pywal = Skwd-Pywal
 theme-bar-skwd-wallust = Skwd-Wallust
+theme-bar-skwd-studio = 色彩工作室
 theme-bar-matugen = Matugen
 theme-bar-wallust = Wallust
 theme-bar-pywal = Pywal

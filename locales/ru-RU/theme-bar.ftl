@@ -5,6 +5,7 @@ theme-bar-custom = Своя
 theme-bar-skwd-iris = Skwd-Iris
 theme-bar-skwd-pywal = Skwd-Pywal
 theme-bar-skwd-wallust = Skwd-Wallust
+theme-bar-skwd-studio = Студия цвета
 theme-bar-matugen = Matugen
 theme-bar-wallust = Wallust
 theme-bar-pywal = Pywal

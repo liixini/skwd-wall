@@ -1,4 +1,5 @@
 mod browser;
+mod browser_preview;
 mod daemon;
 mod diagnostics;
 mod events;
@@ -15,3 +16,5 @@ pub(crate) use diagnostics::{TOAST_MS, apply_error_message};
 #[cfg(test)]
 pub(crate) use events::download_update;
 mod activity;
+
+pub(in crate::app) use ticks::studio_deadline;

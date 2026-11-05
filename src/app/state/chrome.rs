@@ -24,6 +24,7 @@ pub(crate) struct BarState {
     pub(crate) menu_hover: Option<usize>,
     pub(crate) menu_scroll: Spring,
     pub(crate) menu: Option<crate::frontend::ui::MenuKind>,
+    pub(crate) reorder: Option<crate::frontend::ui::ReorderPreview>,
 }
 
 impl BarState {
@@ -34,6 +35,7 @@ impl BarState {
             menu_hover: None,
             menu_scroll: motion.spring(0.0, MotionTier::Standard),
             menu: None,
+            reorder: None,
         }
     }
 }
@@ -77,6 +79,9 @@ impl ChromeState {
         motion.retime_tween(&mut self.filter_bar_reveal, MotionTier::Fast);
         motion.retime_tween(&mut self.filter_bar_orientation_reveal, MotionTier::Fast);
         motion.retime_spring(&mut self.bar.menu_scroll, MotionTier::Standard);
+        if let Some(reorder) = self.bar.reorder.as_mut() {
+            reorder.retime(motion);
+        }
         for pane in self.pane_scrolls.values_mut() {
             motion.retime_spring(&mut pane.spring, MotionTier::Standard);
         }
@@ -103,6 +108,17 @@ impl ChromeState {
             self.filter_bar_orientation_reveal.retarget(1.0);
             changed = true;
         }
+        if let Some(reorder) = self.bar.reorder.as_mut() {
+            let animating = reorder.animating();
+            if animating {
+                reorder.tick(dt);
+                changed = true;
+            }
+            if reorder.finished() {
+                self.bar.reorder = None;
+                changed = true;
+            }
+        }
         changed
     }
 
@@ -114,6 +130,7 @@ impl ChromeState {
         !self.filter_bar_reveal.settled()
             || !self.filter_bar_orientation_reveal.settled()
             || self.filter_bar_pending_vertical.is_some()
+            || self.bar.reorder.as_ref().is_some_and(crate::frontend::ui::ReorderPreview::animating)
     }
 }
 

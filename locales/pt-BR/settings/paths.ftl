@@ -1,6 +1,5 @@
 settings-paths-excluded-card = Pastas excluídas
 settings-paths-excluded-card-desc = Ignora estas pastas e suas subpastas na biblioteca de imagens e vídeos. Os metadados salvos são preservados.
-settings-paths-path-placeholder = Caminho da pasta
 settings-paths-source-card = Pastas de papéis de parede
 settings-paths-source-card-desc = Procure imagens e vídeos nestas pastas e subpastas. As alterações atualizam a biblioteca automaticamente.
 settings-paths-folder-choose-action = Escolher pasta
@@ -25,4 +24,3 @@ settings-paths-removed-excluded = Pasta excluída removida: { $path }
 settings-paths-watch-polling = Sondagem
 settings-paths-watch-error = Não é possível ler
 settings-paths-watch-error-note = Verifique se está montada e legível. A sondagem continua tentando.
-settings-paths-excluded-footer = Pastas excluídas nunca são verificadas, então nenhum perfil pode mostrá-las. Para manter uma pasta mas ocultá-la em público, use Biblioteca › Perfis.

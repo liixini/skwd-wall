@@ -30,6 +30,7 @@ pub struct PreviewRequest {
     pub source: Source,
     pub id: String,
     pub full_url: String,
+    pub refresh: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

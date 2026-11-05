@@ -48,7 +48,6 @@ settings-app-themes-config-found = Config found
 settings-app-themes-config-create = Creates config on first use
 settings-app-themes-on = On
 settings-app-themes-off = Off
-settings-app-themes-hide = Hide details
 settings-app-themes-details = Details
 settings-app-themes-custom-conflict = This app uses a Skwd custom output that cannot be switched automatically. Open Theme outputs to review its template, output file and reload command before turning off Run custom output. Leave it on to keep using it.
 settings-app-themes-other-owner = Another theme tool is connected to this app. Disconnect that integration before enabling Skwd.

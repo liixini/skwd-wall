@@ -65,7 +65,14 @@ fn motion_weights_reach_all_state() {
     assert_eq!(app.scene.motion_duration_ms(MotionTier::Standard), 330.0);
     assert_eq!(app.scene.motion_duration_ms(MotionTier::Slow), 810.0);
     assert_eq!(app.panels.settings.control_anim.duration_ms(), 90.0);
-    assert_eq!(app.panels.settings.entrance.duration_ms(), 330.0);
+    let settings_motion = crate::frontend::settings::SETTINGS_MOTION;
+    assert_eq!(settings_motion.open_ms, 1_700.0);
+    assert_eq!(settings_motion.content_ms, 420.0);
+    assert!((app.panels.settings.entrance.duration_ms() - settings_motion.open_ms).abs() < 0.01);
+    assert!((app.panels.settings.tab_anim.duration_ms() - settings_motion.content_ms).abs() < 0.01);
+    assert!(
+        (app.panels.settings.section_anim.duration_ms() - settings_motion.content_ms).abs() < 0.01
+    );
     assert!((app.chrome.bar.menu_scroll.duration_ms() - 330.0).abs() < 0.01);
     assert_eq!(app.source_browser.entrance.duration_ms(), 810.0);
     assert_eq!(app.source_browser.wall.scene.motion_duration_ms(MotionTier::Standard), 330.0);
@@ -408,7 +415,7 @@ fn depth_settings_do_not_change_slices() {
     let depth = super::super::startup::layout_params(&config);
     assert_eq!(depth.slices.slice_h, 650.0);
     assert_eq!(depth.slices.visible_count, 7);
-    assert_eq!(depth.slices.corners, [24.0; 4]);
+    assert_eq!(depth.slices.corners, CardCorners::round(24.0));
     config.set_key(skwd_config::keys::selector::DISPLAY_MODE, json!("slices"));
     let slices = super::super::startup::layout_params(&config);
     assert_eq!(slices.slices.slice_h, 360.0);
@@ -423,7 +430,7 @@ fn depth_default_profile_reaches_the_scene_and_matches_render_defaults() {
     let fallback = crate::frontend::scene::layout::DepthParams::default();
     assert_eq!(params.slices.slice_h, 520.0);
     assert_eq!(params.slices.visible_count, 5);
-    assert_eq!(params.slices.corners, [0.0; 4]);
+    assert_eq!(params.slices.corners, CardCorners::default());
     assert_eq!(params.slices.skew, 0.0);
     assert!(!config.depth_shadows());
     assert!(!params.extra.depth.selection_frame);

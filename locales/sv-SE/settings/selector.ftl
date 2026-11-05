@@ -4,10 +4,6 @@ settings-selector-display-mode-desc = Välj hur bakgrundskorten arrangeras i vä
 settings-selector-filter-motion-label = Filterrörelse
 settings-selector-filter-motion-desc = Hur snabbt rullningen går när filterresultaten ändras. De tre delade vikterna finns i Rörelse-inställningarna.
 settings-selector-presets-card = Förval
-settings-selector-presets-card-desc = Spara de aktuella layoutinställningarna eller använd en sparad uppsättning. Varje visningsläge har egna förval.
-settings-selector-preset-name-label = Namn
-settings-selector-preset-name-desc = Byt namn på det valda förvalet. Spara aktuell skapar ett nytt förval med automatiskt namn.
-settings-selector-preset-name-placeholder = Stilnamn
 settings-selector-preset-generated-name = Stil { $number }
 settings-selector-saved-styles-label = Sparade stilar
 settings-selector-live-preview-card = Färgförhandsvisning
@@ -68,10 +64,6 @@ settings-selector-grid-gap-x-label = Horisontellt mellanrum
 settings-selector-grid-gap-x-desc = Synligt avstånd kant till kant mellan kolumner.
 settings-selector-grid-gap-y-label = Vertikalt mellanrum
 settings-selector-grid-gap-y-desc = Synligt avstånd kant till kant mellan rader.
-settings-selector-grid-round-label = Rundade hörn
-settings-selector-grid-round-desc = Av ger raka hörn på varje Wall-kort.
-settings-selector-grid-corner-radius-label = Hörnradie
-settings-selector-grid-corner-radius-desc = Rundning som används när rundade hörn är på.
 settings-selector-performance-card = Prestanda
 settings-selector-performance-card-desc = Varje korn är separat geometri. Större korn ger färre former och mycket mindre GPU-arbete.
 settings-selector-sand-note-discrete = Belastningen är liten för den identifierade diskreta GPU:n. Samma kornstorlek kan vara ungefär 150 gånger långsammare på en integrerad GPU.
@@ -157,16 +149,6 @@ settings-selector-wobble-desc = Kort böjs i rullningsriktningen och fjädrar ti
 settings-selector-wobble-strength-label = Gungningens styrka
 settings-selector-wobble-strength-desc = Värdet 100 är standard. Värdet 200 dubblar böjningen och färgseparationen.
 settings-selector-corners-card = Hörn
-settings-selector-round-corners-label = Rundade hörn
-settings-selector-round-corners-desc = Använd en hörnradie på skivkanterna.
-settings-selector-corner-tl-label = Övre vänster
-settings-selector-corner-tl-desc = Hörnradie uppe till vänster. 0 = rakt.
-settings-selector-corner-tr-label = Övre höger
-settings-selector-corner-tr-desc = Hörnradie uppe till höger. 0 = rakt.
-settings-selector-corner-br-label = Nedre höger
-settings-selector-corner-br-desc = Hörnradie nere till höger. 0 = rakt.
-settings-selector-corner-bl-label = Nedre vänster
-settings-selector-corner-bl-desc = Hörnradie nere till vänster. 0 = rakt.
 settings-selector-card-flip-card = Kortvändning
 settings-selector-card-flip-card-desc = Välj hur ett bakgrundskort går över från miniatyren till detaljerna på baksidan.
 settings-selector-flip-effect-label = Effekt
@@ -193,15 +175,21 @@ settings-selector-video-preview-desc = Animera själva videon vid hovring/val i 
 settings-selector-preview-delay-label = Fördröjning
 settings-selector-preview-delay-desc = Vänta så här länge vid hovring/val innan förhandsvisningen startar (ms).
 settings-selector-tag-cloud-position-card = Sökpanelens position
-settings-selector-tag-cloud-position-card-desc = Flytta sökpanelen horisontellt eller vertikalt i pixlar. Positiva horisontella förskjutningar flyttar den åt höger; positiva vertikala förskjutningar flyttar den nedåt.
+settings-selector-tag-cloud-position-card-desc = Placera sökpanelen på skärmen. Skärmpositionen åsidosätter pixelförskjutningarna när den är aktiverad.
+settings-selector-tag-position-enabled-label = Använd skärmposition
+settings-selector-tag-position-enabled-desc = Behåll sökpanelens skärmkoordinater när dess storlek eller väljarens stil ändras. Stäng av för att använda pixelförskjutningarna.
+settings-selector-tag-position-x-label = Vänsterkant
+settings-selector-tag-position-x-desc = Ange sökpanelens vänsterkant som procent av skärmens bredd.
+settings-selector-tag-position-y-label = Överkant
+settings-selector-tag-position-y-desc = Ange sökpanelens överkant som procent av skärmens höjd.
 settings-selector-tag-offset-x-label = Sökpanelens horisontella förskjutning
-settings-selector-tag-offset-x-desc = Flytta sökpanelen åt vänster eller höger i förhållande till den här väljaren.
+settings-selector-tag-offset-x-desc = Används när skärmposition är av. Flytta panelen åt vänster eller höger i förhållande till den här väljaren.
 settings-selector-tag-offset-y-label = Sökpanelens vertikala förskjutning
-settings-selector-tag-offset-y-desc = Flytta sökpanelen uppåt eller nedåt i förhållande till den här väljaren.
-settings-selector-mode-slices = Slices
-settings-selector-mode-hex = Geometric
-settings-selector-mode-wall = Wall
-settings-selector-mode-sandy = Sandy
+settings-selector-tag-offset-y-desc = Används när skärmposition är av. Flytta panelen uppåt eller nedåt i förhållande till den här väljaren.
+settings-selector-mode-slices = Skivor
+settings-selector-mode-hex = Geometrisk
+settings-selector-mode-wall = Vägg
+settings-selector-mode-sandy = Sand
 settings-selector-gpu-tier-discrete = Diskret
 settings-selector-gpu-tier-integrated = Integrerad
 settings-selector-gpu-tier-other = Övrig
@@ -216,8 +204,6 @@ settings-selector-swap-style-weave = Väv
 settings-selector-swap-style-bloom = Blomning
 settings-selector-swap-style-flock = Starsvärm
 settings-selector-swap-style-ring = Ring
-settings-selector-preset-rename-hint = Välj en stil att byta namn på
-settings-selector-preset-save-current = Spara aktuell
 
 settings-selector-mode-hand = Korthand
 settings-selector-hand-card = Korthand
@@ -273,7 +259,6 @@ settings-selector-hand-fan-roll-label = Solfjäderslutning
 settings-selector-hand-fan-roll-desc = Lutning som läggs till per kort, som kort spridda i en hand. 0 håller dem upprätta.
 settings-selector-hand-arch-label = Båge
 settings-selector-hand-arch-desc = Hur långt de yttre korten sjunker under mittkortet.
-settings-selector-hand-corner-radius-label = Hörnradie
 settings-selector-hand-skew-label = Skevning
 settings-selector-hand-skew-desc = Skjuva kortets kontur till ett parallellogram, i pixlar horisontell förskjutning.
 settings-selector-hand-backdrop-blur-label = Bakgrundsoskärpa
@@ -286,60 +271,58 @@ settings-selector-start-position-desc = Öppna från början, vid den senast anv
 settings-selector-start-position-beginning = Början
 settings-selector-start-position-applied = Senast använda bakgrund
 settings-selector-start-position-browsing = Senaste bläddringsposition
+settings-selector-loop-around-label = Börja om vid ändarna
+settings-selector-loop-around-desc = Går du förbi den första eller sista bakgrunden hoppar markeringen till andra änden. Nedhållna tangenter, sidbläddring och snabb scrollning stannar först vid änden, så tryck eller scrolla igen för att börja om. Onlinekällor börjar om först när alla sidor har laddats. I layouten Wall och i onlinekällor scrollar mushjulet bara vyn.
 
-settings-selector-mode-depth = Depth
-settings-selector-depth-card = Depth cards
-settings-selector-depth-desc = Cards shrink toward the edges. As you scroll, artwork shifts inside each card according to its position in the row.
+settings-selector-mode-depth = Djup
+settings-selector-depth-card = Djupkort
+settings-selector-depth-desc = Korten krymper mot kanterna. När du rullar förskjuts bilden i varje kort efter kortets plats i raden.
 
-settings-selector-parallax-label = Image parallax
-settings-selector-parallax-desc = Shift artwork inside each card as it moves across the view. The image keeps moving through the visible edges.
+settings-selector-parallax-label = Bildparallax
+settings-selector-parallax-desc = Förskjut bilden i varje kort när kortet rör sig över vyn. Bilden fortsätter att röra sig genom de synliga kanterna.
 settings-selector-mode-collection = Samling
 settings-selector-collection-desc = Bläddra i en lutad stapel med mushjulet eller piltangenterna. Klicka på ett kort för att förstora det; klicka igen eller tryck på Escape för att återgå. Tryck på Enter för att använda. Högerklicka för detaljer.
 
-settings-selector-depth-height-label = Card height
-settings-selector-depth-height-desc = Height of the centre card. Large cards shrink to fit the screen.
+settings-selector-depth-height-label = Korthöjd
+settings-selector-depth-height-desc = Det mittersta kortets höjd. Stora kort krymper så att de ryms på skärmen.
 
-settings-selector-depth-width-label = Card width
-settings-selector-depth-width-desc = Width of the centre card in pixels.
+settings-selector-depth-width-label = Kortbredd
+settings-selector-depth-width-desc = Det mittersta kortets bredd i pixlar.
 
-settings-selector-depth-spacing-label = Card spacing
-settings-selector-depth-spacing-desc = Distance between card centres in pixels before depth falloff.
+settings-selector-depth-spacing-label = Kortavstånd
+settings-selector-depth-spacing-desc = Avstånd mellan kortens mittpunkter i pixlar, före djupavtagningen.
 
-settings-selector-depth-count-label = Visible cards
-settings-selector-depth-count-desc = Maximum number of cards around the current selection.
+settings-selector-depth-count-label = Synliga kort
+settings-selector-depth-count-desc = Största antal kort runt det valda kortet.
 
-settings-selector-depth-falloff-label = Depth falloff
-settings-selector-depth-falloff-desc = Scale reduction per card away from the centre, from 0 to 1. Zero keeps their sizes equal.
+settings-selector-depth-falloff-label = Djupavtagning
+settings-selector-depth-falloff-desc = Skalminskning för varje kort längre från mitten, från 0 till 1. Noll ger lika stora kort.
 
-settings-selector-depth-corners-label = Corner radius
-settings-selector-depth-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-depth-skew-label = Card skew
-settings-selector-depth-skew-desc = Slant the card edges. Zero keeps them upright.
+settings-selector-depth-skew-label = Kortlutning
+settings-selector-depth-skew-desc = Luta kortens kanter. Noll håller dem upprätta.
 
-settings-selector-depth-speed-label = Navigation duration
-settings-selector-depth-speed-desc = Time for a navigation movement in milliseconds. Lower values move faster.
+settings-selector-depth-speed-label = Navigeringstid
+settings-selector-depth-speed-desc = Tid för en navigeringsrörelse i millisekunder. Lägre värden går fortare.
 
-settings-selector-collection-size-label = Card size
-settings-selector-collection-size-desc = Card width as a percentage of screen height.
+settings-selector-collection-size-label = Kortstorlek
+settings-selector-collection-size-desc = Kortets bredd i procent av skärmens höjd.
 
-settings-selector-collection-spacing-label = Stack spacing
-settings-selector-collection-spacing-desc = Vertical distance between stacked cards as a percentage of card size.
+settings-selector-collection-spacing-label = Avstånd i högen
+settings-selector-collection-spacing-desc = Lodrätt avstånd mellan staplade kort, i procent av kortstorleken.
 
-settings-selector-collection-count-label = Visible cards
-settings-selector-collection-count-desc = Maximum number of cards in the stack.
+settings-selector-collection-count-label = Synliga kort
+settings-selector-collection-count-desc = Största antal kort i högen.
 
-settings-selector-collection-tilt-label = Stack tilt
-settings-selector-collection-tilt-desc = Tilt the stack away from you. Zero shows the cards face-on.
+settings-selector-collection-tilt-label = Högens lutning
+settings-selector-collection-tilt-desc = Luta högen bort från dig. Noll visar korten rakt framifrån.
 
-settings-selector-collection-corners-label = Corner radius
-settings-selector-collection-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-collection-speed-label = Motion speed
-settings-selector-collection-speed-desc = Speed of navigation and opening or closing a card. Higher values move faster.
+settings-selector-collection-speed-label = Rörelsehastighet
+settings-selector-collection-speed-desc = Hastighet för navigering och för att öppna eller stänga ett kort. Högre värden går fortare.
 
-settings-selector-depth-frame-label = Selection frame
-settings-selector-depth-frame-desc = Draw a highlighted border around the selected card.
+settings-selector-depth-frame-label = Markeringsram
+settings-selector-depth-frame-desc = Rita en markerad kant runt det valda kortet.
 
-settings-selector-shadows-label = Card shadows
-settings-selector-shadows-desc = Draw a shadow behind each card.
+settings-selector-shadows-label = Kortskuggor
+settings-selector-shadows-desc = Rita en skugga bakom varje kort.

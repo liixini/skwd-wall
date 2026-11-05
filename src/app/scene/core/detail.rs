@@ -1,8 +1,10 @@
 use std::collections::HashSet;
 
 use crate::domain::library::catalog::{Wallpaper, WallpaperKind};
-use crate::frontend::scene::layout::Mode;
-use crate::frontend::scene::{BackPanel, InstanceRaw, card_flip_phases, card_flip_shader_payload};
+use crate::frontend::scene::layout::{CardCorners, Mode};
+use crate::frontend::scene::{
+    BackPanel, DrawingCardState, InstanceRaw, card_flip_phases, card_flip_shader_payload,
+};
 
 use super::model::{RebuildCtx, SceneCore};
 
@@ -75,6 +77,36 @@ fn build_item_fields(item: &Wallpaper) -> Vec<(String, String)> {
 }
 
 impl SceneCore {
+    pub(in crate::app) fn drawing_key(item: &Wallpaper) -> Option<&str> {
+        if let Some(id) = item.key.strip_prefix(wall_proto::drawing::WE_KEY_PREFIX) {
+            return (!id.is_empty() && !item.engine_id().is_empty()).then_some(item.key.as_str());
+        }
+        let prefix = match item.kind {
+            WallpaperKind::Static => wall_proto::drawing::STATIC_KEY_PREFIX,
+            WallpaperKind::Video => wall_proto::drawing::VIDEO_KEY_PREFIX,
+            WallpaperKind::We => return None,
+        };
+        (!item.path.is_empty()
+            && item.key.strip_prefix(prefix).is_some_and(|name| !name.is_empty()))
+        .then_some(item.key.as_str())
+    }
+
+    pub fn set_card_drawing(&mut self, key: &str, state: DrawingCardState) -> bool {
+        let next = Some((key.to_string(), state));
+        if self.card.drawing != next {
+            self.card.drawing = next;
+            self.motion.needs_frame = true;
+            return true;
+        }
+        false
+    }
+
+    pub fn clear_card_drawing(&mut self) {
+        if self.card.drawing.take().is_some() {
+            self.motion.needs_frame = true;
+        }
+    }
+
     pub fn set_removal_action(&mut self, action: crate::frontend::scene::RemovalAction) {
         if self.card.removal != action {
             self.card.removal = action;
@@ -132,7 +164,7 @@ impl SceneCore {
             self.card.det_p = 0.0;
         }
         self.card.flipped = Some(idx);
-        self.card.det_src = src;
+        self.card.det_src = self.unplace_card(src);
         self.card.det_target = 1.0;
         self.card.fav_snap = true;
         self.motion.needs_frame = true;
@@ -157,7 +189,7 @@ impl SceneCore {
         hh: f32,
         skew: f32,
         edge_tilt: f32,
-        radii: [f32; 4],
+        corners: CardCorners,
         progress: f32,
     ) -> BackPanel {
         let item = &ctx.catalog.items[store_idx];
@@ -171,7 +203,7 @@ impl SceneCore {
             hh,
             skew,
             edge_tilt,
-            radii,
+            corners,
             progress,
             coordinated_flip: matches!(
                 self.mode,
@@ -191,6 +223,13 @@ impl SceneCore {
             chip_pop: self.card.chip_pop.x.clamp(0.0, 1.0),
             pop_idx: self.card.pop_idx,
             static_img: item.kind == WallpaperKind::Static,
+            drawing: Self::drawing_key(item).map(|_| {
+                self.card
+                    .drawing
+                    .as_ref()
+                    .filter(|(key, _)| key == &item.key)
+                    .map_or(DrawingCardState::Checking, |(_, state)| *state)
+            }),
             overview_available: crate::infrastructure::runtime::is_niri(),
             scene_properties: item.effective_kind() == WallpaperKind::We && !item.we_id.is_empty(),
             reset_thumbnail: item.kind == WallpaperKind::We && !item.we_id.is_empty(),
@@ -252,7 +291,7 @@ impl SceneCore {
         let cy = src[1] + (vh * 0.5 - src[1]) * ease;
         let hw = src[2] + (thw - src[2]) * ease;
         let hh = src[3] + (thh - src[3]) * ease;
-        let radii = [0.0; 4];
+        let corners = CardCorners::default();
         instances.push(InstanceRaw {
             rect: [vw * 0.5, vh * 0.5, vw * 0.5, vh * 0.5],
             fill: [0.0, 0.0, 0.0, 0.72 * ease],
@@ -269,7 +308,7 @@ impl SceneCore {
             ..Default::default()
         });
         let mut body =
-            self.body_instance(ctx, wanted, store_idx, [cx, cy, hw, hh], radii, 0.0, 0.0, true);
+            self.body_instance(ctx, wanted, store_idx, [cx, cy, hw, hh], corners, 0.0, 0.0, true);
         body.params[2] = (prog * 8.0).min(1.0);
         let phases =
             card_flip_phases(prog, self.card.flip_shader_enabled, self.card.flip_back_enabled);
@@ -286,7 +325,7 @@ impl SceneCore {
             thh,
             0.0,
             0.0,
-            radii,
+            corners,
             progress,
         ));
     }

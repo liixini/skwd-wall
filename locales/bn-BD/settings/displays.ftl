@@ -8,3 +8,6 @@ settings-displays-lock-label = লক
 settings-displays-lock-desc = এই মনিটরের ওয়ালপেপার শুধু মাল্টিপিকার দিয়ে হালনাগাদ করুন।
 settings-displays-empty-label = ডিসপ্লে শনাক্ত করা হচ্ছে
 settings-displays-empty-desc = ওয়ালপেপার সার্ভিস ডিসপ্লে জানালে বর্তমান ওয়ালপেপার দেখা যাবে।
+settings-displays-default-placement-label = ডিফল্ট অবস্থান
+settings-displays-default-placement-desc = যে ডিসপ্লের নিজস্ব অবস্থান নেই, সেগুলো এটি ব্যবহার করে।
+settings-displays-use-global = গ্লোবাল ব্যবহার করুন · { $mode }

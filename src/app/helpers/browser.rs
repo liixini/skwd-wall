@@ -1,5 +1,6 @@
 use iced::Task;
 
+use crate::frontend::nav::{grid_step, step};
 use crate::frontend::scene::layout::GridParams;
 use crate::infrastructure::config::Config;
 
@@ -19,41 +20,45 @@ pub(crate) fn browser_wall_params(config: &Config) -> GridParams {
         thumb_h: total_h / layout.rows.max(1) as f32,
         gap_x: 0.0,
         gap_y: 0.0,
-        corner_radius: 0.0,
+        corners: crate::frontend::scene::layout::CardCorners::default(),
         border_width: 0.0,
         ..GridParams::default()
     }
 }
 
-pub(crate) fn browser_key_nav(app: &mut App, delta: i64) -> Task<Message> {
+pub(crate) fn browser_wraps(app: &App) -> bool {
+    app.config.loop_around()
+        && !app.input.held
+        && app.source_browser.browser.as_ref().is_some_and(|browser| {
+            !browser.session.loading && browser.session.page >= browser.session.last_page
+        })
+}
+
+pub(crate) fn browser_key_nav(app: &mut App, dx: i32, dy: i32) -> Task<Message> {
+    let wrap = browser_wraps(app);
     let Some(browser) = app.source_browser.browser.as_ref() else {
         return Task::none();
     };
-    let count = browser.session.items.len() as i64;
-    if count == 0 {
-        return Task::none();
-    }
+    let count = browser.session.items.len();
     if let Some(current) = browser.session.preview {
-        if delta.abs() != 1 {
+        if dy != 0 {
             return Task::none();
         }
-        let next = current as i64 + delta;
-        if next < 0 || next >= count {
+        let Some(next) = step(current, dx, count, wrap) else {
             return Task::none();
-        }
+        };
         return update(
             app,
-            Message::Browser(crate::frontend::browser::BrowserMsg::OpenPreview(next as usize)),
+            Message::Browser(crate::frontend::browser::BrowserMsg::OpenPreview(next)),
         );
     }
+    let cols = app.source_browser.wall.scene.gp.cols;
     let next = match app.source_browser.wall.scene.hover {
-        Some(current) => current as i64 + delta,
-        None => 0,
+        Some(current) if dy != 0 => grid_step(current, dy, cols, count, wrap),
+        Some(current) => step(current, dx, count, wrap),
+        None => (count > 0).then_some(0),
     };
-    if next < 0 || next >= count {
-        return Task::none();
-    }
-    browser_select(app, next as usize)
+    next.map_or_else(Task::none, |next| browser_select(app, next))
 }
 
 pub(crate) fn browser_select(app: &mut App, next: usize) -> Task<Message> {
@@ -117,7 +122,12 @@ pub(crate) fn apply_browser_defaults(
         Source::Steam => {
             browser.request.sorting = choice(steam::DEFAULT_SORT, &STEAM_SORTS, "3");
             browser.request.steam.kind = choice(steam::DEFAULT_TYPE, &STEAM_TYPES, "");
-            browser.request.steam.category = choice(steam::DEFAULT_CATEGORY, &STEAM_CATEGORIES, "");
+            browser.request.steam.tags =
+                Some(choice(steam::DEFAULT_CATEGORY, &STEAM_CATEGORIES, ""))
+                    .filter(|tag| !tag.is_empty())
+                    .into_iter()
+                    .collect();
+            browser.request.steam.excluded_tags.clear();
             browser.request.steam.resolution =
                 choice(steam::DEFAULT_RESOLUTION, &STEAM_RESOLUTIONS, "");
             browser.request.steam.trend_days =

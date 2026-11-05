@@ -4,6 +4,8 @@ use std::process::{Command, Output};
 const ZENITY: &str = "zenity";
 const FILE_SELECTION: &str = "--file-selection";
 const DIRECTORY: &str = "--directory";
+const SAVE: &str = "--save";
+const CONFIRM_OVERWRITE: &str = "--confirm-overwrite";
 const TITLE: &str = "--title";
 const FILTER: &str = "--file-filter";
 const FILENAME: &str = "--filename";
@@ -28,6 +30,17 @@ pub fn choose(spec: &FilePicker<'_>) -> Result<Option<PathBuf>, String> {
     if let Some(start) = spec.start {
         command.arg(format!("{FILENAME}={}/", start.display()));
     }
+    selected(command.output().map_err(|err| format!("start file picker: {err}"))?)
+}
+
+pub fn save(title: &str, suggested: &Path) -> Result<Option<PathBuf>, String> {
+    let mut command = Command::new(ZENITY);
+    command
+        .arg(FILE_SELECTION)
+        .arg(SAVE)
+        .arg(CONFIRM_OVERWRITE)
+        .arg(format!("{TITLE}={title}"))
+        .arg(format!("{FILENAME}={}", suggested.display()));
     selected(command.output().map_err(|err| format!("start file picker: {err}"))?)
 }
 

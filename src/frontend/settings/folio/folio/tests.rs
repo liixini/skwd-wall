@@ -2,16 +2,10 @@ use super::*;
 
 #[test]
 fn tracker_spans_rail() {
-    assert_eq!(tracker_position(0, 11), 0.0);
-    assert_eq!(tracker_position(10, 11), 1.0);
-    assert_eq!(tracker_position(99, 11), 1.0);
-}
-
-#[test]
-fn branch_reveal_height() {
-    assert_eq!(branch_height(8, 1.0, 0.0), 0.0);
-    assert!(branch_height(8, 1.0, 0.5) > 100.0);
-    assert!(branch_height(8, 1.0, 1.0) > branch_height(8, 1.0, 0.5));
+    assert_eq!(tracker_position(0.0, 11), 0.0);
+    assert_eq!(tracker_position(10.0, 11), 1.0);
+    assert_eq!(tracker_position(99.0, 11), 1.0);
+    assert_eq!(tracker_position(2.5, 11), 0.25);
 }
 
 #[test]
@@ -28,7 +22,7 @@ fn button_wipe_diagonal() {
 #[test]
 fn category_copy_complete() {
     for tab in crate::frontend::settings::tables::TABS {
-        assert_ne!(category_note(tab), "Settings for this part of skwd-wall.");
+        assert!(!super::super::super::tables::category_label(tab).starts_with("settings-tab-"));
     }
 }
 
@@ -45,7 +39,6 @@ fn small_type_floor() {
 #[test]
 fn editor_bars_match_kind() {
     let source = include_str!("../folio.rs");
-    assert!(source.contains("fn compact_field_grid<'a>"));
     assert!(source.contains("control.is_inline_editor()"));
     assert!(source.contains("crate::frontend::ui::folio_inline_bar("));
     assert!(source.contains("crate::frontend::ui::folio_stack_bar("));
@@ -53,39 +46,46 @@ fn editor_bars_match_kind() {
 }
 
 #[test]
-fn settings_columns_fit_the_available_width_at_large_ui_scales() {
-    for (available, scale, single) in [(618.0, 1.0, true), (459.0, 1.5, true), (1072.0, 1.0, false)]
+fn sheet_bounds_fit() {
+    for (viewport, scale) in
+        [((1366.0, 768.0), 1.0), ((3840.0, 2160.0), 1.0), ((1366.0, 768.0), 1.5)]
     {
-        let (content, column, single_column) = reading_columns(available, scale);
-        assert_eq!(single_column, single);
-        assert!((content + 76.0 * scale - available).abs() < 0.001);
-        assert!((column * 2.0 + 34.0 * scale - content).abs() < 0.001);
+        let (width, height) = super::super::appearance::sheet_size(viewport, scale);
+        assert!(width <= viewport.0 - METRICS.margin);
+        assert!(height <= viewport.1 - METRICS.margin);
+        assert!(width <= METRICS.width * scale);
     }
+    assert_eq!(super::super::appearance::sheet_size((3840.0, 2160.0), 1.0), (1344.0, 746.0));
+    assert_eq!(super::super::appearance::sheet_size((1366.0, 768.0), 1.0), (1344.0, 746.0));
+    let scale = super::super::appearance::sheet_scale((1366.0, 768.0), 2.0);
+    assert_eq!(scale, 1.0);
+    assert_eq!(super::super::appearance::sheet_scale((3840.0, 2160.0), 2.0), 2.0);
 }
 
 #[test]
 fn inline_vs_group_editors() {
     let inline = [
         Control::Number { key: "number".into(), path: String::new(), unit: "px" },
-        Control::TextField { key: "text".into(), path: String::new(), placeholder: "path" },
+        Control::TextField {
+            key: "text".into(),
+            path: String::new(),
+            placeholder: "path",
+            secret: false,
+        },
         Control::KeyBinding { key: "key".into(), path: String::new(), default: "ctrl+f" },
     ];
     assert!(inline.iter().all(Control::is_inline_editor));
-    assert!(inline.iter().all(Control::is_compact_field));
-    let grouped = Control::MotionWeights {
-        weights: vec![(
-            String::from("fast"),
-            String::from("motion.fast"),
-            ActionId::ResetMotionFast,
-        )],
+    let grouped = Control::StackBar {
+        id: String::from("bar"),
+        summary: String::new(),
+        preview: None,
+        rows: Vec::new(),
     };
     assert!(grouped.is_group_editor());
     assert!(grouped.compact_bar_id().is_some());
     let toggle = Control::Toggle { path: String::new(), value: true };
     assert!(toggle.compact_bar_id().is_none());
     assert!(toggle.is_compact_action());
-    assert!(toggle.is_compact_field());
-    assert!(Control::Code { snippet: "layer-rule" }.is_wide_field());
 }
 
 #[test]
@@ -94,7 +94,6 @@ fn toggles_use_action_bar() {
     assert!(source.contains("fn compact_action_field("));
     assert!(source.contains("crate::frontend::ui::folio_action_bar("));
     assert!(source.contains("crate::frontend::ui::folio_action("));
-    assert!(source.contains("row.control.is_compact_field() == compact"));
 }
 
 #[test]
@@ -107,7 +106,7 @@ fn folio_no_ordinals() {
 fn railless_sheet() {
     let source = include_str!("../folio.rs");
     for shared in [
-        "crate::frontend::ui::folio_index_shell(",
+        "super::appearance::Ornament::Frame {",
         "crate::frontend::ui::folio_sheet_panel_style(",
         "crate::frontend::ui::folio_scrim_style(",
         "folio_horizontal_rule(",
@@ -126,28 +125,10 @@ fn railless_sheet() {
 }
 
 #[test]
-fn page_never_covers_reading() {
-    let source = include_str!("../folio.rs");
-    let page_start = source.find("let page = container(stack![").unwrap();
-    let body_start = source[page_start..].find("let body = row![").unwrap() + page_start;
-    let page = &source[page_start..body_start];
-    assert!(page.contains("reading,"));
-    assert!(page.contains(".style(move |_|"));
-    assert!(!page.contains("stack![\n        atmosphere,\n        container(text(\"\"))"));
-}
-
-#[test]
-fn preview_uses_full_stage() {
-    let mut settings = vec![
-        Row { title: String::new(), desc: String::new(), control: Control::Preview },
-        Row { title: String::new(), desc: String::new(), control: Control::Static },
-    ];
-    assert!(take_transition_preview(&mut settings));
-    assert_eq!(settings.len(), 1);
-    assert!(matches!(settings[0].control, Control::Static));
-    let source = include_str!("../folio.rs");
-    assert!(source.contains("page = page.push(transition_preview_stage("));
-    assert!(!source.contains("if let Some(handle) = transition_preview {\n        image(handle)"));
+fn reading_area_stays_visible() {
+    let (width, _) = super::super::appearance::sheet_size((1366.0, 768.0), 1.0);
+    let body = width - METRICS.index - reading_inset(1.0);
+    assert!(body > METRICS.editor * 2.0, "two value columns fit");
 }
 
 #[test]
@@ -167,8 +148,24 @@ fn workbench_ctx_structs() {
         "pub struct ChromeCtx<",
         "struct ReadingInput<",
         "fn picker_layout_workbench<'a>(\n    source: &SourceCtx<'a>,",
-        "fn reading_surface<'a>(input: ReadingInput<'a>, focus: FocusCtx<'_>)",
+        "fn reading_surface<'a>(input: ReadingInput<'a, '_>)",
     ] {
         assert!(source.contains(shaped), "{shaped}");
     }
+}
+
+#[test]
+fn unchanged_values_stay_still() {
+    let old = Row::of(
+        "Volume".into(),
+        "Wallpaper audio".into(),
+        Control::Number { key: "volume".into(), path: "volume".into(), unit: "%" },
+    );
+    let inputs = HashMap::from([("volume".into(), "40".into())]);
+    assert!(unchanged_row(&old, &old, &inputs, &inputs));
+    let changed = HashMap::from([("volume".into(), "50".into())]);
+    assert!(!unchanged_row(&old, &old, &inputs, &changed));
+    let mut renamed = old.clone();
+    renamed.title = "Brightness".into();
+    assert!(!unchanged_row(&old, &renamed, &inputs, &inputs));
 }

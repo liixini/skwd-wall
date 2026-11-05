@@ -260,7 +260,7 @@ pub(super) fn draw_tags(
             mid_text(
                 crate::i18n::tr_args!("card-back-more", count => hidden),
                 Point::new(x + width / 2.0, y + height / 2.0),
-                with_alpha(palette.surface_text, 0.62 * alpha),
+                with_alpha(palette.surface_variant_text, 0.62 * alpha),
                 8.5,
                 UI_FONT,
                 Alignment::Center,

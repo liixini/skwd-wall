@@ -40,7 +40,7 @@ fn hit_skew_geometry() {
 fn hit_topmost_skips_labels() {
     let items = vec![
         (item(0.0, 100.0, 0.0, 0), BrowserAct::Close),
-        (item(0.0, 100.0, 0.0, 5), BrowserAct::ResMode),
+        (item(0.0, 100.0, 0.0, 5), BrowserAct::MaxDuration("300")),
         (item(0.0, 100.0, 0.0, 9), BrowserAct::Label),
     ];
     assert_eq!(BrowserBar::hit(&items, Point::new(50.0, 10.0)), Some(1));
@@ -51,8 +51,8 @@ fn hit_topmost_skips_labels() {
 fn actions_emit_browser_feature_intents() {
     assert!(matches!(BrowserBar::message(&BrowserAct::Close), BrowserIntent::Close));
     assert!(matches!(
-        BrowserBar::message(&BrowserAct::ResMode),
-        BrowserIntent::Update(BrowserMsg::ToggleResExact)
+        BrowserBar::message(&BrowserAct::MaxDuration("300")),
+        BrowserIntent::Update(BrowserMsg::SetMaxDuration(duration)) if duration == "300"
     ));
     assert!(matches!(BrowserBar::message(&BrowserAct::Label), BrowserIntent::Capture));
 }

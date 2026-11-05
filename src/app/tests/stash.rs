@@ -80,3 +80,11 @@ fn stash_state_is_reported() {
     let state: Value = serde_json::from_str(&crate::app::update::ui_state_json(&app)).unwrap();
     assert_eq!(state["stashed"], json!(true));
 }
+
+#[test]
+fn stash_closes_strand() {
+    let mut app = shown_app();
+    app.panels.strand = Some(crate::frontend::strand::Strand::new([1280.0, 720.0], 1.0, None));
+    cmd(&mut app, "stash");
+    assert!(app.panels.strand.is_none());
+}

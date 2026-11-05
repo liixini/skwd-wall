@@ -4,6 +4,8 @@
 1	src/infrastructure/semantic.rs
 2	src/main.rs
 2	src/rendering/capabilities/gpu.rs
+3	src/shell/fontconfig_env.rs
 2	src/shell/fonts.rs
 5	src/shell/shell.rs
-3	src/shell/tests.rs
+4	src/shell/tests.rs
+3	tests/fontconfig_env.rs

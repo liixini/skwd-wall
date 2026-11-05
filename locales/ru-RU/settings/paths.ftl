@@ -1,6 +1,5 @@
 settings-paths-excluded-card = Исключённые папки
 settings-paths-excluded-card-desc = Пропускать эти папки и вложенные папки в библиотеке изображений и видео. Сохранённые метаданные остаются.
-settings-paths-path-placeholder = Путь к папке
 settings-paths-source-card = Папки с обоями
 settings-paths-source-card-desc = Искать изображения и видео в этих папках и вложенных папках. Изменения автоматически обновляют библиотеку.
 settings-paths-folder-choose-action = Выбрать папку
@@ -26,4 +25,3 @@ settings-paths-removed-excluded = Исключённая папка убрана
 settings-paths-watch-polling = Опрос
 settings-paths-watch-error = Не читается
 settings-paths-watch-error-note = Проверьте, что она смонтирована и доступна для чтения. Опрос продолжает повторять попытки.
-settings-paths-excluded-footer = Исключённые папки никогда не сканируются, поэтому ни один профиль не может их показать. Чтобы оставить папку, но скрыть её на людях, используйте Библиотека › Профили.

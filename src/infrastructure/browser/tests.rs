@@ -111,14 +111,15 @@ fn provider_search_encoding() {
         query_type: 3,
         trend_days: 3,
         request_type: String::from("Video"),
-        category: String::from("Anime"),
+        tags: vec![String::from("Anime"), String::from("Nature")],
+        excluded_tags: vec![String::from("Girls")],
         resolution: String::from("1920 x 1080"),
         allow_nsfw: false,
         page: 2,
     }));
     assert_eq!(call.method, "steam.search");
     assert_eq!(call.params["days"], 3);
-    assert_eq!(call.params["tags"], json!(["Video", "Anime", "1920 x 1080"]));
+    assert_eq!(call.params["tags"], json!(["Video", "Anime", "Nature", "1920 x 1080"]));
     assert_eq!(
         call.params["excluded_tags"],
         json!([
@@ -129,7 +130,8 @@ fn provider_search_encoding() {
             "NSFW",
             "Partial Nudity",
             "Nudity",
-            "Gore"
+            "Gore",
+            "Girls"
         ])
     );
 
@@ -185,8 +187,10 @@ fn download_preview_apply_encoding() {
         source: Source::Wallhaven,
         id: String::from("wall"),
         full_url: String::from("https://example.invalid/wall"),
+        refresh: true,
     });
     assert_eq!(preview.method, "wallhaven.preview");
+    assert_eq!(preview.params["refresh"], true);
 
     assert_eq!(
         encode_apply(&ApplyTarget::Path { kind: ApplyKind::Video, path: String::from("/video") }),

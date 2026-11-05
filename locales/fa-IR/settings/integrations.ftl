@@ -1,3 +1,8 @@
+settings-integrations-caelestia-card = Caelestia
+settings-integrations-caelestia-card-desc = تصویرزمینه‌های انتخاب‌شده در هر دو برنامه را با Skwd نمایش دهید.
+settings-integrations-caelestia-sync-label = همگام‌سازی تصویرزمینه‌های Caelestia
+settings-integrations-caelestia-sync-desc = Skwd تصویرزمینه‌های انتخاب‌شده در هر یک از دو برنامه را نمایش می‌دهد. انتخاب‌های Caelestia روی نمایشگرهای باز اعمال می‌شوند.
+
 settings-integrations-plasma-card = KDE Plasma
 settings-integrations-lock-mode-label = کاغذدیواری صفحهٔ قفل
 settings-integrations-lock-mode-desc = «بدون مدیریت» Plasma را تغییر نمی‌دهد. «تصویر ثابت» همیشه از تصویر زیر استفاده می‌کند. «پیروی» آخرین کاغذدیواری اعمال‌شده را دنبال می‌کند.
@@ -33,7 +38,7 @@ settings-integrations-follow-desc = تا وقتی Skwd رنگ‌ها را کنت
 
 settings-section-lockscreens = صفحه‌های قفل
 settings-lockscreens-source-label = منبع تصویر
-settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-source-help = «پیروی از آخرین اعمال‌شده» از تصویر فعلی پس‌زمینه استفاده می‌کند. «تصویر ثابت» از پروندهٔ زیر استفاده می‌کند. ویدیوها و صحنه‌ها در صورت وجود از یک تصویر ثابت استفاده می‌کنند.
 settings-lockscreens-image-label = تصویر ثابت
 settings-lockscreens-image-desc = مسیر کامل یک تصویر موجود را وارد کنید، مانند ~/Pictures/lockscreen.jpg. Skwd آن را برای صفحه‌های قفل فعال کپی می‌کند. در اینجا نمی‌توان از فایل ویدیو استفاده کرد.
 settings-lockscreens-hyprlock-card = Hyprlock

@@ -1,14 +1,16 @@
-use iced::widget::{button, canvas, column, container, text};
-use iced::{Color, Element, Length};
+use iced::widget::{button, column, container};
+use iced::{Element, Length};
 
 use crate::app::Message;
 use crate::contracts::settings::{SettingsSource, keys};
-use crate::domain::theme::{hex_to_hsv, hsv_to_hex};
 use crate::frontend::theme::Palette;
 use crate::frontend::ui::{label, row};
 use crate::i18n::tr;
 
 use super::SettingsMsg;
+
+const HEX_SIZE: f32 = 12.0;
+const WHEEL_GAP: f32 = 14.0;
 
 #[derive(Debug, Clone, Default)]
 pub struct BackgroundControl {
@@ -16,6 +18,7 @@ pub struct BackgroundControl {
     pub mode: String,
     pub color: String,
     pub inherited: bool,
+    pub placement_visible: bool,
 }
 
 impl BackgroundControl {
@@ -33,14 +36,16 @@ impl BackgroundControl {
             cfg.text(&format!("{}.{output}", keys::display::BACKGROUND_COLORS))
         };
         let color = if color.is_empty() { cfg.text(keys::display::FILL_COLOR) } else { color };
-        let hex = color.trim_start_matches('#');
         let color =
-            if matches!(hex.len(), 6 | 8) && hex.bytes().all(|value| value.is_ascii_hexdigit()) {
-                format!("#{}", &hex[..6])
-            } else {
-                String::from("#000000")
-            };
-        Self { output: output.to_string(), mode, color, inherited }
+            super::colour::normalized(&color).unwrap_or_else(|| super::colour::BLACK.to_string());
+        let placement = if output.is_empty() {
+            cfg.text(keys::display::FILL_MODE)
+        } else {
+            let local = cfg.text(&format!("{}.{output}", keys::display::FILL_MODES));
+            if local.is_empty() { cfg.text(keys::display::FILL_MODE) } else { local }
+        };
+        let placement_visible = matches!(placement.as_str(), "center" | "fit");
+        Self { output: output.to_string(), mode, color, inherited, placement_visible }
     }
 
     pub fn button_width(scale: f32) -> f32 {
@@ -56,6 +61,12 @@ impl BackgroundControl {
         72.0 * scale + 3.0 * Self::button_width(scale) + 30.0 * scale
     }
 
+    pub const REVEAL_PREFIX: &'static str = "background:";
+
+    pub fn reveal_id(path: &str) -> String {
+        format!("{}{path}", Self::REVEAL_PREFIX)
+    }
+
     pub fn picker_id(&self) -> String {
         format!("background-picker:{}", self.output)
     }
@@ -67,16 +78,12 @@ impl BackgroundControl {
         scale: f32,
         palette: &'a Palette,
     ) -> Element<'a, Message> {
-        let swatch = crate::frontend::theme::parse_hex(&self.color).unwrap_or(Color::BLACK);
         let solid = self.mode != "blur";
         let width = Self::button_width(scale);
         let color = button(
             container(
                 row![
-                    container(text(""))
-                        .width(Length::Fixed(20.0 * scale))
-                        .height(Length::Fixed(20.0 * scale))
-                        .style(move |_| crate::frontend::ui::box_style(swatch, palette.outline)),
+                    super::colour::swatch(&self.color, super::colour::SWATCH_SIDE * scale, palette),
                     label(
                         tr("settings-background-color"),
                         10.0,
@@ -129,43 +136,19 @@ impl BackgroundControl {
         }
         let mut body = column![choices].spacing(8.0 * scale);
         if picker > 0.0 {
-            let hsv = hex_to_hsv(&self.color).unwrap_or_default();
             let output = self.output.clone();
-            let wheel: Element<'_, Message> =
-                canvas(crate::frontend::theme_designer::wheel::ColorWheel { hsv })
-                    .width(Length::Fixed(176.0 * scale))
-                    .height(Length::Fixed(176.0 * scale))
-                    .into();
-            let wheel = wheel.map(move |message| {
-                let next = match message {
-                    Message::Theme(crate::frontend::theme_designer::ThemeMsg::Hue(hue)) => {
-                        hsv_to_hex(
-                            hue,
-                            if hsv.1 == 0.0 { 0.5 } else { hsv.1 },
-                            if hsv.2 == 0.0 { 0.5 } else { hsv.2 },
-                        )
-                    }
-                    Message::Theme(crate::frontend::theme_designer::ThemeMsg::SV(
-                        saturation,
-                        value,
-                    )) => hsv_to_hex(hsv.0, saturation, value),
-                    Message::Theme(crate::frontend::theme_designer::ThemeMsg::DragEnd) => {
-                        return Message::Settings(SettingsMsg::BackgroundCommit(output.clone()));
-                    }
-                    message => return message,
-                };
-                Message::Settings(SettingsMsg::BackgroundColor(output.clone(), next))
-            });
-            body = body.push(
-                container(
-                    row![wheel, label(self.color.clone(), 12.0, scale, palette.surface_text)]
-                        .spacing(14.0 * scale),
-                )
-                .height(Length::Fixed(
-                    184.0 * scale * crate::frontend::animation::smoothstep(picker),
-                ))
-                .clip(true),
+            let wheel = super::colour::wheel(
+                &self.color,
+                scale,
+                move |hex| Message::Settings(SettingsMsg::BackgroundColor(output.clone(), hex)),
+                Message::Settings(SettingsMsg::BackgroundCommit(self.output.clone())),
             );
+            body = body.push(super::colour::reveal(
+                row![wheel, label(self.color.clone(), HEX_SIZE, scale, palette.surface_text)]
+                    .spacing(WHEEL_GAP * scale),
+                picker,
+                scale,
+            ));
         }
         container(body)
             .width(Length::Fill)

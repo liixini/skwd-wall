@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use crate::contracts::rendering::RendererSnapshot;
+use crate::contracts::rendering::{CHAMFER, INSTANCE_FLAGS, RendererSnapshot};
 use crate::domain::library::catalog::WallpaperKind;
-use crate::frontend::scene::layout::{self, Hit, Mode};
+use crate::frontend::scene::layout::{self, CardCorners, Hit, Mode};
 use crate::frontend::scene::{
     Chrome, InstanceRaw, RenderSnapshot, TransSnap, apply_entrance_motion,
 };
@@ -18,6 +18,7 @@ use super::layout_helpers::{
 use super::model::{RebuildCtx, RebuildSinks, SceneCore};
 
 impl SceneCore {
+    #[expect(clippy::too_many_lines, reason = "Scene render snapshot boundary")]
     pub(super) fn rebuild(&mut self, mut ctx: RebuildCtx<'_>) {
         let (vw, vh) = self.viewport;
         if vw <= 0.0 || vh <= 0.0 {
@@ -45,7 +46,7 @@ impl SceneCore {
             wanted: &mut wanted,
         };
 
-        let clip = match self.mode {
+        let mut clip = match self.mode {
             Mode::Slices => {
                 self.rebuild_slices(&mut ctx, &mut sinks, entrance);
                 None
@@ -83,7 +84,7 @@ impl SceneCore {
             let col = ctx.palette.primary;
             [col.r, col.g, col.b, 1.0]
         };
-        let transition = self.motion.transition.as_ref().map(|trans| TransSnap {
+        let mut transition = self.motion.transition.as_ref().map(|trans| TransSnap {
             old: trans.old.clone(),
             progress: trans.progress.x,
             kind: trans.kind,
@@ -91,6 +92,23 @@ impl SceneCore {
             accent,
         });
         apply_entrance_motion(&mut instances, self.motion.launch_anim, entrance, vw, vh);
+        let mut back = self.card.pending_back.take();
+        let mut sandy = self.sandy.snap.take();
+        if let Some((placement, target)) = self.frame_placement(&hits, clip) {
+            placement.instances(&mut instances);
+            placement.hits(&mut hits);
+            placement.chrome(&mut chrome);
+            if let Some(panel) = &mut back {
+                placement.back(panel);
+            }
+            if let Some(snap) = &mut sandy {
+                placement.sandy(snap);
+            }
+            if let Some(trans) = &mut transition {
+                placement.transition(trans);
+            }
+            clip = Some([target.x, target.y, target.x + target.width, target.y + target.height]);
+        }
         if atlas_debug_enabled() {
             audit_atlas(
                 &instances,
@@ -107,7 +125,7 @@ impl SceneCore {
             near_layers,
             transition,
             clip,
-            sandy: self.sandy.snap.take(),
+            sandy,
             time: now_t,
             vis: self.motion.visibility.value().clamp(0.0, 1.0),
         });
@@ -116,7 +134,7 @@ impl SceneCore {
             hits,
             chrome,
             placeholders,
-            back: self.card.pending_back.take(),
+            back,
             overlay: !matches!(self.mode, Mode::Slices | Mode::Depth) && self.card.det_p > 0.05,
         });
     }
@@ -127,7 +145,7 @@ impl SceneCore {
         wanted: &mut HashSet<usize>,
         store_idx: usize,
         rect: [f32; 4],
-        radii: [f32; 4],
+        corners: CardCorners,
         skew: f32,
         edge_tilt: f32,
         near_ok: bool,
@@ -146,12 +164,12 @@ impl SceneCore {
         let pv = ctx.palette.surface_variant;
         let mut inst = InstanceRaw {
             rect,
-            radii,
             fill: [pv.r, pv.g, pv.b, 0.8],
             params: [skew, 0.0, 1.0, 0.0],
             shape: [edge_tilt, 0.0, 0.0, 0.0],
             ..Default::default()
         };
+        corners.stamp(&mut inst);
         let preview_idx = self.preview_slot_idx();
         let Some(atlas) = ctx.atlas.as_mut() else {
             return inst;
@@ -197,7 +215,7 @@ impl SceneCore {
         if mode > 0 {
             let fade = self.card.fades.get(&store_idx).map_or(1.0, |spr| spr.x);
             let (co, cs) = layout::cover_crop(rect[2] * 2.0, rect[3] * 2.0, THUMB_W, THUMB_H);
-            inst.misc = [mode, layer, 0, 0];
+            inst.misc = [mode, layer, 0, inst.misc[INSTANCE_FLAGS] & CHAMFER];
             inst.uv = [uv_o[0], uv_o[1], uv_s[0], uv_s[1]];
             inst.crop = [co[0], co[1], cs[0], cs[1]];
             inst.params[3] = fade.clamp(0.0, 1.0);
@@ -218,7 +236,7 @@ impl SceneCore {
             wanted,
             spec.store_idx,
             body_rect,
-            spec.radii,
+            spec.corners,
             spec.skew,
             spec.edge_tilt,
             spec.near_ok,

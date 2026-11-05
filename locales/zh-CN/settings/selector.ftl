@@ -4,10 +4,6 @@ settings-selector-display-mode-desc = 选择壁纸卡片在选择器中的排列
 settings-selector-filter-motion-label = 筛选动效
 settings-selector-filter-motion-desc = 筛选结果变化时滚动的速度。三种共用速度在动效设置中调整。
 settings-selector-presets-card = 预设
-settings-selector-presets-card-desc = 保存当前布局设置或应用已保存的一组设置。每种显示模式都有自己的预设。
-settings-selector-preset-name-label = 名称
-settings-selector-preset-name-desc = 重命名所选预设。“保存当前”会创建一个自动命名的新预设。
-settings-selector-preset-name-placeholder = 样式名称
 settings-selector-preset-generated-name = 样式 { $number }
 settings-selector-saved-styles-label = 已保存的样式
 settings-selector-live-preview-card = 颜色预览
@@ -68,10 +64,6 @@ settings-selector-grid-gap-x-label = 水平间距
 settings-selector-grid-gap-x-desc = 列与列之间可见的边缘间距。
 settings-selector-grid-gap-y-label = 垂直间距
 settings-selector-grid-gap-y-desc = 行与行之间可见的边缘间距。
-settings-selector-grid-round-label = 圆角
-settings-selector-grid-round-desc = 关闭时，所有墙面卡片都使用直角。
-settings-selector-grid-corner-radius-label = 圆角半径
-settings-selector-grid-corner-radius-desc = 启用圆角时使用的圆润程度。
 settings-selector-performance-card = 性能
 settings-selector-performance-card-desc = 每粒沙都是独立的几何体。沙粒越大，形状越少，GPU 工作量也大幅减少。
 settings-selector-sand-note-discrete = 对检测到的独立显卡来说，这个负载很小。同样的沙粒大小在集成显卡上可能慢约 150 倍。
@@ -157,16 +149,6 @@ settings-selector-wobble-desc = 卡片会朝滚动方向弯曲，并在停止滚
 settings-selector-wobble-strength-label = 摆动强度
 settings-selector-wobble-strength-desc = 数值 100 为默认。数值 200 会让弯曲和颜色分离加倍。
 settings-selector-corners-card = 边角
-settings-selector-round-corners-label = 圆角
-settings-selector-round-corners-desc = 为切片边缘应用圆角半径。
-settings-selector-corner-tl-label = 左上
-settings-selector-corner-tl-desc = 左上角半径。0 = 直角。
-settings-selector-corner-tr-label = 右上
-settings-selector-corner-tr-desc = 右上角半径。0 = 直角。
-settings-selector-corner-br-label = 右下
-settings-selector-corner-br-desc = 右下角半径。0 = 直角。
-settings-selector-corner-bl-label = 左下
-settings-selector-corner-bl-desc = 左下角半径。0 = 直角。
 settings-selector-card-flip-card = 卡片翻转
 settings-selector-card-flip-card-desc = 选择壁纸卡片如何从缩略图翻转到背面的详细信息。
 settings-selector-flip-effect-label = 效果
@@ -194,6 +176,12 @@ settings-selector-preview-delay-label = 预览延迟
 settings-selector-preview-delay-desc = 悬停或选中后等待多久开始预览（毫秒）。
 settings-selector-tag-cloud-position-card = 搜索面板位置
 settings-selector-tag-cloud-position-card-desc = 以像素为单位水平或垂直移动搜索面板。水平正值向右移动；垂直正值向下移动。
+settings-selector-tag-position-enabled-label = 使用屏幕位置
+settings-selector-tag-position-enabled-desc = 搜索面板的大小或选择器样式改变时，让面板保持在这些屏幕坐标上。关闭后改用像素偏移。
+settings-selector-tag-position-x-label = 左边缘
+settings-selector-tag-position-x-desc = 按屏幕宽度的百分比设置搜索面板的左边缘。
+settings-selector-tag-position-y-label = 上边缘
+settings-selector-tag-position-y-desc = 按屏幕高度的百分比设置搜索面板的上边缘。
 settings-selector-tag-offset-x-label = 搜索面板水平偏移
 settings-selector-tag-offset-x-desc = 相对于此选择器向左或向右移动搜索面板。
 settings-selector-tag-offset-y-label = 搜索面板垂直偏移
@@ -216,8 +204,6 @@ settings-selector-swap-style-weave = 编织
 settings-selector-swap-style-bloom = 绽放
 settings-selector-swap-style-flock = 群飞
 settings-selector-swap-style-ring = 光环
-settings-selector-preset-rename-hint = 选择要重命名的样式
-settings-selector-preset-save-current = 保存当前
 settings-selector-mode-hand = 手牌
 settings-selector-hand-card = 手牌
 settings-selector-hand-card-desc = 一组高卡片呈扇形展开，像透视中握在手里的纸牌。移动指针可倾斜手牌，拖动舞台可旋转手牌，滚动超过边缘可发下一手牌。
@@ -272,7 +258,6 @@ settings-selector-hand-fan-roll-label = 扇形旋转
 settings-selector-hand-fan-roll-desc = 每张卡片增加的倾斜，就像手中展开的纸牌。0 表示保持竖直。
 settings-selector-hand-arch-label = 弧度
 settings-selector-hand-arch-desc = 外侧卡片比中间卡片低多少。
-settings-selector-hand-corner-radius-label = 圆角半径
 settings-selector-hand-skew-label = 倾斜
 settings-selector-hand-skew-desc = 将卡片轮廓错切成平行四边形，单位为水平偏移像素。
 settings-selector-hand-backdrop-blur-label = 背景模糊
@@ -285,60 +270,58 @@ settings-selector-start-position-desc = 从开头、上次应用的壁纸或上�
 settings-selector-start-position-beginning = 开头
 settings-selector-start-position-applied = 上次应用的壁纸
 settings-selector-start-position-browsing = 上次浏览的位置
+settings-selector-loop-around-label = 两端循环
+settings-selector-loop-around-desc = 越过第一张或最后一张壁纸时，会跳到另一端。按住按键、翻页和快速滚动会先停在末端，再按一次或再滚动一次才会循环。在线来源在所有页面加载完成后才会循环。在墙面布局和在线来源中，鼠标滚轮只滚动视图。
 
-settings-selector-mode-depth = Depth
-settings-selector-depth-card = Depth cards
-settings-selector-depth-desc = Cards shrink toward the edges. As you scroll, artwork shifts inside each card according to its position in the row.
+settings-selector-mode-depth = 深度
+settings-selector-depth-card = 景深卡片
+settings-selector-depth-desc = 卡片向两侧逐渐缩小。滚动时，每张卡片内的图片会按其在这一排中的位置移动。
 
-settings-selector-parallax-label = Image parallax
-settings-selector-parallax-desc = Shift artwork inside each card as it moves across the view. The image keeps moving through the visible edges.
+settings-selector-parallax-label = 图片视差
+settings-selector-parallax-desc = 卡片在视图中移动时，让卡片内的图片随之偏移。图片会继续越过可见边缘移动。
 settings-selector-mode-collection = 合集
 settings-selector-collection-desc = 使用滚轮或方向键浏览倾斜的卡片堆。点击卡片可展开预览，再次点击或按 Escape 返回。按 Enter 应用壁纸，右键查看详情。
 
-settings-selector-depth-height-label = Card height
-settings-selector-depth-height-desc = Height of the centre card. Large cards shrink to fit the screen.
+settings-selector-depth-height-label = 卡片高度
+settings-selector-depth-height-desc = 中间卡片的高度。过大的卡片会缩小以适应屏幕。
 
-settings-selector-depth-width-label = Card width
-settings-selector-depth-width-desc = Width of the centre card in pixels.
+settings-selector-depth-width-label = 卡片宽度
+settings-selector-depth-width-desc = 中间卡片的宽度，单位为像素。
 
-settings-selector-depth-spacing-label = Card spacing
-settings-selector-depth-spacing-desc = Distance between card centres in pixels before depth falloff.
+settings-selector-depth-spacing-label = 卡片间距
+settings-selector-depth-spacing-desc = 应用景深衰减之前，卡片中心之间的距离，单位为像素。
 
-settings-selector-depth-count-label = Visible cards
-settings-selector-depth-count-desc = Maximum number of cards around the current selection.
+settings-selector-depth-count-label = 可见卡片数
+settings-selector-depth-count-desc = 当前所选卡片周围的最大卡片数。
 
-settings-selector-depth-falloff-label = Depth falloff
-settings-selector-depth-falloff-desc = Scale reduction per card away from the centre, from 0 to 1. Zero keeps their sizes equal.
+settings-selector-depth-falloff-label = 景深衰减
+settings-selector-depth-falloff-desc = 每远离中心一张卡片的缩放减少量，范围 0 到 1。设为 0 时所有卡片大小相同。
 
-settings-selector-depth-corners-label = Corner radius
-settings-selector-depth-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-depth-skew-label = Card skew
-settings-selector-depth-skew-desc = Slant the card edges. Zero keeps them upright.
+settings-selector-depth-skew-label = 卡片倾斜
+settings-selector-depth-skew-desc = 让卡片的边缘倾斜。设为 0 时保持竖直。
 
-settings-selector-depth-speed-label = Navigation duration
-settings-selector-depth-speed-desc = Time for a navigation movement in milliseconds. Lower values move faster.
+settings-selector-depth-speed-label = 导航时长
+settings-selector-depth-speed-desc = 一次导航移动的时长，单位为毫秒。值越小越快。
 
-settings-selector-collection-size-label = Card size
-settings-selector-collection-size-desc = Card width as a percentage of screen height.
+settings-selector-collection-size-label = 卡片大小
+settings-selector-collection-size-desc = 卡片宽度，按屏幕高度的百分比计算。
 
-settings-selector-collection-spacing-label = Stack spacing
-settings-selector-collection-spacing-desc = Vertical distance between stacked cards as a percentage of card size.
+settings-selector-collection-spacing-label = 卡片堆间距
+settings-selector-collection-spacing-desc = 叠放卡片之间的纵向距离，按卡片大小的百分比计算。
 
-settings-selector-collection-count-label = Visible cards
-settings-selector-collection-count-desc = Maximum number of cards in the stack.
+settings-selector-collection-count-label = 可见卡片数
+settings-selector-collection-count-desc = 卡片堆中的最大卡片数。
 
-settings-selector-collection-tilt-label = Stack tilt
-settings-selector-collection-tilt-desc = Tilt the stack away from you. Zero shows the cards face-on.
+settings-selector-collection-tilt-label = 卡片堆倾斜
+settings-selector-collection-tilt-desc = 让卡片堆向远离你的方向倾斜。设为 0 时正对着显示卡片。
 
-settings-selector-collection-corners-label = Corner radius
-settings-selector-collection-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-collection-speed-label = Motion speed
-settings-selector-collection-speed-desc = Speed of navigation and opening or closing a card. Higher values move faster.
+settings-selector-collection-speed-label = 动作速度
+settings-selector-collection-speed-desc = 导航以及卡片打开或关闭的速度。值越大越快。
 
-settings-selector-depth-frame-label = Selection frame
-settings-selector-depth-frame-desc = Draw a highlighted border around the selected card.
+settings-selector-depth-frame-label = 选择边框
+settings-selector-depth-frame-desc = 在所选卡片周围绘制高亮边框。
 
-settings-selector-shadows-label = Card shadows
-settings-selector-shadows-desc = Draw a shadow behind each card.
+settings-selector-shadows-label = 卡片阴影
+settings-selector-shadows-desc = 在每张卡片后面绘制阴影。

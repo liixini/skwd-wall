@@ -1,5 +1,3 @@
-settings-tab-language = ভাষা
-settings-tab-note-language = পিকার ও সেটিংসে ব্যবহৃত ভাষা বেছে নিন।
 settings-language-card = ইন্টারফেসের ভাষা
 settings-language-card-desc = পরিবর্তন সাথে সাথে প্রযোজ্য হয় এবং পরের বার চালুর জন্য সংরক্ষিত থাকে।
 settings-language-choice-label = ভাষা

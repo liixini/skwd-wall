@@ -1,6 +1,5 @@
 settings-performance-power-card = Ноутбук и питание
 settings-performance-power-card-desc = Окно выбора прекращает отрисовку, когда всё успокаивается. Рендереры обоев продолжают работать и после его закрытия, поэтому у них отдельные ограничения для батареи.
-settings-performance-power-source-label = Текущий источник питания
 settings-performance-power-battery-limited = Батарея (автоматические ограничения активны)
 settings-performance-power-battery-unlimited = Батарея (автоматические ограничения отключены)
 settings-performance-power-external = Внешнее питание, настольный ПК или нет данных (автоматические ограничения неактивны)
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = Добавить миниатюры из
 settings-performance-capture-we-desc = Захватывать нативные сцены в фоне. Повторно использовать корректные захваты и сохранять существующие превью, если сцена не удалась. Можно остановить и продолжить позже.
 settings-performance-capture-we-action = Создать миниатюры
 settings-performance-capture-we-stop = Остановить
+settings-performance-effective-label = Действующие ограничения
+settings-performance-effective = Окно выбора: { $fps } FPS · Видео ставится на паузу через { $seconds } с простоя · { $reason }
+settings-performance-effective-no-idle = Окно выбора: { $fps } FPS · Пауза видео при простое выключена · { $reason }
+settings-performance-effective-reason-battery = От батареи
+settings-performance-effective-reason-disabled = Экономия заряда выключена
+settings-performance-effective-reason-external = От внешнего питания

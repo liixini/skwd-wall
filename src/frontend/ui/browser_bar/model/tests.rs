@@ -2,7 +2,6 @@ use crate::frontend::browser::{Browser, Source};
 
 use super::builder::browser_bar_items;
 use super::cache::{browser_bar_items_compact, compact_reflow};
-use super::types::BrowserAct;
 
 #[test]
 fn provider_bars_fit_floor() {
@@ -23,7 +22,7 @@ fn compact_filters_in_rail() {
     for source in Source::ALL {
         let browser = Browser::new(source);
         let items = browser_bar_items_compact(&browser, 1.0, max_width);
-        if source == Source::Bing {
+        if matches!(source, Source::Bing | Source::Steam | Source::Wallhaven) {
             assert!(items.is_empty());
             continue;
         }
@@ -39,7 +38,7 @@ fn compact_filters_in_rail() {
 
 #[test]
 fn compact_reflow_memoized() {
-    let mut browser = Browser::new(Source::Wallhaven);
+    let mut browser = Browser::new(Source::Unsplash);
     let first = browser_bar_items_compact(&browser, 1.0, 254.0);
     let repeat = browser_bar_items_compact(&browser, 1.0, 254.0);
     assert!(std::rc::Rc::ptr_eq(&first, &repeat));
@@ -47,75 +46,12 @@ fn compact_reflow_memoized() {
     let wider = browser_bar_items_compact(&browser, 1.0, 300.0);
     assert!(!std::rc::Rc::ptr_eq(&first, &wider));
 
-    browser.request.wallhaven.anime = false;
+    browser.request.catalog.unsplash.orientation = String::from("portrait");
     let refiltered = browser_bar_items_compact(&browser, 1.0, 300.0);
     assert!(!std::rc::Rc::ptr_eq(&wider, &refiltered));
 
     let settled = browser_bar_items_compact(&browser, 1.0, 300.0);
     assert!(std::rc::Rc::ptr_eq(&refiltered, &settled));
-}
-
-#[test]
-fn wallhaven_compact_headings() {
-    let browser = Browser::new(Source::Wallhaven);
-    let items = browser_bar_items_compact(&browser, 1.0, 254.0);
-    let headings: Vec<&str> = items
-        .iter()
-        .filter_map(|(item, action)| {
-            matches!(action, super::types::BrowserAct::Label)
-                .then_some(item.label.as_str())
-                .filter(|label| label.as_bytes().get(2) == Some(&b' '))
-        })
-        .collect();
-
-    assert_eq!(
-        headings,
-        ["01  Content", "02  Order", "03  Safety and colour", "04  Format", "05  Limit",]
-    );
-}
-
-#[test]
-fn collection_controls_restore() {
-    let mut browser = Browser::new(Source::Wallhaven);
-    browser.request.query = "forest".into();
-    browser.request.wallhaven.atleast = "3840x2160".into();
-    browser.request.wallhaven.collections = vec![("12".into(), "Saved".into())];
-    browser.request.wallhaven.collection = "12".into();
-    browser.request.wallhaven.atmost = "1920x1080".into();
-
-    let items = browser_bar_items(&browser, 1.0);
-    assert!(items.iter().any(|(_, action)| matches!(action, BrowserAct::Purity(0))));
-    assert!(items.iter().any(|(_, action)| matches!(action, BrowserAct::Atmost("1920x1080"))));
-    assert!(
-        items
-            .iter()
-            .any(|(_, action)| matches!(action, BrowserAct::Collection(id) if id.is_empty()))
-    );
-    assert!(items.iter().all(|(_, action)| matches!(
-        action,
-        BrowserAct::Close
-            | BrowserAct::Purity(_)
-            | BrowserAct::Atmost(_)
-            | BrowserAct::Collection(_)
-            | BrowserAct::Label
-    )));
-
-    let compact = browser_bar_items_compact(&browser, 1.0, 254.0);
-    let headings: Vec<&str> = compact
-        .iter()
-        .filter_map(|(item, action)| {
-            matches!(action, BrowserAct::Label)
-                .then_some(item.label.as_str())
-                .filter(|label| label.as_bytes().get(2) == Some(&b' '))
-        })
-        .collect();
-    assert_eq!(headings, ["01  Safety", "02  Limit", "03  Collection"]);
-
-    browser.request.wallhaven.collection.clear();
-    let restored = browser_bar_items(&browser, 1.0);
-    assert!(restored.iter().any(|(_, action)| matches!(action, BrowserAct::Category(_))));
-    assert!(restored.iter().any(|(_, action)| matches!(action, BrowserAct::Atleast("3840x2160"))));
-    assert_eq!(browser.request.query, "forest");
 }
 
 #[test]

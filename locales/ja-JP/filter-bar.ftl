@@ -18,6 +18,7 @@ filter-bar-task-tags = タグ
 filter-bar-task-index = インデックス
 filter-bar-task-scan = スキャン
 filter-bar-task-download = ダウンロード
+filter-bar-task-drawing = 描画
 filter-bar-state-running = 実行中
 filter-bar-state-paused = 一時停止中
 filter-bar-state-done = 完了

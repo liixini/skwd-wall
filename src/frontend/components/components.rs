@@ -83,6 +83,29 @@ pub fn parallelogram(x: f32, y: f32, w: f32, h: f32, skew: f32) -> Path {
     })
 }
 
+pub fn chamfered(rect: iced::Rectangle, cuts: [[f32; 2]; 4]) -> Path {
+    let [top_left, top_right, bottom_right, bottom_left] = cuts;
+    let (left, top) = (rect.x, rect.y);
+    let (right, bottom) = (rect.x + rect.width, rect.y + rect.height);
+    let points = [
+        Point::new(left + top_left[0], top),
+        Point::new(right - top_right[0], top),
+        Point::new(right, top + top_right[1]),
+        Point::new(right, bottom - bottom_right[1]),
+        Point::new(right - bottom_right[0], bottom),
+        Point::new(left + bottom_left[0], bottom),
+        Point::new(left, bottom - bottom_left[1]),
+        Point::new(left, top + top_left[1]),
+    ];
+    Path::new(|builder| {
+        builder.move_to(points[0]);
+        for point in &points[1..] {
+            builder.line_to(*point);
+        }
+        builder.close();
+    })
+}
+
 pub fn cut_rect(x: f32, y: f32, w: f32, h: f32, cut: f32) -> Path {
     Path::new(|builder| {
         builder.move_to(Point::new(x + cut, y));

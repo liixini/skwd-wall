@@ -1,4 +1,4 @@
-use super::layout::{feq, lerp, slice_midline_width};
+use super::layout::{CardCorners, feq, lerp, slice_midline_width};
 
 pub const STRIP_MARGIN: f32 = 26.0;
 pub const BAR_ZONE: f32 = 48.0;
@@ -52,7 +52,7 @@ pub struct SandyParams {
     pub swap_loop: bool,
     pub swap_style: f32,
     pub skew: f32,
-    pub corners: [f32; 4],
+    pub corners: CardCorners,
     pub edge_speed: f32,
     pub ring_size: f32,
     pub ring_spin: f32,
@@ -85,9 +85,7 @@ impl SandyParams {
         self.swap_loop = target.swap_loop;
         self.swap_style = target.swap_style;
         self.skew = lerp(self.skew, target.skew, amount);
-        for index in 0..4 {
-            self.corners[index] = lerp(self.corners[index], target.corners[index], amount);
-        }
+        self.corners.morph_toward(&target.corners, amount);
         self.edge_speed = target.edge_speed;
         self.ring_size = lerp(self.ring_size, target.ring_size, amount);
         self.ring_spin = lerp(self.ring_spin, target.ring_spin, amount);
@@ -119,7 +117,7 @@ impl SandyParams {
             && self.swap_loop == target.swap_loop
             && self.swap_style == target.swap_style
             && feq(self.skew, target.skew)
-            && (0..4).all(|index| feq(self.corners[index], target.corners[index]))
+            && self.corners.settled_to(&target.corners)
             && self.edge_speed == target.edge_speed
             && feq(self.ring_size, target.ring_size)
             && feq(self.ring_spin, target.ring_spin)

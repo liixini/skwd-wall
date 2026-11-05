@@ -90,3 +90,66 @@ fn legacy_light_profile_keeps_its_original_colours() {
     assert_eq!(candidate.colors[3], "#fafafa");
     assert!(candidate.colors.iter().all(|hex| crate::domain::theme::hex_to_hsv(hex).is_some()));
 }
+
+#[test]
+fn extended_text_aliases() {
+    let aliases = ["on_secondary", "on_tertiary", "on_error", "on_surface_variant", "on_hover"];
+    let camel = ["secondaryText", "tertiaryText", "errorText", "surfaceVariantText", "hoverText"];
+    let mut values = serde_json::Map::new();
+    for (index, alias) in aliases.into_iter().enumerate() {
+        values.insert(alias.to_owned(), json!(format!("#{index:06x}")));
+    }
+    let spec = decode_palette(&values.clone().into());
+    let fields = [
+        spec.secondary_text,
+        spec.tertiary_text,
+        spec.error_text,
+        spec.surface_variant_text,
+        spec.hover_text,
+    ];
+    for (index, field) in fields.into_iter().enumerate() {
+        assert_eq!(field, Some(format!("#{index:06x}")));
+    }
+    for key in camel {
+        values.insert(key.to_owned(), json!("#abcdef"));
+    }
+    let spec = decode_palette(&values.into());
+    for field in [
+        spec.secondary_text,
+        spec.tertiary_text,
+        spec.error_text,
+        spec.surface_variant_text,
+        spec.hover_text,
+    ] {
+        assert_eq!(field.as_deref(), Some("#abcdef"));
+    }
+}
+
+#[test]
+fn material_outline_stays_literal() {
+    let spec = decode_palette(&json!({"outline": "#010203", "outline_variant": "#040506"}));
+    assert_eq!(spec.outline.as_deref(), Some("#010203"));
+}
+
+#[test]
+fn saved_hover_variants() {
+    let candidate = crate::domain::theme::Candidate::from_seed("#84d1ce", true).unwrap();
+    let mut saved = encode_candidate(&candidate, true);
+    for (mode, fill, text) in [("dark", "#123456", "#fedcba"), ("light", "#abcdef", "#102030")] {
+        saved["_scheme"]["colors"]["hover"][mode]["color"] = json!(fill);
+        saved["_scheme"]["colors"]["on_hover"][mode]["color"] = json!(text);
+    }
+    let mut candidate = super::decode_candidate_variant(&saved, true);
+    let original = candidate.clone();
+    for (dark, fill, text) in [(true, "#123456", "#fedcba"), (false, "#abcdef", "#102030")] {
+        candidate.set_dark(dark);
+        let palette = crate::frontend::theme::Palette::from_candidate(&candidate);
+        assert_eq!(palette.hover, crate::frontend::theme::parse_hex(fill).unwrap());
+        assert_eq!(palette.hover_text, crate::frontend::theme::parse_hex(text).unwrap());
+        let saved = encode_candidate(&candidate, true);
+        assert_eq!(saved["hover"], fill);
+        assert_eq!(saved["hoverText"], text);
+        assert_eq!(super::decode_candidate_variant(&saved, dark), candidate);
+        assert!(candidate.same_colors(&original));
+    }
+}

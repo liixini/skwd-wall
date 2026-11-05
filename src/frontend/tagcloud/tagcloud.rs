@@ -397,7 +397,7 @@ fn tag_control_chip<'a>(
     } else {
         control_background(pal, active, false)
     };
-    let foreground = if destructive { pal.destructive() } else { control_text(pal, active) };
+    let foreground = if destructive { pal.destructive() } else { control_text(pal, active, false) };
     let border = if destructive {
         with_alpha(pal.destructive(), 0.72)
     } else {

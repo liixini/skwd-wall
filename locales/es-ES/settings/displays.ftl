@@ -8,3 +8,6 @@ settings-displays-lock-label = Bloquear
 settings-displays-lock-desc = Actualizar el fondo de este monitor solo desde el selector múltiple.
 settings-displays-empty-label = Detectando pantallas
 settings-displays-empty-desc = Los fondos actuales aparecerán cuando el servicio informe de sus pantallas.
+settings-displays-default-placement-label = Ubicación predeterminada
+settings-displays-default-placement-desc = La usan todas las pantallas que no tienen una ubicación propia.
+settings-displays-use-global = Usar la global · { $mode }

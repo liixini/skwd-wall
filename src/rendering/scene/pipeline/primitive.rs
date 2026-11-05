@@ -60,7 +60,7 @@ impl Primitive for ScenePrimitive {
             pipeline.recreate_near(device, queue, target);
         }
         self.drain_uploads(pipeline, queue);
-        if self.render.vis <= 0.0 {
+        if self.vis() <= 0.0 {
             return;
         }
         if let Some(nv) = &self.render.sandy {
@@ -82,7 +82,7 @@ impl Primitive for ScenePrimitive {
                 layer_b: nv.layer_b as f32,
                 progress: nv.progress,
                 time: self.render.time,
-                vis: self.render.vis,
+                vis: self.vis(),
                 seed: nv.seed,
                 strands: nv.knobs[0],
                 twist: nv.knobs[1],
@@ -117,7 +117,7 @@ impl Primitive for ScenePrimitive {
         let globals = Globals {
             resolution: [bounds.width * sf, bounds.height * sf],
             time: self.render.time,
-            vis: self.render.vis,
+            vis: self.vis(),
             clip,
         };
         queue.write_buffer(&pipeline.globals, 0, bytemuck::bytes_of(&globals));
@@ -154,7 +154,7 @@ impl Primitive for ScenePrimitive {
         target: &wgpu::TextureView,
         clip_bounds: &Rectangle<u32>,
     ) {
-        if self.render.vis <= 0.0 {
+        if self.vis() <= 0.0 {
             return;
         }
         if pipeline.out_copy {
@@ -334,6 +334,7 @@ impl Primitive for BrowserScenePrimitive {
             render: self.render.clone(),
             uploads: self.uploads.clone(),
             pool: self.pool.clone(),
+            fade: 1.0,
         };
         let origin = self.origin;
         if pipeline.0.embedded_origin != origin {
@@ -384,6 +385,7 @@ impl Primitive for BrowserScenePrimitive {
             render: self.render.clone(),
             uploads: self.uploads.clone(),
             pool: self.pool.clone(),
+            fade: 1.0,
         };
         <ScenePrimitive as Primitive>::draw(&scene, &pipeline.0, render_pass)
     }
@@ -399,12 +401,17 @@ impl Primitive for BrowserScenePrimitive {
             render: self.render.clone(),
             uploads: self.uploads.clone(),
             pool: self.pool.clone(),
+            fade: 1.0,
         };
         <ScenePrimitive as Primitive>::render(&scene, &pipeline.0, encoder, target, clip_bounds);
     }
 }
 
 impl ScenePrimitive {
+    fn vis(&self) -> f32 {
+        self.render.vis * self.fade
+    }
+
     fn drain_uploads(&self, pipeline: &mut ScenePipeline, queue: &wgpu::Queue) {
         pipeline.out_copy = false;
         let mut uploads = self.uploads.lock().unwrap_or_else(std::sync::PoisonError::into_inner);

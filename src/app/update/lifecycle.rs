@@ -15,8 +15,7 @@ pub(crate) fn drive_transition_preview(app: &mut App) {
     let shader = if shader.is_empty() { String::from("random") } else { shader };
     let fill_mode = app.config.str_path(skwd_config::keys::display::FILL_MODE);
     let fill_mode = if fill_mode.is_empty() { String::from("fill") } else { fill_mode };
-    let duration =
-        app.config.num_path(skwd_config::keys::transition::DURATION_MS).max(300.0) as u64;
+    let duration = app.config.transition_duration_ms();
     let Some((fallback, to)) = crate::infrastructure::preview::stock_pair(&app.config.cache_dir())
     else {
         return;
@@ -44,7 +43,15 @@ pub(crate) fn drive_transition_preview(app: &mut App) {
 
 pub(super) fn tick(app: &mut App, now: Instant, w: f32, h: f32) -> Task<Message> {
     let animating = app.animating();
-    let wake_due = animating || app.scene.preview_deadline_due(now);
+    let studio_due = app
+        .panels
+        .colour_studio
+        .as_ref()
+        .and_then(|studio| crate::app::runtime::studio_deadline(now, &studio.model))
+        .is_some_and(|deadline| deadline <= now);
+    let minute_due =
+        app.panels.strand.as_ref().and_then(|strand| strand.minute).is_some_and(|due| due <= now);
+    let wake_due = animating || app.scene.preview_deadline_due(now) || studio_due || minute_due;
     if !crate::app::scene::animation_tick_due(wake_due, app.runtime_state.next_animation_tick, now)
     {
         app.preview_resources.render_loop_active = animating;
@@ -78,6 +85,12 @@ pub(super) fn tick(app: &mut App, now: Instant, w: f32, h: f32) -> Task<Message>
 }
 
 pub(super) fn exit(app: &mut App) -> Task<Message> {
+    if app.panels.strand.is_some() {
+        return super::strand::escape(app);
+    }
+    if app.panels.arrange.is_some() {
+        return super::arrange::update(app, crate::frontend::arrange::ArrangeMsg::Escape);
+    }
     if app.theme.audition_open && app.theme.audition_focused {
         super::warm::exit_picker(app);
     }

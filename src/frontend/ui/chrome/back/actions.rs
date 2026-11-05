@@ -20,6 +20,7 @@ enum ActionStyle {
 const DISABLED_ACTION_ALPHA: f32 = 0.38;
 
 const REVEAL_STAGGER: f32 = 3.72;
+const DRAWING_STAGGER: f32 = 3.6;
 const COPY_STAGGER: f32 = 3.74;
 const COPY_LABELS: [&str; 2] = ["card-back-copy-image", "card-back-copy-path"];
 
@@ -86,6 +87,26 @@ pub(super) fn draw_actions(
             palette.primary,
             ActionStyle::Secondary,
             3.55,
+        );
+    }
+    if let (Some(rectangle), Some(drawing)) = (layout.actions.drawing, panel.drawing) {
+        draw_action(
+            frame,
+            palette,
+            geometry,
+            progress,
+            fade,
+            rectangle,
+            drawing.label(),
+            palette.primary,
+            match drawing {
+                crate::frontend::scene::DrawingCardState::Draw => ActionStyle::Secondary,
+                crate::frontend::scene::DrawingCardState::Drawn => ActionStyle::Selected,
+                crate::frontend::scene::DrawingCardState::Checking
+                | crate::frontend::scene::DrawingCardState::Preparing
+                | crate::frontend::scene::DrawingCardState::Paused => ActionStyle::Disabled,
+            },
+            DRAWING_STAGGER,
         );
     }
     if let Some(scene_properties) = layout.actions.scene_properties {

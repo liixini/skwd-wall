@@ -77,7 +77,7 @@ impl App {
             && let Some(pal) = palette
         {
             self.set_swatch_for(card);
-            self.start_fade(pal);
+            self.start_fade(&pal);
             self.retick();
         }
     }
@@ -117,6 +117,9 @@ impl App {
             }
         }
         self.daemon.output_statuses.clone_from(&outs);
+        if crate::app::update::arrange::placement::reselect(self) {
+            self.apply_layout();
+        }
         let mut output_names: Vec<String> = outs
             .iter()
             .filter(|output| output.is_connected())

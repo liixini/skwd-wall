@@ -4,10 +4,6 @@ settings-selector-display-mode-desc = Выберите, как карточки 
 settings-selector-filter-motion-label = Движение фильтра
 settings-selector-filter-motion-desc = Как быстро прокручивается лента при изменении результатов фильтра. Три общие скорости задаются в настройках движения.
 settings-selector-presets-card = Предустановки
-settings-selector-presets-card-desc = Сохраните текущие настройки раскладки или примените сохранённый набор. У каждого режима отображения свои предустановки.
-settings-selector-preset-name-label = Название
-settings-selector-preset-name-desc = Переименовать выбранную предустановку. «Сохранить текущее» создаёт новую предустановку с автоматическим названием.
-settings-selector-preset-name-placeholder = Название стиля
 settings-selector-preset-generated-name = Стиль { $number }
 settings-selector-saved-styles-label = Сохранённые стили
 settings-selector-live-preview-card = Предпросмотр цветов
@@ -68,10 +64,6 @@ settings-selector-grid-gap-x-label = Отступ по горизонтали
 settings-selector-grid-gap-x-desc = Видимое расстояние между краями соседних столбцов.
 settings-selector-grid-gap-y-label = Отступ по вертикали
 settings-selector-grid-gap-y-desc = Видимое расстояние между краями соседних строк.
-settings-selector-grid-round-label = Скруглённые углы
-settings-selector-grid-round-desc = Если выключено, у всех карточек стены прямые углы.
-settings-selector-grid-corner-radius-label = Радиус скругления
-settings-selector-grid-corner-radius-desc = Скругление, используемое при включённых скруглённых углах.
 settings-selector-performance-card = Производительность
 settings-selector-performance-card-desc = Каждая песчинка является отдельной геометрией. Чем крупнее песчинки, тем меньше фигур и намного меньше работы GPU.
 settings-selector-sand-note-discrete = Для обнаруженного дискретного GPU эта нагрузка невелика. Тот же размер песчинок может работать примерно в 150 раз медленнее на встроенном GPU.
@@ -157,16 +149,6 @@ settings-selector-wobble-desc = Карточки изгибаются в нап�
 settings-selector-wobble-strength-label = Сила покачивания
 settings-selector-wobble-strength-desc = Значение 100 используется по умолчанию. Значение 200 удваивает изгиб и расхождение цветов.
 settings-selector-corners-card = Углы
-settings-selector-round-corners-label = Скруглять углы
-settings-selector-round-corners-desc = Применить радиус скругления к краям полос.
-settings-selector-corner-tl-label = Верхний левый
-settings-selector-corner-tl-desc = Радиус верхнего левого угла. 0 = прямой.
-settings-selector-corner-tr-label = Верхний правый
-settings-selector-corner-tr-desc = Радиус верхнего правого угла. 0 = прямой.
-settings-selector-corner-br-label = Нижний правый
-settings-selector-corner-br-desc = Радиус нижнего правого угла. 0 = прямой.
-settings-selector-corner-bl-label = Нижний левый
-settings-selector-corner-bl-desc = Радиус нижнего левого угла. 0 = прямой.
 settings-selector-card-flip-card = Переворот карточки
 settings-selector-card-flip-card-desc = Выберите, как карточка обоев переходит от миниатюры к сведениям на обороте.
 settings-selector-flip-effect-label = Эффект
@@ -194,6 +176,12 @@ settings-selector-preview-delay-label = Задержка предпросмот�
 settings-selector-preview-delay-desc = Сколько ждать при наведении или выборе перед началом предпросмотра (мс).
 settings-selector-tag-cloud-position-card = Положение панели поиска
 settings-selector-tag-cloud-position-card-desc = Сдвигает панель поиска по горизонтали или вертикали в пикселях. Положительное горизонтальное смещение сдвигает вправо, положительное вертикальное сдвигает вниз.
+settings-selector-tag-position-enabled-label = Использовать позицию на экране
+settings-selector-tag-position-enabled-desc = Удерживает панель поиска в этих экранных координатах при смене её размера или стиля окна выбора. Выключите, чтобы использовать смещения в пикселях.
+settings-selector-tag-position-x-label = Левый край
+settings-selector-tag-position-x-desc = Задайте левый край панели поиска в процентах от ширины экрана.
+settings-selector-tag-position-y-label = Верхний край
+settings-selector-tag-position-y-desc = Задайте верхний край панели поиска в процентах от высоты экрана.
 settings-selector-tag-offset-x-label = Горизонтальное смещение панели поиска
 settings-selector-tag-offset-x-desc = Сдвинуть панель поиска влево или вправо относительно этого окна выбора.
 settings-selector-tag-offset-y-label = Вертикальное смещение панели поиска
@@ -216,8 +204,6 @@ settings-selector-swap-style-weave = Плетение
 settings-selector-swap-style-bloom = Цветение
 settings-selector-swap-style-flock = Стая
 settings-selector-swap-style-ring = Кольцо
-settings-selector-preset-rename-hint = Выберите стиль для переименования
-settings-selector-preset-save-current = Сохранить текущее
 settings-selector-mode-hand = Карты в руке
 settings-selector-hand-card = Карты в руке
 settings-selector-hand-card-desc = Веер высоких карт в перспективе, как игральные карты в руке. Двигайте указатель, чтобы наклонить веер, перетаскивайте сцену, чтобы вращать его, и прокручивайте дальше края, чтобы раздать следующие карты.
@@ -272,7 +258,6 @@ settings-selector-hand-fan-roll-label = Крен веера
 settings-selector-hand-fan-roll-desc = Наклон, добавляемый каждой карте, как у карт, разложенных веером в руке. 0 оставляет их прямыми.
 settings-selector-hand-arch-label = Дуга
 settings-selector-hand-arch-desc = Насколько крайние карты опускаются ниже центральной.
-settings-selector-hand-corner-radius-label = Радиус скругления
 settings-selector-hand-skew-label = Наклон
 settings-selector-hand-skew-desc = Скосить контур карты в параллелограмм, в пикселях горизонтального смещения.
 settings-selector-hand-backdrop-blur-label = Размытие фона
@@ -285,60 +270,58 @@ settings-selector-start-position-desc = Открывать начало спис
 settings-selector-start-position-beginning = Начало списка
 settings-selector-start-position-applied = Последние применённые обои
 settings-selector-start-position-browsing = Последняя позиция просмотра
+settings-selector-loop-around-label = Зацикливать по краям
+settings-selector-loop-around-desc = Если перейти дальше первых или последних обоев, выбор перескочит на другой конец. Удерживаемые клавиши, листание страницами и быстрая прокрутка сначала останавливаются на краю, поэтому нажмите или прокрутите ещё раз, чтобы перейти на другой конец. Онлайн-источники зацикливаются, когда загружены все страницы. В раскладке «Стена» и в онлайн-источниках колесо мыши только прокручивает вид.
 
-settings-selector-mode-depth = Depth
-settings-selector-depth-card = Depth cards
-settings-selector-depth-desc = Cards shrink toward the edges. As you scroll, artwork shifts inside each card according to its position in the row.
+settings-selector-mode-depth = Глубина
+settings-selector-depth-card = Карточки с глубиной
+settings-selector-depth-desc = Карточки уменьшаются к краям. При прокрутке изображение внутри каждой карточки смещается в зависимости от её места в ряду.
 
-settings-selector-parallax-label = Image parallax
-settings-selector-parallax-desc = Shift artwork inside each card as it moves across the view. The image keeps moving through the visible edges.
+settings-selector-parallax-label = Параллакс изображения
+settings-selector-parallax-desc = Смещает изображение внутри каждой карточки, пока она движется по области просмотра. Изображение продолжает двигаться и через видимые края.
 settings-selector-mode-collection = Коллекция
 settings-selector-collection-desc = Листайте наклонённую стопку колёсиком или стрелками. Нажмите на карточку, чтобы увеличить её; нажмите ещё раз или Escape, чтобы вернуться. Enter применяет обои. Правая кнопка мыши открывает сведения.
 
-settings-selector-depth-height-label = Card height
-settings-selector-depth-height-desc = Height of the centre card. Large cards shrink to fit the screen.
+settings-selector-depth-height-label = Высота карточки
+settings-selector-depth-height-desc = Высота центральной карточки. Большие карточки уменьшаются, чтобы поместиться на экране.
 
-settings-selector-depth-width-label = Card width
-settings-selector-depth-width-desc = Width of the centre card in pixels.
+settings-selector-depth-width-label = Ширина карточки
+settings-selector-depth-width-desc = Ширина центральной карточки в пикселях.
 
-settings-selector-depth-spacing-label = Card spacing
-settings-selector-depth-spacing-desc = Distance between card centres in pixels before depth falloff.
+settings-selector-depth-spacing-label = Расстояние между карточками
+settings-selector-depth-spacing-desc = Расстояние между центрами карточек в пикселях до ослабления с глубиной.
 
-settings-selector-depth-count-label = Visible cards
-settings-selector-depth-count-desc = Maximum number of cards around the current selection.
+settings-selector-depth-count-label = Видимые карточки
+settings-selector-depth-count-desc = Наибольшее число карточек вокруг текущего выбора.
 
-settings-selector-depth-falloff-label = Depth falloff
-settings-selector-depth-falloff-desc = Scale reduction per card away from the centre, from 0 to 1. Zero keeps their sizes equal.
+settings-selector-depth-falloff-label = Ослабление с глубиной
+settings-selector-depth-falloff-desc = Уменьшение масштаба на каждую карточку при удалении от центра, от 0 до 1. При нуле размеры одинаковы.
 
-settings-selector-depth-corners-label = Corner radius
-settings-selector-depth-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-depth-skew-label = Card skew
-settings-selector-depth-skew-desc = Slant the card edges. Zero keeps them upright.
+settings-selector-depth-skew-label = Скос карточек
+settings-selector-depth-skew-desc = Наклоняет края карточек. При нуле они остаются вертикальными.
 
-settings-selector-depth-speed-label = Navigation duration
-settings-selector-depth-speed-desc = Time for a navigation movement in milliseconds. Lower values move faster.
+settings-selector-depth-speed-label = Длительность навигации
+settings-selector-depth-speed-desc = Время одного перемещения при навигации в миллисекундах. Чем меньше значение, тем быстрее.
 
-settings-selector-collection-size-label = Card size
-settings-selector-collection-size-desc = Card width as a percentage of screen height.
+settings-selector-collection-size-label = Размер карточки
+settings-selector-collection-size-desc = Ширина карточки в процентах от высоты экрана.
 
-settings-selector-collection-spacing-label = Stack spacing
-settings-selector-collection-spacing-desc = Vertical distance between stacked cards as a percentage of card size.
+settings-selector-collection-spacing-label = Интервал в стопке
+settings-selector-collection-spacing-desc = Расстояние по вертикали между карточками в стопке в процентах от размера карточки.
 
-settings-selector-collection-count-label = Visible cards
-settings-selector-collection-count-desc = Maximum number of cards in the stack.
+settings-selector-collection-count-label = Видимые карточки
+settings-selector-collection-count-desc = Наибольшее число карточек в стопке.
 
-settings-selector-collection-tilt-label = Stack tilt
-settings-selector-collection-tilt-desc = Tilt the stack away from you. Zero shows the cards face-on.
+settings-selector-collection-tilt-label = Наклон стопки
+settings-selector-collection-tilt-desc = Наклоняет стопку от вас. При нуле карточки видны анфас.
 
-settings-selector-collection-corners-label = Corner radius
-settings-selector-collection-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-collection-speed-label = Motion speed
-settings-selector-collection-speed-desc = Speed of navigation and opening or closing a card. Higher values move faster.
+settings-selector-collection-speed-label = Скорость движения
+settings-selector-collection-speed-desc = Скорость навигации и открытия или закрытия карточки. Чем больше значение, тем быстрее.
 
-settings-selector-depth-frame-label = Selection frame
-settings-selector-depth-frame-desc = Draw a highlighted border around the selected card.
+settings-selector-depth-frame-label = Рамка выбора
+settings-selector-depth-frame-desc = Рисует выделенную рамку вокруг выбранной карточки.
 
-settings-selector-shadows-label = Card shadows
-settings-selector-shadows-desc = Draw a shadow behind each card.
+settings-selector-shadows-label = Тени карточек
+settings-selector-shadows-desc = Рисует тень за каждой карточкой.

@@ -20,7 +20,7 @@ pub fn profile_commands(id: &str) -> [String; 2] {
 }
 
 pub(super) fn tab_profiles(builder: &mut Builder<'_>) {
-    builder.card(tr("settings-profiles-card"), tr("settings-profiles-card-desc"));
+    builder.card(crate::i18n::text("settings-profiles-card"), tr("settings-profiles-card-desc"));
 }
 
 pub fn profiles_page(
@@ -63,6 +63,7 @@ pub fn profiles_page(
         state: Some(workshop),
         mixed: false,
         hidden_inside: 0,
+        excluded_inside: 0,
         children: false,
         collapsed: false,
     });
@@ -151,14 +152,15 @@ fn push_subtree(nodes: &mut Vec<TreeNode>, source: &TreeSource<'_>, folder: usiz
         .iter()
         .filter(|entry| parent_of(entry, source.folders) == Some(folder))
         .collect();
-    let hidden_inside = descendants
-        .iter()
-        .filter(|other| {
-            source.states[**other] == ProfileState::Hide
-                && source.parents[**other]
-                    .is_some_and(|parent| source.states[parent] != ProfileState::Hide)
-        })
-        .count();
+    let inside = |wanted: ProfileState| {
+        descendants
+            .iter()
+            .filter(|other| {
+                source.states[**other] == wanted
+                    && source.parents[**other].is_some_and(|parent| source.states[parent] != wanted)
+            })
+            .count()
+    };
     nodes.push(TreeNode {
         id: fold_id(source.profile, path),
         path: source.index.map_or_else(String::new, |index| {
@@ -172,7 +174,8 @@ fn push_subtree(nodes: &mut Vec<TreeNode>, source: &TreeSource<'_>, folder: usiz
         depth,
         state: Some(state),
         mixed: descendants.iter().any(|other| source.states[*other] != state),
-        hidden_inside,
+        hidden_inside: inside(ProfileState::Hide),
+        excluded_inside: inside(ProfileState::Exclude),
         children: !children.is_empty() || !never_scanned.is_empty(),
         collapsed: false,
     });
@@ -190,6 +193,7 @@ fn push_subtree(nodes: &mut Vec<TreeNode>, source: &TreeSource<'_>, folder: usiz
             state: None,
             mixed: false,
             hidden_inside: 0,
+            excluded_inside: 0,
             children: false,
             collapsed: false,
         });

@@ -16,6 +16,17 @@ const BOOLEAN_SHAPE: &str = "boolean";
 const LOCKSCREEN_OK_FIELD: &str = "ok";
 const LOCKSCREEN_SHAPE: &str = "lockscreen result";
 const TRUE_SHAPE: &str = "true";
+const DRAWING_STATUS_SHAPE: &str = "drawing status";
+
+pub fn decode_drawing_status(value: &Value) -> DecodeResult<wall_proto::drawing::Status> {
+    super::common::root(wall_proto::rpc::DRAWING_STATUS, value, DRAWING_STATUS_SHAPE)
+}
+
+const WIDGET_DESK_SHAPE: &str = "widget desk";
+
+pub fn decode_widget_desk(value: &Value) -> DecodeResult<wall_proto::widgets::Desk> {
+    super::common::root(wall_proto::rpc::WIDGETS_SCENE, value, WIDGET_DESK_SHAPE)
+}
 
 pub fn decode_status(value: &Value) -> DecodeResult<StatusResult> {
     let object = envelope("status", value)?;

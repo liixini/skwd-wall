@@ -34,6 +34,8 @@ settings-playback-resuming = Esperando para reanudar
 settings-playback-paused-overview = En pausa mientras la vista general de Niri está cerrada
 
 settings-playback-fullscreen-desc = Pausa mientras haya una ventana a pantalla completa visible. Requiere compatibilidad del compositor.
+settings-playback-focused = Pausar mientras una ventana tenga el foco
+settings-playback-focused-desc = Pausa cuando una ventana de aplicación tenga el foco del teclado, incluidas las ventanas pequeñas o flotantes. Haz clic en el escritorio para reanudar. Requiere compatibilidad del compositor.
 
 theme-profile-enabled = Usar este perfil
 
@@ -80,13 +82,14 @@ settings-playback-detection-unavailable = Detección del estado de ventanas no d
 
 settings-playback-pause-desc = Pausa los fondos animados cuando se cumple alguna condición activada.
 
-settings-playback-detection-off = Activa la pausa por pantalla completa o ventanas maximizadas para comprobar la compatibilidad del compositor.
+settings-playback-detection-off = Activa una condición de pausa de ventana para comprobar la compatibilidad del compositor.
 
 settings-playback-process-desc = Pausa todas las pantallas mientras se ejecuta un proceso de la lista.
 
 settings-playback-paused-maximized = En pausa: ventana maximizada
 
 settings-playback-paused-fullscreen = En pausa: ventana a pantalla completa
+settings-playback-paused-focused = En pausa: ventana con el foco
 
 
 settings-paper-layer-label = Capa del fondo

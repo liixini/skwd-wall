@@ -45,7 +45,7 @@ impl Effects {
         }
         let current = self.editor.nav_focus.min(stops - 1);
         self.editor.nav_focus =
-            crate::frontend::nav::step(current, delta, stops).unwrap_or(current);
+            crate::frontend::nav::step(current, delta, stops, false).unwrap_or(current);
     }
 
     pub fn nav_horizontal(&self, delta: i32) -> Option<EffectsMsg> {
@@ -58,13 +58,13 @@ impl Effects {
                 let categories = self.categories();
                 let current = self.editor.category_of(&self.editor.selected_id);
                 let index = categories.iter().position(|category| *category == current)?;
-                let next = crate::frontend::nav::step(index, delta, categories.len())?;
+                let next = crate::frontend::nav::step(index, delta, categories.len(), false)?;
                 Some(EffectsMsg::Select(self.first_effect_of(&categories[next])))
             }
             NAV_EFFECT => {
                 let ids = self.effects_in(&self.editor.category_of(&self.editor.selected_id));
                 let index = ids.iter().position(|id| *id == self.editor.selected_id)?;
-                let next = crate::frontend::nav::step(index, delta, ids.len())?;
+                let next = crate::frontend::nav::step(index, delta, ids.len(), false)?;
                 Some(EffectsMsg::Select(ids[next].clone()))
             }
             row => {
@@ -82,7 +82,8 @@ impl Effects {
                         .iter()
                         .position(|option| option.mode == current)
                         .unwrap_or(0);
-                    let next = crate::frontend::nav::step(index, delta, parameter.options.len())?;
+                    let next =
+                        crate::frontend::nav::step(index, delta, parameter.options.len(), false)?;
                     Some(EffectsMsg::SetChoice(id, parameter.options[next].mode.clone()))
                 } else {
                     let current = self

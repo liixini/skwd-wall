@@ -54,6 +54,7 @@ const BACKDROP: u32 = 16384u;
 const BACKFACE: u32 = 32768u;
 const MUTED: u32 = 65536u;
 const UNFRAMED_RECT: u32 = 131072u;
+const CHAMFER: u32 = 262144u;
 
 @vertex
 fn vs_main(@builtin(vertex_index) vi: u32, inst: Instance) -> VsOut {
@@ -158,13 +159,13 @@ fn backdrop_grade(in: VsOut, rgb_in: vec3<f32>) -> vec3<f32> {
     return rgb + vec3(line * 0.008);
 }
 
-fn sd_sheared_rounded_box(
-    p: vec2<f32>,
-    b_in: vec2<f32>,
-    radii: vec4<f32>,
-    skew: f32,
-    edge_tilt: f32,
-) -> f32 {
+struct Sheared {
+    q: vec2<f32>,
+    b: vec2<f32>,
+    lean: vec2<f32>,
+}
+
+fn sheared(p: vec2<f32>, b_in: vec2<f32>, skew: f32, edge_tilt: f32) -> Sheared {
     let sx = skew * 0.5;
     let ty = edge_tilt * 0.5;
     let b = max(b_in - abs(vec2(sx, ty)), vec2(1.0));
@@ -174,16 +175,62 @@ fn sd_sheared_rounded_box(
         (b.y * p.x + sx * p.y) / safe_det * b.x,
         (ty * p.x + b.x * p.y) / safe_det * b.y,
     );
-    let top = q.y < 0.0;
-    let left = q.x < 0.0;
-    var r: f32;
-    if (top) {
-        r = select(radii.y, radii.x, left);
-    } else {
-        r = select(radii.z, radii.w, left);
+    return Sheared(q, b, vec2(sx, ty));
+}
+
+fn corner_size(q: vec2<f32>, sizes: vec4<f32>) -> f32 {
+    if (q.y < 0.0) {
+        return select(sizes.y, sizes.x, q.x < 0.0);
     }
-    let d = abs(q) - b + vec2(r);
+    return select(sizes.z, sizes.w, q.x < 0.0);
+}
+
+fn sd_sheared_rounded_box(
+    p: vec2<f32>,
+    b_in: vec2<f32>,
+    radii: vec4<f32>,
+    skew: f32,
+    edge_tilt: f32,
+) -> f32 {
+    let s = sheared(p, b_in, skew, edge_tilt);
+    let r = corner_size(s.q, radii);
+    let d = abs(s.q) - s.b + vec2(r);
     return min(max(d.x, d.y), 0.0) + length(max(d, vec2(0.0))) - r;
+}
+
+fn sd_sheared_chamfered_box(
+    p: vec2<f32>,
+    b_in: vec2<f32>,
+    cuts: vec4<f32>,
+    skew: f32,
+    edge_tilt: f32,
+) -> f32 {
+    let s = sheared(p, b_in, skew, edge_tilt);
+    let a = abs(s.q);
+    let e = a - s.b;
+    let boxed = min(max(e.x, e.y), 0.0) + length(max(e, vec2(0.0)));
+    let c = corner_size(s.q, cuts);
+    if (c <= 0.0) {
+        return boxed;
+    }
+    let edges = vec2(length(vec2(s.b.x, s.lean.y)), length(vec2(s.lean.x, s.b.y)));
+    let cut = c * s.b / edges;
+    let n = normalize(vec2(cut.y, cut.x));
+    return max(boxed, dot(a - vec2(s.b.x - cut.x, s.b.y), n));
+}
+
+fn sd_card(
+    p: vec2<f32>,
+    b_in: vec2<f32>,
+    sizes: vec4<f32>,
+    skew: f32,
+    edge_tilt: f32,
+    flags: u32,
+) -> f32 {
+    if ((flags & CHAMFER) != 0u) {
+        return sd_sheared_chamfered_box(p, b_in, sizes, skew, edge_tilt);
+    }
+    return sd_sheared_rounded_box(p, b_in, sizes, skew, edge_tilt);
 }
 
 fn sd_hexagon_flat(p: vec2<f32>, circumradius: f32) -> f32 {
@@ -466,7 +513,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
     if ((in.misc.w & 64u) == 64u) {
         let blur = max(border_w, 1.0);
         let he = max(in.half_ext - vec2(blur * 0.8), vec2(1.0));
-        let ds = sd_sheared_rounded_box(in.local, he, in.radii, 0.0, 0.0);
+        let ds = sd_card(in.local, he, in.radii, 0.0, 0.0, in.misc.w);
         let sa = in.fill.a * pow(clamp(1.0 - (ds + blur * 0.2) / blur, 0.0, 1.0), 1.7) * opacity;
         let vfs = clamp(globals.vis, 0.0, 1.0);
         return vec4(in.fill.rgb * sa * vfs, sa * vfs);
@@ -492,7 +539,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
             d = sd_hexagon_flat(in.local, in.half_ext.x);
         }
     } else {
-        d = sd_sheared_rounded_box(card_p, in.half_ext, in.radii, skew, in.shape.x);
+        d = sd_card(card_p, in.half_ext, in.radii, skew, in.shape.x, in.misc.w);
     }
     if ((in.misc.w & PROJECTED) != 0u) {
         d = max(d, ribbon_cut(in));
@@ -514,7 +561,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
         let yn = clamp(loc.y / max(hh, 1.0), -1.35, 1.35);
         loc.x -= bend * hw * 0.5 * yn * yn;
         loc.y *= 1.0 + abs(bend) * 0.12 * (1.0 - clamp(abs(loc.x / max(hw, 1.0)), 0.0, 1.0));
-        let d2 = sd_sheared_rounded_box(loc, vec2(hw, hh), in.radii, skew, in.shape.x);
+        let d2 = sd_card(loc, vec2(hw, hh), in.radii, skew, in.shape.x, in.misc.w);
         let grad2 = max(length(vec2(dpdx(d2), dpdy(d2))), 0.0001);
         let sa = clamp(0.5 - d2 / grad2, 0.0, 1.0);
         var norm = clamp(loc / (2.0 * vec2(hw, hh)) + vec2(0.5), vec2(0.0), vec2(1.0));

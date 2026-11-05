@@ -45,10 +45,18 @@ const PREVIEW_ROLES: [ThemeRole; ThemeRole::ALL.len()] = [
 ];
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HoverColors {
+    pub fill: String,
+    pub text: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Candidate {
     pub colors: [String; THEME_ROLE_COUNT],
     pub alternate: [String; THEME_ROLE_COUNT],
     pub dark: bool,
+    pub hover: Option<HoverColors>,
+    pub alternate_hover: Option<HoverColors>,
 }
 
 impl Default for Candidate {
@@ -57,6 +65,8 @@ impl Default for Candidate {
             colors: std::array::from_fn(|_| "#808080".to_string()),
             alternate: std::array::from_fn(|_| "#808080".to_string()),
             dark: true,
+            hover: None,
+            alternate_hover: None,
         }
     }
 }
@@ -86,7 +96,8 @@ impl Candidate {
 
     pub fn from_seed(hex: &str, dark: bool) -> Option<Self> {
         let (colors, alternate) = skwd_palette::material::generate_colors(hex)?;
-        let mut candidate = Self { colors, alternate, dark: true };
+        let mut candidate =
+            Self { colors, alternate, dark: true, hover: None, alternate_hover: None };
         candidate.set_dark(dark);
         Some(candidate)
     }
@@ -94,15 +105,22 @@ impl Candidate {
     pub fn set_dark(&mut self, dark: bool) {
         if self.dark != dark {
             std::mem::swap(&mut self.colors, &mut self.alternate);
+            std::mem::swap(&mut self.hover, &mut self.alternate_hover);
             self.dark = dark;
         }
     }
 
     pub fn same_colors(&self, other: &Self) -> bool {
         if self.dark == other.dark {
-            self.colors == other.colors && self.alternate == other.alternate
+            self.colors == other.colors
+                && self.alternate == other.alternate
+                && self.hover == other.hover
+                && self.alternate_hover == other.alternate_hover
         } else {
-            self.colors == other.alternate && self.alternate == other.colors
+            self.colors == other.alternate
+                && self.alternate == other.colors
+                && self.hover == other.alternate_hover
+                && self.alternate_hover == other.hover
         }
     }
 

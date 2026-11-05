@@ -1,4 +1,467 @@
 use super::*;
+use crate::frontend::settings::Control;
+
+fn drawing_wall(name: &str, kind: &str, key: &str) -> Value {
+    let mut item = wall(name, kind, 1, 0);
+    item["key"] = json!(key);
+    item["path"] = json!(format!("/wall/{name}"));
+    if key.starts_with("we:") {
+        item["we_id"] = json!(key.strip_prefix("we:").unwrap());
+    }
+    item
+}
+
+fn open_drawing_card(app: &mut App) -> (String, (f32, f32)) {
+    seed(app, &[static_wall("a.png", 1)]);
+    app.scene.viewport = (800.0, 600.0);
+    app.scene.set_visible(true);
+    let _ = update(app, Message::KeyFlip);
+    let now = Instant::now();
+    for frame_no in 0..=80 {
+        frame(app, now + Duration::from_millis(frame_no * 16), 800.0, 600.0);
+    }
+    let panel = app.scene.render.back.as_ref().expect("card back");
+    let layout = crate::frontend::ui::back_layout(panel);
+    let action = layout.actions.drawing.expect("draw action");
+    let action = crate::frontend::ui::back_bounds(panel, &layout, action);
+    let key = app.flipped_drawing_key().expect("static card").to_string();
+    (key, (action.0 + action.2 * 0.5, action.1 + action.3 * 0.5))
+}
+
+#[test]
+fn card_draw_toggle() {
+    let mut app = test_app();
+    let (key, (x, y)) = open_drawing_card(&mut app);
+    drain_calls(&app);
+    app.adopt_drawing_status(wall_proto::drawing::Status {
+        key: key.clone(),
+        pack: wall_proto::drawing::PackState::Available,
+        prepared: true,
+        ..Default::default()
+    });
+    frame(&mut app, Instant::now() + Duration::from_secs(2), 800.0, 600.0);
+    let _ = update(&mut app, Message::Click(x, y, crate::domain::input::MouseButton::Left));
+    let calls = drain_calls(&app);
+    assert!(calls.iter().any(|(method, params)| {
+        method == wall_proto::rpc::DRAWING_SET_ENABLED
+            && params["key"] == key
+            && params["enabled"] == true
+    }));
+    assert_eq!(app.flipped_drawing_key(), Some(key.as_str()));
+    app.daemon.pending.clear();
+    app.adopt_drawing_status(wall_proto::drawing::Status {
+        key: key.clone(),
+        enabled: true,
+        prepared: true,
+        ..Default::default()
+    });
+    assert_eq!(app.flipped_drawing_key(), Some(key.as_str()));
+    let now = Instant::now();
+    app.run_tick(now + Duration::from_secs(2));
+    let state: Value = serde_json::from_str(&crate::app::update::ui_state_json(&app)).unwrap();
+    assert_eq!(state["card_back"]["drawing"]["state"], "drawn");
+    assert_eq!(state["card_back"]["drawing"]["enabled"], true);
+    let _ = update(&mut app, Message::Click(x, y, crate::domain::input::MouseButton::Left));
+    assert!(drain_calls(&app).iter().any(|(method, params)| {
+        method == wall_proto::rpc::DRAWING_SET_ENABLED
+            && params["key"] == key
+            && params["enabled"] == false
+    }));
+}
+
+#[test]
+fn card_stale_status() {
+    let mut app = test_app();
+    let (key, _) = open_drawing_card(&mut app);
+    app.adopt_drawing_status(wall_proto::drawing::Status {
+        key: "static:other.png".into(),
+        enabled: true,
+        prepared: true,
+        ..Default::default()
+    });
+    assert_eq!(app.flipped_drawing_key(), Some(key.as_str()));
+    assert_eq!(
+        app.scene.render.back.as_ref().unwrap().drawing,
+        Some(crate::frontend::scene::DrawingCardState::Checking)
+    );
+    app.adopt_drawing_status(wall_proto::drawing::Status {
+        key: key.clone(),
+        active_key: key,
+        phase: wall_proto::drawing::Phase::Preparing,
+        ..Default::default()
+    });
+    frame(&mut app, Instant::now() + Duration::from_secs(2), 800.0, 600.0);
+    assert_eq!(
+        app.scene.render.back.as_ref().unwrap().drawing,
+        Some(crate::frontend::scene::DrawingCardState::Preparing)
+    );
+}
+
+#[test]
+fn card_waits_for_status() {
+    let mut app = test_app();
+    let (key, (x, y)) = open_drawing_card(&mut app);
+    let calls = drain_calls(&app);
+    assert!(calls.iter().any(|(method, params)| {
+        method == wall_proto::rpc::DRAWING_STATUS && params["key"] == key
+    }));
+    let state: Value = serde_json::from_str(&crate::app::update::ui_state_json(&app)).unwrap();
+    assert_eq!(state["card_back"]["drawing"]["state"], "checking");
+    assert_eq!(state["card_back"]["drawing"]["enabled"], false);
+    let _ = update(&mut app, Message::Click(x, y, crate::domain::input::MouseButton::Left));
+    assert!(
+        !drain_calls(&app).iter().any(|(method, _)| method == wall_proto::rpc::DRAWING_SET_ENABLED)
+    );
+    app.adopt_drawing_status(wall_proto::drawing::Status {
+        key,
+        pack: wall_proto::drawing::PackState::Missing,
+        ..Default::default()
+    });
+    frame(&mut app, Instant::now() + Duration::from_secs(2), 800.0, 600.0);
+    let _ = update(&mut app, Message::Click(x, y, crate::domain::input::MouseButton::Left));
+    assert!(app.panels.settings.open);
+    assert!(
+        !drain_calls(&app).iter().any(|(method, _)| method == wall_proto::rpc::DRAWING_SET_ENABLED)
+    );
+}
+
+#[test]
+fn card_busy_error() {
+    let mut app = test_app();
+    let (key, _) = open_drawing_card(&mut app);
+    drain_calls(&app);
+    app.scene.set_card_drawing(&key, crate::frontend::scene::DrawingCardState::Preparing);
+    app.rpc_error(Pending::DrawingCardAction { key: key.clone(), enabled: true }, "busy".into());
+    assert_eq!(app.flipped_drawing_key(), Some(key.as_str()));
+    assert!(!app.panels.settings.open);
+    app.run_tick(Instant::now() + Duration::from_secs(2));
+    assert_eq!(
+        app.scene.render.back.as_ref().unwrap().drawing,
+        Some(crate::frontend::scene::DrawingCardState::Draw)
+    );
+    assert!(drain_calls(&app).iter().any(|(method, params)| {
+        method == wall_proto::rpc::DRAWING_STATUS && params["key"] == key
+    }));
+}
+
+#[test]
+fn card_progress_event() {
+    let mut app = test_app();
+    let (key, _) = open_drawing_card(&mut app);
+    drain_calls(&app);
+    let status =
+        wall_proto::drawing::Status { key, enabled: true, prepared: true, ..Default::default() };
+    app.handle_ipc(IpcMsg::Event {
+        name: wall_proto::ev::DRAWING_STATUS.into(),
+        data: json!(status),
+    });
+    assert!(drain_calls(&app).is_empty());
+    app.run_tick(Instant::now() + Duration::from_secs(2));
+    assert_eq!(
+        app.scene.render.back.as_ref().unwrap().drawing,
+        Some(crate::frontend::scene::DrawingCardState::Drawn)
+    );
+}
+
+#[test]
+fn card_terminal_error() {
+    let mut app = test_app();
+    let (key, _) = open_drawing_card(&mut app);
+    app.daemon.pending.clear();
+    drain_calls(&app);
+    app.adopt_drawing_status(wall_proto::drawing::Status {
+        key: key.clone(),
+        pack: wall_proto::drawing::PackState::Available,
+        phase: wall_proto::drawing::Phase::Preparing,
+        active_key: key.clone(),
+        ..Default::default()
+    });
+    app.handle_ipc(IpcMsg::Event {
+        name: wall_proto::ev::DRAWING_STATUS.into(),
+        data: json!(wall_proto::drawing::Status {
+            key: key.clone(),
+            phase: wall_proto::drawing::Phase::Failed,
+            error: Some("source unavailable".into()),
+            ..Default::default()
+        }),
+    });
+    assert!(drain_calls(&app).iter().any(|(method, params)| {
+        method == wall_proto::rpc::DRAWING_STATUS && params["key"] == key
+    }));
+    assert_eq!(
+        app.daemon.drawing.as_ref().unwrap().pack,
+        wall_proto::drawing::PackState::Available
+    );
+    let id = *app
+        .daemon
+        .pending
+        .iter()
+        .find_map(|(id, pending)| matches!(pending, Pending::DrawingStatus).then_some(id))
+        .expect("terminal status request");
+    let authoritative = wall_proto::drawing::Status {
+        key: key.clone(),
+        active_key: key,
+        pack: wall_proto::drawing::PackState::Available,
+        phase: wall_proto::drawing::Phase::Failed,
+        error: Some("source unavailable".into()),
+        ..Default::default()
+    };
+    respond(&mut app, id, json!(authoritative.clone()));
+    let toast = app.runtime_state.toast.clone().expect("drawing failure toast");
+    assert!(toast.0.contains("source unavailable"));
+    app.adopt_drawing_status(authoritative);
+    assert_eq!(app.runtime_state.toast.as_ref().unwrap().1, toast.1);
+}
+
+#[test]
+fn card_choice_persists() {
+    let mut app = test_app();
+    let (key, _) = open_drawing_card(&mut app);
+    app.adopt_drawing_status(wall_proto::drawing::Status {
+        key: key.clone(),
+        active_key: key.clone(),
+        pack: wall_proto::drawing::PackState::Available,
+        phase: wall_proto::drawing::Phase::Preparing,
+        ..Default::default()
+    });
+    let mut deck_config = Config::from_data(app.config.root().clone());
+    deck_config.config_path = app.config.config_path.clone();
+    deck_config.save_key(
+        &format!("{}.{}", skwd_config::keys::drawing::ROOT, skwd_config::keys::drawing::WALLPAPERS),
+        json!({key.clone(): true}),
+    );
+    app.adopt_drawing_status(wall_proto::drawing::Status {
+        key: key.clone(),
+        active_key: key.clone(),
+        pack: wall_proto::drawing::PackState::Available,
+        phase: wall_proto::drawing::Phase::Ready,
+        enabled: true,
+        prepared: true,
+        ..Default::default()
+    });
+    app.config.save_key(skwd_config::keys::drawing::DURATION_MS, json!(7000));
+    let saved: Value =
+        serde_json::from_slice(&std::fs::read(&app.config.config_path).unwrap()).unwrap();
+    assert_eq!(saved["drawing"]["wallpapers"][&key], true);
+    assert_eq!(saved["drawing"]["durationMs"], 7000);
+}
+
+#[test]
+fn drawing_animated_cards() {
+    for (name, kind, key) in [
+        ("clip.mp4", "video", "video:clip.mp4"),
+        ("scene", "we", "we:42"),
+        ("we-video.mp4", "video", "we:43"),
+    ] {
+        let mut app = test_app();
+        seed(&mut app, &[drawing_wall(name, kind, key)]);
+        app.scene.viewport = (800.0, 600.0);
+        app.scene.set_visible(true);
+        let _ = update(&mut app, Message::KeyFlip);
+        let now = Instant::now();
+        for frame_no in 0..=80 {
+            frame(&mut app, now + Duration::from_millis(frame_no * 16), 800.0, 600.0);
+        }
+        assert!(app.scene.render.back.as_ref().is_some_and(|panel| panel.drawing.is_some()));
+        assert_eq!(app.flipped_drawing_key(), Some(key));
+        app.adopt_drawing_status(wall_proto::drawing::Status {
+            key: key.into(),
+            pack: wall_proto::drawing::PackState::Available,
+            prepared: true,
+            ..Default::default()
+        });
+        frame(&mut app, Instant::now() + Duration::from_secs(2), 800.0, 600.0);
+        let panel = app.scene.render.back.as_ref().unwrap();
+        let layout = crate::frontend::ui::back_layout(panel);
+        let action =
+            crate::frontend::ui::back_bounds(panel, &layout, layout.actions.drawing.unwrap());
+        drain_calls(&app);
+        let _ = update(
+            &mut app,
+            Message::Click(
+                action.0 + action.2 * 0.5,
+                action.1 + action.3 * 0.5,
+                crate::domain::input::MouseButton::Left,
+            ),
+        );
+        assert!(drain_calls(&app).iter().any(|(method, params)| {
+            method == wall_proto::rpc::DRAWING_SET_ENABLED
+                && params["key"] == key
+                && params["enabled"] == true
+        }));
+    }
+}
+
+#[test]
+fn drawing_requires_preparation() {
+    use crate::frontend::settings::SettingsMsg;
+
+    let mut app = test_app();
+    let _ = update(
+        &mut app,
+        Message::Settings(SettingsMsg::Toggle(skwd_config::keys::drawing::ENABLED.into(), true)),
+    );
+    assert!(!app.config.flag_default_config(skwd_config::keys::drawing::ENABLED));
+    assert!(drain_calls(&app).is_empty());
+}
+
+#[test]
+fn drawing_resumes_active_key() {
+    use crate::frontend::settings::{ActionId, SettingsMsg};
+
+    let mut app = test_app();
+    app.daemon.drawing = Some(wall_proto::drawing::Status {
+        key: String::from("static:other"),
+        active_key: String::from("static:active"),
+        phase: wall_proto::drawing::Phase::Paused,
+        ..Default::default()
+    });
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::ResumeDrawing)));
+    let calls = drain_calls(&app);
+    assert!(calls.iter().any(|(method, params)| {
+        method == wall_proto::rpc::DRAWING_RESUME && params["key"] == "static:active"
+    }));
+}
+
+#[test]
+fn drawing_preview_shows_desktop() {
+    use crate::frontend::settings::{ActionId, SettingsMsg};
+
+    let mut app = test_app();
+    seed(&mut app, &[static_wall("a.png", 1)]);
+    let key = app.drawing_selection().unwrap().to_string();
+    app.daemon.drawing = Some(wall_proto::drawing::Status {
+        key: key.clone(),
+        prepared: true,
+        ..Default::default()
+    });
+    app.runtime_state.overlay = Some(iced::window::Id::unique());
+    app.panels.settings.open = true;
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::PreviewDrawing)));
+    let calls = drain_calls(&app);
+    assert!(calls.iter().any(|(method, params)| {
+        method == wall_proto::rpc::DRAWING_PREVIEW && params["key"] == key
+    }));
+    assert!(app.runtime_state.stashed);
+    assert!(app.panels.settings.open);
+}
+
+#[test]
+fn drawing_picker_restores() {
+    use crate::frontend::settings::{ActionId, SettingsMsg};
+
+    let mut app = test_app();
+    app.runtime_state.overlay = Some(iced::window::Id::unique());
+    app.panels.settings.open = true;
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::ChooseDrawingPack)));
+    assert!(app.runtime_state.stashed);
+    assert!(app.panels.settings.folder_picking);
+
+    let _ = update(&mut app, Message::DrawingPackChosen(Ok(None)));
+    assert!(!app.runtime_state.stashed);
+    assert!(!app.panels.settings.folder_picking);
+    assert!(app.panels.settings.open);
+}
+
+#[test]
+fn drawing_status_is_inspectable() {
+    let mut app = test_app();
+    seed(&mut app, &[static_wall("a.png", 1)]);
+    let key = app.drawing_selection().unwrap().to_string();
+    app.daemon.drawing = Some(wall_proto::drawing::Status {
+        key: key.clone(),
+        prepared: true,
+        ..Default::default()
+    });
+    let state: Value = serde_json::from_str(&crate::app::update::ui_state_json(&app)).unwrap();
+    assert_eq!(state["settings"]["drawing"]["selected"], key);
+    assert_eq!(state["settings"]["drawing"]["status"]["prepared"], true);
+}
+
+#[test]
+fn drawing_view_uses_media() {
+    use crate::frontend::settings::{ActionId, SettingsMsg};
+
+    let mut app = test_app();
+    seed(
+        &mut app,
+        &[
+            static_wall("a.png", 1),
+            drawing_wall("clip.mp4", "video", "video:clip.mp4"),
+            drawing_wall("scene", "we", "we:42"),
+            static_wall("b.png", 1),
+        ],
+    );
+    let hidden = app
+        .library_session
+        .library
+        .catalog()
+        .items
+        .iter()
+        .position(|item| item.key == "static:b.png")
+        .unwrap() as u32;
+    app.library_session.filtered.retain(|&index| index != hidden);
+    app.config
+        .set_key(skwd_config::keys::drawing::SCOPE, json!(skwd_config::keys::drawing::SCOPE_VIEW));
+    app.daemon.drawing = Some(wall_proto::drawing::Status {
+        pack: wall_proto::drawing::PackState::Available,
+        ..Default::default()
+    });
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::PrepareDrawing)));
+    let calls = drain_calls(&app);
+    let request =
+        calls.iter().find(|(method, _)| method == wall_proto::rpc::DRAWING_PREPARE).unwrap();
+    let keys = request.1["keys"].as_array().unwrap();
+    assert_eq!(keys.len(), 3);
+    assert!(keys.contains(&json!("static:a.png")));
+    assert!(keys.contains(&json!("video:clip.mp4")));
+    assert!(keys.contains(&json!("we:42")));
+    assert!(!keys.contains(&json!("static:b.png")));
+}
+
+#[test]
+fn drawing_view_rejects_large() {
+    use crate::frontend::settings::{ActionId, SettingsMsg};
+
+    let mut app = test_app();
+    let walls: Vec<_> = (0..=wall_proto::drawing::MAX_PREPARE_KEYS)
+        .map(|index| static_wall(&format!("{index}.png"), 1))
+        .collect();
+    seed(&mut app, &walls);
+    assert!(app.drawing_view_keys().count() > wall_proto::drawing::MAX_PREPARE_KEYS);
+    app.config
+        .set_key(skwd_config::keys::drawing::SCOPE, json!(skwd_config::keys::drawing::SCOPE_VIEW));
+    app.daemon.drawing = Some(wall_proto::drawing::Status {
+        pack: wall_proto::drawing::PackState::Available,
+        ..Default::default()
+    });
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::PrepareDrawing)));
+    assert!(
+        !drain_calls(&app).iter().any(|(method, _)| method == wall_proto::rpc::DRAWING_PREPARE)
+    );
+}
+
+#[test]
+fn saver_keeps_overrides() {
+    use crate::frontend::settings::SettingsMsg;
+
+    let mut app = test_app();
+    app.config.set_key(skwd_config::keys::performance::BATTERY_FPS, json!(48));
+    for on in [true, false] {
+        let _ = update(
+            &mut app,
+            Message::Settings(SettingsMsg::Toggle(
+                skwd_config::keys::performance::BATTERY_SAVER.into(),
+                on,
+            )),
+        );
+        assert_eq!(
+            app.config.flag_default_config(skwd_config::keys::performance::BATTERY_SAVER),
+            on
+        );
+    }
+    assert_eq!(app.config.num_path(skwd_config::keys::performance::BATTERY_FPS), 48.0);
+}
 
 #[test]
 fn outdoors_policy_persists_separately() {
@@ -306,7 +769,9 @@ fn edit_source(app: &mut App, raw: &str) -> String {
     app.config.save_key(FolderKind::Source.key(), json!(["/old"]));
     app.init_settings_inputs();
     let key = format!("{}.0", FolderKind::Source.key());
-    let _ = update(app, Message::Settings(SettingsMsg::EditFolder(key.clone())));
+    let token =
+        crate::frontend::settings::token_key(&key, 0, crate::frontend::settings::TokenSide::Body);
+    let _ = update(app, Message::Settings(SettingsMsg::EditToken(token, key.clone())));
     assert_eq!(
         app.panels.settings.input_edit.as_ref().map(|edit| edit.key.as_str()),
         Some(key.as_str())
@@ -317,7 +782,8 @@ fn edit_source(app: &mut App, raw: &str) -> String {
 
 fn add_draft(app: &mut App, kind: crate::contracts::settings::FolderKind, raw: &str) {
     use crate::frontend::settings::{ActionId, SettingsMsg};
-    let _ = update(app, Message::Settings(SettingsMsg::FolderDraft(kind, raw.into())));
+    let draft = crate::frontend::settings::draft_key(kind);
+    let _ = update(app, Message::Settings(SettingsMsg::Input(draft, raw.into())));
     let _ = update(app, Message::Settings(SettingsMsg::Run(ActionId::AddFolder(kind))));
 }
 
@@ -332,6 +798,49 @@ fn draft_folders_persist() {
             serde_json::from_slice(&std::fs::read(&app.config.config_path).unwrap()).unwrap();
         assert_eq!(skwd_config::get(&saved, kind.key()).unwrap(), &json!(["/existing", "/added"]));
         assert!(!app.panels.settings.folder_drafts.contains_key(kind.key()));
+    }
+}
+
+fn begin_draft(app: &mut App, kind: crate::contracts::settings::FolderKind) -> String {
+    use crate::frontend::settings::{SettingsMsg, TokenSide, draft_key, token_key};
+    app.init_settings_inputs();
+    let key = draft_key(kind);
+    let token = token_key(&key, 0, TokenSide::Body);
+    let _ = update(app, Message::Settings(SettingsMsg::EditToken(token, key.clone())));
+    key
+}
+
+#[test]
+fn escape_clears_draft() {
+    use crate::contracts::settings::FolderKind;
+    use crate::frontend::settings::{SettingsKey, SettingsMsg};
+    for kind in [FolderKind::Source, FolderKind::Excluded] {
+        let mut app = test_app();
+        app.panels.settings.open = true;
+        app.config.save_key(kind.key(), json!(["/existing"]));
+        let key = begin_draft(&mut app, kind);
+        let _ = update(&mut app, Message::Settings(SettingsMsg::Input(key, "/typed".into())));
+        let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Cancel)));
+        assert!(app.panels.settings.folder_drafts.get(kind.key()).is_none_or(String::is_empty));
+        app.init_settings_inputs();
+        assert_eq!(
+            app.panels.settings.inputs.get(&crate::frontend::settings::draft_key(kind)),
+            Some(&String::new())
+        );
+        let _ = update(&mut app, Message::Settings(SettingsMsg::Commit));
+        let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Activate)));
+        assert_eq!(app.config.array_values(kind.key()), [json!("/existing")]);
+    }
+}
+
+#[test]
+fn empty_draft_adds_nothing() {
+    use crate::contracts::settings::FolderKind;
+    for raw in ["", "   "] {
+        let mut app = test_app();
+        app.config.save_key(FolderKind::Source.key(), json!(["/existing"]));
+        add_draft(&mut app, FolderKind::Source, raw);
+        assert_eq!(app.config.array_values(FolderKind::Source.key()), [json!("/existing")]);
     }
 }
 
@@ -376,7 +885,9 @@ fn undo_commits_open_edit() {
     let remove = ActionId::RemoveFolder(excluded, 0);
     let _ = update(&mut app, Message::Settings(SettingsMsg::Run(remove)));
     let key = format!("{}.1", excluded.key());
-    let _ = update(&mut app, Message::Settings(SettingsMsg::EditFolder(key.clone())));
+    let token =
+        crate::frontend::settings::token_key(&key, 0, crate::frontend::settings::TokenSide::Body);
+    let _ = update(&mut app, Message::Settings(SettingsMsg::EditToken(token, key.clone())));
     let _ = update(&mut app, Message::Settings(SettingsMsg::Input(key, "/c2".into())));
     let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::UndoFolderRemove)));
     let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Cancel)));
@@ -396,6 +907,22 @@ fn folder_inputs_seeded() {
 }
 
 #[test]
+fn process_list_edits_inline() {
+    use crate::frontend::settings::SettingsMsg;
+
+    let mut app = test_app();
+    let key = skwd_config::keys::playback::PROCESSES;
+    app.config.save_key(key, json!("steam*, mpv"));
+    app.panels.settings.tab = "wallpapers".into();
+    app.init_settings_inputs();
+    assert_eq!(app.panels.settings.inputs.get(key).map(String::as_str), Some("steam*, mpv"));
+    let _ =
+        update(&mut app, Message::Settings(SettingsMsg::Input(key.into(), "steam*, vlc".into())));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Commit));
+    assert_eq!(app.config.str_path(key), "steam*, vlc");
+}
+
+#[test]
 fn resolved_folder_normalizes() {
     let home = skwd_config::home();
     assert_eq!(crate::app::settings_source::resolved_folder("~/walls/../x/"), format!("{home}/x"));
@@ -410,7 +937,7 @@ fn section_change_drops_undo() {
     let remove = ActionId::RemoveFolder(FolderKind::Source, 0);
     let _ = update(&mut app, Message::Settings(SettingsMsg::Run(remove)));
     assert!(app.panels.settings.folder_undo.is_some());
-    let _ = update(&mut app, Message::Settings(SettingsMsg::SelectSection(2)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::ToggleSection(2)));
     assert!(app.panels.settings.folder_undo.is_none());
 }
 
@@ -574,7 +1101,7 @@ fn empty_default_shows_all() {
     let mut app = test_app();
     app.config.set_key(skwd_config::keys::filter_bar::DEFAULT_FOLDER, json!(""));
     let cards = crate::frontend::settings::build_tab(
-        "filter",
+        "picker",
         &app.config,
         &[],
         &app.library_session.folder_options,
@@ -1198,6 +1725,125 @@ fn outdoors_actions_call_service() {
 }
 
 #[test]
+fn weather_mode_menu() {
+    use crate::frontend::settings::{SettingsMsg, WEATHER_MODE_KEY};
+    use skwd_config::keys::weather;
+
+    let pick = |app: &mut App, mode: &str| {
+        let _ =
+            update(app, Message::Settings(SettingsMsg::Pick(WEATHER_MODE_KEY.into(), mode.into())));
+    };
+    let mut app = test_app();
+    drain_calls(&app);
+    pick(&mut app, weather::SOURCE_SEMANTIC);
+    assert_eq!(app.config.str_path(weather::SOURCE), weather::SOURCE_SEMANTIC);
+    assert!(app.config.flag_default_config(weather::ENABLED));
+    pick(&mut app, crate::frontend::settings::WEATHER_OFF);
+    assert!(!app.config.flag_default_config(weather::ENABLED));
+    assert_eq!(app.config.str_path(weather::SOURCE), weather::SOURCE_SEMANTIC);
+    drain_calls(&app);
+    pick(&mut app, weather::SOURCE_OUTDOORS);
+    assert_eq!(
+        drain_calls(&app),
+        [(wall_proto::rpc::WALL_WEATHER_FOLLOW.into(), json!({"enabled": true}))]
+    );
+}
+
+fn following_app() -> App {
+    use skwd_config::keys::weather;
+    let mut app = test_app();
+    app.config.set_key(weather::SOURCE, json!(weather::SOURCE_OUTDOORS));
+    app.config.set_key(weather::ENABLED, json!(true));
+    drain_calls(&app);
+    app
+}
+
+fn pick_mode(app: &mut App, mode: &str) {
+    use crate::frontend::settings::{SettingsMsg, WEATHER_MODE_KEY};
+    let _ = update(app, Message::Settings(SettingsMsg::Pick(WEATHER_MODE_KEY.into(), mode.into())));
+}
+
+fn answer_weather(app: &mut App, error: Option<&str>) {
+    use crate::infrastructure::ipc::IpcMsg;
+    use crate::infrastructure::runtime::Wake;
+    let id = app
+        .daemon
+        .pending
+        .iter()
+        .find_map(|(id, pending)| (*pending == Pending::WeatherAction).then_some(*id))
+        .expect("pending stop");
+    let status = json!(crate::contracts::daemon::WeatherStatus::default());
+    let (result, error) = match error {
+        Some(message) => (None, Some(wall_proto::ErrorInfo { code: 1, message: message.into() })),
+        None => (Some(status), None),
+    };
+    let _ = update(app, Message::Daemon(Wake::Ipc(IpcMsg::Response { id, result, error })));
+}
+
+#[test]
+fn weather_stop_then_switch() {
+    use crate::app::state::WeatherQueue;
+    use skwd_config::keys::weather;
+
+    let mut app = following_app();
+    pick_mode(&mut app, weather::SOURCE_PLAYLISTS);
+    assert_eq!(
+        drain_calls(&app),
+        [(wall_proto::rpc::WALL_WEATHER_FOLLOW.into(), json!({"enabled": false}))]
+    );
+    pick_mode(&mut app, weather::SOURCE_SEMANTIC);
+    assert!(drain_calls(&app).is_empty());
+    let queued = WeatherQueue { mode: weather::SOURCE_SEMANTIC.into(), stopped: true };
+    assert_eq!(app.panels.settings.weather_after_follow, Some(queued));
+    app.config.set_key(weather::SOURCE, json!(weather::SOURCE_PLAYLISTS));
+    app.config.set_key(weather::ENABLED, json!(false));
+    app.config.persist();
+    answer_weather(&mut app, None);
+    assert_eq!(app.config.str_path(weather::SOURCE), weather::SOURCE_SEMANTIC);
+    assert!(app.config.flag_default_config(weather::ENABLED));
+    assert!(app.panels.settings.weather_after_follow.is_none());
+}
+
+#[test]
+fn weather_stop_error_clears() {
+    use skwd_config::keys::weather;
+
+    let mut app = following_app();
+    pick_mode(&mut app, weather::SOURCE_PLAYLISTS);
+    answer_weather(&mut app, Some("stop failed"));
+    assert!(app.panels.settings.weather_after_follow.is_none());
+    assert_eq!(app.config.str_path(weather::SOURCE), weather::SOURCE_OUTDOORS);
+}
+
+#[test]
+fn weather_stop_stuck() {
+    use skwd_config::keys::weather;
+
+    let mut app = following_app();
+    pick_mode(&mut app, weather::SOURCE_PLAYLISTS);
+    drain_calls(&app);
+    answer_weather(&mut app, None);
+    assert!(
+        !drain_calls(&app).iter().any(|(method, _)| method == wall_proto::rpc::WALL_WEATHER_FOLLOW)
+    );
+    assert!(app.panels.settings.weather_after_follow.is_none());
+}
+
+#[test]
+fn weather_review_menu_opens() {
+    use crate::frontend::settings::{SettingsMsg, WEATHER_REVIEW_KEY};
+
+    let mut app = test_app();
+    app.config.save_key(skwd_config::keys::weather::SOURCE, json!("semantic"));
+    drain_calls(&app);
+    let review = SettingsMsg::Pick(WEATHER_REVIEW_KEY.into(), "rainy".into());
+    let _ = update(&mut app, Message::Settings(review));
+    assert!(drain_calls(&app).iter().any(|(method, params)| {
+        method == wall_proto::rpc::WALL_WEATHER_CANDIDATES && params["category"] == "rainy"
+    }));
+}
+
+#[test]
 fn source_flip_loads_catalog() {
     let mut app = test_app();
     app.config.persist();
@@ -1538,44 +2184,67 @@ fn placement_reapplies_one_output() {
 }
 
 #[test]
+fn placement_can_return_to_the_visible_global_value() {
+    use crate::frontend::settings::SettingsMsg;
+
+    let mut app = test_app();
+    app.config.set_key(skwd_config::keys::display::FILL_MODE, json!("fit"));
+    app.config.set_key("display.fillModes.DP-1", json!("fill"));
+    let _ = update(
+        &mut app,
+        Message::Settings(SettingsMsg::Pick("display.fillModes.DP-1".into(), String::new())),
+    );
+    assert_eq!(app.config.str_path("display.fillModes.DP-1"), "");
+    assert_eq!(app.panels.settings.bar_reveals["background:display.fillModes.DP-1"].target, 1.0);
+}
+
+#[test]
 fn layout_studio_inset_while_live() {
     use crate::frontend::settings::SettingsMsg;
 
     let mut app = test_app();
+    let mut now = Instant::now();
     app.scene.viewport = (1280.0, 720.0);
     let _ = update(&mut app, Message::ToggleSettings);
     assert!(app.panels.settings.open);
-    assert_eq!(app.panels.settings.tab, "picker");
+    assert_eq!(app.panels.settings.tab, "layout");
     assert_eq!(app.panels.settings.inset_target, 0.0);
 
-    let _ = update(&mut app, Message::Settings(SettingsMsg::SelectSection(1)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::ToggleSection(0)));
+    assert_eq!(app.panels.settings.inset_target, 0.0);
+    let _ = update(&mut app, Message::Settings(SettingsMsg::EnterLayoutStudio));
+    assert!(app.panels.settings.layout_studio);
     assert!(app.panels.settings.inset_target > 0.0);
     assert!(!app.scene.hidden());
 
-    let _ = update(&mut app, Message::Settings(SettingsMsg::SelectSection(4)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::ToggleSection(4)));
+    assert!(!app.panels.settings.layout_studio);
     assert_eq!(app.panels.settings.inset_target, 0.0);
     assert_eq!(app.panels.settings.section, 4);
     assert_eq!(app.panels.settings.control_page, 0);
-    assert_eq!(app.panels.settings.section_anim.x, 0.0);
 
+    tick_frames(&mut app, &mut now, 60);
     let _ = update(&mut app, Message::SetSettingsTab(String::from("picker")));
-    assert_eq!(app.panels.settings.tab, "picker");
-    assert_eq!(app.panels.settings.section, 0);
+    assert_eq!(app.panels.settings.tab, "layout");
+    assert_eq!(app.panels.settings.section, 4);
     assert_eq!(app.panels.settings.control_page, 0);
     assert_eq!(app.panels.settings.inset_target, 0.0);
 
-    let _ = update(&mut app, Message::SetSettingsTab(String::from("search")));
-    assert_eq!(app.panels.settings.tab, "filter");
+    let _ = update(&mut app, Message::SetSettingsTab(String::from("library")));
+    assert_eq!(app.panels.settings.tab, "library");
     assert_eq!(app.panels.settings.inset_target, 0.0);
     assert_eq!(app.panels.settings.section_anim.x, 0.0);
 
-    let _ = update(&mut app, Message::SetSettingsTab(String::from("motion")));
-    assert_eq!(app.panels.settings.tab, "motion");
+    tick_frames(&mut app, &mut now, 60);
+    let _ = update(&mut app, Message::SetSettingsTab(String::from("transitions")));
+    assert_eq!(app.panels.settings.tab, "wallpapers");
     assert_eq!(app.panels.settings.inset_target, 0.0);
     assert_eq!(app.panels.settings.section_anim.x, 0.0);
 
+    tick_frames(&mut app, &mut now, 60);
     let _ = update(&mut app, Message::SetSettingsTab(String::from("picker")));
-    assert_eq!(app.panels.settings.tab, "picker");
+    assert_eq!(app.panels.settings.tab, "layout");
+    assert_eq!(app.panels.settings.open_section, None, "places reopen collapsed");
     assert_eq!(app.panels.settings.inset_target, 0.0);
 }
 
@@ -1607,15 +2276,17 @@ fn layout_studio_returns_to_settings() {
     let mut app = test_app();
     app.scene.viewport = (1280.0, 720.0);
     let _ = update(&mut app, Message::ToggleSettings);
-    let _ = update(&mut app, Message::Settings(SettingsMsg::SelectSection(1)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::ToggleSection(0)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::EnterLayoutStudio));
     assert!(app.panels.settings.inset_target > 0.0);
     assert!(!app.scene.hidden());
 
     let _ = update(&mut app, Message::Settings(SettingsMsg::LeaveLayoutStudio));
 
     assert!(app.panels.settings.open);
-    assert_eq!(app.panels.settings.tab, "picker");
+    assert_eq!(app.panels.settings.tab, "layout");
     assert_eq!(app.panels.settings.section, 0);
+    assert!(!app.panels.settings.layout_studio);
     assert_eq!(app.panels.settings.focus, SettingsFocus::Sections);
     assert_eq!(app.panels.settings.inset_target, 0.0);
     let mut now = Instant::now();
@@ -1624,37 +2295,11 @@ fn layout_studio_returns_to_settings() {
 }
 
 #[test]
-fn studio_saves_applies_on_canvas() {
-    use crate::frontend::settings::SettingsMsg;
-
-    let mut app = test_app();
-    app.scene.viewport = crate::frontend::ui::MIN_VIEWPORT;
-    let mode = app.config.selector_mode();
-    let before = app.config.selector_presets(&mode).len();
-    let _ = update(&mut app, Message::ToggleSettings);
-    let _ = update(&mut app, Message::Settings(SettingsMsg::SelectSection(1)));
-    let _ = update(&mut app, Message::SavePreset);
-    let selected = app.config.selected_preset(&mode).expect("new preset becomes active");
-    assert_eq!(selected, "Style 1");
-    assert_eq!(app.config.selector_presets(&mode).len(), before + 1);
-    let persisted: Value =
-        serde_json::from_str(&std::fs::read_to_string(&app.config.config_path).unwrap()).unwrap();
-    assert_eq!(
-        persisted["components"]["wallpaperSelector"]["presets"][mode.as_str()][0]["name"],
-        selected
-    );
-
-    let _ = update(&mut app, Message::ApplyPreset(mode, selected));
-    assert!(app.panels.settings.open);
-    assert_eq!(app.panels.settings.section, 1);
-    assert!(!app.scene.hidden());
-}
-
-#[test]
 fn workbench_keyboard_navigation() {
     use crate::frontend::settings::{SettingsFocus, SettingsKey, SettingsMsg};
 
     let mut app = test_app();
+    let mut now = Instant::now();
     app.scene.viewport = (1536.0, 960.0);
     let _ = update(&mut app, Message::ToggleSettings);
     let _ = update(&mut app, Message::SetSettingsTab(String::from("picker")));
@@ -1665,28 +2310,30 @@ fn workbench_keyboard_navigation() {
     assert_eq!(app.panels.settings.focus, SettingsFocus::Sections);
     assert_eq!(app.panels.settings.section, 1);
 
+    tick_frames(&mut app, &mut now, 60);
     let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Up)));
     assert_eq!(app.panels.settings.focus, SettingsFocus::Sections);
     assert_eq!(app.panels.settings.section, 0);
 
+    tick_frames(&mut app, &mut now, 60);
     let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Previous)));
     assert_eq!(app.panels.settings.focus, SettingsFocus::Index);
     let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Next)));
     assert_eq!(app.panels.settings.focus, SettingsFocus::Sections);
 
     let _ = update(&mut app, Message::SetSettingsTab(String::from("sources")));
+    tick_frames(&mut app, &mut now, 60);
 
     let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Next)));
     assert_eq!(app.panels.settings.focus, SettingsFocus::Controls);
     assert_eq!(app.panels.settings.focused_control, 0);
 
     let before = app.config.flag_default_true(skwd_config::keys::features::WALLHAVEN);
-    let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Activate)));
-    assert!(app.panels.settings.expanded_details.contains("source.wallhaven"));
-    assert_eq!(app.config.flag_default_true(skwd_config::keys::features::WALLHAVEN), before);
-
-    let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Next)));
-    assert_eq!(app.panels.settings.focused_control, 0);
+    for expected in [!before, before] {
+        let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Activate)));
+        assert_eq!(app.config.flag_default_true(skwd_config::keys::features::WALLHAVEN), expected);
+        assert_eq!(app.panels.settings.focused_control, 0);
+    }
 
     let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Down)));
     assert_eq!(app.panels.settings.focused_control, 1);
@@ -1741,7 +2388,7 @@ fn workbench_mouse_tab_owns_focus() {
     let _ =
         update(&mut app, Message::Settings(SettingsMsg::SelectTab(String::from("performance"))));
 
-    assert_eq!(app.panels.settings.tab, "performance");
+    assert_eq!(app.panels.settings.tab, "system");
     assert_eq!(app.panels.settings.focus, SettingsFocus::Index);
 }
 
@@ -1760,7 +2407,7 @@ fn workbench_tab_leaves_search() {
     );
 
     assert!(!app.panels.settings.search_open);
-    assert_eq!(app.panels.settings.focus, SettingsFocus::Sections);
+    assert_eq!(app.panels.settings.focus, SettingsFocus::Strip);
 }
 
 #[test]
@@ -1769,6 +2416,7 @@ fn workbench_tab_cycles_focus() {
 
     let mut app = test_app();
     let _ = update(&mut app, Message::ToggleSettings);
+    let _ = update(&mut app, Message::Settings(SettingsMsg::ToggleSection(0)));
     assert_eq!(app.panels.settings.focus, SettingsFocus::Sections);
 
     let tab = |app: &mut App, backwards| {
@@ -1786,7 +2434,11 @@ fn workbench_tab_cycles_focus() {
     tab(&mut app, true);
     assert_eq!(app.panels.settings.focus, SettingsFocus::Sections);
     tab(&mut app, true);
+    assert_eq!(app.panels.settings.focus, SettingsFocus::Strip);
+    tab(&mut app, true);
     assert_eq!(app.panels.settings.focus, SettingsFocus::Index);
+    tab(&mut app, false);
+    assert_eq!(app.panels.settings.focus, SettingsFocus::Strip);
     tab(&mut app, false);
     assert_eq!(app.panels.settings.focus, SettingsFocus::Sections);
 }
@@ -1796,57 +2448,47 @@ fn workbench_ctrl_tab_cycles_pages() {
     use crate::frontend::settings::{SettingsFocus, SettingsKey, SettingsMsg};
 
     let mut app = test_app();
+    let mut now = Instant::now();
     let _ = update(&mut app, Message::ToggleSettings);
     let _ = update(&mut app, Message::SetSettingsTab(String::from("picker")));
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::Key(SettingsKey::CategoryNext { backwards: false })),
     );
-    assert_eq!(app.panels.settings.tab, "filter");
+    assert_eq!(app.panels.settings.tab, "bar");
     assert_eq!(app.panels.settings.focus, SettingsFocus::Index);
 
+    tick_frames(&mut app, &mut now, 60);
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::Key(SettingsKey::CategoryNext { backwards: true })),
     );
-    assert_eq!(app.panels.settings.tab, "picker");
+    assert_eq!(app.panels.settings.tab, "layout");
 }
 
 #[test]
-fn workbench_tab_walks_grouped_fields() {
+fn tab_walks_speed_rows() {
     use crate::frontend::settings::{SettingsFocus, SettingsKey, SettingsMsg};
 
     let mut app = test_app();
+    let mut now = Instant::now();
     let _ = update(&mut app, Message::ToggleSettings);
-    let _ = update(&mut app, Message::SetSettingsTab(String::from("motion")));
-    let _ = update(
-        &mut app,
-        Message::Settings(SettingsMsg::Key(SettingsKey::FocusNext { backwards: false })),
-    );
+    let _ = update(&mut app, Message::SetSettingsTab(String::from("picker")));
+    tick_frames(&mut app, &mut now, 60);
+    let section = open_section(&mut app, "Opening and motion");
+    tick_frames(&mut app, &mut now, 60);
+    let fast = skwd_config::keys::motion::FAST_MS;
+    let row = section.rows().position(|row| row.control.path() == Some(fast)).expect("fast");
+    app.panels.settings.focus = SettingsFocus::Controls;
+    app.panels.settings.focused_control = row;
     let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Activate)));
-    assert_eq!(
-        app.panels.settings.input_edit.as_ref().map(|edit| edit.key.as_str()),
-        Some(skwd_config::keys::motion::FAST_MS)
-    );
-
-    for key in [skwd_config::keys::motion::STANDARD_MS, skwd_config::keys::motion::SLOW_MS] {
-        let _ = update(
-            &mut app,
-            Message::Settings(SettingsMsg::Key(SettingsKey::FocusNext { backwards: false })),
-        );
-        assert_eq!(
-            app.panels.settings.input_edit.as_ref().map(|edit| edit.key.as_str()),
-            Some(key)
-        );
-        assert_eq!(app.panels.settings.focus, SettingsFocus::Controls);
-    }
-
+    assert_eq!(app.panels.settings.input_edit.as_ref().map(|edit| edit.key.as_str()), Some(fast));
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::Key(SettingsKey::FocusNext { backwards: false })),
     );
     assert!(app.panels.settings.input_edit.is_none());
-    assert_eq!(app.panels.settings.focus, SettingsFocus::Index);
+    assert_eq!(app.panels.settings.focused_control, row + 1);
 }
 
 #[test]
@@ -1866,14 +2508,14 @@ fn settings_search_opens_canonical_control() {
         .settings
         .search_results
         .iter()
-        .find(|result| result.tab == "performance")
+        .find(|result| result.tab == "system")
         .cloned()
-        .expect("performance search result");
+        .expect("app search result");
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::OpenSearchResult(result.tab, result.section, result.row)),
     );
-    assert_eq!(app.panels.settings.tab, "performance");
+    assert_eq!(app.panels.settings.tab, "system");
     assert_eq!(app.panels.settings.section, result.section);
     assert_eq!(app.panels.settings.focus, SettingsFocus::Controls);
     assert!(!app.panels.settings.search_open);
@@ -1896,7 +2538,7 @@ fn settings_search_inline_keybind() {
         .settings
         .search_results
         .iter()
-        .find(|result| result.tab == "picker")
+        .find(|result| result.tab == "keybinds" && result.title == "Toggle playlists")
         .cloned()
         .expect("shortcut search result");
 
@@ -1905,28 +2547,33 @@ fn settings_search_inline_keybind() {
         Message::Settings(SettingsMsg::OpenSearchResult(result.tab, result.section, result.row)),
     );
 
-    assert_eq!(app.panels.settings.section, 4);
+    assert_eq!(app.panels.settings.tab, "keybinds");
+    assert_eq!(app.panels.settings.section, result.section);
     assert!(app.panels.settings.bar_reveals.is_empty());
     assert_eq!(app.panels.settings.focus, SettingsFocus::Controls);
 }
 
 #[test]
 fn workbench_keyboard_skips_control_segments() {
-    use crate::frontend::settings::{Control, SettingsFocus, SettingsKey, SettingsMsg, build_tab};
+    use crate::frontend::settings::{SettingsFocus, SettingsKey, SettingsMsg};
 
     let mut app = test_app();
+    let mut now = Instant::now();
     let _ = update(&mut app, Message::ToggleSettings);
-    let _ = update(&mut app, Message::SetSettingsTab(String::from("picker")));
-    let _ = update(&mut app, Message::Settings(SettingsMsg::SelectSection(4)));
+    let _ = update(&mut app, Message::SetSettingsTab(String::from("keybinds")));
+    tick_frames(&mut app, &mut now, 60);
+    let section = open_section(&mut app, "Controls");
+    tick_frames(&mut app, &mut now, 60);
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::Key(SettingsKey::FocusNext { backwards: false })),
     );
     assert_eq!(app.panels.settings.focus, SettingsFocus::Controls);
 
-    let cards = build_tab("picker", &app.config, &[], &[], "", &[]);
-    let rows = &cards[4].1;
-    assert!(matches!(rows[0].control, Control::Segment));
+    let rows: Vec<_> = section.rows().collect();
+    assert!(
+        rows.iter().any(|row| matches!(row.control, crate::frontend::settings::Control::Segment))
+    );
     for _ in 0..rows.len() {
         assert!(rows[app.panels.settings.focused_control].control.is_focusable());
         let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Down)));
@@ -1940,16 +2587,15 @@ fn workbench_enter_commits_escape_restores() {
     let mut app = test_app();
     app.scene.viewport = (1536.0, 960.0);
     let _ = update(&mut app, Message::ToggleSettings);
+    let mut now = Instant::now();
     let _ = update(&mut app, Message::SetSettingsTab(String::from("picker")));
+    tick_frames(&mut app, &mut now, 60);
+    let _ = open_section(&mut app, "Opening and motion");
+    tick_frames(&mut app, &mut now, 60);
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::Key(SettingsKey::FocusNext { backwards: false })),
     );
-    let _ = update(
-        &mut app,
-        Message::Settings(SettingsMsg::Key(SettingsKey::FocusNext { backwards: false })),
-    );
-
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::Key(SettingsKey::FocusNext { backwards: false })),
@@ -1989,6 +2635,11 @@ fn workbench_escape_leaves_choice() {
     let mut app = test_app();
     app.scene.viewport = (1536.0, 960.0);
     let _ = update(&mut app, Message::ToggleSettings);
+    let mut now = Instant::now();
+    let _ = update(&mut app, Message::SetSettingsTab(String::from("picker")));
+    tick_frames(&mut app, &mut now, 60);
+    let _ = open_section(&mut app, "Opening and motion");
+    tick_frames(&mut app, &mut now, 60);
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::Key(SettingsKey::FocusNext { backwards: false })),
@@ -2035,14 +2686,16 @@ fn layout_studio_releases_preview() {
     assert!(!first.is_empty());
     app.finish_settings_preview(&first, None);
 
-    let _ = update(&mut app, Message::Settings(SettingsMsg::SelectSection(1)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::ToggleSection(0)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::EnterLayoutStudio));
 
     assert!(app.panels.settings.preview_desired_path.is_empty());
     assert!(app.panels.settings.preview_in_flight_path.is_empty());
     assert!(app.panels.settings.preview_allocated_path.is_empty());
     assert!(app.panels.settings.preview_allocation.is_none());
 
-    let _ = update(&mut app, Message::Settings(SettingsMsg::SelectSection(0)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::LeaveLayoutStudio));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::ToggleSection(0)));
     assert_eq!(app.panels.settings.preview_in_flight_path, first);
 }
 
@@ -2053,7 +2706,8 @@ fn hard_overlay_releases_inset() {
     let mut app = test_app();
     app.scene.viewport = (1280.0, 720.0);
     let _ = update(&mut app, Message::ToggleSettings);
-    let _ = update(&mut app, Message::Settings(SettingsMsg::SelectSection(1)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::ToggleSection(0)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::EnterLayoutStudio));
     assert!(app.panels.settings.inset_target > 0.0);
 
     app.input.help_open = true;
@@ -2313,6 +2967,25 @@ fn deleting_a_reference_to_the_active_model_stops_search_before_removal() {
 }
 
 #[test]
+fn drawing_colour_commits() {
+    use crate::frontend::settings::SettingsMsg;
+    let path = skwd_config::keys::drawing::INK_COLOR;
+    let mut app = test_app();
+    let saved = |app: &App| {
+        std::fs::read(&app.config.config_path)
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .unwrap_or_default()
+    };
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Colour(path.into(), "#fafaf5".into())));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Colour(path.into(), "chalk".into())));
+    assert_eq!(app.config.str_path(path), "#fafaf5");
+    assert!(saved(&app)["drawing"]["inkColor"].is_null());
+    let _ = update(&mut app, Message::Settings(SettingsMsg::ColourCommit(path.into())));
+    assert_eq!(saved(&app)["drawing"]["inkColor"], "#fafaf5");
+}
+
+#[test]
 fn wallpaper_background_retains_color_and_monitor_inheritance() {
     use crate::frontend::settings::{SettingsMsg, background::BackgroundControl};
     let mut app = test_app();
@@ -2531,6 +3204,128 @@ fn profile_choices_show_preview() {
 }
 
 #[test]
+fn profile_previews_reuse_cache() {
+    use crate::contracts::settings::SettingsSource;
+    use crate::domain::theme::Candidate;
+
+    let saved = Candidate::from_preset("nord").unwrap();
+    let mut config = Config::from_data(json!({
+        "theme": {"mode": "dark", "savedThemes":
+            crate::infrastructure::theme::upsert_saved(&[], "Mine", &saved)}
+    }));
+    let first = config.palette_colors();
+    let cached = config.palette_previews.get().unwrap().as_ptr();
+    for _ in 0..10 {
+        assert_eq!(config.palette_colors(), first);
+        assert_eq!(config.palette_previews.get().unwrap().as_ptr(), cached);
+    }
+    config.set_key(skwd_config::keys::theme::MODE, json!("light"));
+    assert!(config.palette_previews.get().is_none());
+    let light = config.palette_colors();
+    assert_ne!(light.last(), first.last());
+    config.set_key(skwd_config::keys::theme::SAVED_THEMES, json!([]));
+    assert!(config.palette_previews.get().is_none());
+    assert_eq!(config.palette_colors().len(), skwd_palette::PRESETS.len());
+    let snapshot = config.begin_transient();
+    let theme = crate::infrastructure::theme::upsert_saved(&[], "Mine", &saved).remove(0);
+    config.array_push(skwd_config::keys::theme::SAVED_THEMES, theme);
+    assert!(config.palette_previews.get().is_none());
+    assert_eq!(config.palette_colors().len(), skwd_palette::PRESETS.len() + 1);
+    config.array_remove(skwd_config::keys::theme::SAVED_THEMES, 0);
+    assert!(config.palette_previews.get().is_none());
+    assert_eq!(config.palette_colors().len(), skwd_palette::PRESETS.len());
+    config.restore_transient(snapshot);
+}
+
+#[test]
+fn theme_view_reuses_previews() {
+    use crate::contracts::daemon::{AppThemeStatus, AppThemesResult};
+    use crate::domain::theme::Candidate;
+    use crate::frontend::settings::{Control, RuntimeStatus, build_tab_with_runtime_status};
+
+    let saved = Candidate::from_preset("nord").unwrap();
+    let config = Config::from_data(json!({
+        "theme": {"savedThemes":
+            crate::infrastructure::theme::upsert_saved(&[], "Mine", &saved)}
+    }));
+    let apps = AppThemesResult {
+        apps: (0..10)
+            .map(|idx| AppThemeStatus {
+                id: format!("app{idx}"),
+                name: format!("App {idx}"),
+                installed: true,
+                config_found: true,
+                config_path: String::new(),
+                output_path: String::new(),
+                enabled: true,
+                state: "applied".into(),
+                detail: String::new(),
+                can_enable: false,
+                can_disable: true,
+                can_adopt: false,
+                template_path: String::new(),
+                customized: false,
+                can_disconnect: true,
+                can_reconnect: false,
+            })
+            .collect(),
+    };
+    for _ in 0..3 {
+        let cards = build_tab_with_runtime_status(
+            "theme",
+            &config,
+            &[],
+            &[],
+            "",
+            &[],
+            RuntimeStatus { app_themes: Some(&apps), ..RuntimeStatus::default() },
+        );
+        let profiles: Vec<_> = cards
+            .iter()
+            .flat_map(|(_, rows)| rows)
+            .filter_map(|row| match &row.control {
+                Control::Details { rows, .. } => rows.first(),
+                _ => None,
+            })
+            .filter_map(|row| match &row.control {
+                Control::Dropdown { options, palettes, .. } => Some((options, palettes)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(profiles.len(), apps.apps.len());
+        for (options, palettes) in profiles {
+            assert!(options.iter().any(|(name, _)| name == "Mine"));
+            assert_eq!(palettes.last().unwrap().1, saved.preview_colors());
+        }
+        assert!(config.palette_previews.get().is_some());
+    }
+}
+
+#[test]
+fn profile_previews_refresh_reload() {
+    use crate::contracts::settings::SettingsSource;
+    use crate::domain::theme::Candidate;
+
+    let saved = Candidate::from_preset("nord").unwrap();
+    let mut config = Config::from_data(json!({}));
+    let dir = tempfile::tempdir().unwrap();
+    config.config_path = dir.path().join("config.json");
+    let baseline = config.palette_colors();
+    let themes = crate::infrastructure::theme::upsert_saved(&[], "Reloaded", &saved);
+    std::fs::write(&config.config_path, json!({"theme": {"savedThemes": themes}}).to_string())
+        .unwrap();
+    assert!(config.reload());
+    assert!(config.palette_previews.get().is_none());
+    assert_eq!(config.palette_colors().len(), baseline.len() + 1);
+    let snapshot = config.begin_transient();
+    config.remove_key(skwd_config::keys::theme::SAVED_THEMES);
+    assert_eq!(config.palette_colors(), baseline);
+    config.restore_transient(snapshot);
+    assert!(config.palette_previews.get().is_none());
+    assert_eq!(config.palette_colors().len(), baseline.len() + 1);
+}
+
+#[test]
 fn legacy_profile_keeps_swatches() {
     use crate::contracts::settings::SettingsSource;
 
@@ -2586,4 +3381,231 @@ fn busy_profile_unchanged() {
         assert_eq!(app.config.str_path(path), "dracula");
         assert!(drain_calls(&app).is_empty());
     }
+}
+
+#[test]
+fn drawing_library_toggles() {
+    use crate::contracts::daemon::{TaskCapabilities, TaskState, TaskStatus};
+    use crate::frontend::settings::{ActionId, SettingsMsg};
+
+    let mut app = test_app();
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::PrepareAllDrawings)));
+    let calls = drain_calls(&app);
+    let request =
+        calls.iter().find(|(method, _)| method == wall_proto::rpc::DRAWING_PREPARE).unwrap();
+    assert_eq!(request.1["library"], json!(true));
+
+    app.daemon.tasks.update(TaskStatus {
+        id: wall_proto::drawing::TASK.into(),
+        kind: String::new(),
+        label: String::new(),
+        state: TaskState::Running,
+        progress: 3,
+        total: 9,
+        detail: String::new(),
+        eta: String::new(),
+        capabilities: TaskCapabilities::default(),
+    });
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::PrepareAllDrawings)));
+    let calls = drain_calls(&app);
+    assert!(calls.iter().any(|(method, params)| method == wall_proto::rpc::TASK_CONTROL
+        && params["id"] == json!(wall_proto::drawing::TASK)));
+    assert!(!calls.iter().any(|(method, _)| method == wall_proto::rpc::DRAWING_PREPARE));
+}
+
+#[test]
+fn drawing_library_row() {
+    use crate::contracts::daemon::{TaskCapabilities, TaskState, TaskStatus};
+    use crate::frontend::settings::{ActionId, Control};
+
+    let mut app = test_app();
+    app.daemon.drawing = Some(wall_proto::drawing::Status {
+        pack: wall_proto::drawing::PackState::Available,
+        failed: 2,
+        ..Default::default()
+    });
+    app.daemon.tasks.update(TaskStatus {
+        id: wall_proto::drawing::TASK.into(),
+        kind: String::new(),
+        label: String::new(),
+        state: TaskState::Running,
+        progress: 3,
+        total: 9,
+        detail: String::new(),
+        eta: String::new(),
+        capabilities: TaskCapabilities::default(),
+    });
+    let ctx = app.settings_source_ctx();
+    let row = ctx
+        .place("wallpapers")
+        .sections
+        .into_iter()
+        .flat_map(crate::frontend::settings::Section::into_rows)
+        .find(|row| {
+            matches!(&row.control, Control::ActionBtn { id: ActionId::PrepareAllDrawings, .. })
+        })
+        .unwrap();
+    let Control::ActionBtn { label, .. } = &row.control else { unreachable!() };
+    assert_eq!(label, crate::i18n::tr("settings-drawing-library-stop"));
+    assert!(row.desc.contains("3 / 9"));
+    assert!(
+        row.desc.contains(&crate::i18n::tr_args!("settings-drawing-library-skipped", count => 2))
+    );
+}
+
+fn pick_scope(app: &mut App, value: &str) {
+    use crate::frontend::settings::SettingsMsg;
+    let path = crate::frontend::settings::DRAWING_SCOPE_KEY.into();
+    let _ = update(app, Message::Settings(SettingsMsg::Pick(path, value.into())));
+}
+
+#[test]
+fn library_scope_is_transient() {
+    use skwd_config::keys::drawing::{SCOPE, SCOPE_SELECTED, SCOPE_VIEW};
+
+    let mut app = test_app();
+    app.panels.settings.open = true;
+    pick_scope(&mut app, SCOPE_VIEW);
+    assert_eq!(app.config.str_path(SCOPE), SCOPE_VIEW);
+    pick_scope(&mut app, crate::frontend::settings::DRAWING_LIBRARY_SCOPE);
+    assert!(app.panels.settings.drawing_library);
+    assert_eq!(app.config.str_path(SCOPE), SCOPE_VIEW);
+    assert!(app.settings_runtime_status().drawing_job.library);
+    pick_scope(&mut app, SCOPE_SELECTED);
+    assert!(!app.panels.settings.drawing_library);
+    assert_eq!(app.config.str_path(SCOPE), SCOPE_SELECTED);
+}
+
+#[test]
+fn library_scope_reverts() {
+    use crate::frontend::settings::{ActionId, SettingsMsg};
+
+    let mut app = test_app();
+    seed(&mut app, &[static_wall("a.png", 1)]);
+    app.daemon.drawing = Some(wall_proto::drawing::Status {
+        pack: wall_proto::drawing::PackState::Available,
+        ..Default::default()
+    });
+    app.panels.settings.open = true;
+    pick_scope(&mut app, crate::frontend::settings::DRAWING_LIBRARY_SCOPE);
+    app.close_settings();
+    assert!(!app.panels.settings.drawing_library);
+    app.panels.settings.open = true;
+    pick_scope(&mut app, crate::frontend::settings::DRAWING_LIBRARY_SCOPE);
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::PrepareAllDrawings)));
+    assert!(!app.panels.settings.drawing_library);
+    let calls = drain_calls(&app);
+    assert!(calls.iter().any(|(method, params)| {
+        method == wall_proto::rpc::DRAWING_PREPARE && params["library"] == json!(true)
+    }));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::PrepareDrawing)));
+    let calls = drain_calls(&app);
+    let single: Vec<_> =
+        calls.iter().filter(|(method, _)| method == wall_proto::rpc::DRAWING_PREPARE).collect();
+    assert_eq!(single.len(), 1, "{calls:?}");
+    assert_ne!(single[0].1["library"], json!(true));
+}
+
+#[test]
+fn library_job_keeps_menu() {
+    use crate::contracts::daemon::{TaskCapabilities, TaskState, TaskStatus};
+    use crate::frontend::settings::{ActionId, SettingsMsg};
+
+    let mut app = test_app();
+    app.daemon.drawing = Some(wall_proto::drawing::Status {
+        pack: wall_proto::drawing::PackState::Available,
+        ..Default::default()
+    });
+    app.panels.settings.open = true;
+    let scope = app.config.str_path(skwd_config::keys::drawing::SCOPE);
+    let job = TaskStatus {
+        id: wall_proto::drawing::TASK.into(),
+        kind: String::new(),
+        label: String::new(),
+        state: TaskState::Running,
+        progress: 1,
+        total: 9,
+        detail: String::new(),
+        eta: String::new(),
+        capabilities: TaskCapabilities::default(),
+    };
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::PrepareAllDrawings)));
+    assert!(!app.settings_runtime_status().drawing_job.library);
+    app.daemon.tasks.update(job.clone());
+    assert!(app.settings_runtime_status().drawing_job.library);
+    assert!(!app.panels.settings.drawing_library);
+    assert_eq!(app.config.str_path(skwd_config::keys::drawing::SCOPE), scope);
+    app.daemon.tasks.update(TaskStatus { state: TaskState::Completed, ..job });
+    assert!(!app.settings_runtime_status().drawing_job.library);
+}
+
+fn focus_wallpaper_row(app: &mut App, section: &str, wanted: impl Fn(&Control) -> bool) {
+    use crate::frontend::settings::{SettingsFocus, place};
+    app.panels.settings.open = true;
+    app.panels.settings.tab = place::WALLPAPERS.to_string();
+    let sections = app.place_source().place(place::WALLPAPERS).sections;
+    let index = sections.iter().position(|item| item.id.key == section).expect("section");
+    let at = sections[index].rows().position(|row| wanted(&row.control)).expect("row");
+    app.panels.settings.open_section = Some(sections[index].id);
+    app.panels.settings.section = index;
+    app.panels.settings.focus = SettingsFocus::Controls;
+    app.panels.settings.focused_control = at;
+}
+
+#[test]
+fn colour_enter_closes_edit() {
+    use crate::frontend::settings::{SettingsKey, SettingsMsg, TokenSide, token_key};
+    let mut app = test_app();
+    let path = skwd_config::keys::drawing::PAPER_COLOR;
+    focus_wallpaper_row(
+        &mut app,
+        "settings-wallpapers-drawing",
+        |control| matches!(control, Control::Colour { path: found, .. } if found == path),
+    );
+    app.panels.settings.edit = Some(7);
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Activate)));
+    assert_eq!(app.panels.settings.edit, None);
+    assert_eq!(app.panels.settings.pop, Some(token_key(path, 0, TokenSide::Body)));
+}
+
+#[test]
+fn display_enter_opens_more() {
+    use crate::frontend::settings::{SettingsKey, SettingsMsg, live_key};
+    let mut app = test_app();
+    app.daemon.output_statuses = vec![crate::contracts::daemon::OutputStatus {
+        name: String::from("DP-1"),
+        ..Default::default()
+    }];
+    drain_calls(&app);
+    focus_wallpaper_row(&mut app, "settings-tab-displays", |control| {
+        matches!(control, Control::Display(_))
+    });
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Activate)));
+    assert_eq!(app.panels.settings.pop, Some(live_key("DP-1")));
+    assert!(app.config.str_path(skwd_config::keys::display::THEME_OUTPUT).is_empty());
+    assert!(drain_calls(&app).is_empty());
+}
+
+#[test]
+fn second_display_more() {
+    use crate::frontend::settings::{SettingsKey, SettingsMsg, live_key};
+    let mut app = test_app();
+    app.daemon.output_statuses = ["DP-1", "DP-2"]
+        .map(|name| crate::contracts::daemon::OutputStatus {
+            name: String::from(name),
+            ..Default::default()
+        })
+        .to_vec();
+    drain_calls(&app);
+    focus_wallpaper_row(&mut app, "settings-tab-displays", |control| {
+        matches!(control, Control::Display(_))
+    });
+    let sections = app.place_source().place(crate::frontend::settings::place::WALLPAPERS).sections;
+    let displays = sections.iter().find(|item| item.id.key == "settings-tab-displays").unwrap();
+    let rows: Vec<_> = displays.rows().collect();
+    let last = rows.iter().rposition(|row| matches!(row.control, Control::Display(_))).unwrap();
+    app.panels.settings.focused_control = last;
+    let _ = update(&mut app, Message::Settings(SettingsMsg::Key(SettingsKey::Activate)));
+    assert_eq!(app.panels.settings.pop, Some(live_key("DP-2")));
+    assert!(drain_calls(&app).is_empty());
 }

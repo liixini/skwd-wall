@@ -89,4 +89,3 @@ effects-activity-inactive-desc = নিষ্ক্রিয় অ্যাক�
 effects-activity-unavailable = নির্বাচিত অ্যাক্টিভিটি পাওয়া যাচ্ছে না। বিদ্যমান একটি অ্যাক্টিভিটি বেছে আবার চেষ্টা করুন।
 effects-activity-saved = { $activity }-এর জন্য সংরক্ষিত হয়েছে।
 effects-activity-unassigned = কোনো Skwd ওয়ালপেপার নির্ধারিত নেই
-effects-activity-preparing = { $activity }-এর জন্য ওয়ালপেপার প্রস্তুত করা হচ্ছে।

@@ -1,3 +1,5 @@
+use crate::i18n::tr;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Mods {
     pub ctrl: bool,
@@ -156,9 +158,9 @@ impl Trigger {
             Self::Mouse(spec) => {
                 spec.mods.label(&mut output);
                 output.push_str(match spec.button {
-                    MouseButton::Left => "Click",
-                    MouseButton::Right => "Right-click",
-                    MouseButton::Middle => "Middle-click",
+                    MouseButton::Left => tr("settings-keybinds-click"),
+                    MouseButton::Right => tr("settings-keybinds-click-right"),
+                    MouseButton::Middle => tr("settings-keybinds-click-middle"),
                 });
             }
         }
@@ -221,26 +223,45 @@ pub fn binding_config(triggers: &[Trigger]) -> String {
 }
 
 pub fn binding_label(triggers: &[Trigger]) -> String {
-    triggers.iter().map(Trigger::label).collect::<Vec<_>>().join(" \u{b7} ")
-}
-
-pub fn slot_triggers(triggers: &[Trigger], slot: usize) -> &[Trigger] {
-    let (primary, secondary) = triggers.split_at(triggers.len().min(1));
-    if slot == 0 { primary } else { secondary }
-}
-
-pub fn with_slot(triggers: &[Trigger], slot: usize, replacement: Option<Trigger>) -> Vec<Trigger> {
-    let (primary, secondary) = triggers.split_at(triggers.len().min(1));
-    let combined: Vec<Trigger> = if slot == 0 {
-        replacement.into_iter().chain(secondary.iter().cloned()).collect()
-    } else {
-        primary.iter().cloned().chain(replacement).collect()
-    };
-    let mut unique = Vec::with_capacity(combined.len());
-    for trigger in combined {
+    let mut unique: Vec<&Trigger> = Vec::with_capacity(triggers.len());
+    for trigger in triggers {
         if !unique.contains(&trigger) {
             unique.push(trigger);
         }
     }
-    unique
+    unique.into_iter().map(Trigger::label).collect::<Vec<_>>().join(" \u{b7} ")
+}
+
+fn split_slots(triggers: &[Trigger]) -> (&[Trigger], &[Trigger]) {
+    match triggers {
+        [first, second, ..] if first == second => (&[], &triggers[1..]),
+        _ => triggers.split_at(triggers.len().min(1)),
+    }
+}
+
+fn join_slots(primary: Option<Trigger>, secondary: Vec<Trigger>) -> Vec<Trigger> {
+    let lead = primary.or_else(|| secondary.first().cloned());
+    lead.into_iter().chain(secondary).collect()
+}
+
+pub fn slot_triggers(triggers: &[Trigger], slot: usize) -> &[Trigger] {
+    let (primary, secondary) = split_slots(triggers);
+    if slot == 0 { primary } else { secondary }
+}
+
+pub fn with_slot(triggers: &[Trigger], slot: usize, replacement: Option<Trigger>) -> Vec<Trigger> {
+    let (primary, secondary) = split_slots(triggers);
+    let primary = primary.first().cloned();
+    if slot == 0 {
+        let kept = secondary.iter().filter(|kept| Some(*kept) != replacement.as_ref()).cloned();
+        return join_slots(replacement.clone(), kept.collect());
+    }
+    let secondary = replacement.filter(|added| Some(added) != primary.as_ref());
+    join_slots(primary, secondary.into_iter().collect())
+}
+
+pub fn without(triggers: &[Trigger], gone: &Trigger) -> Vec<Trigger> {
+    let (primary, secondary) = split_slots(triggers);
+    let primary = primary.first().filter(|kept| *kept != gone).cloned();
+    join_slots(primary, secondary.iter().filter(|kept| *kept != gone).cloned().collect())
 }

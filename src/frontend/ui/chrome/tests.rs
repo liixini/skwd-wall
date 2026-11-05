@@ -2,6 +2,7 @@
 
 #[test]
 fn chrome_signature_buckets() {
+    use crate::frontend::scene::layout::CardCorners;
     use crate::frontend::scene::{BackPanel, Chrome};
     use crate::frontend::theme::Palette;
     use crate::frontend::ui::chrome_signature;
@@ -72,8 +73,16 @@ fn chrome_signature_buckets() {
     let pop = BackPanel { progress: 0.5, chip_pop: 0.5, pop_idx: 2, ..Default::default() };
     assert_ne!(with_back, chrome_signature(&[chrome], Some(&pop), &pal));
 
-    let rounded = BackPanel { progress: 0.5, radii: [18.0, 12.0, 8.0, 4.0], ..Default::default() };
-    assert_ne!(with_back, chrome_signature(&[chrome], Some(&rounded), &pal));
+    let sizes = [18.0, 12.0, 8.0, 4.0];
+    let rounded = BackPanel {
+        progress: 0.5,
+        corners: CardCorners { sizes, cut: false },
+        ..Default::default()
+    };
+    let cut = BackPanel { corners: CardCorners { sizes, cut: true }, ..rounded.clone() };
+    let rounded_sign = chrome_signature(&[chrome], Some(&rounded), &pal);
+    assert_ne!(with_back, rounded_sign);
+    assert_ne!(rounded_sign, chrome_signature(&[chrome], Some(&cut), &pal));
 }
 
 #[test]

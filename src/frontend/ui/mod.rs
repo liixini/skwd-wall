@@ -1,6 +1,7 @@
 mod bar;
 pub(crate) mod browser_bar;
 mod browser_wall;
+pub(crate) mod calm;
 mod chips;
 mod chrome;
 mod color;
@@ -12,14 +13,21 @@ mod theme_bar;
 
 pub use crate::frontend::components::{parallelogram, with_alpha};
 
+#[cfg(test)]
+pub use bar::MENU_MAX_ROWS;
+pub use bar::edit_id;
 pub use bar::{
-    BarAction, BarIntent, BarItem, BarShow, BarVisualStyle, FilterBar, MENU_MAX_ROWS, MENU_ROW_H,
-    MenuKind, SORTS, TYPES, build_bar_with_tasks, cycle_key, sort_label_key, verticalize_bar,
+    BarAction, BarIntent, BarItem, BarModel, BarShow, BarVisualStyle, FilterBar, MENU_CHROME_H,
+    MENU_ROW_H, MenuKind, SORTS, TYPES, build_bar_with_tasks, cycle_key, sort_label_key,
+    verticalize_bar,
 };
-pub(crate) use bar::{control_background, control_border, control_text};
+pub(crate) use bar::{
+    EditBar, ReorderPreview, control_background, control_border, control_text, draw_edit_bar,
+};
 pub(crate) use bar::{folder_leaf, folder_short_label};
 pub use browser_bar::{BrowserAct, BrowserBar, browser_bar_compact_size};
 pub use browser_wall::{BrowserWallInput, BrowserWallInputLayer};
+pub(crate) use chips::EXCLUDED_MARK;
 pub use chips::{
     TagChips, chip_width, pl_chip, skwd_chip, tag_cloud_body_height, tag_cloud_row_count,
 };
@@ -34,22 +42,30 @@ pub use color::{
 pub use help::{HelpIntent, help_overlay};
 #[cfg(test)]
 pub use misc::MIN_VIEWPORT;
+#[cfg(test)]
+pub(crate) use misc::measured_line_width;
 pub use misc::{
-    EYE_CLOSED, FOLIO_BUTTON_HEIGHT, FOLIO_INDEX_WIDTH, FOLIO_RULE_ALPHA, FadeFrame, Flow,
-    NERD_FONT, Spinner, TWISTY_CLOSED, TWISTY_OPEN, TYPE_SMALL, UI_FONT, UI_FONT_FAMILY, bg_style,
-    box_style, diamond, end, field_input, flat_button_style, folio_action, folio_action_bar,
-    folio_action_width, folio_action_width_in, folio_action_wrap, folio_button_style,
-    folio_destructive_action, folio_details, folio_field, folio_ghost_field, folio_horizontal_rule,
-    folio_icon_action, folio_index_shell, folio_index_shell_tinted, folio_inline_bar,
-    folio_line_button_style, folio_masthead, folio_rule, folio_scrim_style, folio_scroll_padding,
-    folio_sheet, folio_sheet_dims, folio_sheet_panel_style, folio_stack_bar, ghost_input_style,
-    hud, inert_backdrop, label, legible_type_scale, logical_padding, mid_text, mirror_x,
-    mirror_x_for, panel_style, rtl, scrim_style, sentence_case, start, start_for,
-    workbench_input_style, wrap_rows,
+    EYE_CLOSED, FOLIO_BUTTON_HEIGHT, FOLIO_BUTTON_INSET, FOLIO_BUTTON_MIN_WIDTH, FOLIO_INDEX_WIDTH,
+    FOLIO_RULE_ALPHA, FadeFrame, Flow, NERD_FONT, Spinner, TWISTY_CLOSED, TWISTY_OPEN, TYPE_SMALL,
+    UI_FONT, UI_FONT_FAMILY, bg_style, box_style, diamond, end, field_input, flat_button_style,
+    folio_action, folio_action_bar, folio_action_width, folio_action_width_in, folio_action_wrap,
+    folio_button_style, folio_destructive_action, folio_details, folio_field, folio_ghost_field,
+    folio_horizontal_rule, folio_icon_action, folio_index_shell, folio_index_shell_tinted,
+    folio_inline_bar, folio_line_button_style, folio_masthead, folio_rail_style, folio_rule,
+    folio_scrim_style, folio_scroll_padding, folio_sheet, folio_sheet_dims,
+    folio_sheet_panel_style, folio_stack_bar, ghost_input_style, hud, inert_backdrop, label,
+    legible_type_scale, logical_padding, mid_text, mirror_x, mirror_x_for, motion_slot,
+    panel_style, rtl, scrim_style, sentence_case, start, start_for, workbench_input_style,
+    wrap_rows,
 };
 pub(crate) use misc::{
-    FOLIO_RULE_THICKNESS, ellipsize_text, folio_diagonal_edges, folio_diagonal_wipe, row,
+    FOLIO_ACCENT_ALPHA, FOLIO_FILL_ALPHA, FOLIO_OUTLINE_ALPHA, WIPE_EDGE_ALPHA, WIPE_FILL_ALPHA,
+    anchor_rtl, cached_line_width, ellipsize_text, folio_diagonal_edges, folio_wipe, has_rtl, row,
+    shapes_across,
 };
-pub use pane::{PANE_WHEEL_STEP, pane_id, scroll_style, smooth_pane, thin_hbar, thin_vbar};
+pub use pane::{
+    BAR_WIDTH, PANE_WHEEL_STEP, outline_scroll, pane_id, scroll_style, smooth_pane, spaced_vbar,
+    thin_hbar, thin_vbar,
+};
 pub use slider::folio_slider;
 pub use theme_bar::{THEME_BACKENDS, ThemeBar, backend_menu_options};

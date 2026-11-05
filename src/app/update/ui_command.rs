@@ -7,12 +7,105 @@ use super::*;
 use super::settings::settings_toggle;
 use crate::frontend::scene::layout::Mode;
 
+const LAYOUT_OUTPUT_FIELD: &str = "layout_output";
+const WIDGETS_VERB: &str = "widgets";
 const REMOVAL_FIELD: &str = "removal";
 const OUTDOORS_FIELD: &str = "outdoors";
 const COPY_IMAGE_FIELD: &str = "copy_image";
 const COPY_PATH_FIELD: &str = "copy_path";
 const SETTINGS_FIELD: &str = "settings";
+const DRAWING_FIELD: &str = "drawing";
 const WEATHER_REVIEW_FIELD: &str = "weather_review";
+const BROWSER_ASSET_ACTION: &str = "asset";
+
+#[derive(serde::Serialize)]
+struct BrowserPreviewUiState<'a> {
+    id: &'a str,
+    ready: bool,
+    path: Option<&'a str>,
+    url: &'a str,
+    loading: bool,
+    error: Option<&'a str>,
+    asset: usize,
+    frame: usize,
+    frames: usize,
+    media_count: usize,
+    cached_media: usize,
+}
+const ARRANGE_FIELD: &str = "arrange";
+
+#[derive(serde::Serialize)]
+struct ArrangeUiState {
+    active: bool,
+    ready: bool,
+    animating: bool,
+    previewing: bool,
+    preview: (bool, u64, u32),
+    output: Option<String>,
+    selected: Option<String>,
+    picker: [f32; 4],
+    bar: [f32; 4],
+    search: [f32; 4],
+    buttons: Vec<ArrangeButtonState>,
+    plates: Vec<ArrangeButtonState>,
+    steps: Vec<String>,
+    index: usize,
+    dragging: bool,
+}
+
+#[derive(serde::Serialize)]
+struct ArrangeButtonState {
+    id: String,
+    bounds: [f32; 4],
+}
+
+fn arrange_state(app: &App) -> ArrangeUiState {
+    let session = app.panels.arrange.as_ref();
+    let picker = app.scene.picker_frame_bounds().unwrap_or_default();
+    let (model, bar) = crate::app::view::filter_bar_geometry(
+        app,
+        app.scene.viewport.0,
+        app.scene.viewport.1,
+        crate::app::view::BarExtent::Expanded,
+    );
+    let search = crate::app::view::tag_cloud_geometry(app, app.scene.viewport.1);
+    let state = |id: String, rect: crate::domain::strand::Rect| ArrangeButtonState {
+        id,
+        bounds: [rect.x, rect.y, rect.w, rect.h],
+    };
+    ArrangeUiState {
+        active: session.is_some(),
+        ready: session.is_some_and(|session| session.editor.hits_ready()),
+        animating: session.is_some_and(|session| session.editor.animating()),
+        previewing: session.is_some_and(|session| session.preview_config.is_some()),
+        preview: app.scene.preview_config(),
+        output: app.config.layout_output().map(str::to_owned),
+        selected: session
+            .and_then(|session| session.editor.selected())
+            .map(|target| format!("{target:?}")),
+        picker: [picker.x, picker.y, picker.width, picker.height],
+        bar: [bar.x, bar.y, bar.width, bar.height],
+        search: [search.x, search.y, search.width, search.height],
+        buttons: model
+            .items
+            .iter()
+            .filter_map(|item| {
+                item.edit_id().map(|id| ArrangeButtonState {
+                    id,
+                    bounds: [bar.x + item.x, bar.y + item.y, item.w, item.h],
+                })
+            })
+            .collect(),
+        plates: session.map_or_else(Vec::new, |session| {
+            session.editor.plates().into_iter().map(|(id, rect)| state(id, rect)).collect()
+        }),
+        steps: session.map_or_else(Vec::new, |session| {
+            session.history.entries().iter().map(|entry| entry.label.clone()).collect()
+        }),
+        index: session.map_or(0, |session| session.history.index()),
+        dragging: session.is_some_and(crate::app::state::arrange::ArrangeSession::gesturing),
+    }
+}
 
 #[derive(serde::Serialize)]
 struct RemovalState {
@@ -32,6 +125,24 @@ struct OutdoorUiState<'a> {
 }
 
 #[derive(serde::Serialize)]
+struct DrawingUiState<'a> {
+    selected: Option<&'a str>,
+    scope: String,
+    view_count: usize,
+    enabled: bool,
+    pending: bool,
+    status: Option<&'a wall_proto::drawing::Status>,
+}
+
+#[derive(serde::Serialize)]
+struct CardDrawingUiState {
+    label: &'static str,
+    state: crate::frontend::scene::DrawingCardState,
+    enabled: bool,
+    bounds: (f32, f32, f32, f32),
+}
+
+#[derive(serde::Serialize)]
 struct WeatherReviewUiItem {
     key: String,
     approved: bool,
@@ -48,6 +159,13 @@ struct WeatherReviewUiState {
     visible: Vec<WeatherReviewUiItem>,
     focused: Option<String>,
 }
+
+const SETTINGS_SECTIONS_FIELD: &str = "sections";
+const SETTINGS_OPEN_FIELD: &str = "open_section";
+const SETTINGS_OPEN_KEY_FIELD: &str = "open_section_key";
+const SETTINGS_KEYS_FIELD: &str = "section_keys";
+const SETTINGS_TRANSITION_FIELD: &str = "transitioning";
+const SETTINGS_STUDIO_FIELD: &str = "layout_studio";
 
 pub(crate) fn ui_state_json(app: &App) -> String {
     let mode = app.scene.mode.as_key();
@@ -78,6 +196,7 @@ pub(crate) fn ui_state_json(app: &App) -> String {
         let layout = crate::frontend::ui::back_layout(panel);
         let actions = layout.actions;
         let action_count = 3
+            + usize::from(actions.drawing.is_some())
             + usize::from(actions.overview.is_some())
             + usize::from(actions.effects.is_some())
             + usize::from(actions.reset_thumbnail.is_some())
@@ -95,6 +214,12 @@ pub(crate) fn ui_state_json(app: &App) -> String {
             "action_deck": { "x": layout.action_deck.0, "y": layout.action_deck.1,
                 "w": layout.action_deck.2, "h": layout.action_deck.3 },
             "actions": action_count,
+            (DRAWING_FIELD): panel.drawing.zip(actions.drawing).map(|(state, rect)| CardDrawingUiState {
+                label: state.label(),
+                state,
+                enabled: state.enabled(),
+                bounds: crate::frontend::ui::back_bounds(panel, &layout, rect),
+            }),
             (REMOVAL_FIELD): RemovalState {label: panel.removal.label(), enabled: panel.removal.enabled(), bounds: crate::frontend::ui::back_bounds(panel, &layout, layout.actions.delete)},
             "reset_thumbnail": layout.actions.reset_thumbnail.map(|rect| crate::frontend::ui::back_bounds(panel, &layout, rect)),
             "reveal": layout.actions.reveal.map(|rect| crate::frontend::ui::back_bounds(panel, &layout, rect)),
@@ -141,6 +266,40 @@ pub(crate) fn ui_state_json(app: &App) -> String {
         .weather
         .as_ref()
         .filter(|weather| weather.source == crate::contracts::daemon::WeatherSource::Outdoors);
+    let place = super::settings::settings_place(app, &app.panels.settings.tab);
+    let open_section = app
+        .panels
+        .settings
+        .open_section
+        .and_then(|open| place.sections.iter().position(|section| section.id == open));
+    let settings = json!({
+        "open": app.panels.settings.open,
+        "tab": app.panels.settings.tab,
+        "section": app.panels.settings.section,
+        (SETTINGS_OPEN_FIELD): open_section,
+        (SETTINGS_OPEN_KEY_FIELD): app.panels.settings.open_section.map(|open| open.key),
+        (SETTINGS_KEYS_FIELD): place.sections.iter().map(|section| section.id.key).collect::<Vec<_>>(),
+        (SETTINGS_SECTIONS_FIELD): place.sections.iter().map(|section| section.title.as_str()).collect::<Vec<_>>(),
+        (SETTINGS_TRANSITION_FIELD): app.panels.settings.open && (app.panels.settings.previous.is_some()
+            || !app.panels.settings.entrance.settled() || !app.panels.settings.emblem_anim.settled()),
+        (SETTINGS_STUDIO_FIELD): app.panels.settings.layout_studio,
+        "control_page": app.panels.settings.control_page,
+        "focused_control": app.panels.settings.focused_control,
+        "focus": format!("{:?}", app.panels.settings.focus),
+        "search_open": app.panels.settings.search_open,
+        "search_query": app.panels.settings.search_query,
+        "search_results": app.panels.settings.search_results.len(),
+        (DRAWING_FIELD): DrawingUiState {
+            selected: app.drawing_selection(),
+            scope: app.config.str_path(skwd_config::keys::drawing::SCOPE),
+            view_count: app.drawing_view_count(),
+            enabled: app.config.flag_default_config(skwd_config::keys::drawing::ENABLED),
+            pending: app.daemon.pending.values().any(|pending| {
+                matches!(pending, Pending::DrawingStatus | Pending::DrawingAction)
+            }),
+            status: app.daemon.drawing.as_ref(),
+        },
+    });
     let mut state = json!({
         "demo_protocol": 18,
         "views": crate::app::view::view_count(),
@@ -151,6 +310,7 @@ pub(crate) fn ui_state_json(app: &App) -> String {
             "available": crate::i18n::LANGUAGES.iter().map(|language| language.tag).collect::<Vec<_>>(),
         },
         "picker_output": app.runtime_state.picker_output.clone().or_else(|| app.runtime_state.overlay.and_then(crate::shell::picker_output)),
+        (LAYOUT_OUTPUT_FIELD): app.config.layout_output(),
         "mode": mode,
         "count": app.library_session.filtered.len(),
         "current": app.scene.current,
@@ -234,10 +394,18 @@ pub(crate) fn ui_state_json(app: &App) -> String {
             "error": app.source_browser.browser.as_ref().and_then(|browser| browser.session.error.as_ref()),
             "preview": app.source_browser.browser.as_ref().and_then(|browser| {
                 browser.session.preview.and_then(|index| browser.session.items.get(index)).map(|item| {
-                    json!({
-                        "id": item.id,
-                        "ready": item.preview_path.is_some(),
-                        "path": item.preview_path,
+                    json!(BrowserPreviewUiState {
+                        id: &item.id,
+                        ready: browser.view.media.item_id == item.id && browser.view.media.image.is_some(),
+                        path: item.preview_paths.get(&browser.view.media.url).map(String::as_str),
+                        url: &browser.view.media.url,
+                        loading: browser.view.media.loading,
+                        error: browser.view.media.error.as_deref(),
+                        asset: browser.view.asset,
+                        frame: browser.view.media.frame,
+                        frames: browser.view.media.frames,
+                        media_count: item.workshop.as_ref().map_or(1, |details| 1 + details.previews.len()),
+                        cached_media: item.preview_paths.len(),
                     })
                 })
             }),
@@ -282,18 +450,10 @@ pub(crate) fn ui_state_json(app: &App) -> String {
             "search_ms": app.tags.semantic.search_ms,
             "process_active": app.runtime_state.semantic.is_some(),
         },
-        "settings": {
-            "open": app.panels.settings.open,
-            "tab": app.panels.settings.tab,
-            "section": app.panels.settings.section,
-            "control_page": app.panels.settings.control_page,
-            "focused_control": app.panels.settings.focused_control,
-            "focus": format!("{:?}", app.panels.settings.focus),
-            "search_open": app.panels.settings.search_open,
-            "search_query": app.panels.settings.search_query,
-            "search_results": app.panels.settings.search_results.len(),
-        },
+        "settings": settings,
     });
+    state[ARRANGE_FIELD] =
+        serde_json::to_value(arrange_state(app)).expect("arrange state serializes");
     state[SETTINGS_FIELD][WEATHER_REVIEW_FIELD] =
         app.panels.settings.weather_review_category.map_or(serde_json::Value::Null, |category| {
             let review = &app.panels.settings;
@@ -353,6 +513,10 @@ pub(super) fn run_ui_command(app: &mut App, cmd: &str) -> Task<Message> {
     let verb = cmd.split_whitespace().next().unwrap_or("");
     let arg = cmd[verb.len()..].trim().to_string();
     match verb {
+        WIDGETS_VERB => {
+            let shown = crate::app::warm::unstash(app);
+            Task::batch([shown, super::strand::open(app)])
+        }
         "toggle" => crate::app::warm::toggle(app),
         "show" => crate::app::warm::unstash(app),
         "hide" => crate::app::warm::exit_picker(app),
@@ -415,29 +579,29 @@ pub(super) fn run_ui_command(app: &mut App, cmd: &str) -> Task<Message> {
             super::settings::set_view_mode(app, mode.as_key())
         }
         "tab" => {
-            let tab = crate::frontend::settings::canonical_category(arg);
-            if !crate::frontend::settings::visible_tabs(&app.config)
-                .iter()
-                .any(|(key, _)| *key == tab)
-            {
+            if crate::frontend::settings::canonical_place(&arg).is_none() {
                 return Task::none();
             }
             if app.panels.settings.open {
-                return super::update_inner(app, Message::SetSettingsTab(tab));
+                return super::update_inner(app, Message::SetSettingsTab(arg));
             }
             let open = super::update_inner(app, Message::ToggleSettings);
-            Task::batch([open, super::update_inner(app, Message::SetSettingsTab(tab))])
+            Task::batch([open, super::update_inner(app, Message::SetSettingsTab(arg))])
         }
-        "section" => match arg.parse::<usize>() {
-            Ok(section) if app.panels.settings.open => super::update_inner(
-                app,
-                Message::Settings(crate::frontend::settings::SettingsMsg::SelectSection(section)),
-            ),
-            _ => {
-                log::warn!("ui command: 'section' needs an open settings panel and numeric index");
-                Task::none()
-            }
-        },
+        "section" => {
+            let place = super::settings::settings_place(app, &app.panels.settings.tab);
+            let found = arg
+                .parse::<usize>()
+                .ok()
+                .filter(|index| *index < place.sections.len())
+                .or_else(|| place.sections.iter().position(|section| section.id.key == arg))
+                .filter(|_| app.panels.settings.open);
+            let Some(section) = found else {
+                log::warn!("ui command: no open settings section '{arg}'");
+                return Task::none();
+            };
+            super::settings::open_settings_section(app, section)
+        }
         "filter" if arg.is_empty() => super::update_inner(app, Message::ClearTags),
         "filter" => {
             app.library_session.filters.tags = arg
@@ -613,12 +777,8 @@ fn ui_preset(app: &mut App, arg: &str) -> Task<Message> {
         log::warn!("ui command: usage 'preset save <name>'");
         return Task::none();
     }
-    let mode = app.config.selector_mode();
-    app.config.save_selector_preset(&mode, name);
-    app.panels
-        .settings
-        .inputs
-        .insert(crate::frontend::settings::PRESET_NAME_KEY.to_string(), name.to_string());
+    super::settings_layouts::seed(app);
+    app.config.save_named_layout(name);
     app.invalidate_settings();
     app.retick();
     Task::none()
@@ -791,6 +951,13 @@ fn ui_demo_browser(app: &mut App, arg: &str) -> Task<Message> {
                 BrowserMsg::Download(value.to_string())
             };
             super::browser::update(app, message)
+        }
+        BROWSER_ASSET_ACTION => {
+            let Ok(asset) = value.parse::<usize>() else {
+                log::warn!("ui command: gallery asset '{value}' is invalid");
+                return Task::none();
+            };
+            super::browser::update(app, BrowserMsg::SelectPreview(asset))
         }
         "preview-close" if value.is_empty() => {
             super::browser::update(app, BrowserMsg::ClosePreview)
@@ -1454,7 +1621,7 @@ fn ui_recolour(app: &mut App, name: &str) -> Task<Message> {
     app.theme.base_palette = palette;
     app.theme.fade_t =
         app.motion_profile().tween(1.0, crate::frontend::animation::MotionTier::Fast);
-    app.start_fade(palette);
+    app.start_fade(&palette);
     app.init_settings_inputs();
     app.chrome.bar.cache.clear();
     app.invalidate_settings();

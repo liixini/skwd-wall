@@ -2,9 +2,18 @@
 
 mod activity;
 mod app_themes;
+mod arrange;
+mod arrange_controls;
+mod arrange_displays;
+mod arrange_floats;
+mod arrange_preview;
+mod arrange_profiles;
+mod arrange_reach;
 mod audio;
 mod browser_demo;
 mod clipboard;
+mod colour_studio;
+mod colours_keys;
 mod effects;
 mod filters;
 mod folder_keys;
@@ -14,6 +23,7 @@ mod input;
 mod keybind_slots;
 mod library_demo;
 mod library_events;
+mod loop_around;
 mod overview;
 mod picker_keys;
 mod playlists;
@@ -24,10 +34,16 @@ mod scene_properties;
 mod search;
 mod selection_restore;
 mod settings;
+mod settings_home;
+mod settings_layouts;
+mod settings_navigation;
+mod settings_search;
 mod stash;
+mod strand;
 mod tag_editor;
 mod theme;
 mod ui_commands;
+mod workshop_preview;
 
 use super::helpers::{apply_params, collect_neighbors};
 use super::input::{key_message, on_event, settings_key_message};
@@ -41,7 +57,7 @@ use crate::app::SearchMode;
 use crate::contracts::browser::DownloadUpdate;
 use crate::domain::library::catalog::{Catalog, WallpaperKind};
 use crate::frontend::browser::{Browser, BrowserItem, Source};
-use crate::frontend::scene::layout::{MIN_HEX_R, Mode};
+use crate::frontend::scene::layout::{CardCorners, MIN_HEX_R, Mode};
 use crate::frontend::tagcloud::TagMsg;
 use crate::infrastructure::config::Config;
 use crate::infrastructure::ipc::IpcMsg;
@@ -67,6 +83,16 @@ pub(crate) fn test_app() -> App {
     }));
     config.config_path = dir.join("config.json");
     App::with_config_using(config, |_| crate::infrastructure::ipc::DaemonClient::recording())
+}
+
+fn open_section(app: &mut App, title: &str) -> crate::frontend::settings::Section {
+    let place = app.place_source().place(&app.panels.settings.tab);
+    let index = place.sections.iter().position(|section| section.title == title).expect("section");
+    let _ = update(
+        app,
+        Message::Settings(crate::frontend::settings::SettingsMsg::ToggleSection(index)),
+    );
+    place.sections[index].clone()
 }
 
 fn tick_frames(app: &mut App, now: &mut Instant, frames: usize) {
@@ -163,6 +189,11 @@ pub(crate) fn browser_item(id: &str) -> BrowserItem {
         attribution: String::new(),
         attribution_url: String::new(),
         track_url: String::new(),
+        workshop: None,
+        preview_paths: std::collections::HashMap::new(),
+        preview_handles: std::collections::HashMap::new(),
+        preview_error: None,
+        details_ready: false,
     }
 }
 
@@ -231,10 +262,31 @@ fn settled_preview_app() -> App {
     app.scene.viewport = (1280.0, 720.0);
     let mut now = Instant::now();
     app.panels.settings.open = true;
-    app.panels.settings.tab = String::from("motion");
-    app.panels.settings.section = 3;
+    app.panels.settings.tab = String::from("wallpapers");
+    let _ = open_section(&mut app, crate::i18n::tr("settings-transitions-transitions-card"));
     tick_frames(&mut app, &mut now, 600);
     app
 }
 
 mod source_defaults;
+
+fn refresh_arrange_outputs(app: &mut App) {
+    let request = app.panels.arrange.as_ref().map_or(0, |session| session.outputs.request);
+    if request != 0 {
+        respond(app, request, output_inventory(&app.daemon.output_statuses));
+        let _ = crate::app::update::arrange::inventory::resume(app);
+    }
+}
+
+fn output_inventory(outputs: &[crate::contracts::daemon::OutputStatus]) -> Value {
+    json!({"outputs": outputs.iter().map(|output| json!({
+        "name": output.name,
+        "monitor": output.monitor,
+        "target": output.target(),
+        "connected": output.is_connected(),
+        "width": output.width,
+        "height": output.height,
+        "logical_width": output.logical_width,
+        "logical_height": output.logical_height,
+    })).collect::<Vec<_>>()})
+}

@@ -89,4 +89,3 @@ effects-activity-inactive-desc = Em uma atividade inativa, você só pode altera
 effects-activity-unavailable = A atividade selecionada não está disponível. Escolha uma atividade existente e tente novamente.
 effects-activity-saved = Salvo para { $activity }.
 effects-activity-unassigned = Nenhum papel de parede Skwd atribuído
-effects-activity-preparing = Preparando o papel de parede para { $activity }.

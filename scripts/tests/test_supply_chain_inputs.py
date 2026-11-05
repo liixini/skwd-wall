@@ -49,7 +49,7 @@ class SupplyChainInputs(unittest.TestCase):
 
             deck_bin = payloads["deck"] / "usr/bin"
             deck_bin.mkdir(parents=True)
-            for name in ("skwd-walld", "skwd-wall-scan", "skwd-wall-effects", "skwd-steam", "skwd-helm"):
+            for name in ("skwd-walld", "skwd-wall-scan", "skwd-wall-effects", "skwd-wall-draw", "skwd-steam", "skwd-helm"):
                 path = deck_bin / name
                 path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
                 path.chmod(0o755)
@@ -66,10 +66,6 @@ class SupplyChainInputs(unittest.TestCase):
                 path = paper_bin / name
                 path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
                 path.chmod(0o755)
-            tinier = payloads["paper"] / "usr/lib/skwd-paper/skwd-paper-tinier"
-            tinier.parent.mkdir(parents=True)
-            tinier.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-            tinier.chmod(0o755)
 
             lens_bin = payloads["lens"] / "usr/bin/skwd-lens"
             lens_bin.parent.mkdir(parents=True)

@@ -76,7 +76,6 @@ fn clicks_run_bound_action() {
     );
     let _ =
         update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureClick(MouseButton::Left)));
-    let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureApply));
     assert_eq!(app.config.str_path("keys.select"), "none");
     let favourited = |app: &App| {
         let catalog = app.library_session.library.catalog();
@@ -91,7 +90,6 @@ fn clicks_run_bound_action() {
         Message::Settings(SettingsMsg::KeybindCapture("keys.favourite".into(), 0)),
     );
     let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureUnbind));
-    let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureApply));
     let before = favourited(&app);
     let _ = update(&mut app, Message::Click(hit.cx, hit.cy, MouseButton::Left));
     assert_eq!(favourited(&app), before);

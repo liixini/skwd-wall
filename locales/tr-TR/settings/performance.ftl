@@ -1,6 +1,5 @@
 settings-performance-power-card = Dizüstü ve güç
 settings-performance-power-card-desc = Seçici durağanlaştığında çizimi durdurur. Duvar kâğıdı işleyicileri seçici kapandıktan sonra çalışmaya devam eder; bu yüzden pil sınırları ayrıdır.
-settings-performance-power-source-label = Geçerli güç kaynağı
 settings-performance-power-battery-limited = Pil (otomatik sınırlar etkin)
 settings-performance-power-battery-unlimited = Pil (otomatik sınırlar devre dışı)
 settings-performance-power-external = Harici güç, masaüstü veya bilinmiyor (otomatik sınırlar etkin değil)
@@ -69,3 +68,9 @@ settings-performance-capture-we-label = Tüm WE duvar kâğıtlarına yakalanan 
 settings-performance-capture-we-desc = Yerel sahneleri arka planda yakalayın. Geçerli yakalamaları yeniden kullanın ve bir sahne başarısız olursa mevcut önizlemeleri koruyun. Durdurup daha sonra devam edebilirsiniz.
 settings-performance-capture-we-action = Küçük resimler oluştur
 settings-performance-capture-we-stop = Durdur
+settings-performance-effective-label = Geçerli sınırlar
+settings-performance-effective = Seçici { $fps } fps · Video { $seconds } sn boşta kalınca duraklar · { $reason }
+settings-performance-effective-no-idle = Seçici { $fps } fps · Videonun boşta duraklaması kapalı · { $reason }
+settings-performance-effective-reason-battery = Pilde
+settings-performance-effective-reason-disabled = Pil tasarrufu kapalı
+settings-performance-effective-reason-external = Harici güçte

@@ -1,6 +1,5 @@
 settings-performance-power-card = ノート PC と電源
 settings-performance-power-card-desc = ピッカーは落ち着くと描画を停止します。壁紙レンダラーはピッカーを閉じた後も動き続けるため、バッテリー時の制限が別にあります。
-settings-performance-power-source-label = 現在の電源
 settings-performance-power-battery-limited = バッテリー（自動制限が有効）
 settings-performance-power-battery-unlimited = バッテリー（自動制限は無効）
 settings-performance-power-external = 外部電源、デスクトップ、または取得不可（自動制限は非アクティブ）
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = すべての WE 壁紙にキャプチャ
 settings-performance-capture-we-desc = ネイティブシーンをバックグラウンドでキャプチャします。有効なキャプチャは再利用し、シーンが失敗した場合は既存のプレビューを残します。停止して後で続行できます。
 settings-performance-capture-we-action = サムネイルを生成
 settings-performance-capture-we-stop = 停止
+settings-performance-effective-label = 実際の制限
+settings-performance-effective = ピッカー { $fps } fps · 動画は { $seconds } 秒のアイドル後に一時停止 · { $reason }
+settings-performance-effective-no-idle = ピッカー { $fps } fps · 動画のアイドル時一時停止はオフ · { $reason }
+settings-performance-effective-reason-battery = バッテリー駆動中
+settings-performance-effective-reason-disabled = バッテリーセーバーはオフ
+settings-performance-effective-reason-external = 外部電源使用中

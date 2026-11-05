@@ -4,7 +4,7 @@ use super::PaletteSpec;
 use crate::domain::theme::ThemeRole;
 
 #[test]
-fn spec_fields_match_roles() {
+fn indexed_roles_stay_compatible() {
     let PaletteSpec {
         primary,
         primary_text,
@@ -15,6 +15,7 @@ fn spec_fields_match_roles() {
         background,
         outline,
         tertiary,
+        ..
     } = PaletteSpec::default();
     let fields = [
         ("Primary", primary),

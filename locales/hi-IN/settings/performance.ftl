@@ -1,6 +1,5 @@
 settings-performance-power-card = लैपटॉप और पावर
 settings-performance-power-card-desc = पिकर स्थिर होने पर रेंडरिंग रोक देता है। वॉलपेपर रेंडरर उसके बंद होने के बाद भी चलते रहते हैं, इसलिए उनकी बैटरी सीमाएँ अलग हैं।
-settings-performance-power-source-label = वर्तमान पावर स्रोत
 settings-performance-power-battery-limited = बैटरी (स्वचालित सीमाएँ सक्रिय हैं)
 settings-performance-power-battery-unlimited = बैटरी (स्वचालित सीमाएँ अक्षम हैं)
 settings-performance-power-external = बाहरी पावर, डेस्कटॉप या अनुपलब्ध (स्वचालित सीमाएँ निष्क्रिय हैं)
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = सभी WE वॉलपेपर म�
 settings-performance-capture-we-desc = नेटिव सीन पृष्ठभूमि में कैप्चर करें। मान्य कैप्चर दोबारा इस्तेमाल करें और सीन विफल होने पर मौजूदा पूर्वावलोकन रखें। आप रोककर बाद में जारी रख सकते हैं।
 settings-performance-capture-we-action = थंबनेल बनाएँ
 settings-performance-capture-we-stop = रोकें
+settings-performance-effective-label = प्रभावी सीमाएँ
+settings-performance-effective = पिकर { $fps } fps · निष्क्रिय रहने के { $seconds } सेकंड बाद वीडियो रुकता है · { $reason }
+settings-performance-effective-no-idle = पिकर { $fps } fps · निष्क्रिय वीडियो को रोकना बंद है · { $reason }
+settings-performance-effective-reason-battery = बैटरी पर
+settings-performance-effective-reason-disabled = बैटरी सेवर बंद है
+settings-performance-effective-reason-external = बाहरी पावर पर

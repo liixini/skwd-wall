@@ -274,6 +274,11 @@ fn mk(id: &str, path: &str, ready: bool) -> BrowserItem {
         attribution: String::new(),
         attribution_url: String::new(),
         track_url: String::new(),
+        workshop: None,
+        preview_paths: std::collections::HashMap::new(),
+        preview_handles: std::collections::HashMap::new(),
+        preview_error: None,
+        details_ready: false,
     }
 }
 
@@ -285,12 +290,15 @@ fn preview_loading() {
     assert!(!browser.preview_loading());
 
     browser.session.preview = Some(0);
+    browser.view.media.loading = true;
     assert!(browser.preview_loading());
 
     browser.session.items[0].preview_path = Some("/c/a-full.jpg".into());
+    browser.view.media.loading = false;
     assert!(!browser.preview_loading());
 
     browser.session.items[0].preview_path = Some(String::new());
+    browser.view.media.loading = true;
     assert!(browser.preview_loading());
 
     browser.session.preview = Some(9);
@@ -298,12 +306,12 @@ fn preview_loading() {
 }
 
 #[test]
-fn preview_thumb_fallback() {
+fn art_uses_thumbnail() {
     let mut item = mk("progressive", "/cache/thumb.webp", true);
-    assert_eq!(super::view::preview_image_path(&item), Some(("/cache/thumb.webp", false)));
-
-    item.preview_path = Some(String::from("/cache/full.webp"));
-    assert_eq!(super::view::preview_image_path(&item), Some(("/cache/full.webp", true)));
+    item.preview_path = Some(String::from("/cache/full.jpg"));
+    assert_eq!(super::view::thumb_image_path(&item), Some("/cache/thumb.webp"));
+    item.thumb_ready = false;
+    assert_eq!(super::view::thumb_image_path(&item), None);
 }
 
 #[test]
@@ -311,7 +319,9 @@ fn steam_search_request() {
     let mut browser = Browser::new(Source::Steam);
     browser.request.query = "city".into();
     browser.request.steam.kind = "Video".into();
-    browser.request.steam.category = "Anime".into();
+    browser.request.steam.cycle_tag("Anime");
+    browser.request.steam.cycle_tag("Girls");
+    browser.request.steam.cycle_tag("Girls");
     browser.request.steam.resolution = "1920 x 1080".into();
     let SearchRequest::Steam(request) = browser.search_request(2, "") else {
         panic!("expected Steam search");
@@ -321,7 +331,8 @@ fn steam_search_request() {
     assert_eq!(request.trend_days, 7);
     assert_eq!(request.page, 2);
     assert_eq!(request.request_type, "Video");
-    assert_eq!(request.category, "Anime");
+    assert_eq!(request.tags, ["Anime"]);
+    assert_eq!(request.excluded_tags, ["Girls"]);
     assert_eq!(request.resolution, "1920 x 1080");
     assert!(!request.allow_nsfw);
 
@@ -332,13 +343,14 @@ fn steam_search_request() {
     assert!(request.allow_nsfw);
 
     browser.request.steam.kind = String::new();
-    browser.request.steam.category = String::new();
+    browser.request.steam.cycle_tag("");
     browser.request.steam.resolution = String::new();
     let SearchRequest::Steam(request) = browser.search_request(1, "") else {
         panic!("expected Steam search");
     };
     assert!(request.request_type.is_empty());
-    assert!(request.category.is_empty());
+    assert!(request.tags.is_empty());
+    assert!(request.excluded_tags.is_empty());
     assert!(request.resolution.is_empty());
 }
 
@@ -397,9 +409,11 @@ fn busy_session_signals() {
     assert!(!browser.busy());
 
     browser.session.preview = Some(0);
+    browser.view.media.loading = true;
     assert!(browser.preview_loading());
     assert!(browser.busy());
     browser.session.items[0].preview_path = Some("/c/a-full.jpg".into());
+    browser.view.media.loading = false;
     assert!(!browser.busy());
 
     browser.session.pending_apply = Some("a".into());
@@ -449,6 +463,11 @@ fn busy_session_signals() {
         attribution: _,
         attribution_url: _,
         track_url: _,
+        workshop: _,
+        preview_paths: _,
+        preview_handles: _,
+        preview_error: _,
+        details_ready: _,
     } = &items[0];
 }
 
@@ -477,4 +496,43 @@ fn preview_identity_keeps_provider_names_and_only_labels_workshop_ids() {
         item.title = title.into();
         assert_eq!(item.preview_identity(Source::Wallhaven), ("3801970040", None));
     }
+}
+
+#[test]
+fn tag_cycle_order() {
+    let mut steam = Browser::new(Source::Steam).request.steam;
+    assert_eq!(steam.tag_mark(""), TagMark::Include);
+    let marks: Vec<TagMark> = (0..3)
+        .map(|_| {
+            steam.cycle_tag("Anime");
+            steam.tag_mark("Anime")
+        })
+        .collect();
+    assert_eq!(marks, [TagMark::Include, TagMark::Exclude, TagMark::Off]);
+    assert!(steam.tags.is_empty() && steam.excluded_tags.is_empty());
+}
+
+#[test]
+fn all_clears_tags() {
+    let mut steam = Browser::new(Source::Steam).request.steam;
+    steam.cycle_tag("Anime");
+    steam.cycle_tag("Nature");
+    steam.cycle_tag("Nature");
+    assert_eq!(steam.tag_mark(""), TagMark::Off);
+    steam.cycle_tag("");
+    assert_eq!(steam.tag_mark(""), TagMark::Include);
+    assert_eq!(steam.tag_mark("Nature"), TagMark::Off);
+}
+
+#[test]
+fn exclude_skips_include() {
+    let mut steam = Browser::new(Source::Steam).request.steam;
+    steam.cycle_tag("Anime");
+    steam.exclude_tag("Anime");
+    assert_eq!(steam.tag_mark("Anime"), TagMark::Exclude);
+    assert!(steam.tags.is_empty());
+    steam.exclude_tag("Anime");
+    assert_eq!(steam.tag_mark("Anime"), TagMark::Off);
+    steam.exclude_tag("Nature");
+    assert_eq!(steam.excluded_tags, ["Nature"]);
 }

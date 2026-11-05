@@ -89,4 +89,3 @@ effects-activity-inactive-desc = Seules les attributions de fonds d’écran peu
 effects-activity-unavailable = L’activité choisie n’est pas disponible. Choisissez une activité existante et réessayez.
 effects-activity-saved = Enregistré pour { $activity }.
 effects-activity-unassigned = Aucun fond d’écran Skwd attribué
-effects-activity-preparing = Préparation du fond d’écran pour { $activity }.

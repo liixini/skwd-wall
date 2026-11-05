@@ -1,5 +1,4 @@
-use crate::contracts::settings::{SettingsSource, keys, schema::Setting};
-use crate::i18n::tr;
+use crate::contracts::settings::{SettingsSource, schema::Setting};
 
 use super::{ActionId, Card, Control, Row};
 
@@ -9,8 +8,8 @@ pub(super) struct Builder<'a> {
 }
 
 impl Builder<'_> {
-    pub(super) fn card(&mut self, title: &'static str, subtitle: &'static str) {
-        self.cards.push((Card { title, subtitle }, Vec::new()));
+    pub(super) fn card(&mut self, title: crate::i18n::Text, subtitle: &'static str) {
+        self.cards.push((Card::new(title, subtitle), Vec::new()));
     }
 
     pub(super) fn info(&mut self, title: &str, desc: &str) {
@@ -19,7 +18,7 @@ impl Builder<'_> {
 
     pub(super) fn row(&mut self, title: &str, desc: &str, control: Control) {
         if let Some((_, rows)) = self.cards.last_mut() {
-            rows.push(Row { title: title.to_string(), desc: desc.to_string(), control });
+            rows.push(Row::of(title.to_string(), desc.to_string(), control));
         }
     }
 
@@ -35,6 +34,16 @@ impl Builder<'_> {
     pub(super) fn toggle_default_true(&mut self, title: &str, desc: &str, path: &str) {
         let value = self.cfg.flag_default_true(path);
         self.row(title, desc, Control::Toggle { path: path.to_string(), value });
+    }
+
+    pub(super) fn colour(&mut self, title: &str, desc: &str, path: &str) {
+        let hex = super::colour::normalized(&self.cfg.text(path))
+            .or_else(|| {
+                crate::contracts::settings::schema::text_default(path)
+                    .and_then(super::colour::normalized)
+            })
+            .expect("colour default");
+        self.row(title, desc, Control::Colour { path: path.to_string(), hex });
     }
 
     pub(super) fn num(&mut self, title: &str, desc: &str, path: &str, unit: &'static str) {
@@ -70,11 +79,30 @@ impl Builder<'_> {
         path: &str,
         placeholder: &'static str,
     ) {
-        self.row(
-            title,
-            desc,
-            Control::TextField { key: path.to_string(), path: path.to_string(), placeholder },
-        );
+        self.field(title, desc, path, placeholder, false);
+    }
+
+    pub(super) fn secret_field(
+        &mut self,
+        title: &str,
+        desc: &str,
+        path: &str,
+        placeholder: &'static str,
+    ) {
+        self.field(title, desc, path, placeholder, true);
+    }
+
+    fn field(
+        &mut self,
+        title: &str,
+        desc: &str,
+        path: &str,
+        placeholder: &'static str,
+        secret: bool,
+    ) {
+        let key = path.to_string();
+        let control = Control::TextField { key: key.clone(), path: key, placeholder, secret };
+        self.row(title, desc, control);
     }
 
     pub(super) fn key_binding(&mut self, title: &str, path: &str, default: &'static str) {
@@ -165,17 +193,6 @@ impl Builder<'_> {
     }
 
     pub(super) fn chips(&mut self, title: &str, desc: &str, path: &str, options: &[(&str, &str)]) {
-        self.chips_with_disabled(title, desc, path, options, &[]);
-    }
-
-    pub(super) fn chips_with_disabled(
-        &mut self,
-        title: &str,
-        desc: &str,
-        path: &str,
-        options: &[(&str, &str)],
-        disabled: &[&str],
-    ) {
         let current = self.cfg.text(path);
         self.row(
             title,
@@ -187,7 +204,7 @@ impl Builder<'_> {
                     .map(|(key, label)| ((*key).to_string(), (*label).to_string()))
                     .collect(),
                 current,
-                disabled: disabled.iter().map(|key| (*key).to_string()).collect(),
+                disabled: Vec::new(),
                 background: (path == crate::contracts::settings::keys::display::FILL_MODE)
                     .then(|| super::background::BackgroundControl::new(self.cfg, "")),
             },
@@ -276,31 +293,5 @@ impl Builder<'_> {
         build(self);
         let rows = self.cards[card].1.split_off(start);
         self.row(title, desc, Control::Details { id, summary, rows });
-    }
-
-    pub(super) fn motion_weights(&mut self) {
-        self.row(
-            tr("settings-motion-weights-label"),
-            tr("settings-motion-weights-desc"),
-            Control::MotionWeights {
-                weights: vec![
-                    (
-                        tr("settings-motion-fast").to_string(),
-                        String::from(keys::motion::FAST_MS),
-                        ActionId::ResetMotionFast,
-                    ),
-                    (
-                        tr("settings-motion-standard").to_string(),
-                        String::from(keys::motion::STANDARD_MS),
-                        ActionId::ResetMotionStandard,
-                    ),
-                    (
-                        tr("settings-motion-slow").to_string(),
-                        String::from(keys::motion::SLOW_MS),
-                        ActionId::ResetMotionSlow,
-                    ),
-                ],
-            },
-        );
     }
 }

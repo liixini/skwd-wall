@@ -48,6 +48,37 @@ fn theme_preview_debounce() {
 }
 
 #[test]
+fn pinned_opposite_hover() {
+    use crate::frontend::theme_designer::ThemeDesigner;
+    let mut app = test_app();
+    let current = crate::infrastructure::theme::decode_candidate_variant(
+        &json!({"primary": "#123456", "hover": "#112233", "hoverText": "#445566"}),
+        true,
+    );
+    let opposite = crate::infrastructure::theme::decode_candidate_variant(
+        &json!({"primary": "#abcdef", "hover": "#778899", "hoverText": "#aabbcc"}),
+        false,
+    );
+    let light = crate::infrastructure::theme::encode_candidate(&opposite, true);
+    app.config.set_key(
+        skwd_config::keys::theme::WALLPAPER_PROFILES,
+        json!([{"key": "static:source.png", "enabled": true, "light": light}]),
+    );
+    app.panels.theme_designer = Some(ThemeDesigner::new(current.clone(), String::new()));
+    app.daemon.pending.insert(91, Pending::CurrentTheme { load: true });
+    respond(
+        &mut app,
+        91,
+        json!({"key": "static:source.png", "name": "Source",
+        "thumb": "/source.webp", "dark": true,
+        "palette": crate::infrastructure::theme::encode_candidate(&current, true)}),
+    );
+    let candidate = &app.panels.theme_designer.as_ref().unwrap().candidate;
+    assert_eq!(candidate.hover, current.hover);
+    assert_eq!(candidate.alternate_hover, opposite.hover);
+}
+
+#[test]
 fn stale_palette_ignored() {
     let mut app = test_app();
     seed(&mut app, &[wall("a.png", "static", 1, 0), wall("b.png", "static", 2, 0)]);

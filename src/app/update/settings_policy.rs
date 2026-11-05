@@ -10,6 +10,7 @@ pub(super) fn stage_value(app: &mut App, path: &str, value: &Value) {
     };
     sync_audio(app, path, &value);
     mark_deferred_reload(app, path);
+    super::settings_layouts::sync_corners(app, path, &value);
     app.config.set_key(path, value);
     sync_picker_runtime(app, path);
     if changes_weather_members(path) {
@@ -31,7 +32,10 @@ pub(super) fn save_value(app: &mut App, path: &str, value: &Value) {
         }
         app.config.set_key(skwd_config::keys::lock_screens::SDDM_IMAGE, json!(""));
     }
-    app.config.save_key(path, value.clone());
+    super::settings_layouts::sync_corners(app, path, &value);
+    app.config.set_key(path, value.clone());
+    normalize_picker_frame(app);
+    app.config.persist();
     sync_audio(app, path, &value);
     sync_picker_runtime(app, path);
     reload_now(app, path);
@@ -61,6 +65,7 @@ pub(super) fn save_audio_volume(app: &mut App, volume: u32, unmute: bool) {
 
 pub(in crate::app) fn flush_staged(app: &mut App) {
     app.config.ensure_selector_enabled();
+    normalize_picker_frame(app);
     app.config.persist();
     if app.panels.settings.we_dirty {
         app.panels.settings.we_dirty = false;
@@ -77,6 +82,27 @@ pub(in crate::app) fn flush_staged(app: &mut App) {
     if matches!(app.panels.settings.weather_refresh, WeatherRefresh::Pending) {
         app.panels.settings.weather_refresh = WeatherRefresh::Clean;
         app.call_tracked(wall_proto::rpc::WALL_WEATHER, json!({}), Pending::Weather);
+    }
+}
+
+pub(in crate::app) fn normalize_picker_frame(app: &mut App) {
+    use skwd_config::keys::selector;
+
+    let percent = f64::from(crate::frontend::arrange::PERCENT);
+    let limits = [
+        (selector::FRAME_X, percent - app.config.num_path(selector::FRAME_WIDTH)),
+        (selector::FRAME_Y, percent - app.config.num_path(selector::FRAME_HEIGHT)),
+    ];
+    let mut changed = false;
+    for (key, maximum) in limits {
+        if app.config.num_path(key) > maximum {
+            app.config.set_key(key, json!(maximum));
+            changed = true;
+        }
+    }
+    if changed && app.panels.settings.open {
+        app.init_settings_inputs();
+        app.invalidate_settings();
     }
 }
 

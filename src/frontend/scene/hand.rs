@@ -1,6 +1,6 @@
 use glam::{Mat4, Quat, Vec3};
 
-use super::layout::{feq, lerp};
+use super::layout::{CardCorners, feq, lerp};
 
 pub const DESIGN_W: f32 = 1440.0;
 pub const DESIGN_H: f32 = 900.0;
@@ -89,7 +89,7 @@ pub struct HandParams {
     pub fan_angle: f32,
     pub fan_roll: f32,
     pub arch: f32,
-    pub radius: f32,
+    pub corners: CardCorners,
     pub skew: f32,
     pub blur: f32,
     pub axis: Axis,
@@ -119,7 +119,7 @@ impl Default for HandParams {
             fan_angle: 12.0,
             fan_roll: 8.5,
             arch: 20.0,
-            radius: 0.0,
+            corners: CardCorners::default(),
             skew: 0.0,
             blur: 1.0,
             axis: Axis::Rows,
@@ -149,7 +149,7 @@ impl HandParams {
         self.fan_angle = lerp(self.fan_angle, target.fan_angle, amount);
         self.fan_roll = lerp(self.fan_roll, target.fan_roll, amount);
         self.arch = lerp(self.arch, target.arch, amount);
-        self.radius = lerp(self.radius, target.radius, amount);
+        self.corners.morph_toward(&target.corners, amount);
         self.skew = lerp(self.skew, target.skew, amount);
         self.blur = lerp(self.blur, target.blur, amount);
         self.count = target.count;
@@ -177,7 +177,7 @@ impl HandParams {
             && feq(self.fan_angle, target.fan_angle)
             && feq(self.fan_roll, target.fan_roll)
             && feq(self.arch, target.arch)
-            && feq(self.radius, target.radius)
+            && self.corners.settled_to(&target.corners)
             && feq(self.skew, target.skew)
             && feq(self.blur, target.blur)
             && self.count == target.count
@@ -229,8 +229,7 @@ pub fn rnd(a: f32, b: f32, c: f32, d: f32) -> f32 {
     x - x.floor()
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Bezier(pub f32, pub f32, pub f32, pub f32);
+pub use crate::frontend::animation::Bezier;
 
 pub const EASE_DEAL_OUT: Bezier = Bezier(0.62, 0.0, 0.86, 0.24);
 pub const EASE_DEAL_IN: Bezier = Bezier(0.16, 1.06, 0.28, 1.0);
@@ -244,35 +243,6 @@ pub const EASE_REVEAL_TRAVEL: Bezier = Bezier(0.3, 0.0, 0.25, 1.08);
 pub const EASE_REVEAL_TURN: Bezier = Bezier(0.36, 0.0, 0.2, 1.24);
 #[cfg(test)]
 pub const EASE_LINEAR: Bezier = Bezier(0.25, 0.25, 0.75, 0.75);
-
-impl Bezier {
-    fn sample(p1: f32, p2: f32, t: f32) -> f32 {
-        let mt = 1.0 - t;
-        3.0 * mt * mt * t * p1 + 3.0 * mt * t * t * p2 + t * t * t
-    }
-
-    pub fn at(self, x: f32) -> f32 {
-        if x <= 0.0 {
-            return 0.0;
-        }
-        if x >= 1.0 {
-            return 1.0;
-        }
-        let mut t = x;
-        for _ in 0..8 {
-            let fx = Self::sample(self.0, self.2, t) - x;
-            let mt = 1.0 - t;
-            let dx = 3.0 * mt * mt * self.0
-                + 6.0 * mt * t * (self.2 - self.0)
-                + 3.0 * t * t * (1.0 - self.2);
-            if dx.abs() < 1e-6 {
-                break;
-            }
-            t = (t - fx / dx).clamp(0.0, 1.0);
-        }
-        Self::sample(self.1, self.3, t)
-    }
-}
 
 pub fn rot(axis: [f32; 3], deg: f32) -> Mat4 {
     let axis = Vec3::from_array(axis).normalize_or_zero();

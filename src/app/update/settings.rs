@@ -2,15 +2,21 @@ use iced::Task;
 use log::info;
 use serde_json::{Value, json};
 
-use crate::app::state::SettingsInputEdit;
+use crate::app::state::{SettingsInputEdit, WeatherQueue};
 use crate::app::{App, EFFECT_NAMES, Message, Pending, WE_THUMBNAILS_TASK};
-use crate::frontend::settings::{
-    ActionId, Control, PRESET_NAME_KEY, SettingsFocus, SettingsKey, SettingsMsg,
-};
+use crate::contracts::daemon::AppThemeStatus;
+use crate::domain::library::filter::resolution_parts;
+use crate::frontend::settings::{ActionId, Control, SettingsFocus, SettingsKey, SettingsMsg};
 
 pub(super) fn update(app: &mut App, msg: SettingsMsg) -> Task<Message> {
     match msg {
-        SettingsMsg::Input(key, raw) => settings_input(app, &key, &raw),
+        SettingsMsg::Input(key, raw) => {
+            if app.panels.settings.input_edit.as_ref().is_some_and(|edit| edit.key != key) {
+                commit_settings_input_edit(app);
+            }
+            begin_settings_input_edit(app, &key);
+            settings_input(app, &key, &raw)
+        }
         SettingsMsg::ResolutionInput(key, width, raw) => {
             if !raw.bytes().all(|byte| byte.is_ascii_digit()) || raw.len() > 9 {
                 return Task::none();
@@ -27,8 +33,7 @@ pub(super) fn update(app: &mut App, msg: SettingsMsg) -> Task<Message> {
                 .get(&key)
                 .cloned()
                 .unwrap_or_else(|| app.config.str_path(&key));
-            let (current_width, current_height) =
-                current.split_once(['x', 'X', '×']).unwrap_or(("", ""));
+            let (current_width, current_height) = resolution_parts(&current);
             let value = if width {
                 format!("{raw}x{current_height}")
             } else {
@@ -45,9 +50,47 @@ pub(super) fn update(app: &mut App, msg: SettingsMsg) -> Task<Message> {
             super::settings_policy::flush_staged(app);
             task
         }
-        SettingsMsg::Toggle(path, value) => settings_toggle(app, &path, value),
-        SettingsMsg::Commit => settings_commit(app),
-        SettingsMsg::Pick(path, value) => settings_pick(app, &path, &value),
+        SettingsMsg::Toggle(path, value) => {
+            close_token_edit(app);
+            settings_toggle(app, &path, value)
+        }
+        SettingsMsg::NumberStep(key, step) => {
+            if !step.is_finite() {
+                return Task::none();
+            }
+            let current = app
+                .panels
+                .settings
+                .inputs
+                .get(&key)
+                .and_then(|raw| raw.parse::<f64>().ok())
+                .filter(|number| number.is_finite())
+                .unwrap_or_else(|| app.config.num_path(&key));
+            let previous = app
+                .panels
+                .settings
+                .inputs
+                .get(&key)
+                .map(String::as_str)
+                .filter(|raw| raw.parse::<f64>().ok().is_some_and(f64::is_finite));
+            let Some(raw) = crate::frontend::settings::step_number(&key, current, step)
+                .and_then(|next| crate::frontend::settings::number_step_text(next, step, previous))
+            else {
+                return Task::none();
+            };
+            let input = settings_input(app, &key, &raw);
+            let commit = settings_commit(app);
+            Task::batch([input, commit])
+        }
+        SettingsMsg::Commit => {
+            app.panels.settings.edit = None;
+            settings_commit(app)
+        }
+        SettingsMsg::Pick(path, value) => {
+            close_token_edit(app);
+            app.panels.settings.pop = None;
+            settings_pick(app, &path, &value)
+        }
         SettingsMsg::BackgroundPicker(output) => super::settings_background::picker(app, &output),
         SettingsMsg::BackgroundMode(output, mode) => {
             super::settings_background::mode(app, &output, &mode)
@@ -56,8 +99,62 @@ pub(super) fn update(app: &mut App, msg: SettingsMsg) -> Task<Message> {
             super::settings_background::color(app, &output, &color)
         }
         SettingsMsg::BackgroundCommit(output) => super::settings_background::commit(app, &output),
-        SettingsMsg::SelectSection(section) => select_settings_section(app, section),
-        SettingsMsg::LeaveLayoutStudio => select_settings_section(app, 0),
+        SettingsMsg::ColourPicker(path) => super::settings_colour::picker(app, &path),
+        SettingsMsg::Colour(path, hex) => super::settings_colour::change(app, &path, &hex),
+        SettingsMsg::ColourCommit(path) => super::settings_colour::commit(app, &path),
+        SettingsMsg::ToggleSection(section) => toggle_settings_section(app, section),
+        SettingsMsg::OpenPop(key) => {
+            close_token_edit(app);
+            commit_settings_input_edit(app);
+            app.panels.settings.keybind_capture = None;
+            let opening = app.panels.settings.pop != Some(key);
+            app.panels.settings.pop = opening.then_some(key);
+            app.panels.settings.focused_choice = opening
+                .then(|| current_keyboard_control(app))
+                .flatten()
+                .filter(|control| {
+                    app.panels.settings.focus == SettingsFocus::Controls
+                        && control_token(app, control) == Some(key)
+                })
+                .map(|control| initial_choice(&control));
+            app.retick();
+            Task::none()
+        }
+        SettingsMsg::ClosePop => {
+            commit_settings_input_edit(app);
+            app.panels.settings.pop = None;
+            app.panels.settings.edit = None;
+            app.panels.settings.focused_choice = None;
+            app.retick();
+            unfocus_settings_input()
+        }
+        SettingsMsg::EditToken(token, key) => {
+            commit_settings_input_edit(app);
+            app.panels.settings.pop = None;
+            app.panels.settings.edit = Some(token);
+            begin_settings_input_edit(app, &key);
+            iced::widget::operation::focus(crate::frontend::settings::workbench_input_id(&key))
+        }
+        SettingsMsg::EnterLayoutStudio => {
+            if !crate::frontend::settings::is_picker_layout_section(
+                app.panels.settings.open_section,
+            ) {
+                return Task::none();
+            }
+            commit_settings_input_edit(app);
+            app.panels.settings.layout_studio = true;
+            app.panels.settings.previous = None;
+            app.panels.settings.pending = None;
+            app.panels.settings.section_anim.snap(1.0);
+            app.retick();
+            Task::none()
+        }
+        SettingsMsg::Layout(message) => super::settings_layouts::update(app, message),
+        SettingsMsg::LeaveLayoutStudio => {
+            app.panels.settings.layout_studio = false;
+            app.retick();
+            Task::none()
+        }
         SettingsMsg::FocusControl(control) => {
             commit_settings_input_edit(app);
             close_settings_search(app);
@@ -94,22 +191,15 @@ pub(super) fn update(app: &mut App, msg: SettingsMsg) -> Task<Message> {
             app.retick();
             unfocus_settings_input()
         }
-        SettingsMsg::EditFolder(key) => {
-            commit_settings_input_edit(app);
-            if !app.panels.settings.open {
-                return Task::none();
-            }
-            begin_settings_input_edit(app, &key);
-            app.invalidate_settings();
-            iced::widget::operation::focus(crate::frontend::settings::workbench_input_id(&key))
-        }
-        SettingsMsg::FolderDraft(kind, raw) => {
-            app.panels.settings.folder_drafts.insert(kind.key(), raw);
-            app.invalidate_settings();
-            Task::none()
-        }
         SettingsMsg::ProfileFilter(query) => {
-            app.panels.settings.profile_filter = query;
+            use crate::frontend::settings::QUERY_FOLD;
+            let settings = &mut app.panels.settings;
+            settings.expanded_details.retain(|key| !key.starts_with(QUERY_FOLD));
+            settings.bar_reveals.retain(|key, _| !key.starts_with(QUERY_FOLD));
+            settings
+                .inputs
+                .insert(crate::frontend::settings::FILTER_KEY.to_string(), query.clone());
+            settings.profile_filter = query;
             app.invalidate_settings();
             Task::none()
         }
@@ -120,13 +210,11 @@ pub(super) fn update(app: &mut App, msg: SettingsMsg) -> Task<Message> {
             Task::none()
         }
         SettingsMsg::SearchOpen => open_settings_search(app),
-        SettingsMsg::SearchClose => {
-            close_settings_search(app);
-            app.retick();
-            unfocus_settings_input()
-        }
+        SettingsMsg::SearchClose => search_cancel(app),
         SettingsMsg::SearchInput(query) => {
             app.panels.settings.search_query = query;
+            app.panels.settings.search_at = None;
+            disarm(app);
             refresh_settings_search(app);
             app.retick();
             Task::none()
@@ -136,42 +224,49 @@ pub(super) fn update(app: &mut App, msg: SettingsMsg) -> Task<Message> {
         }
         SettingsMsg::SelectTab(tab) => {
             app.panels.settings.focus = SettingsFocus::Index;
-            set_settings_tab(app, tab)
+            set_settings_tab(app, &tab)
         }
         SettingsMsg::Key(key) => settings_key(app, key),
-        SettingsMsg::Run(id) => settings_run(app, id),
+        SettingsMsg::Run(id) => {
+            close_token_edit(app);
+            app.panels.settings.pop = None;
+            app.panels.settings.keybind_capture = None;
+            settings_run(app, id)
+        }
         SettingsMsg::KeybindCapture(path, slot) => open_keybind_capture(app, &path, slot),
         SettingsMsg::KeybindCaptureCancel => {
             app.panels.settings.keybind_capture = None;
             app.retick();
             Task::none()
         }
-        SettingsMsg::KeybindCaptureApply => apply_keybind_capture(app),
         SettingsMsg::KeybindCaptureDefault => {
             let Some(capture) = app.panels.settings.keybind_capture.take() else {
                 return Task::none();
             };
+            app.panels.settings.keys_moved = None;
+            app.panels.settings.keys_same = None;
             store_keybind(app, &capture.path, "");
             Task::none()
         }
         SettingsMsg::KeybindCaptureUnbind => {
-            let Some(capture) = app.panels.settings.keybind_capture.as_mut() else {
-                return Task::none();
-            };
-            capture.triggers.clear();
-            capture.edited = true;
-            app.retick();
+            commit_capture(app, None);
             Task::none()
         }
         SettingsMsg::KeybindCaptureClick(button) => {
             let mods = app.input.mods;
-            capture_trigger(
+            commit_capture(
                 app,
-                crate::domain::input::Trigger::Mouse(crate::domain::input::MouseSpec {
+                Some(crate::domain::input::Trigger::Mouse(crate::domain::input::MouseSpec {
                     mods,
                     button,
-                }),
+                })),
             );
+            Task::none()
+        }
+        SettingsMsg::KeysFind(query) => {
+            app.panels.settings.keybind_capture = None;
+            app.panels.settings.keys_query = query;
+            app.retick();
             Task::none()
         }
         SettingsMsg::ProcessPickerClose => {
@@ -276,46 +371,66 @@ fn open_keybind_capture(app: &mut App, path: &str, slot: usize) -> Task<Message>
     };
     commit_settings_input_edit(app);
     close_settings_search(app);
-    let slot = slot.min(crate::domain::input::SLOTS - 1);
-    let current = app.input.bindings.triggers(descriptor.action);
+    app.panels.settings.pop = None;
+    app.panels.settings.keys_lit = None;
+    app.panels.settings.keys_same = None;
     app.panels.settings.keybind_capture = Some(crate::app::state::KeybindCapture {
         path: path.to_string(),
         action: descriptor.action,
-        title_key: descriptor.title_key,
-        slot,
-        triggers: crate::domain::input::slot_triggers(current, slot).to_vec(),
-        edited: false,
+        slot: slot.min(crate::domain::input::SLOTS - 1),
     });
     app.retick();
     unfocus_settings_input()
 }
 
-fn capture_trigger(app: &mut App, trigger: crate::domain::input::Trigger) {
-    let Some(capture) = app.panels.settings.keybind_capture.as_mut() else {
+fn commit_capture(app: &mut App, replacement: Option<crate::domain::input::Trigger>) {
+    use crate::contracts::picker::KEY_BINDINGS;
+    use crate::domain::input::{SLOTS, slot_triggers};
+    let Some(capture) = app.panels.settings.keybind_capture.take() else {
         return;
     };
-    capture.triggers.clear();
-    capture.triggers.push(trigger);
-    capture.edited = true;
-    app.retick();
+    app.panels.settings.keys_same = None;
+    let other = SLOTS - 1 - capture.slot;
+    if let Some(trigger) = replacement.as_ref().filter(|trigger| {
+        slot_triggers(app.input.bindings.triggers(capture.action), other).contains(trigger)
+    }) {
+        app.panels.settings.keys_same = Some(trigger.label());
+        app.panels.settings.keys_moved = None;
+        return;
+    }
+    let holders: Vec<_> = replacement
+        .iter()
+        .flat_map(|trigger| app.input.bindings.trigger_holders(capture.action, trigger))
+        .filter_map(|holder| KEY_BINDINGS.into_iter().find(|entry| entry.action == holder))
+        .collect();
+    let before = KEY_BINDINGS
+        .into_iter()
+        .filter(|entry| entry.action == capture.action || holders.contains(entry))
+        .map(|entry| (entry.path, app.config.str_path(entry.path)))
+        .collect();
+    app.panels.settings.keys_moved =
+        replacement.as_ref().filter(|_| !holders.is_empty()).map(|key| {
+            crate::app::state::KeyMove {
+                key: key.label(),
+                from: holders.iter().map(|entry| entry.title_key).collect(),
+                before,
+            }
+        });
+    commit_binding_slot(app, capture.action, &capture.path, capture.slot, replacement);
 }
 
-fn apply_keybind_capture(app: &mut App) -> Task<Message> {
-    let Some(capture) = app.panels.settings.keybind_capture.take() else {
-        return Task::none();
+fn undo_key_move(app: &mut App) {
+    let Some(moved) = app.panels.settings.keys_moved.take() else {
+        return;
     };
-    if !capture.edited {
-        app.retick();
-        return Task::none();
+    for (path, value) in moved.before {
+        app.panels.settings.inputs.insert(path.to_string(), value.clone());
+        super::settings_policy::stage_value(app, path, &json!(value));
     }
-    commit_binding_slot(
-        app,
-        capture.action,
-        &capture.path,
-        capture.slot,
-        capture.triggers.into_iter().next(),
-    );
-    Task::none()
+    super::settings_policy::flush_staged(app);
+    app.reload_bindings();
+    app.invalidate_settings();
+    app.retick();
 }
 
 fn commit_binding_slot(
@@ -325,7 +440,7 @@ fn commit_binding_slot(
     slot: usize,
     replacement: Option<crate::domain::input::Trigger>,
 ) {
-    use crate::domain::input::{binding_config, parse_binding, with_slot};
+    use crate::domain::input::{binding_config, parse_binding, with_slot, without};
     let stolen: Vec<_> = replacement
         .iter()
         .flat_map(|trigger| {
@@ -341,15 +456,7 @@ fn commit_binding_slot(
         else {
             continue;
         };
-        let remaining: Vec<_> = app
-            .input
-            .bindings
-            .triggers(other)
-            .iter()
-            .filter(|existing| **existing != trigger)
-            .cloned()
-            .collect();
-        let value = binding_config(&remaining);
+        let value = binding_config(&without(app.input.bindings.triggers(other), &trigger));
         app.panels.settings.inputs.insert(descriptor.path.to_string(), value.clone());
         super::settings_policy::stage_value(app, descriptor.path, &json!(value));
     }
@@ -363,6 +470,8 @@ fn commit_binding_slot(
 }
 
 fn set_nav_keys(app: &mut App, keys: crate::domain::input::NavKeys) {
+    app.panels.settings.keys_moved = None;
+    app.panels.settings.keys_same = None;
     for (action, key) in keys.second_keys() {
         let Some(descriptor) =
             crate::contracts::picker::KEY_BINDINGS.into_iter().find(|entry| entry.action == action)
@@ -379,7 +488,7 @@ fn set_nav_keys(app: &mut App, keys: crate::domain::input::NavKeys) {
     }
 }
 
-fn store_keybind(app: &mut App, path: &str, value: &str) {
+pub(super) fn store_keybind(app: &mut App, path: &str, value: &str) {
     app.panels.settings.inputs.insert(path.to_string(), value.to_string());
     super::settings_policy::stage_value(app, path, &json!(value));
     super::settings_policy::flush_staged(app);
@@ -393,44 +502,67 @@ pub(super) fn keybind_capture_key(
     key: &iced::keyboard::Key,
     modifiers: iced::keyboard::Modifiers,
 ) -> Task<Message> {
+    use crate::domain::input::{KeyId, KeySpec, Trigger};
     use iced::keyboard::key::Named;
     if matches!(key, iced::keyboard::Key::Named(Named::Escape)) {
         app.panels.settings.keybind_capture = None;
+        app.input.quiet = Some(key.clone());
         app.retick();
         return Task::none();
-    }
-    if matches!(key, iced::keyboard::Key::Named(Named::Enter)) {
-        return apply_keybind_capture(app);
     }
     let Some(id) = crate::app::input::key_id(key) else {
         return Task::none();
     };
-    capture_trigger(
-        app,
-        crate::domain::input::Trigger::Key(crate::domain::input::KeySpec {
-            mods: crate::app::input::mods(modifiers),
-            id,
-        }),
-    );
+    app.input.quiet = Some(key.clone());
+    let symbol = matches!(&id, KeyId::Char(text)
+        if text.chars().all(|ch| !ch.is_alphanumeric() && !ch.is_whitespace()));
+    let mut mods = crate::app::input::mods(modifiers);
+    mods.shift &= !symbol;
+    commit_capture(app, Some(Trigger::Key(KeySpec { mods, id })));
     Task::none()
 }
 
 fn settings_key(app: &mut App, key: SettingsKey) -> Task<Message> {
+    let key = if key == SettingsKey::Space && !app.panels.settings.search_open {
+        SettingsKey::Activate
+    } else {
+        key
+    };
+    if app.panels.settings.previous.is_some()
+        && !app.panels.settings.section_anim.settled()
+        && app.panels.settings.focus == SettingsFocus::Controls
+        && matches!(key, SettingsKey::Activate | SettingsKey::Next | SettingsKey::Previous)
+    {
+        return Task::none();
+    }
+
     if app.panels.settings.weather_review_category.is_some() {
         return super::weather_review::key(app, key);
     }
     match key {
         SettingsKey::Search => open_settings_search(app),
+        SettingsKey::Space => search_space(app),
         SettingsKey::Cancel => {
-            if app.panels.settings.search_open {
-                close_settings_search(app);
-                app.retick();
+            if super::settings_layouts::cancel_rename(app) {
                 unfocus_settings_input()
+            } else if app.panels.settings.search_open {
+                search_cancel(app)
             } else if app.panels.settings.input_edit.is_some() {
+                app.panels.settings.edit = None;
                 cancel_settings_input_edit(app)
+            } else if app.panels.settings.pop.take().is_some()
+                || app.panels.settings.edit.take().is_some()
+            {
+                app.panels.settings.focused_choice = None;
+                app.retick();
+                Task::none()
             } else if app.panels.settings.focused_choice.take().is_some() {
                 app.retick();
                 Task::none()
+            } else if !app.panels.settings.keys_query.is_empty() {
+                app.panels.settings.keys_query.clear();
+                app.retick();
+                unfocus_settings_input()
             } else {
                 super::panels::toggle_settings(app)
             }
@@ -441,24 +573,27 @@ fn settings_key(app: &mut App, key: SettingsKey) -> Task<Message> {
                 && (edit.key.ends_with(".from") || edit.key.ends_with(".to"))
                 && app.panels.settings.resolution_height == backwards
             {
+                let key = edit.key.clone();
                 app.panels.settings.resolution_height = !backwards;
+                app.panels.settings.edit = Some(focus_token(app, &key, usize::from(!backwards)));
+                app.retick();
                 return iced::widget::operation::focus(
-                    crate::frontend::settings::workbench_input_id(&format!(
-                        "{}.{}",
-                        edit.key,
-                        if backwards { "width" } else { "height" }
-                    )),
+                    crate::frontend::settings::workbench_input_id(&key),
                 );
             }
-            if let Some(task) = tab_within_motion_weights(app, backwards) {
-                return task;
+            if tab_within_key_row(app, backwards) {
+                return Task::none();
             }
             commit_settings_input_edit(app);
             close_settings_search(app);
             app.panels.settings.focused_choice = None;
             move_settings_tab_focus(app, backwards);
+            if backwards && current_keyboard_control(app).is_some_and(|control| two_stops(&control))
+            {
+                app.panels.settings.focused_choice = Some(1);
+            }
             app.retick();
-            unfocus_settings_input()
+            Task::batch([unfocus_settings_input(), reveal_focused(app)])
         }
         SettingsKey::CategoryNext { backwards } => {
             commit_settings_input_edit(app);
@@ -468,12 +603,19 @@ fn settings_key(app: &mut App, key: SettingsKey) -> Task<Message> {
         }
         SettingsKey::Previous | SettingsKey::Next | SettingsKey::Up | SettingsKey::Down => {
             if app.panels.settings.search_open {
-                return Task::none();
+                return search_arrow(app, key);
             }
             match app.panels.settings.focus {
                 SettingsFocus::Index => match key {
                     SettingsKey::Up | SettingsKey::Down => move_settings_index(app, key),
                     SettingsKey::Next => focus_settings_sections(app),
+                    _ => Task::none(),
+                },
+                SettingsFocus::Strip => match key {
+                    SettingsKey::Up => super::settings_layouts::strip_choice(app, false),
+                    SettingsKey::Down => super::settings_layouts::strip_choice(app, true),
+                    SettingsKey::Next => super::settings_layouts::strip_arrow(app, true),
+                    SettingsKey::Previous => super::settings_layouts::strip_arrow(app, false),
                     _ => Task::none(),
                 },
                 SettingsFocus::Sections => match key {
@@ -500,16 +642,17 @@ fn settings_key(app: &mut App, key: SettingsKey) -> Task<Message> {
                     SettingsKey::Up => move_settings_control(app, -1),
                     SettingsKey::Down => move_settings_control(app, 1),
                     SettingsKey::Previous => focus_settings_sections(app),
+                    SettingsKey::Next => {
+                        tab_within_key_row(app, false);
+                        Task::none()
+                    }
                     _ => Task::none(),
                 },
             }
         }
         SettingsKey::Activate => {
             if app.panels.settings.search_open {
-                let Some(result) = app.panels.settings.search_results.first().cloned() else {
-                    return Task::none();
-                };
-                open_settings_search_result(app, result.tab, result.section, result.row)
+                search_enter(app)
             } else {
                 activate_settings_focus(app)
             }
@@ -519,168 +662,417 @@ fn settings_key(app: &mut App, key: SettingsKey) -> Task<Message> {
 
 fn open_settings_search(app: &mut App) -> Task<Message> {
     commit_settings_input_edit(app);
+    app.panels.settings.keybind_capture = None;
     app.panels.settings.search_open = true;
     app.panels.settings.focus = SettingsFocus::Index;
     app.panels.settings.focused_choice = None;
+    app.panels.settings.search_at = None;
     refresh_settings_search(app);
     app.retick();
     iced::widget::operation::focus(crate::frontend::settings::settings_search_input_id())
 }
 
+fn disarm(app: &mut App) {
+    if app.panels.settings.armed.take().is_some() {
+        app.invalidate_settings();
+    }
+}
+
 fn close_settings_search(app: &mut App) {
+    app.panels.settings.keybind_capture = None;
     app.panels.settings.search_open = false;
     app.panels.settings.search_query.clear();
     app.panels.settings.search_results.clear();
+    app.panels.settings.search_at = None;
 }
 
 fn refresh_settings_search(app: &mut App) {
+    disarm(app);
     if !app.panels.settings.search_open {
         app.panels.settings.search_results.clear();
         return;
     }
-    app.panels.settings.search_results = crate::frontend::settings::search_settings(
+    let hits = crate::frontend::settings::search_hits(
         &app.panels.settings.search_query,
-        &app.config,
-        &app.daemon.effect_themes,
-        &app.library_session.all_folders,
-        &app.panels.settings.semantic_import_status,
-        app.theme.backends.as_deref().unwrap_or(&[]),
-        app.daemon.app_themes.as_ref(),
+        app.place_source(),
     );
+    app.panels.settings.search_results = hits.shown;
+    app.panels.settings.search_total = hits.total;
+    app.seed_search_inputs();
 }
 
-fn open_settings_search_result(
+pub(in crate::app) fn reread_search(app: &mut App) {
+    if app.panels.settings.search_results.is_empty() {
+        return;
+    }
+    let selected = app
+        .panels
+        .settings
+        .search_at
+        .and_then(|at| app.panels.settings.search_results.get(at).cloned());
+    let mut results = std::mem::take(&mut app.panels.settings.search_results);
+    let kept = crate::frontend::settings::reread_settings(&mut results, app.place_source());
+    app.panels.settings.search_results = results;
+    if !kept {
+        let at = app.panels.settings.search_at;
+        refresh_settings_search(app);
+        app.panels.settings.search_at = selected
+            .and_then(|old| {
+                app.panels.settings.search_results.iter().position(|result| result.is(&old))
+            })
+            .or_else(|| {
+                at.map(|at| at.min(app.panels.settings.search_results.len().saturating_sub(1)))
+            })
+            .filter(|at| *at < app.panels.settings.search_results.len());
+        return;
+    }
+    app.seed_search_inputs();
+}
+
+fn search_row(app: &App) -> Option<&crate::frontend::settings::Row> {
+    let settings = &app.panels.settings;
+    settings.search_results.get(settings.search_at?)?.live()
+}
+
+fn search_arrow(app: &mut App, key: SettingsKey) -> Task<Message> {
+    disarm(app);
+    let down = matches!(key, SettingsKey::Down);
+    if !matches!(key, SettingsKey::Up | SettingsKey::Down) {
+        let Some(Control::Number { key: input, path, .. }) =
+            search_row(app).map(|row| row.control.clone())
+        else {
+            return Task::none();
+        };
+        let (_, _, step) = crate::frontend::settings::scrub_bounds(&path);
+        let step = if key == SettingsKey::Next { step } else { -step };
+        return update(app, SettingsMsg::NumberStep(input, step));
+    }
+    if app.panels.settings.pop.is_some() && app.panels.settings.focused_choice.is_some() {
+        return move_settings_choice(app, down);
+    }
+    let settings = &mut app.panels.settings;
+    settings.pop = None;
+    let last = settings.search_results.len().checked_sub(1);
+    settings.search_at = match (settings.search_at, down, last) {
+        (_, _, None) | (None | Some(0), false, _) => None,
+        (None, true, _) => Some(0),
+        (Some(at), false, _) => Some(at - 1),
+        (Some(at), true, Some(last)) => Some((at + 1).min(last)),
+    };
+    let at = settings.search_at;
+    app.retick();
+    at.map_or_else(
+        || iced::widget::operation::focus(crate::frontend::settings::settings_search_input_id()),
+        |at| Task::batch([unfocus_settings_input(), crate::frontend::settings::reveal_result(at)]),
+    )
+}
+
+fn search_space(app: &mut App) -> Task<Message> {
+    use crate::frontend::settings::{TokenSide, token_key};
+    if app.panels.settings.input_edit.is_some() {
+        return Task::none();
+    }
+    let Some(control) = search_row(app).map(|row| row.control.clone()) else {
+        return Task::none();
+    };
+    match control {
+        Control::ActionChips { .. } => Task::none(),
+        Control::Colour { path, .. } => {
+            update(app, SettingsMsg::OpenPop(token_key(&path, 0, TokenSide::Body)))
+        }
+        Control::Resolution { .. } => {
+            app.panels.settings.focused_choice.get_or_insert(0);
+            activate_settings_control(app)
+        }
+        _ => activate_settings_control(app),
+    }
+}
+
+fn search_enter(app: &mut App) -> Task<Message> {
+    let settings = &app.panels.settings;
+    if settings.input_edit.is_some() {
+        settings_commit(app)
+    } else if settings.pop.is_some() && settings.focused_choice.is_some() {
+        activate_settings_control(app)
+    } else {
+        let at = settings.search_at.unwrap_or(0);
+        let Some(result) = settings.search_results.get(at).cloned() else {
+            return Task::none();
+        };
+        open_settings_search_result(app, result.tab, result.section, result.row)
+    }
+}
+
+fn search_cancel(app: &mut App) -> Task<Message> {
+    disarm(app);
+    if app.panels.settings.input_edit.is_some() {
+        app.panels.settings.edit = None;
+        return cancel_settings_input_edit(app);
+    }
+    let settings = &mut app.panels.settings;
+    if settings.pop.take().is_some() || settings.edit.take().is_some() {
+        settings.focused_choice = None;
+        app.retick();
+        return Task::none();
+    }
+    if settings.search_query.is_empty() {
+        close_settings_search(app);
+        app.retick();
+        return unfocus_settings_input();
+    }
+    settings.search_query.clear();
+    settings.search_at = None;
+    refresh_settings_search(app);
+    app.retick();
+    iced::widget::operation::focus(crate::frontend::settings::settings_search_input_id())
+}
+
+pub(super) fn open_settings_search_result(
     app: &mut App,
     tab: String,
     section: usize,
     row: usize,
 ) -> Task<Message> {
-    let tab_task = set_settings_tab(app, tab);
-    let section_count = settings_cards(app).len();
-    if section_count == 0 {
-        return tab_task;
+    if app.panels.settings.open
+        && app.panels.settings.previous.is_some()
+        && !app.panels.settings.section_anim.settled()
+    {
+        app.panels.settings.pending =
+            Some(crate::app::state::SettingsNavigation::Search { tab, section, row });
+        close_settings_search(app);
+        return Task::none();
     }
-    app.panels.settings.section = section.min(section_count - 1);
+    let tab_task = if app.panels.settings.tab == tab {
+        commit_settings_input_edit(app);
+        close_settings_search(app);
+        app.panels.settings.layout_studio = false;
+        Task::none()
+    } else {
+        set_settings_tab(app, &tab)
+    };
+    let place = settings_place(app, &app.panels.settings.tab);
+    let Some(target) = place.sections.get(section.min(place.sections.len().saturating_sub(1)))
+    else {
+        return tab_task;
+    };
+    let id = target.id;
+    let body_row = row >= target.header_rows();
+    app.panels.settings.pop = None;
+    app.panels.settings.edit = None;
+    app.panels.settings.section = place.sections.iter().position(|item| item.id == id).unwrap_or(0);
+    if target.has_body() && app.panels.settings.open_section != Some(id) {
+        let instant = section_instant(app);
+        app.panels.settings.toggle_section(id, instant);
+    }
     app.panels.settings.control_page = 0;
-    app.panels.settings.focused_control = 0;
-    let pages = settings_control_pages(app);
-    let mut remaining = row;
-    for (page_index, page) in pages.iter().enumerate() {
-        if remaining < page.len() {
-            app.panels.settings.control_page = page_index;
-            app.panels.settings.focused_control = remaining;
-            match &page[remaining].control {
-                Control::Details { id, .. } => {
-                    app.panels.settings.expanded_details.insert(id.clone());
-                }
-                control => {
-                    if let Some(id) = control.compact_bar_id() {
-                        let motion = app.motion_profile();
-                        app.panels.settings.open_bar(id, motion);
-                    }
+    app.panels.settings.focused_control = row;
+    if let Some(found) = target.row(row) {
+        match &found.control {
+            Control::Details { id, .. } => {
+                app.panels.settings.expanded_details.insert(id.clone());
+            }
+            control => {
+                if let Some(id) = control.compact_bar_id() {
+                    let motion = app.motion_profile();
+                    app.panels.settings.open_bar(id, motion);
                 }
             }
-            break;
         }
-        remaining = remaining.saturating_sub(page.len());
     }
     app.panels.settings.focus = SettingsFocus::Controls;
     app.panels.settings.focused_choice = None;
     close_settings_search(app);
-    app.panels.settings.section_anim.run(0.0, 1.0);
     app.panels.settings.control_anim.run(0.0, 1.0);
     app.retick();
-    Task::batch([tab_task, unfocus_settings_input()])
+    let reveal_row =
+        if body_row { crate::frontend::settings::reveal_row(id, row) } else { Task::none() };
+    Task::batch([
+        tab_task,
+        unfocus_settings_input(),
+        crate::frontend::settings::reveal_section(id),
+        reveal_row,
+    ])
+}
+
+fn section_instant(app: &App) -> bool {
+    !app.panels.settings.open
+        || crate::frontend::settings::SETTINGS_MOTION.reduced(app.motion_profile())
+}
+
+fn reveal_focused(app: &App) -> Task<Message> {
+    let settings = &app.panels.settings;
+    if settings.focus != SettingsFocus::Controls {
+        return Task::none();
+    }
+    let place = settings_place(app, &settings.tab);
+    match place.sections.get(settings.section) {
+        Some(section) if section.id == crate::frontend::settings::KEYS_SHEET => {
+            crate::frontend::settings::reveal_row(section.id, settings.focused_control)
+        }
+        Some(section)
+            if settings.open_section == Some(section.id)
+                && settings.focused_control >= section.header_rows() =>
+        {
+            Task::batch([
+                crate::frontend::settings::reveal_section(section.id),
+                crate::frontend::settings::reveal_row(section.id, settings.focused_control),
+                if settings.focused_control >= section.rows().count() {
+                    crate::frontend::settings::reveal_line(section.id, settings.focused_control)
+                } else {
+                    Task::none()
+                },
+            ])
+        }
+        _ => Task::none(),
+    }
 }
 
 fn unfocus_settings_input() -> Task<Message> {
     iced::widget::operation::focus(iced::widget::Id::new("settings-workbench-keyboard-focus"))
 }
 
-fn settings_cards(
-    app: &App,
-) -> Vec<(crate::frontend::settings::Card, Vec<crate::frontend::settings::Row>)> {
-    crate::frontend::settings::build_tab_with_runtime_status(
-        &app.panels.settings.tab,
-        &app.config,
-        &app.daemon.effect_themes,
-        &app.library_session.all_folders,
-        "",
-        app.theme.backends.as_deref().unwrap_or(&[]),
-        app.settings_runtime_status(),
-    )
+pub(super) fn settings_place(app: &App, tab: &str) -> crate::frontend::settings::Place {
+    app.place_source().place(tab)
 }
 
-fn settings_control_pages(app: &App) -> Vec<Vec<crate::frontend::settings::Row>> {
-    if crate::frontend::settings::page_section(
-        &app.panels.settings.tab,
-        app.panels.settings.section,
-    )
-    .is_some()
-    {
-        return Vec::new();
+fn keyboard_section(app: &App) -> Option<crate::frontend::settings::Section> {
+    let mut sections = settings_place(app, &app.panels.settings.tab).sections;
+    let focused = app.panels.settings.section;
+    if sections.get(focused).is_some_and(|section| !section.has_body()) {
+        return Some(sections.swap_remove(focused));
     }
-    let rows = settings_cards(app)
+    let open = app.panels.settings.open_section?;
+    sections.into_iter().find(|section| section.id == open)
+}
+
+struct ControlPage {
+    rows: Vec<crate::frontend::settings::Row>,
+    skipped: Vec<usize>,
+    header: usize,
+    own: usize,
+}
+
+fn settings_control_pages(app: &App) -> Vec<ControlPage> {
+    let moved = app.panels.settings.keys_moved.is_some();
+    keyboard_section(app)
+        .map(|section| {
+            let own = section.rows().count();
+            let skipped = (0..own)
+                .filter(|at| {
+                    section.say.parks(*at).is_some()
+                        || section.follows(*at)
+                        || (moved && crate::frontend::settings::conflict_links(&section, *at))
+                })
+                .collect();
+            let header = section.header_rows();
+            let lines = crate::frontend::settings::page_rows(section.id, &app.page_ctx());
+            let undo = moved && section.id == crate::frontend::settings::KEYS_SHEET;
+            let extra = undo.then(crate::frontend::settings::undo_row);
+            let rows = section.into_rows().chain(lines).chain(extra).collect();
+            ControlPage { rows, skipped, header, own }
+        })
+        .filter(|page| !page.rows.is_empty())
         .into_iter()
-        .nth(app.panels.settings.section)
-        .map_or_else(Vec::new, |(_, rows)| rows);
-    (!rows.is_empty()).then_some(rows).into_iter().collect()
+        .collect()
 }
 
 fn current_keyboard_control(app: &App) -> Option<Control> {
-    let pages = settings_control_pages(app);
-    let page = app.panels.settings.control_page.min(pages.len().saturating_sub(1));
-    pages.get(page)?.get(app.panels.settings.focused_control).map(|row| row.control.clone())
+    if app.panels.settings.search_open {
+        return search_row(app).map(|row| row.control.clone());
+    }
+    keyboard_control_before(app, 0)
 }
 
-fn settings_control_positions(
-    pages: &[Vec<crate::frontend::settings::Row>],
-) -> Vec<(usize, usize)> {
+fn keyboard_control_before(app: &App, back: usize) -> Option<Control> {
+    let pages = settings_control_pages(app);
+    let page = app.panels.settings.control_page.min(pages.len().saturating_sub(1));
+    let at = app.panels.settings.focused_control.checked_sub(back)?;
+    pages.get(page)?.rows.get(at).map(|row| row.control.clone())
+}
+
+struct AppDetails {
+    app: AppThemeStatus,
+    profile: Control,
+    slot: u8,
+}
+
+impl AppDetails {
+    fn actions(&self) -> Vec<ActionId> {
+        crate::frontend::settings::panel_actions(&self.app, self.slot)
+    }
+
+    fn key(&self) -> u64 {
+        crate::frontend::settings::app_key(&self.app.id)
+    }
+}
+
+fn app_details(app: &App) -> Option<AppDetails> {
+    if app.panels.settings.search_open {
+        return None;
+    }
+    let profile = current_keyboard_control(app)?;
+    let Control::AppTheme { app: status, index } = keyboard_control_before(app, 1)? else {
+        return None;
+    };
+    let slot = u8::try_from(index).unwrap_or(u8::MAX);
+    Some(AppDetails { app: status, profile, slot })
+}
+
+fn settings_control_positions(pages: &[ControlPage]) -> Vec<(usize, usize)> {
     pages
         .iter()
         .enumerate()
-        .flat_map(|(page, rows)| {
-            rows.iter()
-                .enumerate()
-                .filter(|(_, row)| row.control.is_focusable())
-                .map(move |(control, _)| (page, control))
+        .flat_map(|(page, controls)| {
+            (0..controls.header)
+                .chain(controls.own..controls.rows.len())
+                .chain(controls.header..controls.own)
+                .filter(|at| {
+                    controls.rows[*at].control.is_focusable() && !controls.skipped.contains(at)
+                })
+                .map(move |control| (page, control))
         })
         .collect()
 }
 
 fn choice_count(control: &Control) -> usize {
     match control {
-        Control::Dropdown { options, .. } | Control::Chips { options, .. } => options.len(),
+        Control::Dropdown { options, .. } | Control::Chips { options, .. } => {
+            options.len() + usize::from(control.unlisted())
+        }
         Control::ActionChips { items } => items.len(),
         Control::KeyBinding { .. } => crate::domain::input::SLOTS,
-        Control::Presets { items, .. } => 1 + items.len() * 2,
+        Control::Resolution { .. } => crate::frontend::settings::DIMENSIONS.len(),
         _ => 0,
     }
 }
 
 fn choice_enabled(control: &Control, index: usize) -> bool {
+    let custom = usize::from(control.unlisted());
+    if index < custom {
+        return true;
+    }
     match control {
-        Control::Dropdown { options, .. } => index < options.len(),
+        Control::Dropdown { options, .. } => index - custom < options.len(),
         Control::Chips { options, disabled, .. } => {
-            options.get(index).is_some_and(|(key, _)| !disabled.contains(key))
+            options.get(index - custom).is_some_and(|(key, _)| !disabled.contains(key))
         }
-        Control::Presets { items, .. } => index < 1 + items.len() * 2,
         Control::ActionChips { items } => index < items.len(),
         Control::KeyBinding { .. } => index < crate::domain::input::SLOTS,
+        Control::Resolution { .. } => index < crate::frontend::settings::DIMENSIONS.len(),
         _ => false,
     }
 }
 
 fn initial_choice(control: &Control) -> usize {
+    if control.unlisted() {
+        return 0;
+    }
     let current = match control {
         Control::Dropdown { options, current, .. } => {
             options.iter().position(|(key, _)| key == current).unwrap_or(0)
         }
         Control::Chips { options, current, .. } => {
             options.iter().position(|(key, _)| key == current).unwrap_or(0)
-        }
-        Control::Presets { items, .. } => {
-            items.iter().position(|(_, active)| *active).map_or(0, |index| 1 + index * 2)
         }
         _ => 0,
     };
@@ -705,49 +1097,47 @@ fn next_choice(control: &Control, current: usize, forwards: bool) -> Option<usiz
 }
 
 fn move_settings_tab(app: &mut App, delta: isize) -> Task<Message> {
-    let tabs = crate::frontend::settings::visible_tabs(&app.config);
-    if tabs.is_empty() {
-        return Task::none();
-    }
-    let current = tabs.iter().position(|(key, _)| *key == app.panels.settings.tab).unwrap_or(0);
-    let next = (current as isize + delta).rem_euclid(tabs.len() as isize) as usize;
+    let places = crate::frontend::settings::place_keys();
+    let current =
+        places.iter().position(|key| *key == app.panels.settings.navigation_tab()).unwrap_or(0);
+    let next = (current as isize + delta).rem_euclid(places.len() as isize) as usize;
     app.panels.settings.focus = SettingsFocus::Index;
-    set_settings_tab(app, tabs[next].0.to_string())
+    set_settings_tab(app, places[next])
 }
 
 fn move_settings_index(app: &mut App, key: SettingsKey) -> Task<Message> {
-    let tabs = crate::frontend::settings::visible_tabs(&app.config);
-    if tabs.is_empty() {
-        return Task::none();
-    }
-    let current = tabs.iter().position(|(tab, _)| *tab == app.panels.settings.tab).unwrap_or(0);
+    let places = crate::frontend::settings::place_keys();
+    let current =
+        places.iter().position(|place| *place == app.panels.settings.navigation_tab()).unwrap_or(0);
     let next = match key {
         SettingsKey::Up => current.saturating_sub(1),
-        SettingsKey::Down => (current + 1).min(tabs.len() - 1),
+        SettingsKey::Down => (current + 1).min(places.len() - 1),
         _ => current,
     };
     if next == current {
         return Task::none();
     }
     app.panels.settings.focus = SettingsFocus::Index;
-    set_settings_tab(app, tabs[next].0.to_string())
+    set_settings_tab(app, places[next])
 }
 
 fn move_settings_section(app: &mut App, key: SettingsKey) -> Task<Message> {
-    let count = settings_cards(app).len();
+    let place = settings_place(app, &app.panels.settings.tab);
+    let count = place.sections.len();
     if count == 0 {
         return Task::none();
     }
     let current = app.panels.settings.section.min(count - 1);
-    let section = match key {
+    let next = match key {
         SettingsKey::Up => current.saturating_sub(1),
         SettingsKey::Down => (current + 1).min(count - 1),
         _ => current,
     };
-    if section == current {
-        return Task::none();
-    }
-    select_settings_section(app, section)
+    app.panels.settings.section = next;
+    app.panels.settings.focus = SettingsFocus::Sections;
+    app.panels.settings.focused_choice = None;
+    app.retick();
+    crate::frontend::settings::reveal_section(place.sections[next].id)
 }
 
 fn focus_settings_sections(app: &mut App) -> Task<Message> {
@@ -758,8 +1148,18 @@ fn focus_settings_sections(app: &mut App) -> Task<Message> {
 }
 
 fn drill_into_settings_controls(app: &mut App) -> Task<Message> {
-    let pages = settings_control_pages(app);
-    if pages.first().is_none_or(Vec::is_empty) {
+    let place = settings_place(app, &app.panels.settings.tab);
+    let Some(section) = place.sections.get(app.panels.settings.section) else {
+        return Task::none();
+    };
+    if section.has_body() && app.panels.settings.open_section != Some(section.id) {
+        let instant = section_instant(app);
+        app.panels.settings.toggle_section(section.id, instant);
+    }
+    if section.rows().next().is_none()
+        && crate::frontend::settings::page_section(section.id).is_none()
+    {
+        app.retick();
         return Task::none();
     }
     focus_keyboard_control(app, 0, 0);
@@ -795,28 +1195,43 @@ fn move_settings_control(app: &mut App, delta: isize) -> Task<Message> {
     let (page, control) = positions[next];
     focus_keyboard_control(app, page, control);
     app.retick();
-    Task::none()
+    reveal_focused(app)
 }
 
-fn select_settings_section(app: &mut App, section: usize) -> Task<Message> {
+fn toggle_settings_section(app: &mut App, section: usize) -> Task<Message> {
     commit_settings_input_edit(app);
     close_settings_search(app);
+    let place = settings_place(app, &app.panels.settings.tab);
+    let Some(target) = place.sections.get(section) else {
+        return Task::none();
+    };
+    if target.has_body() {
+        let instant = section_instant(app);
+        app.panels.settings.toggle_section(target.id, instant);
+    }
+    app.panels.settings.section = section;
     app.panels.settings.focus = SettingsFocus::Sections;
     app.panels.settings.focused_choice = None;
     app.panels.settings.focused_control = 0;
     app.panels.settings.control_page = 0;
-    if app.panels.settings.section != section {
-        app.panels.settings.section = section;
-        app.panels.settings.armed = None;
-        app.panels.settings.folder_undo = None;
-        app.panels.settings.section_anim.run(0.0, 1.0);
-        app.panels.settings.control_anim.snap(1.0);
-    }
+    app.panels.settings.armed = None;
+    app.panels.settings.folder_undo = None;
+    app.panels.settings.layout_studio = false;
     app.retick();
-    Task::none()
+    Task::batch([unfocus_settings_input(), crate::frontend::settings::reveal_section(target.id)])
 }
 
-fn clamp_keyboard_control(app: &mut App) {
+pub(super) fn open_settings_section(app: &mut App, section: usize) -> Task<Message> {
+    let place = settings_place(app, &app.panels.settings.tab);
+    match place.sections.get(section) {
+        Some(target) if app.panels.settings.open_section != Some(target.id) => {
+            toggle_settings_section(app, section)
+        }
+        _ => Task::none(),
+    }
+}
+
+pub(super) fn clamp_keyboard_control(app: &mut App) {
     let pages = settings_control_pages(app);
     let positions = settings_control_positions(&pages);
     if positions.is_empty() {
@@ -828,7 +1243,8 @@ fn clamp_keyboard_control(app: &mut App) {
     let (page, control) = positions
         .iter()
         .copied()
-        .find(|position| *position >= current)
+        .find(|position| *position == current)
+        .or_else(|| positions.iter().copied().find(|position| *position >= current))
         .unwrap_or_else(|| *positions.last().unwrap());
     app.panels.settings.control_page = page;
     app.panels.settings.focused_control = control;
@@ -845,7 +1261,22 @@ fn move_settings_tab_focus(app: &mut App, backwards: bool) {
                 app.panels.settings.focus = SettingsFocus::Sections;
             }
         }
+        SettingsFocus::Index if super::settings_layouts::strip_focusable(app) => {
+            super::settings_layouts::focus_strip(app);
+        }
         SettingsFocus::Index => app.panels.settings.focus = SettingsFocus::Sections,
+        SettingsFocus::Strip if backwards => {
+            app.panels.settings.pop = None;
+            app.panels.settings.focus = SettingsFocus::Index;
+        }
+        SettingsFocus::Strip => {
+            app.panels.settings.pop = None;
+            app.panels.settings.focused_control = 0;
+            app.panels.settings.focus = SettingsFocus::Sections;
+        }
+        SettingsFocus::Sections if backwards && super::settings_layouts::strip_focusable(app) => {
+            super::settings_layouts::focus_strip(app);
+        }
         SettingsFocus::Sections if backwards => app.panels.settings.focus = SettingsFocus::Index,
         SettingsFocus::Sections => {
             if let Some(&(page, control)) = positions.first() {
@@ -895,25 +1326,118 @@ fn focus_keyboard_control(app: &mut App, page: usize, control: usize) {
     }
 }
 
-fn tab_within_motion_weights(app: &mut App, backwards: bool) -> Option<Task<Message>> {
-    let active_key = app.panels.settings.input_edit.as_ref()?.key.clone();
-    let Control::MotionWeights { weights } = current_keyboard_control(app)? else {
+fn two_stops(control: &Control) -> bool {
+    matches!(control, Control::KeyBinding { .. })
+        || crate::frontend::settings::links_control(control)
+}
+
+fn tab_within_key_row(app: &mut App, backwards: bool) -> bool {
+    let stops = app.panels.settings.focus == SettingsFocus::Controls
+        && app.panels.settings.input_edit.is_none()
+        && current_keyboard_control(app).is_some_and(|control| two_stops(&control));
+    let choice = app.panels.settings.focused_choice.unwrap_or(0);
+    let last = crate::domain::input::SLOTS - 1;
+    if !stops || (backwards && choice == 0) || (!backwards && choice >= last) {
+        return false;
+    }
+    app.panels.settings.focused_choice = Some(if backwards { choice - 1 } else { choice + 1 });
+    app.retick();
+    true
+}
+
+fn focused_checks(app: &App) -> Option<(u64, Vec<Control>)> {
+    use crate::frontend::settings::{Slot, token_key, token_side};
+    if app.panels.settings.search_open {
         return None;
+    }
+    let section = keyboard_section(app)?;
+    let focused = app.panels.settings.focused_control;
+    let rows = section
+        .say
+        .tokens
+        .iter()
+        .find(|slot| matches!(slot, Slot::Checks { .. }) && slot.lead() == focused)
+        .map(|slot| slot.rows().collect())
+        .or_else(|| section.checks(focused))?;
+    let items: Vec<_> = rows
+        .into_iter()
+        .filter_map(|at| section.row(at).map(|row| row.control.clone()))
+        .filter(|control| control.ticked().is_some() && control.path().is_some())
+        .collect();
+    let lead = items.first().and_then(Control::path)?.to_string();
+    Some((token_key(&lead, 0, token_side(&section, focused)), items))
+}
+
+fn activate_checks(app: &mut App) -> Option<Task<Message>> {
+    let (key, items) = focused_checks(app)?;
+    let Some(choice) = app.panels.settings.focused_choice else {
+        app.panels.settings.pop = Some(key);
+        app.panels.settings.focused_choice = Some(0);
+        app.retick();
+        return Some(Task::none());
     };
-    let current = weights.iter().position(|(_, key, _)| key == &active_key)?;
-    let next = if backwards {
-        current.checked_sub(1)?
-    } else {
-        let next = current + 1;
-        (next < weights.len()).then_some(next)?
+    match items.get(choice)? {
+        Control::Dropdown { path, options, current, .. } => {
+            let other = options.iter().find(|(value, _)| value != current)?;
+            Some(settings_pick(app, path, &other.0))
+        }
+        control => {
+            let on = control.ticked()?;
+            Some(settings_toggle(app, control.path()?, !on))
+        }
+    }
+}
+
+fn move_app_stop(app: &mut App, forwards: bool, stops: usize) {
+    let current = app.panels.settings.focused_choice.unwrap_or_default();
+    let next = if forwards { current + 1 } else { current + stops - 1 };
+    app.panels.settings.focused_choice = Some(next % stops);
+    app.retick();
+}
+
+fn open_app_stop(app: &mut App, details: &AppDetails) -> Task<Message> {
+    let choice = app.panels.settings.focused_choice.unwrap_or_default();
+    let Some(id) = choice.checked_sub(1).and_then(|at| details.actions().into_iter().nth(at))
+    else {
+        let Control::Dropdown { path, .. } = &details.profile else {
+            return Task::none();
+        };
+        app.panels.settings.pop = Some(focus_token(app, path, 0));
+        app.panels.settings.focused_choice = Some(initial_choice(&details.profile));
+        app.retick();
+        return Task::none();
     };
-    let next_key = weights[next].1.clone();
-    commit_settings_input_edit(app);
-    begin_settings_input_edit(app, &next_key);
-    Some(iced::widget::operation::focus(crate::frontend::settings::workbench_input_id(&next_key)))
+    settings_run(app, id)
+}
+
+fn activate_details(app: &mut App) -> Option<Task<Message>> {
+    let details = app_details(app)?;
+    match app.panels.settings.pop {
+        None => {
+            app.panels.settings.pop = Some(details.key());
+            app.panels.settings.focused_choice = Some(0);
+            app.retick();
+            Some(Task::none())
+        }
+        Some(open) if open == details.key() => Some(open_app_stop(app, &details)),
+        Some(_) => None,
+    }
 }
 
 fn move_settings_choice(app: &mut App, forwards: bool) -> Task<Message> {
+    if let Some(details) =
+        app_details(app).filter(|details| app.panels.settings.pop == Some(details.key()))
+    {
+        move_app_stop(app, forwards, 1 + details.actions().len());
+        return Task::none();
+    }
+    if let Some((_, items)) = focused_checks(app) {
+        let current = app.panels.settings.focused_choice.unwrap_or_default();
+        let next = if forwards { current + 1 } else { current.saturating_sub(1) };
+        app.panels.settings.focused_choice = Some(next.min(items.len().saturating_sub(1)));
+        app.retick();
+        return Task::none();
+    }
     let Some(control) = current_keyboard_control(app) else {
         return Task::none();
     };
@@ -934,11 +1458,17 @@ fn activate_settings_focus(app: &mut App) -> Task<Message> {
             app.retick();
             Task::none()
         }
+        SettingsFocus::Sections
+            if app.panels.settings.tab == crate::frontend::settings::place::KEYBINDS =>
+        {
+            iced::widget::operation::focus(crate::frontend::settings::keys_find_id())
+        }
         SettingsFocus::Sections => {
             move_settings_tab_focus(app, false);
             app.retick();
-            Task::none()
+            reveal_focused(app)
         }
+        SettingsFocus::Strip => super::settings_layouts::strip_activate(app),
         SettingsFocus::Controls => activate_settings_control(app),
     }
 }
@@ -947,11 +1477,22 @@ fn activate_settings_control(app: &mut App) -> Task<Message> {
     if app.panels.settings.input_edit.is_some() {
         return settings_commit(app);
     }
+    if let Some(task) = activate_checks(app) {
+        return task;
+    }
+    if let Some(task) = activate_details(app) {
+        return task;
+    }
     let Some(control) = current_keyboard_control(app) else {
         return Task::none();
     };
     match control {
-        Control::Display(control) => super::update_inner(app, control.activate()),
+        Control::Display(_) => live_output(app).map_or_else(Task::none, |output| {
+            update(app, SettingsMsg::OpenPop(crate::frontend::settings::live_key(&output)))
+        }),
+        Control::AppTheme { app: entry, .. } if crate::frontend::settings::busy(&entry) => {
+            Task::none()
+        }
         Control::AppTheme { app: entry, .. } => {
             let index = app
                 .daemon
@@ -966,6 +1507,10 @@ fn activate_settings_control(app: &mut App) -> Task<Message> {
             })
         }
         Control::Toggle { path, value } => settings_toggle(app, &path, !value),
+        Control::Colour { path, .. } => {
+            let key = focus_token(app, &path, 0);
+            update(app, SettingsMsg::OpenPop(key))
+        }
         Control::KeyBinding { path, .. } => {
             let Some(slot) = app.panels.settings.focused_choice else {
                 app.panels.settings.focused_choice = Some(0);
@@ -976,6 +1521,7 @@ fn activate_settings_control(app: &mut App) -> Task<Message> {
             open_keybind_capture(app, &path, slot)
         }
         Control::Number { key, .. } | Control::TextField { key, .. } => {
+            app.panels.settings.edit = Some(focus_token(app, &key, 0));
             begin_settings_input_edit(app, &key);
             iced::widget::operation::focus(crate::frontend::settings::workbench_input_id(&key))
         }
@@ -985,51 +1531,18 @@ fn activate_settings_control(app: &mut App) -> Task<Message> {
             {
                 return update(app, SettingsMsg::ResolutionLimit(key, true));
             }
-            app.panels.settings.resolution_height = false;
+            let Some(slot) = app.panels.settings.focused_choice else {
+                app.panels.settings.focused_choice = Some(0);
+                app.retick();
+                return Task::none();
+            };
+            app.panels.settings.focused_choice = None;
+            app.panels.settings.resolution_height = slot > 0;
+            app.panels.settings.edit = Some(focus_token(app, &key, slot));
             begin_settings_input_edit(app, &key);
-            iced::widget::operation::focus(crate::frontend::settings::workbench_input_id(&format!(
-                "{key}.width"
-            )))
+            iced::widget::operation::focus(crate::frontend::settings::workbench_input_id(&key))
         }
-        Control::MotionWeights { weights } => {
-            let Some((_, key, _)) = weights.first() else {
-                return Task::none();
-            };
-            let motion = app.motion_profile();
-            app.panels.settings.open_bar(format!("setting-group:{key}"), motion);
-            begin_settings_input_edit(app, key);
-            iced::widget::operation::focus(crate::frontend::settings::workbench_input_id(key))
-        }
-        Control::Dropdown { path, options, current, .. } => {
-            let Some(choice) = app.panels.settings.focused_choice else {
-                app.panels.settings.focused_choice =
-                    Some(options.iter().position(|(key, _)| key == &current).unwrap_or(0));
-                app.retick();
-                return Task::none();
-            };
-            app.panels.settings.focused_choice = None;
-            options
-                .get(choice)
-                .map_or_else(Task::none, |(value, _)| settings_pick(app, &path, value))
-        }
-        Control::Chips { path, options, current, disabled, background } => {
-            let Some(choice) = app.panels.settings.focused_choice else {
-                app.panels.settings.focused_choice = Some(initial_choice(&Control::Chips {
-                    path,
-                    options,
-                    current,
-                    disabled,
-                    background,
-                }));
-                app.retick();
-                return Task::none();
-            };
-            app.panels.settings.focused_choice = None;
-            let Some((value, _)) = options.get(choice) else {
-                return Task::none();
-            };
-            if disabled.contains(value) { Task::none() } else { settings_pick(app, &path, value) }
-        }
+        menu @ (Control::Dropdown { .. } | Control::Chips { .. }) => pick_menu(app, &menu),
         Control::ActionBtn { id, .. } | Control::ToggleAction { id, .. } => settings_run(app, id),
         Control::ActionChips { items } => {
             let Some(choice) = app.panels.settings.focused_choice else {
@@ -1039,28 +1552,6 @@ fn activate_settings_control(app: &mut App) -> Task<Message> {
             };
             app.panels.settings.focused_choice = None;
             items.get(choice).map_or_else(Task::none, |(id, _)| settings_run(app, id.clone()))
-        }
-        Control::Presets { mode, items } => {
-            let Some(choice) = app.panels.settings.focused_choice else {
-                app.panels.settings.focused_choice = Some(
-                    items.iter().position(|(_, active)| *active).map_or(0, |index| 1 + index * 2),
-                );
-                app.retick();
-                return Task::none();
-            };
-            app.panels.settings.focused_choice = None;
-            if choice == 0 {
-                return save_preset(app);
-            }
-            let item = (choice - 1) / 2;
-            let Some((name, _)) = items.get(item) else {
-                return Task::none();
-            };
-            if (choice - 1).is_multiple_of(2) {
-                apply_preset(app, &mode, name)
-            } else {
-                delete_preset(app, &mode, name)
-            }
         }
         Control::Details { id, .. } => {
             toggle_settings_details(app, &id);
@@ -1076,6 +1567,67 @@ fn activate_settings_control(app: &mut App) -> Task<Message> {
             Task::none()
         }
     }
+}
+
+fn live_output(app: &App) -> Option<String> {
+    let pages = settings_control_pages(app);
+    let page = app.panels.settings.control_page.min(pages.len().saturating_sub(1));
+    let rows = &pages.get(page)?.rows;
+    let upto = (app.panels.settings.focused_control + 1).min(rows.len());
+    rows[..upto].iter().rev().find_map(|row| match &row.control {
+        Control::Chips { background: Some(background), .. } => Some(background.output.clone()),
+        _ => None,
+    })
+}
+
+fn pick_menu(app: &mut App, menu: &Control) -> Task<Message> {
+    let (Control::Dropdown { path, options, .. } | Control::Chips { path, options, .. }) = menu
+    else {
+        return Task::none();
+    };
+    let Some(choice) = app.panels.settings.focused_choice else {
+        app.panels.settings.focused_choice = Some(initial_choice(menu));
+        app.panels.settings.pop = Some(focus_token(app, path, 0));
+        app.retick();
+        return Task::none();
+    };
+    app.panels.settings.focused_choice = None;
+    app.panels.settings.pop = None;
+    let picked = choice.checked_sub(usize::from(menu.unlisted())).and_then(|at| options.get(at));
+    let Some((value, _)) = picked.filter(|_| choice_enabled(menu, choice)) else {
+        app.retick();
+        return Task::none();
+    };
+    settings_pick(app, path, value)
+}
+
+fn close_token_edit(app: &mut App) {
+    if app.panels.settings.edit.take().is_some() {
+        commit_settings_input_edit(app);
+    }
+}
+
+fn control_token(app: &App, control: &Control) -> Option<u64> {
+    match control {
+        Control::Dropdown { path, .. } | Control::Chips { path, .. } => {
+            Some(focus_token(app, path, 0))
+        }
+        chips if crate::frontend::settings::second_keys_row(chips) => {
+            Some(crate::frontend::settings::second_keys_token())
+        }
+        _ => None,
+    }
+}
+
+fn focus_token(app: &App, identity: &str, slot: usize) -> u64 {
+    use crate::frontend::settings::{TokenSide, token_side};
+    if app.panels.settings.search_open {
+        return crate::frontend::settings::token_key(identity, slot, TokenSide::Sentence);
+    }
+    let control = app.panels.settings.focused_control;
+    let side =
+        keyboard_section(app).map_or(TokenSide::Body, |section| token_side(&section, control));
+    crate::frontend::settings::token_key(identity, slot, side)
 }
 
 fn toggle_settings_details(app: &mut App, id: &str) {
@@ -1107,7 +1659,7 @@ fn commit_closes_settings(app: &mut App) -> bool {
     open && !app.panels.settings.open
 }
 
-fn commit_settings_input_edit(app: &mut App) {
+pub(super) fn commit_settings_input_edit(app: &mut App) {
     if let Some(edit) = app.panels.settings.input_edit.take() {
         super::settings_policy::flush_staged(app);
         super::settings_folders::reveal_committed_folder(app, &edit.key, &edit.original);
@@ -1118,9 +1670,7 @@ fn cancel_settings_input_edit(app: &mut App) -> Task<Message> {
     let Some(edit) = app.panels.settings.input_edit.take() else {
         return Task::none();
     };
-    let restore = if edit.key == PRESET_NAME_KEY {
-        preset_name_input(app, &edit.original)
-    } else {
+    let restore = {
         app.panels.settings.inputs.insert(edit.key.clone(), edit.original.clone());
         settings_input_store(app, &edit.key, &edit.original);
         if edit.key.starts_with("keys.") {
@@ -1191,8 +1741,9 @@ pub(super) fn settings_input_store(app: &mut App, key: &str, raw: &str) {
         super::settings_policy::stage_value(app, key, &json!(0));
         return;
     }
-    if key.starts_with(skwd_config::keys::library::PROFILES)
-        && key.ends_with(crate::contracts::settings::keys::library::profile::NAME)
+    if key == skwd_config::keys::playback::PROCESSES
+        || (key.starts_with(skwd_config::keys::library::PROFILES)
+            && key.ends_with(crate::contracts::settings::keys::library::profile::NAME))
     {
         super::settings_policy::stage_value(app, key, &json!(raw));
         return;
@@ -1224,6 +1775,19 @@ pub(super) fn settings_input_store(app: &mut App, key: &str, raw: &str) {
 }
 
 pub(super) fn settings_toggle(app: &mut App, path: &str, value: bool) -> Task<Message> {
+    if path == skwd_config::keys::drawing::ENABLED {
+        if value
+            && !app.daemon.drawing.as_ref().is_some_and(|status| {
+                status.prepared && app.drawing_selection() == Some(status.key.as_str())
+            })
+        {
+            app.show_toast(crate::i18n::tr("settings-drawing-enable-unprepared"));
+            return Task::none();
+        }
+        if !value {
+            app.daemon.client.call(wall_proto::rpc::DRAWING_CANCEL, json!({}));
+        }
+    }
     if path == skwd_config::keys::features::MATUGEN {
         return super::theme::set_matugen_enabled(app, value);
     }
@@ -1239,6 +1803,9 @@ pub(super) fn settings_commit(app: &mut App) -> Task<Message> {
     super::settings_policy::flush_staged(app);
     if let Some(edit) = &editing {
         super::settings_folders::reveal_committed_folder(app, &edit.key, &edit.original);
+        if let Some(kind) = crate::frontend::settings::folder_draft(&edit.key) {
+            let _ = super::settings_folders::add_folder(app, kind);
+        }
     }
     if editing.is_some() {
         app.retick();
@@ -1248,37 +1815,133 @@ pub(super) fn settings_commit(app: &mut App) -> Task<Message> {
     }
 }
 
-pub(super) fn set_settings_tab(app: &mut App, tab: String) -> Task<Message> {
-    let tab = crate::frontend::settings::canonical_category(tab);
+pub(super) fn set_settings_tab(app: &mut App, requested: &str) -> Task<Message> {
+    let route = crate::frontend::settings::legacy_section(requested);
+    let Some(tab) = crate::frontend::settings::canonical_place(requested) else {
+        return Task::none();
+    };
     commit_settings_input_edit(app);
     close_settings_search(app);
+    app.panels.settings.pop = None;
+    app.panels.settings.edit = None;
+    app.panels.settings.keybind_capture = None;
+    if app.panels.settings.open
+        && app.panels.settings.previous.is_some()
+        && !app.panels.settings.section_anim.settled()
+    {
+        app.panels.settings.pending =
+            Some(crate::app::state::SettingsNavigation::Page { tab: requested.to_string() });
+        return Task::none();
+    }
     let changed = app.panels.settings.tab != tab;
-    app.panels.settings.tab = tab;
-    app.panels.settings.section = 0;
-    app.panels.settings.control_page = 0;
-    app.panels.settings.focused_control = 0;
-    app.panels.settings.focused_choice = None;
     if changed {
-        app.panels.settings.section_anim.run(0.0, 1.0);
+        snapshot_settings_page(app);
+        app.panels.settings.close_sections();
+        app.panels.settings.keys_query.clear();
+        app.panels.settings.keys_moved = None;
+        app.panels.settings.keys_same = None;
+        app.panels.settings.keys_lit = None;
+        app.panels.settings.section = 0;
     } else {
         app.panels.settings.section_anim.snap(1.0);
     }
+    app.panels.settings.layout_studio = false;
+    app.panels.settings.tab = tab.to_string();
+    app.panels.settings.control_page = 0;
+    app.panels.settings.focused_control = 0;
+    app.panels.settings.focused_choice = None;
     app.panels.settings.control_anim.snap(1.0);
     app.panels.settings.armed = None;
     app.panels.settings.folder_undo = None;
     app.init_settings_inputs();
     if changed {
         app.panels.settings.tab_anim.run(0.0, 1.0);
+        if !crate::frontend::settings::SETTINGS_MOTION.reduced(app.motion_profile()) {
+            app.panels.settings.emblem_anim.run(0.0, 1.0);
+        }
         app.chrome.pane_scrolls.remove("settings");
     }
+    let top = if changed {
+        iced::widget::operation::snap_to(
+            crate::frontend::settings::settings_reading_id(),
+            iced::widget::scrollable::RelativeOffset::START,
+        )
+    } else {
+        Task::none()
+    };
+    let focus = app.panels.settings.focus;
+    let opened = route
+        .and_then(|key| {
+            settings_place(app, tab).sections.iter().position(|section| section.id.key == key)
+        })
+        .map_or_else(Task::none, |section| open_settings_section(app, section));
+    app.panels.settings.focus = focus;
     app.invalidate_settings();
     app.retick();
-    Task::none()
+    Task::batch([top, opened])
+}
+
+pub(super) fn open_drawing_setup(app: &mut App) -> Task<Message> {
+    let opening =
+        if app.panels.settings.open { Task::none() } else { super::panels::toggle_settings(app) };
+    let tab = crate::frontend::settings::place::WALLPAPERS.to_string();
+    let Some(section) = settings_place(app, &tab)
+        .sections
+        .iter()
+        .position(|section| section.title == crate::i18n::tr("settings-drawing-card"))
+    else {
+        return opening;
+    };
+    let navigating = open_settings_search_result(app, tab, section, 0);
+    Task::batch([opening, navigating])
+}
+
+fn snapshot_settings_page(app: &mut App) {
+    let motion = app.motion_profile();
+    if !app.panels.settings.open || crate::frontend::settings::SETTINGS_MOTION.reduced(motion) {
+        app.panels.settings.previous = None;
+        app.panels.settings.section_anim.snap(1.0);
+        return;
+    }
+    app.panels.settings.previous = Some(crate::frontend::settings::PageSnapshot {
+        place: settings_place(app, &app.panels.settings.tab),
+        inputs: app.panels.settings.inputs.clone(),
+    });
+    motion.retime_tween_override(
+        &mut app.panels.settings.section_anim,
+        crate::frontend::settings::SETTINGS_MOTION.content_ms,
+    );
+    app.panels.settings.section_anim.run(0.0, 1.0);
+}
+
+pub(super) fn finish_settings_transition(app: &mut App) -> Task<Message> {
+    if !app.panels.settings.section_anim.settled() {
+        return Task::none();
+    }
+    app.panels.settings.previous = None;
+    let Some(pending) = app.panels.settings.pending.take() else {
+        return Task::none();
+    };
+    match pending {
+        crate::app::state::SettingsNavigation::Page { tab } => set_settings_tab(app, &tab),
+        crate::app::state::SettingsNavigation::Search { tab, section, row } => {
+            open_settings_search_result(app, tab, section, row)
+        }
+    }
 }
 
 pub(super) fn settings_pick(app: &mut App, path: &str, value: &str) -> Task<Message> {
+    if let Some(task) = drawing_pick(app, path, value) {
+        return task;
+    }
     if super::settings_profiles::pick(app, path, value) {
         return Task::none();
+    }
+    if let Some(task) = super::settings_layouts::pick(app, path, value) {
+        return task;
+    }
+    if let Some(task) = weather_pick(app, path, value) {
+        return task;
     }
     let profile_id = path.strip_prefix(&format!("{}.", skwd_config::keys::theme::APP_PROFILES));
     if profile_id.is_some_and(|id| {
@@ -1297,7 +1960,12 @@ pub(super) fn settings_pick(app: &mut App, path: &str, value: &str) -> Task<Mess
         } else {
             old
         };
-        super::settings_background::animate_placement(app, path, &old, value);
+        let resolved = if value.is_empty() {
+            app.config.str_path(skwd_config::keys::display::FILL_MODE)
+        } else {
+            value.to_string()
+        };
+        super::settings_background::animate_placement(app, path, &old, &resolved);
     }
     if path == "playback.addProcess" {
         let _ = process_picker_add(app, value);
@@ -1312,6 +1980,15 @@ pub(super) fn settings_pick(app: &mut App, path: &str, value: &str) -> Task<Mess
     }
     if path == skwd_config::keys::theme::ENGINE && value == "matugen" {
         app.config.set_key(skwd_config::keys::features::MATUGEN, json!(true));
+    }
+    let reveal_hand = path == skwd_config::keys::selector::DISPLAY_MODE
+        && crate::contracts::picker::Mode::try_from_key(value)
+            == Some(crate::contracts::picker::Mode::Hand)
+        && app.panels.settings.open
+        && app.panels.settings.tab == crate::frontend::settings::place::LAYOUT
+        && !app.panels.settings.layout_studio;
+    if reveal_hand {
+        snapshot_settings_page(app);
     }
     if path == skwd_config::keys::theme::BACKEND {
         super::theme::save_theme_selection(app, value);
@@ -1346,6 +2023,14 @@ pub(super) fn settings_pick(app: &mut App, path: &str, value: &str) -> Task<Mess
     app.init_settings_inputs();
     app.invalidate_settings();
     app.retick();
+    if reveal_hand
+        && let Some(section) = settings_place(app, &app.panels.settings.tab)
+            .sections
+            .iter()
+            .position(|section| section.id.key == crate::frontend::settings::layout_place::SHAPE)
+    {
+        return open_settings_section(app, section);
+    }
     Task::none()
 }
 
@@ -1391,7 +2076,7 @@ fn refresh_theme_setting(app: &mut App, path: &str, value: &str, profile_id: Opt
             && path == skwd_config::keys::theme::STATIC_THEME
         {
             app.theme.base_palette = pal;
-            app.start_fade(pal);
+            app.start_fade(&pal);
         }
         app.daemon.client.call("wall.retheme", json!({}));
         app.invalidate_swatch();
@@ -1399,6 +2084,9 @@ fn refresh_theme_setting(app: &mut App, path: &str, value: &str, profile_id: Opt
 }
 
 pub(super) fn settings_pick_side_effects(app: &mut App, path: &str, value: &str) {
+    if path == skwd_config::keys::selector::DISPLAY_MODE {
+        super::settings_layouts::close_vanished_section(app);
+    }
     if path.starts_with(skwd_config::keys::filter_bar::RESOLUTION_PRESETS)
         && let Some(base) = path.strip_suffix(".orientation")
     {
@@ -1502,11 +2190,118 @@ fn run_array_action(app: &mut App, id: &ActionId) {
     }
 }
 
+fn drawing_pick(app: &mut App, path: &str, value: &str) -> Option<Task<Message>> {
+    if path != crate::frontend::settings::DRAWING_SCOPE_KEY {
+        return None;
+    }
+    let library = value == crate::frontend::settings::DRAWING_LIBRARY_SCOPE;
+    app.panels.settings.drawing_library = library;
+    app.panels.settings.library_job = false;
+    Some(if library {
+        Task::none()
+    } else {
+        settings_pick(app, skwd_config::keys::drawing::SCOPE, value)
+    })
+}
+
+fn weather_pick(app: &mut App, path: &str, value: &str) -> Option<Task<Message>> {
+    if path == crate::frontend::settings::WEATHER_MODE_KEY {
+        return Some(weather_mode(app, value));
+    }
+    if path != crate::frontend::settings::WEATHER_REVIEW_KEY {
+        return None;
+    }
+    let conditions = crate::frontend::settings::WEATHER_CONDITIONS;
+    let picked = conditions.iter().find(|(category, _)| *category == value);
+    Some(picked.map_or_else(Task::none, |(category, _)| super::weather_review::open(app, category)))
+}
+
+fn weather_busy(app: &App) -> bool {
+    app.daemon.pending.values().any(|pending| *pending == Pending::WeatherAction)
+}
+
+fn following(app: &App) -> bool {
+    crate::frontend::settings::following_outdoors(
+        app.place_source().cfg,
+        app.daemon.weather.as_ref(),
+    )
+}
+
+fn weather_mode(app: &mut App, mode: &str) -> Task<Message> {
+    if weather_busy(app) {
+        let stopped =
+            app.panels.settings.weather_after_follow.as_ref().is_some_and(|queue| queue.stopped);
+        app.panels.settings.weather_after_follow =
+            Some(WeatherQueue { mode: mode.to_string(), stopped });
+        return Task::none();
+    }
+    if following(app) && mode != skwd_config::keys::weather::SOURCE_OUTDOORS {
+        app.panels.settings.weather_after_follow =
+            Some(WeatherQueue { mode: mode.to_string(), stopped: true });
+        return settings_run(app, ActionId::FollowOutdoors(false));
+    }
+    switch_weather(app, mode)
+}
+
+fn switch_weather(app: &mut App, mode: &str) -> Task<Message> {
+    if mode == skwd_config::keys::weather::SOURCE_OUTDOORS {
+        return if following(app) {
+            Task::none()
+        } else {
+            settings_run(app, ActionId::FollowOutdoors(true))
+        };
+    }
+    let enabled = mode != crate::frontend::settings::WEATHER_OFF;
+    let source = if enabled {
+        settings_pick(app, skwd_config::keys::weather::SOURCE, mode)
+    } else {
+        Task::none()
+    };
+    Task::batch([source, settings_toggle(app, skwd_config::keys::weather::ENABLED, enabled)])
+}
+
+pub(super) fn resume_weather_mode(app: &mut App) -> Task<Message> {
+    if weather_busy(app) {
+        return Task::none();
+    }
+    let Some(queue) = app.panels.settings.weather_after_follow.take() else {
+        return Task::none();
+    };
+    let outdoors = queue.mode == skwd_config::keys::weather::SOURCE_OUTDOORS;
+    if queue.stopped && following(app) && !outdoors {
+        return Task::none();
+    }
+    weather_mode(app, &queue.mode)
+}
+
 fn weather_action(app: &mut App, method: &str, params: Value) {
     if app.daemon.pending.values().any(|pending| *pending == Pending::WeatherAction) {
         return;
     }
     app.call_tracked(method, params, Pending::WeatherAction);
+}
+
+pub(super) fn drawing_pack_chosen(
+    app: &mut App,
+    result: Result<Option<std::path::PathBuf>, String>,
+) -> Task<Message> {
+    app.panels.settings.folder_picking = false;
+    match result {
+        Ok(Some(path)) => {
+            app.call_tracked(
+                wall_proto::rpc::DRAWING_REGISTER,
+                json!(wall_proto::drawing::RegisterRequest { path: path.display().to_string() }),
+                Pending::DrawingAction,
+            );
+        }
+        Ok(None) => {}
+        Err(error) => {
+            app.show_toast(
+                crate::i18n::tr_args!(crate::app::constants::DRAWING_ERROR, error => error),
+            );
+        }
+    }
+    crate::app::warm::unstash(app)
 }
 
 pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
@@ -1519,6 +2314,12 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
     app.panels.settings.armed = None;
     app.invalidate_settings();
     match id {
+        id @ (ActionId::UsePremade(_) | ActionId::Nudge(..) | ActionId::CentreNudge(_)) => {
+            return super::settings_layouts::run(app, &id);
+        }
+        ActionId::ArrangePicker => {
+            return super::arrange::update(app, crate::frontend::arrange::ArrangeMsg::Begin);
+        }
         ActionId::SetThemeTarget(provider, enabled) => {
             if !matches!(provider, "noctalia" | "dms") {
                 return Task::none();
@@ -1676,9 +2477,10 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
                 .values()
                 .any(|task| task.id == WE_THUMBNAILS_TASK && task.state.is_active())
             {
-                app.daemon.client.call(
-                    wall_proto::rpc::TASK_CONTROL,
-                    json!({"id": WE_THUMBNAILS_TASK, "action": "stop"}),
+                super::dispatcher::control_task(
+                    app,
+                    WE_THUMBNAILS_TASK,
+                    crate::contracts::daemon::TaskControl::Stop,
                 );
             } else {
                 app.daemon.client.call(wall_proto::rpc::WALL_CAPTURE_THUMBNAILS, json!({}));
@@ -1743,6 +2545,148 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
         ActionId::ClearCache => {
             app.daemon.client.call("wall.clear_data", json!({}));
         }
+        ActionId::ChooseDrawingPack => {
+            if app.panels.settings.folder_picking {
+                return Task::none();
+            }
+            let title = crate::i18n::tr("settings-drawing-pack-picker-title").to_string();
+            let filter = crate::i18n::tr("settings-drawing-pack-picker-filter").to_string();
+            app.panels.settings.folder_picking = true;
+            let choose = iced_runtime::task::blocking(move |mut sender| {
+                let result = crate::infrastructure::file_picker::choose(
+                    &crate::infrastructure::file_picker::FilePicker {
+                        title: &title,
+                        directory: false,
+                        filters: &[filter],
+                        start: None,
+                    },
+                );
+                let _ = sender.try_send(Message::DrawingPackChosen(result));
+            });
+            return crate::app::warm::stash(app).chain(choose);
+        }
+        ActionId::DetachDrawingPack => {
+            app.call_tracked(wall_proto::rpc::DRAWING_DETACH, json!({}), Pending::DrawingAction);
+        }
+        ActionId::PrepareDrawing => {
+            let ready = app.daemon.drawing.as_ref().is_some_and(|status| {
+                status.pack == wall_proto::drawing::PackState::Available
+                    && !matches!(
+                        status.phase,
+                        wall_proto::drawing::Phase::Checking
+                            | wall_proto::drawing::Phase::Preparing
+                            | wall_proto::drawing::Phase::Paused
+                    )
+            });
+            if !ready {
+                return Task::none();
+            }
+            if app.config.str_path(skwd_config::keys::drawing::SCOPE)
+                == skwd_config::keys::drawing::SCOPE_VIEW
+            {
+                let keys: Vec<String> = app
+                    .drawing_view_keys()
+                    .take(wall_proto::drawing::MAX_PREPARE_KEYS + 1)
+                    .map(str::to_string)
+                    .collect();
+                if keys.is_empty() {
+                    app.show_toast(crate::i18n::tr(crate::frontend::settings::DRAWING_VIEW_EMPTY));
+                    return Task::none();
+                }
+                if keys.len() > wall_proto::drawing::MAX_PREPARE_KEYS {
+                    app.show_toast(crate::i18n::tr_args!(
+                        crate::frontend::settings::DRAWING_VIEW_LIMIT,
+                        count => app.drawing_view_keys().count(),
+                        limit => wall_proto::drawing::MAX_PREPARE_KEYS
+                    ));
+                    return Task::none();
+                }
+                app.call_tracked(
+                    wall_proto::rpc::DRAWING_PREPARE,
+                    json!(wall_proto::drawing::PrepareRequest { keys, ..Default::default() }),
+                    Pending::DrawingAction,
+                );
+                return Task::none();
+            }
+            let Some(key) = app.drawing_selection() else { return Task::none() };
+            app.call_tracked(
+                wall_proto::rpc::DRAWING_PREPARE,
+                json!(wall_proto::drawing::KeyRequest { key: key.to_string(), output: None }),
+                Pending::DrawingAction,
+            );
+        }
+        ActionId::PrepareAllDrawings => {
+            let running = app
+                .daemon
+                .tasks
+                .values()
+                .any(|task| task.id == wall_proto::drawing::TASK && task.state.is_active());
+            if running {
+                super::dispatcher::control_task(
+                    app,
+                    wall_proto::drawing::TASK,
+                    crate::contracts::daemon::TaskControl::Stop,
+                );
+            } else {
+                app.panels.settings.drawing_library = false;
+                app.panels.settings.library_job = true;
+                app.call_tracked(
+                    wall_proto::rpc::DRAWING_PREPARE,
+                    json!(wall_proto::drawing::PrepareRequest {
+                        library: true,
+                        ..Default::default()
+                    }),
+                    Pending::DrawingAction,
+                );
+            }
+        }
+        ActionId::CancelDrawing => {
+            app.call_tracked(wall_proto::rpc::DRAWING_CANCEL, json!({}), Pending::DrawingAction);
+        }
+        ActionId::PauseDrawing => {
+            app.call_tracked(wall_proto::rpc::DRAWING_PAUSE, json!({}), Pending::DrawingAction);
+        }
+        ActionId::ResumeDrawing => {
+            let Some(key) = app
+                .daemon
+                .drawing
+                .as_ref()
+                .filter(|status| status.phase == wall_proto::drawing::Phase::Paused)
+                .map(|status| status.active_key.clone())
+                .filter(|key| !key.is_empty())
+            else {
+                return Task::none();
+            };
+            app.call_tracked(
+                wall_proto::rpc::DRAWING_RESUME,
+                json!(wall_proto::drawing::KeyRequest { key, output: None }),
+                Pending::DrawingAction,
+            );
+        }
+        ActionId::ClearDrawingCache => {
+            app.call_tracked(
+                wall_proto::rpc::DRAWING_CLEAR_CACHE,
+                json!({}),
+                Pending::DrawingAction,
+            );
+        }
+        ActionId::PreviewDrawing => {
+            let Some(key) = app.drawing_selection() else { return Task::none() };
+            if !app
+                .daemon
+                .drawing
+                .as_ref()
+                .is_some_and(|status| status.prepared && status.key == key)
+            {
+                return Task::none();
+            }
+            app.call_tracked(
+                wall_proto::rpc::DRAWING_PREVIEW,
+                json!(wall_proto::drawing::KeyRequest { key: key.to_string(), output: None }),
+                Pending::DrawingAction,
+            );
+            return crate::app::warm::stash(app);
+        }
         ActionId::RecomputeColors => {
             app.daemon.client.call("wall.recompute_colors", json!({}));
         }
@@ -1758,6 +2702,8 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
         ActionId::CopyProfileCommand(index, helm) => {
             return super::settings_profiles::copy_command(app, usize::from(index), helm);
         }
+        ActionId::ExportConfiguration => return transfer_configuration(true),
+        ActionId::ImportConfiguration => return transfer_configuration(false),
         ActionId::ImportSemanticModel => return import_semantic_model(app),
         ActionId::DeleteSemanticModel(index) => return delete_semantic_model(app, Some(index)),
         ActionId::DeleteActiveSemanticModel => return delete_semantic_model(app, None),
@@ -1789,6 +2735,14 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
             return super::settings_folders::restore_folder(app);
         }
         ActionId::NewProfile => return super::settings_profiles::add_profile(app),
+        ActionId::SelectProfile(position) => {
+            return update(app, SettingsMsg::SelectProfile(position));
+        }
+        ActionId::ActivateProfile(profile) => {
+            return settings_pick(app, skwd_config::keys::library::PROFILE, &profile);
+        }
+        ActionId::FoldTree(id, open) => return update(app, SettingsMsg::ToggleFold(id, open)),
+        ActionId::OpenSection(section) => return open_settings_section(app, section),
         ActionId::DeleteProfile(index) => {
             super::settings_profiles::remove_profile(app, usize::from(index));
         }
@@ -1812,14 +2766,84 @@ pub(super) fn settings_run(app: &mut App, id: ActionId) -> Task<Message> {
         ActionId::GenerateBugReport => {
             app.call_tracked("status.bug_report", json!({}), Pending::BugReport);
         }
-        ActionId::ResetMotionFast => reset_motion_weight(app, skwd_config::keys::motion::FAST_MS),
-        ActionId::ResetMotionStandard => {
-            reset_motion_weight(app, skwd_config::keys::motion::STANDARD_MS);
-        }
-        ActionId::ResetMotionSlow => reset_motion_weight(app, skwd_config::keys::motion::SLOW_MS),
         ActionId::ResetKeybinds => reset_keybinds(app),
         ActionId::SetNavKeys(keys) => set_nav_keys(app, keys),
+        ActionId::LightKey(path) => {
+            app.panels.settings.keys_lit = Some(path);
+            app.panels.settings.keys_query.clear();
+            app.retick();
+        }
+        ActionId::UndoKeyMove => {
+            undo_key_move(app);
+            clamp_keyboard_control(app);
+        }
+        ActionId::OpenSearch => return open_settings_search(app),
+        ActionId::OpenPlace { place, setting } => {
+            return super::settings_home::open_place(app, place, setting);
+        }
+        ActionId::ResetSetting(change) => return super::settings_home::reset(app, &change),
+        ActionId::ResetEverything => return super::settings_home::reset_everything(app),
     }
+    Task::none()
+}
+
+fn transfer_configuration(export: bool) -> Task<Message> {
+    let labels = crate::infrastructure::config_pack::Labels {
+        export_title: crate::i18n::tr("settings-configuration-export-dialog"),
+        import_title: crate::i18n::tr("settings-configuration-import-dialog"),
+    };
+    iced_runtime::task::blocking(move |mut sender| {
+        let message = if export {
+            Message::ConfigurationExported(crate::infrastructure::config_pack::export(&labels))
+        } else {
+            Message::ConfigurationImported(crate::infrastructure::config_pack::import(&labels))
+        };
+        let _ = sender.try_send(message);
+    })
+}
+
+pub(super) fn configuration_exported(
+    app: &mut App,
+    result: Result<Option<std::path::PathBuf>, String>,
+) -> Task<Message> {
+    match result {
+        Ok(Some(path)) => {
+            let path = path.display().to_string();
+            app.show_toast(crate::i18n::tr_args!(
+                "settings-configuration-export-complete",
+                path => path
+            ));
+        }
+        Ok(None) => {}
+        Err(error) => app.show_toast(crate::i18n::tr_args!(
+            "settings-configuration-export-error",
+            error => error
+        )),
+    }
+    app.retick();
+    Task::none()
+}
+
+pub(super) fn configuration_imported(
+    app: &mut App,
+    result: Result<Option<std::path::PathBuf>, String>,
+) -> Task<Message> {
+    match result {
+        Ok(Some(path)) => {
+            app.adopt_external_config();
+            let path = path.display().to_string();
+            app.show_toast(crate::i18n::tr_args!(
+                "settings-configuration-import-complete",
+                path => path
+            ));
+        }
+        Ok(None) => {}
+        Err(error) => app.show_toast(crate::i18n::tr_args!(
+            "settings-configuration-import-error",
+            error => error
+        )),
+    }
+    app.retick();
     Task::none()
 }
 
@@ -1931,6 +2955,9 @@ pub(super) fn sddm_setup(
 }
 
 fn reset_keybinds(app: &mut App) {
+    app.panels.settings.keys_moved = None;
+    app.panels.settings.keys_same = None;
+    app.panels.settings.keys_lit = None;
     for descriptor in crate::contracts::picker::KEY_BINDINGS {
         app.panels.settings.inputs.insert(descriptor.path.to_string(), String::new());
         super::settings_policy::stage_value(app, descriptor.path, &json!(""));
@@ -2049,15 +3076,6 @@ fn format_pack_size(bytes: u64) -> String {
     }
 }
 
-fn reset_motion_weight(app: &mut App, path: &str) {
-    app.config.remove_key(path);
-    app.config.persist();
-    app.apply_layout();
-    app.init_settings_inputs();
-    app.invalidate_settings();
-    app.retick();
-}
-
 fn add_resolution_preset_band(app: &mut App, band: &str) {
     let (label, from, to) = match band {
         "fhd" => ("settings-filter-resolution-band-fhd", "1920x1080", "2559x1439"),
@@ -2130,49 +3148,6 @@ pub(super) fn cycle_view_mode(app: &mut App, backwards: bool) -> Task<Message> {
         Some(mode) => set_view_mode(app, mode),
         None => Task::none(),
     }
-}
-
-pub(super) fn apply_preset(app: &mut App, mode: &str, name: &str) -> Task<Message> {
-    app.config.apply_selector_preset(mode, name);
-    app.apply_layout();
-    app.init_settings_inputs();
-    app.panels.settings.inputs.insert(PRESET_NAME_KEY.to_string(), name.to_string());
-    app.invalidate_settings();
-    app.retick();
-    Task::none()
-}
-
-pub(super) fn save_preset(app: &mut App) -> Task<Message> {
-    let mode = app.config.selector_mode();
-    let name = app.config.next_preset_name(&mode, |number| {
-        crate::i18n::tr_args!(
-            "settings-selector-preset-generated-name",
-            number => number.to_string()
-        )
-    });
-    app.config.save_selector_preset(&mode, &name);
-    app.panels.settings.inputs.insert(PRESET_NAME_KEY.to_string(), name);
-    app.invalidate_settings();
-    app.retick();
-    Task::none()
-}
-
-pub(super) fn preset_name_input(app: &mut App, text: &str) -> Task<Message> {
-    app.panels.settings.inputs.insert(PRESET_NAME_KEY.to_string(), text.to_string());
-    let mode = app.config.selector_mode();
-    app.config.rename_selected_preset(&mode, text);
-    app.invalidate_settings();
-    app.retick();
-    Task::none()
-}
-
-pub(super) fn delete_preset(app: &mut App, mode: &str, name: &str) -> Task<Message> {
-    app.config.delete_selector_preset(mode, name);
-    let selected = app.config.selected_preset(mode).unwrap_or_default();
-    app.panels.settings.inputs.insert(PRESET_NAME_KEY.to_string(), selected);
-    app.invalidate_settings();
-    app.retick();
-    Task::none()
 }
 
 #[cfg(test)]

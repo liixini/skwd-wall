@@ -1,13 +1,14 @@
 use iced::Alignment;
 
 use crate::frontend::animation::{smoothstep, window};
-use crate::frontend::scene::BackPanel;
+use crate::frontend::scene::{BackPanel, DrawingCardState};
 use crate::frontend::ui::{mirror_x_for, rtl, start_for};
 use crate::i18n::tr;
 
 #[derive(Debug, Clone, Copy)]
 enum ActionKind {
     Playlist,
+    Drawing,
     Effects,
     SceneProperties,
     ResetThumbnail,
@@ -132,7 +133,7 @@ fn place_tag_flow(
 }
 
 fn action_specs(panel: &BackPanel, max_width: f32) -> Vec<(ActionKind, f32)> {
-    let mut specs = Vec::with_capacity(5);
+    let mut specs = Vec::new();
     if panel.overview_available {
         let width = label_width(tr("card-back-overview"), 22.0)
             .max(label_width(tr("card-back-overview-set"), 42.0));
@@ -140,6 +141,19 @@ fn action_specs(panel: &BackPanel, max_width: f32) -> Vec<(ActionKind, f32)> {
     }
     if panel.static_img {
         specs.push((ActionKind::Effects, action_width(tr("card-back-effects"))));
+    }
+    if panel.drawing.is_some() {
+        let width = [
+            DrawingCardState::Checking,
+            DrawingCardState::Draw,
+            DrawingCardState::Drawn,
+            DrawingCardState::Preparing,
+            DrawingCardState::Paused,
+        ]
+        .into_iter()
+        .map(|state| action_width(state.label()))
+        .fold(0.0_f32, f32::max);
+        specs.push((ActionKind::Drawing, width));
     }
     if panel.scene_properties {
         specs.push((ActionKind::SceneProperties, action_width(tr("card-back-scene-properties"))));
@@ -572,6 +586,7 @@ type Rect = (f32, f32, f32, f32);
 #[derive(Clone, Copy, Default)]
 pub struct ActionRects {
     pub playlist: Rect,
+    pub drawing: Option<Rect>,
     pub scene_properties: Option<Rect>,
     pub reset_thumbnail: Option<Rect>,
     pub reveal: Option<Rect>,
@@ -586,6 +601,7 @@ impl ActionRects {
     fn map(self, place: impl Fn(Rect) -> Rect) -> Self {
         Self {
             playlist: place(self.playlist),
+            drawing: self.drawing.map(&place),
             scene_properties: self.scene_properties.map(&place),
             reset_thumbnail: self.reset_thumbnail.map(&place),
             reveal: self.reveal.map(&place),
@@ -606,6 +622,7 @@ fn assign_actions(
     for ((kind, _), rectangle) in specs.into_iter().zip(rectangles) {
         match kind {
             ActionKind::Playlist => rects.playlist = rectangle,
+            ActionKind::Drawing => rects.drawing = Some(rectangle),
             ActionKind::Effects => rects.effects = Some(rectangle),
             ActionKind::SceneProperties => rects.scene_properties = Some(rectangle),
             ActionKind::ResetThumbnail => rects.reset_thumbnail = Some(rectangle),

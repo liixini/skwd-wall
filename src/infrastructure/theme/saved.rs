@@ -1,6 +1,7 @@
 use serde_json::{Value, json};
 
-use crate::domain::theme::{Candidate, ThemeRole};
+use crate::contracts::picker::palette_keys;
+use crate::domain::theme::{Candidate, HoverColors, ThemeRole};
 
 pub fn profile_in_use(root: &serde_json::Value, name: &str) -> bool {
     skwd_config::get(root, skwd_config::keys::theme::APP_PROFILES)
@@ -31,6 +32,10 @@ const ROLE_KEYS: [(&str, ThemeRole); ThemeRole::ALL.len()] = [
 ];
 const SCHEME_VERSION_KEY: &str = "_schemeVersion";
 const SCHEME_VERSION: u64 = 1;
+const DARK_MODE: &str = "dark";
+const LIGHT_MODE: &str = "light";
+const COLORS_KEY: &str = "colors";
+const COLOR_KEY: &str = "color";
 
 pub fn decode_candidate(value: &Value) -> Candidate {
     let dark = value
@@ -51,10 +56,21 @@ pub fn decode_candidate_variant(value: &Value, dark: bool) -> Candidate {
     let Some(doc) = skwd_palette::material::from_palette(value, dark, "tonal-spot") else {
         return Candidate::default();
     };
+    let hover = |dark| {
+        let mode = if dark { DARK_MODE } else { LIGHT_MODE };
+        Some(HoverColors {
+            fill: skwd_palette::material::role(&doc, palette_keys::HOVER[0], mode)
+                .and_then(|color| skwd_palette::material::parse_seed(&color))?,
+            text: skwd_palette::material::role(&doc, palette_keys::HOVER_TEXT[1], mode)
+                .and_then(|color| skwd_palette::material::parse_seed(&color))?,
+        })
+    };
     Candidate {
         colors: skwd_palette::material::colors(&doc, dark),
         alternate: skwd_palette::material::colors(&doc, !dark),
         dark,
+        hover: hover(dark),
+        alternate_hover: hover(!dark),
     }
 }
 
@@ -78,10 +94,24 @@ pub fn encode_candidate(candidate: &Candidate, include_aliases: bool) -> Value {
     } else {
         (&candidate.alternate, &candidate.colors)
     };
-    map.insert(
-        "_scheme".to_string(),
-        skwd_palette::material::from_colors(dark, light, candidate.dark),
-    );
+    let mut document = skwd_palette::material::from_colors(dark, light, candidate.dark);
+    let (dark_hover, light_hover) = if candidate.dark {
+        (&candidate.hover, &candidate.alternate_hover)
+    } else {
+        (&candidate.alternate_hover, &candidate.hover)
+    };
+    for (mode, hover) in [(DARK_MODE, dark_hover), (LIGHT_MODE, light_hover)] {
+        if let Some(hover) = hover {
+            document[COLORS_KEY][palette_keys::HOVER[0]][mode][COLOR_KEY] = json!(hover.fill);
+            document[COLORS_KEY][palette_keys::HOVER_TEXT[1]][mode][COLOR_KEY] = json!(hover.text);
+        }
+    }
+    skwd_palette::material::select_mode(&mut document, candidate.dark);
+    if let Some(hover) = &candidate.hover {
+        map.insert(palette_keys::HOVER[0].to_string(), json!(hover.fill));
+        map.insert(palette_keys::HOVER_TEXT[0].to_string(), json!(hover.text));
+    }
+    map.insert("_scheme".to_string(), document);
     map.insert(SCHEME_VERSION_KEY.to_string(), json!(SCHEME_VERSION));
     Value::Object(map)
 }

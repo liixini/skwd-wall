@@ -84,8 +84,8 @@ playlists-choose = Choose a playlist
 playlists-browse-all = All wallpapers
 playlists-edit = Edit playlists
 playlists-picker-search = Search by name or ID
-playlists-picker-no-match = No playlists match this search.
-playlists-picker-hint = Choose which wallpapers to browse. Playback stays as it is.
+playlists-picker-no-match = এই অনুসন্ধানের সঙ্গে কোনো প্লেলিস্ট মেলেনি।
+playlists-picker-hint = কোন ওয়ালপেপার ব্রাউজ করবেন তা বেছে নিন। প্লেব্যাক আগের মতোই থাকবে।
 playlists-filter-help = Filter reference
 playlists-help-combine = ফিল্টারগুলো ফাঁকা স্থান দিয়ে আলাদা করুন। ফোল্ডার নিয়ম ছাড়া প্রতিটি ফিল্টার মিলতে হবে; তালিকাভুক্ত যেকোনো ফোল্ডারের আইটেম গণ্য হয়। ফাঁকা স্থানযুক্ত পথ উদ্ধৃতিচিহ্নে রাখুন।
 playlists-help-source = all / favourites
@@ -107,7 +107,7 @@ playlists-help-height = height:>=1080
     Compare the wallpaper height in pixels.
 playlists-help-resolution = res:>=1920x1080
     Both dimensions must satisfy the comparison.
-playlists-help-comparison = Comparisons: >=, <=, >, <, =
+playlists-help-comparison = তুলনা: >=, <=, >, <, =
     With no operator, numbers mean at least. Numeric = allows a difference below 0.5, including ratios. Use lowercase filter keywords.
-playlists-help-example = Example: favourites type:video ratio:landscape color:blue
+playlists-help-example = উদাহরণ: favourites type:video ratio:landscape color:blue
     Blue, wide videos from your favourites.

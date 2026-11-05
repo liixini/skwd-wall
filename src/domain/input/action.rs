@@ -45,6 +45,8 @@ pub enum InputAction {
     Favourite,
     Effects,
     Studio,
+    ColourStudio,
+    Widgets,
     SceneProperties,
     Playlists,
     Settings,
@@ -87,7 +89,7 @@ pub enum InputAction {
 }
 
 impl InputAction {
-    pub const ALL: [Self; 46] = [
+    pub const ALL: [Self; 48] = [
         Self::Select,
         Self::Apply,
         Self::Flip,
@@ -95,6 +97,8 @@ impl InputAction {
         Self::Favourite,
         Self::Effects,
         Self::Studio,
+        Self::ColourStudio,
+        Self::Widgets,
         Self::SceneProperties,
         Self::Playlists,
         Self::Settings,
@@ -145,11 +149,13 @@ impl InputAction {
             Self::Favourite => "f",
             Self::Effects => "ctrl+click",
             Self::Studio => "shift+right-click",
+            Self::ColourStudio => "c",
+            Self::Widgets => "e",
             Self::SceneProperties => "shift+w",
             Self::Playlists => "p",
             Self::Settings => "shift+s",
             Self::Help => "?",
-            Self::ThemePanel => "c",
+            Self::ThemePanel => "shift+c",
             Self::TagCloud => "shift+down, /",
             Self::TagMode => "t",
             Self::FilterBar => "shift+up",
@@ -214,6 +220,7 @@ impl InputAction {
                 | Self::Favourite
                 | Self::Effects
                 | Self::Studio
+                | Self::ColourStudio
                 | Self::SceneProperties
         )
     }

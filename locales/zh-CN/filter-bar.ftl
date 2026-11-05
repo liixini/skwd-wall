@@ -18,6 +18,7 @@ filter-bar-task-tags = 标签
 filter-bar-task-index = 索引
 filter-bar-task-scan = 扫描
 filter-bar-task-download = 下载
+filter-bar-task-drawing = 绘制
 filter-bar-state-running = 运行中
 filter-bar-state-paused = 已暂停
 filter-bar-state-done = 已完成

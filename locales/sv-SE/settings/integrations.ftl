@@ -1,3 +1,8 @@
+settings-integrations-caelestia-card = Caelestia
+settings-integrations-caelestia-card-desc = Låt Skwd visa bakgrundsbilder som väljs i någon av apparna.
+settings-integrations-caelestia-sync-label = Synkronisera Caelestias bakgrundsbilder
+settings-integrations-caelestia-sync-desc = Skwd visar bakgrundsbilder som väljs i någon av apparna. Val i Caelestia används på olåsta skärmar.
+
 settings-integrations-plasma-card = KDE Plasma
 settings-integrations-lock-mode-label = Låsskärmens bakgrund
 settings-integrations-lock-mode-desc = Ohanterad lämnar Plasma i fred. Statisk använder alltid bilden nedan. Följ speglar den senast använda bakgrundsbilden.
@@ -33,7 +38,7 @@ settings-integrations-follow-desc = Följ Skwd när det styr färgerna. Av behå
 
 settings-section-lockscreens = Låsskärmar
 settings-lockscreens-source-label = Bildkälla
-settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-source-help = Följ senast tillämpad använder den nuvarande bakgrundsbilden. Stillbild använder filen nedan. Videor och scener använder en stillbild när det finns en.
 settings-lockscreens-image-label = Statisk bild
 settings-lockscreens-image-desc = Ange hela sökvägen till en befintlig bild, till exempel ~/Pictures/lockscreen.jpg. Skwd kopierar den till aktiverade låsskärmar. En videofil kan inte användas här.
 settings-lockscreens-hyprlock-card = Hyprlock

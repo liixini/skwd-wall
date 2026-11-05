@@ -1,5 +1,6 @@
 #[allow(clippy::wildcard_imports)]
 use super::*;
+use crate::contracts::settings::SettingsSource;
 use crate::i18n::{tr, tr_args};
 
 const LOCKSCREEN_IMAGE_EXAMPLE: &str = "~/Pictures/lock-screen.jpg";
@@ -54,8 +55,22 @@ pub(super) fn engine_options(available: &[String], current: &str) -> Vec<(&'stat
     out
 }
 
-pub(super) fn tab_theme(builder: &mut Builder<'_>, backends: &[String]) {
-    let cfg = builder.cfg;
+const IMPORTED_SHELLS: [(&str, &str, &str); 2] = [
+    (
+        "noctalia",
+        "settings-theme-external-card-desc-noctalia",
+        "settings-theme-imported-variant-desc-noctalia",
+    ),
+    ("dms", "settings-theme-external-card-desc-dms", "settings-theme-imported-variant-desc-dms"),
+];
+
+struct Resolved {
+    policy: String,
+    authority: String,
+    engine: String,
+}
+
+fn resolved(cfg: &dyn SettingsSource) -> Resolved {
     let effective = cfg.theme_backend();
     let policy = match cfg.text(keys::theme::POLICY).as_str() {
         "wallpaper" | "fixed" | "off" => cfg.text(keys::theme::POLICY),
@@ -90,15 +105,179 @@ pub(super) fn tab_theme(builder: &mut Builder<'_>, backends: &[String]) {
                 | "pywal"
                 | "iris"
         ) {
-            effective.clone()
+            effective
         } else {
             "skwd-iris".to_string()
         }
     } else {
         configured_engine
     };
+    Resolved { policy, authority, engine }
+}
 
-    builder.card(tr("settings-theme-behaviour-card"), tr("settings-theme-behaviour-card-desc"));
+fn authority_row(builder: &mut Builder<'_>, backends: &[String], authority: &str) {
+    let owned = authority_options(backends, authority);
+    let opts: Vec<(&str, &str)> = owned.iter().map(|(id, label)| (*id, label.as_str())).collect();
+    builder.dropdown_cur(
+        tr("settings-theme-authority-label"),
+        tr("settings-theme-authority-desc"),
+        keys::theme::AUTHORITY,
+        &opts,
+        authority.to_string(),
+    );
+}
+
+fn engine_row(builder: &mut Builder<'_>, backends: &[String], engine: &str) {
+    let owned = engine_options(backends, engine);
+    let opts: Vec<(&str, &str)> = owned.iter().map(|(id, label)| (*id, label.as_str())).collect();
+    builder.dropdown_cur(
+        tr("settings-theme-engine-label"),
+        tr("settings-theme-engine-desc"),
+        keys::theme::ENGINE,
+        &opts,
+        engine.to_string(),
+    );
+}
+
+fn appearance_rows(builder: &mut Builder<'_>) {
+    builder.dropdown(
+        tr("settings-theme-scheme-label"),
+        tr("settings-theme-scheme-desc"),
+        keys::theme::SCHEME,
+        &[
+            ("tonal-spot", tr("settings-theme-scheme-tonal-spot")),
+            ("vibrant", tr("settings-theme-scheme-vibrant")),
+            ("expressive", tr("settings-theme-scheme-expressive")),
+            ("neutral", tr("settings-theme-scheme-neutral")),
+            ("monochrome", tr("settings-theme-scheme-monochrome")),
+            ("fidelity", tr("settings-theme-scheme-fidelity")),
+            ("content", tr("settings-theme-scheme-content")),
+            ("rainbow", tr("settings-theme-scheme-rainbow")),
+            ("fruit-salad", tr("settings-theme-scheme-fruit-salad")),
+        ],
+    );
+    builder.dropdown(
+        tr("settings-theme-finish-label"),
+        tr("settings-theme-finish-desc"),
+        keys::theme::STYLE,
+        &[
+            ("natural", tr("settings-theme-finish-natural")),
+            ("pastel", tr("settings-theme-finish-pastel")),
+            ("muted", tr("settings-theme-finish-muted")),
+            ("vibrant", tr("settings-theme-finish-vibrant")),
+        ],
+    );
+    builder.dropdown(
+        tr("settings-theme-variant-label"),
+        tr("settings-theme-variant-desc"),
+        keys::theme::MODE,
+        &[
+            ("dark", tr("settings-theme-variant-dark")),
+            ("light", tr("settings-theme-variant-light")),
+            ("auto", tr("settings-theme-variant-auto")),
+        ],
+    );
+}
+
+fn static_theme_row(builder: &mut Builder<'_>) {
+    let cfg = builder.cfg;
+    let mut options = cfg.palette_presets();
+    for name in cfg.saved_theme_names() {
+        options.push((name.clone(), tr_args!("settings-theme-static-theme-yours", name => &name)));
+    }
+    options.push(("custom".to_string(), tr("settings-theme-static-theme-custom").to_string()));
+    let current = cfg.text(keys::theme::STATIC_THEME);
+    builder.row(
+        tr("settings-theme-static-theme-label"),
+        tr("settings-theme-static-theme-desc"),
+        Control::Dropdown {
+            palettes: cfg.palette_colors(),
+            path: keys::theme::STATIC_THEME.to_string(),
+            options,
+            current,
+        },
+    );
+}
+
+fn custom_colors_row(builder: &mut Builder<'_>) {
+    builder.text_field(
+        tr("settings-theme-custom-colors-label"),
+        tr("settings-theme-custom-colors-desc"),
+        keys::theme::CUSTOM_COLORS,
+        "#1e1e2e, #89b4fa, #f5c2e7",
+    );
+}
+
+fn matugen_rows(builder: &mut Builder<'_>) {
+    builder.dropdown(
+        tr("settings-theme-scheme-label"),
+        tr("settings-theme-matugen-scheme-desc"),
+        keys::matugen::SCHEME_TYPE,
+        &[
+            ("scheme-content", tr("settings-theme-scheme-content")),
+            ("scheme-expressive", tr("settings-theme-scheme-expressive")),
+            ("scheme-fidelity", tr("settings-theme-scheme-fidelity")),
+            ("scheme-fruit-salad", tr("settings-theme-scheme-fruit-salad")),
+            ("scheme-monochrome", tr("settings-theme-scheme-monochrome")),
+            ("scheme-neutral", tr("settings-theme-scheme-neutral")),
+            ("scheme-rainbow", tr("settings-theme-scheme-rainbow")),
+            ("scheme-tonal-spot", tr("settings-theme-scheme-tonal-spot")),
+            ("scheme-vibrant", tr("settings-theme-scheme-vibrant")),
+            ("scheme-smart", tr("settings-theme-matugen-smart")),
+        ],
+    );
+    builder.dropdown(
+        tr("settings-theme-variant-label"),
+        tr("settings-theme-matugen-smart-mode-desc"),
+        keys::theme::MODE,
+        &[
+            ("dark", tr("settings-theme-variant-dark")),
+            ("light", tr("settings-theme-variant-light")),
+            ("auto", tr("settings-theme-variant-auto")),
+            ("smart", tr("settings-theme-matugen-smart")),
+        ],
+    );
+    builder.dropdown(
+        tr("settings-theme-interface-finish-label"),
+        tr("settings-theme-interface-finish-desc"),
+        keys::theme::STYLE,
+        &[
+            ("natural", tr("settings-theme-finish-natural-plain")),
+            ("pastel", tr("settings-theme-finish-pastel")),
+            ("muted", tr("settings-theme-finish-muted")),
+            ("vibrant", tr("settings-theme-finish-vibrant")),
+        ],
+    );
+    builder.dropdown(
+        tr("settings-theme-color-index-label"),
+        tr("settings-theme-color-index-desc"),
+        keys::matugen::COLOR_INDEX,
+        &[("0", tr("settings-theme-color-index-primary")), ("1", "1"), ("2", "2"), ("3", "3")],
+    );
+    builder.text_field(
+        tr("settings-theme-contrast-label"),
+        tr("settings-theme-contrast-desc"),
+        keys::matugen::CONTRAST,
+        "0.00",
+    );
+}
+
+fn wallust_row(builder: &mut Builder<'_>) {
+    builder.text_field(
+        tr("settings-theme-wallust-palette-label"),
+        tr("settings-theme-wallust-palette-desc"),
+        keys::theme::WALLUST_PALETTE,
+        "dark16",
+    );
+}
+
+pub(super) fn tab_theme(builder: &mut Builder<'_>, backends: &[String]) {
+    let Resolved { policy, authority, engine } = resolved(builder.cfg);
+
+    builder.card(
+        crate::i18n::text("settings-theme-behaviour-card"),
+        tr("settings-theme-behaviour-card-desc"),
+    );
     builder.dropdown_cur(
         tr("settings-theme-policy-label"),
         tr("settings-theme-policy-desc"),
@@ -112,31 +291,19 @@ pub(super) fn tab_theme(builder: &mut Builder<'_>, backends: &[String]) {
     );
 
     if policy == "wallpaper" {
-        builder.card(tr("settings-theme-driver-card"), tr("settings-theme-driver-card-desc"));
-        let owned = authority_options(backends, &authority);
-        let opts: Vec<(&str, &str)> =
-            owned.iter().map(|(id, label)| (*id, label.as_str())).collect();
-        builder.dropdown_cur(
-            tr("settings-theme-authority-label"),
-            tr("settings-theme-authority-desc"),
-            keys::theme::AUTHORITY,
-            &opts,
-            authority.clone(),
+        builder.card(
+            crate::i18n::text("settings-theme-driver-card"),
+            tr("settings-theme-driver-card-desc"),
         );
+        authority_row(builder, backends, &authority);
     }
 
     if policy == "wallpaper" && authority == "skwd" {
-        builder.card(tr("settings-theme-engine-card"), tr("settings-theme-engine-card-desc"));
-        let owned = engine_options(backends, &engine);
-        let opts: Vec<(&str, &str)> =
-            owned.iter().map(|(id, label)| (*id, label.as_str())).collect();
-        builder.dropdown_cur(
-            tr("settings-theme-engine-label"),
-            tr("settings-theme-engine-desc"),
-            keys::theme::ENGINE,
-            &opts,
-            engine.clone(),
+        builder.card(
+            crate::i18n::text("settings-theme-engine-card"),
+            tr("settings-theme-engine-card-desc"),
         );
+        engine_row(builder, backends, &engine);
     }
 
     if policy == "wallpaper"
@@ -146,48 +313,17 @@ pub(super) fn tab_theme(builder: &mut Builder<'_>, backends: &[String]) {
             "native" | "skwd-iris" | "skwd-pywal" | "skwd-wallust" | "wallust" | "pywal" | "iris"
         )
     {
-        builder
-            .card(tr("settings-theme-appearance-card"), tr("settings-theme-appearance-card-desc"));
-        builder.dropdown(
-            tr("settings-theme-scheme-label"),
-            tr("settings-theme-scheme-desc"),
-            keys::theme::SCHEME,
-            &[
-                ("tonal-spot", tr("settings-theme-scheme-tonal-spot")),
-                ("vibrant", tr("settings-theme-scheme-vibrant")),
-                ("expressive", tr("settings-theme-scheme-expressive")),
-                ("neutral", tr("settings-theme-scheme-neutral")),
-                ("monochrome", tr("settings-theme-scheme-monochrome")),
-                ("fidelity", tr("settings-theme-scheme-fidelity")),
-                ("content", tr("settings-theme-scheme-content")),
-                ("rainbow", tr("settings-theme-scheme-rainbow")),
-                ("fruit-salad", tr("settings-theme-scheme-fruit-salad")),
-            ],
+        builder.card(
+            crate::i18n::text("settings-theme-appearance-card"),
+            tr("settings-theme-appearance-card-desc"),
         );
-        builder.dropdown(
-            tr("settings-theme-finish-label"),
-            tr("settings-theme-finish-desc"),
-            keys::theme::STYLE,
-            &[
-                ("natural", tr("settings-theme-finish-natural")),
-                ("pastel", tr("settings-theme-finish-pastel")),
-                ("muted", tr("settings-theme-finish-muted")),
-                ("vibrant", tr("settings-theme-finish-vibrant")),
-            ],
-        );
-        builder.dropdown(
-            tr("settings-theme-variant-label"),
-            tr("settings-theme-variant-desc"),
-            keys::theme::MODE,
-            &[
-                ("dark", tr("settings-theme-variant-dark")),
-                ("light", tr("settings-theme-variant-light")),
-                ("auto", tr("settings-theme-variant-auto")),
-            ],
-        );
+        appearance_rows(builder);
     }
     if policy == "wallpaper" {
-        builder.card(tr("settings-theme-designer-label"), tr("settings-theme-profile-desc"));
+        builder.card(
+            crate::i18n::text("settings-theme-designer-label"),
+            tr("settings-theme-profile-desc"),
+        );
         builder.action(
             tr("settings-theme-designer-label"),
             tr("settings-theme-designer-desc"),
@@ -197,135 +333,47 @@ pub(super) fn tab_theme(builder: &mut Builder<'_>, backends: &[String]) {
     }
     match (policy.as_str(), authority.as_str(), engine.as_str()) {
         ("fixed", _, _) => {
-            builder.card(tr("settings-theme-fixed-card"), tr("settings-theme-fixed-card-desc"));
-            let mut options = cfg.palette_presets();
-            for name in cfg.saved_theme_names() {
-                options.push((
-                    name.clone(),
-                    tr_args!("settings-theme-static-theme-yours", name => &name),
-                ));
-            }
-            options
-                .push(("custom".to_string(), tr("settings-theme-static-theme-custom").to_string()));
-            let current = cfg.text(keys::theme::STATIC_THEME);
-            builder.row(
-                tr("settings-theme-static-theme-label"),
-                tr("settings-theme-static-theme-desc"),
-                Control::Dropdown {
-                    palettes: cfg.palette_colors(),
-                    path: keys::theme::STATIC_THEME.to_string(),
-                    options,
-                    current,
-                },
+            builder.card(
+                crate::i18n::text("settings-theme-fixed-card"),
+                tr("settings-theme-fixed-card-desc"),
             );
+            static_theme_row(builder);
             builder.action(
                 tr("settings-theme-designer-label"),
                 tr("settings-theme-designer-desc"),
                 ActionId::OpenThemeDesigner,
                 tr("settings-theme-designer-action"),
             );
-            builder.text_field(
-                tr("settings-theme-custom-colors-label"),
-                tr("settings-theme-custom-colors-desc"),
-                keys::theme::CUSTOM_COLORS,
-                "#1e1e2e, #89b4fa, #f5c2e7",
-            );
+            custom_colors_row(builder);
         }
         ("wallpaper", "skwd", "matugen") => {
-            builder.card(tr("settings-theme-matugen-card"), tr("settings-theme-matugen-card-desc"));
-            builder.dropdown(
-                tr("settings-theme-scheme-label"),
-                tr("settings-theme-matugen-scheme-desc"),
-                keys::matugen::SCHEME_TYPE,
-                &[
-                    ("scheme-content", tr("settings-theme-scheme-content")),
-                    ("scheme-expressive", tr("settings-theme-scheme-expressive")),
-                    ("scheme-fidelity", tr("settings-theme-scheme-fidelity")),
-                    ("scheme-fruit-salad", tr("settings-theme-scheme-fruit-salad")),
-                    ("scheme-monochrome", tr("settings-theme-scheme-monochrome")),
-                    ("scheme-neutral", tr("settings-theme-scheme-neutral")),
-                    ("scheme-rainbow", tr("settings-theme-scheme-rainbow")),
-                    ("scheme-tonal-spot", tr("settings-theme-scheme-tonal-spot")),
-                    ("scheme-vibrant", tr("settings-theme-scheme-vibrant")),
-                    ("scheme-smart", tr("settings-theme-matugen-smart")),
-                ],
+            builder.card(
+                crate::i18n::text("settings-theme-matugen-card"),
+                tr("settings-theme-matugen-card-desc"),
             );
-            builder.dropdown(
-                tr("settings-theme-variant-label"),
-                tr("settings-theme-matugen-smart-mode-desc"),
-                keys::theme::MODE,
-                &[
-                    ("dark", tr("settings-theme-variant-dark")),
-                    ("light", tr("settings-theme-variant-light")),
-                    ("auto", tr("settings-theme-variant-auto")),
-                    ("smart", tr("settings-theme-matugen-smart")),
-                ],
-            );
-            builder.dropdown(
-                tr("settings-theme-interface-finish-label"),
-                tr("settings-theme-interface-finish-desc"),
-                keys::theme::STYLE,
-                &[
-                    ("natural", tr("settings-theme-finish-natural-plain")),
-                    ("pastel", tr("settings-theme-finish-pastel")),
-                    ("muted", tr("settings-theme-finish-muted")),
-                    ("vibrant", tr("settings-theme-finish-vibrant")),
-                ],
-            );
-            builder.dropdown(
-                tr("settings-theme-color-index-label"),
-                tr("settings-theme-color-index-desc"),
-                keys::matugen::COLOR_INDEX,
-                &[
-                    ("0", tr("settings-theme-color-index-primary")),
-                    ("1", "1"),
-                    ("2", "2"),
-                    ("3", "3"),
-                ],
-            );
-            builder.text_field(
-                tr("settings-theme-contrast-label"),
-                tr("settings-theme-contrast-desc"),
-                keys::matugen::CONTRAST,
-                "0.00",
-            );
+            matugen_rows(builder);
         }
         ("wallpaper", "skwd", "wallust") => {
-            builder.card(tr("settings-theme-wallust-card"), "");
-            builder.text_field(
-                tr("settings-theme-wallust-palette-label"),
-                tr("settings-theme-wallust-palette-desc"),
-                keys::theme::WALLUST_PALETTE,
-                "dark16",
-            );
+            builder.card(crate::i18n::text("settings-theme-wallust-card"), "");
+            wallust_row(builder);
         }
         ("wallpaper", "skwd", "native") => {
-            builder.card(tr("settings-theme-native-card"), tr("settings-theme-native-card-desc"));
-        }
-        ("wallpaper", "noctalia", _) => {
             builder.card(
-                tr("settings-theme-external-card"),
-                tr("settings-theme-external-card-desc-noctalia"),
-            );
-            builder.dropdown(
-                tr("settings-theme-imported-variant-label"),
-                tr("settings-theme-imported-variant-desc-noctalia"),
-                keys::theme::MODE,
-                &[
-                    ("dark", tr("settings-theme-variant-dark")),
-                    ("light", tr("settings-theme-variant-light")),
-                    ("auto", tr("settings-theme-variant-auto")),
-                ],
+                crate::i18n::text("settings-theme-native-card"),
+                tr("settings-theme-native-card-desc"),
             );
         }
-        ("wallpaper", "dms", _) => {
-            builder.card(
-                tr("settings-theme-external-card"),
-                tr("settings-theme-external-card-desc-dms"),
-            );
+        ("wallpaper", provider, _)
+            if IMPORTED_SHELLS.iter().any(|(shell, _, _)| *shell == provider) =>
+        {
+            let (_, card, variant) = IMPORTED_SHELLS
+                .into_iter()
+                .find(|(shell, _, _)| *shell == provider)
+                .expect("imported shell");
+            builder.card(crate::i18n::text("settings-theme-external-card"), tr(card));
             builder.dropdown(
                 tr("settings-theme-imported-variant-label"),
-                tr("settings-theme-imported-variant-desc-dms"),
+                tr(variant),
                 keys::theme::MODE,
                 &[
                     ("dark", tr("settings-theme-variant-dark")),
@@ -336,6 +384,19 @@ pub(super) fn tab_theme(builder: &mut Builder<'_>, backends: &[String]) {
         }
         _ => {}
     }
+}
+
+pub(super) fn tab_theme_asleep(builder: &mut Builder<'_>, backends: &[String]) {
+    let Resolved { authority, engine, .. } = resolved(builder.cfg);
+    builder.card(crate::i18n::text("settings-theme-engine-card"), "");
+    authority_row(builder, backends, &authority);
+    engine_row(builder, backends, &engine);
+    appearance_rows(builder);
+    matugen_rows(builder);
+    wallust_row(builder);
+    static_theme_row(builder);
+    custom_colors_row(builder);
+    lock_image_row(builder);
 }
 
 fn theme_target(builder: &mut Builder<'_>, provider: &'static str) {
@@ -350,7 +411,16 @@ fn theme_target(builder: &mut Builder<'_>, provider: &'static str) {
 
 pub(super) fn tab_integrations(builder: &mut Builder<'_>) {
     builder.card(
-        tr("settings-integrations-noctalia-card"),
+        crate::i18n::text("settings-integrations-caelestia-card"),
+        tr("settings-integrations-caelestia-card-desc"),
+    );
+    builder.toggle(
+        tr("settings-integrations-caelestia-sync-label"),
+        tr("settings-integrations-caelestia-sync-desc"),
+        keys::caelestia::WALLPAPER_SYNC,
+    );
+    builder.card(
+        crate::i18n::text("settings-integrations-noctalia-card"),
         tr("settings-integrations-noctalia-card-desc"),
     );
     theme_target(builder, "noctalia");
@@ -377,7 +447,10 @@ pub(super) fn tab_integrations(builder: &mut Builder<'_>) {
         keys::paths::NOCTALIA_BIN,
         "noctalia",
     );
-    builder.card(tr("settings-integrations-dms-card"), tr("settings-integrations-dms-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-integrations-dms-card"),
+        tr("settings-integrations-dms-card-desc"),
+    );
     theme_target(builder, "dms");
     builder.toggle(
         tr("settings-integrations-dms-hover-label"),
@@ -386,13 +459,12 @@ pub(super) fn tab_integrations(builder: &mut Builder<'_>) {
     );
 }
 
-#[expect(clippy::too_many_lines, reason = "Lockscreen settings declarative composition")]
 pub(super) fn tab_lockscreens(builder: &mut Builder<'_>) {
     use crate::contracts::settings::LockScreenTarget;
 
     let lock_mode = builder.cfg.text(keys::plasma::LOCK_SCREEN_MODE);
     let source_mode = builder.cfg.text(keys::lock_screens::MODE);
-    builder.card(tr("settings-section-lockscreens"), "");
+    builder.card(crate::i18n::text("settings-section-lockscreens"), "");
     for (target, title, path) in [
         (
             LockScreenTarget::Plasma,
@@ -451,7 +523,7 @@ pub(super) fn tab_lockscreens(builder: &mut Builder<'_>) {
             },
         );
     }
-    builder.card(tr("settings-lockscreens-advanced-label"), "");
+    builder.card(crate::i18n::text("settings-lockscreens-advanced-label"), "");
     builder.dropdown_cur(
         tr("settings-lockscreens-source-label"),
         tr("settings-lockscreens-source-help"),
@@ -467,12 +539,7 @@ pub(super) fn tab_lockscreens(builder: &mut Builder<'_>) {
         },
     );
     if builder.cfg.text(keys::lock_screens::MODE) == keys::lock_screens::STATIC {
-        builder.text_field(
-            tr("settings-lockscreens-image-label"),
-            tr("settings-lockscreens-image-desc"),
-            keys::lock_screens::IMAGE,
-            LOCKSCREEN_IMAGE_EXAMPLE,
-        );
+        lock_image_row(builder);
     }
     builder.dropdown_cur(
         tr("settings-integrations-lock-mode-label"),
@@ -486,28 +553,57 @@ pub(super) fn tab_lockscreens(builder: &mut Builder<'_>) {
         lock_mode.clone(),
     );
     if lock_mode == "static" {
-        builder.text_field(
-            tr("settings-integrations-lock-image-label"),
-            tr("settings-integrations-lock-image-desc"),
-            keys::plasma::LOCK_SCREEN_IMAGE,
-            LOCKSCREEN_IMAGE_EXAMPLE,
-        );
+        plasma_image(builder);
     } else if lock_mode == "follow" {
-        builder.dropdown(
-            tr("settings-integrations-lock-dynamic-label"),
-            tr("settings-integrations-lock-dynamic-desc"),
-            keys::plasma::LOCK_SCREEN_DYNAMIC,
-            &[
-                ("poster", tr("settings-integrations-lock-poster")),
-                ("live", tr("settings-integrations-lock-live")),
-            ],
-        );
+        plasma_dynamic(builder);
     }
+}
+
+fn lock_image_row(builder: &mut Builder<'_>) {
+    builder.text_field(
+        tr("settings-lockscreens-image-label"),
+        tr("settings-lockscreens-image-desc"),
+        keys::lock_screens::IMAGE,
+        LOCKSCREEN_IMAGE_EXAMPLE,
+    );
+}
+
+fn plasma_image(builder: &mut Builder<'_>) {
+    builder.text_field(
+        tr("settings-integrations-lock-image-label"),
+        tr("settings-integrations-lock-image-desc"),
+        keys::plasma::LOCK_SCREEN_IMAGE,
+        LOCKSCREEN_IMAGE_EXAMPLE,
+    );
+}
+
+fn plasma_dynamic(builder: &mut Builder<'_>) {
+    builder.dropdown(
+        tr("settings-integrations-lock-dynamic-label"),
+        tr("settings-integrations-lock-dynamic-desc"),
+        keys::plasma::LOCK_SCREEN_DYNAMIC,
+        &[
+            ("poster", tr("settings-integrations-lock-poster")),
+            ("live", tr("settings-integrations-lock-live")),
+        ],
+    );
+}
+
+pub(super) fn tab_lock_asleep(builder: &mut Builder<'_>, themes: &[String]) {
+    builder.card(crate::i18n::text("settings-section-lockscreens"), "");
+    plasma_image(builder);
+    plasma_dynamic(builder);
+    tab_niri(builder, themes);
+    niri_source(builder);
+    niri_recolour(builder, themes);
 }
 
 pub(super) fn tab_matugen(builder: &mut Builder<'_>) {
     let cfg = builder.cfg;
-    builder.card(tr("settings-matugen-external-card"), tr("settings-matugen-external-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-matugen-external-card"),
+        tr("settings-matugen-external-card-desc"),
+    );
     builder.row(
         tr("settings-general-feature-matugen-label"),
         tr("settings-general-feature-matugen-desc"),
@@ -530,19 +626,19 @@ pub(super) fn tab_matugen(builder: &mut Builder<'_>) {
         "matugen -c %config% image %path%",
     );
     builder.card(
-        tr("settings-matugen-integrations-card"),
+        crate::i18n::text("settings-matugen-integrations-card"),
         tr("settings-matugen-integrations-card-desc"),
     );
     let count = cfg.array_len(keys::integrations::LIST);
     for idx in 0..count {
-        builder.cards.last_mut().expect("integration card").1.push(super::Row {
-            title: tr("settings-app-themes-custom-enabled").into(),
-            desc: tr("settings-app-themes-custom-enabled-desc").into(),
-            control: super::Control::Toggle {
+        builder.cards.last_mut().expect("integration card").1.push(super::Row::of(
+            tr("settings-app-themes-custom-enabled").into(),
+            tr("settings-app-themes-custom-enabled-desc").into(),
+            super::Control::Toggle {
                 path: format!("integrations.{idx}.enabled"),
                 value: cfg.flag_default_true(&format!("integrations.{idx}.enabled")),
             },
-        });
+        ));
         builder.text_field(
             tr("settings-matugen-name-label"),
             tr("settings-matugen-name-desc"),
@@ -593,7 +689,10 @@ pub(super) fn tab_matugen(builder: &mut Builder<'_>) {
 }
 
 pub(super) fn tab_niri(builder: &mut Builder<'_>, themes: &[String]) {
-    builder.card(tr("settings-niri-backdrop-card"), tr("settings-niri-backdrop-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-niri-backdrop-card"),
+        tr("settings-niri-backdrop-card-desc"),
+    );
     builder.toggle(
         tr("settings-niri-show-label"),
         tr("settings-niri-show-desc"),
@@ -612,17 +711,7 @@ pub(super) fn tab_niri(builder: &mut Builder<'_>, themes: &[String]) {
     if stationary {
         builder.info(tr("settings-niri-mode-stationary"), tr("settings-niri-stationary-desc"));
     } else {
-        builder.toggle(
-            tr("settings-niri-follow-label"),
-            tr("settings-niri-follow-desc"),
-            keys::niri::BACKDROP_FOLLOW_WALLPAPER,
-        );
-        builder.text_field(
-            tr("settings-niri-image-label"),
-            tr("settings-niri-image-desc"),
-            keys::niri::BACKDROP,
-            "~/Pictures/overview.jpg",
-        );
+        niri_source(builder);
     }
     builder.action(
         tr("settings-niri-refresh-label"),
@@ -677,16 +766,34 @@ pub(super) fn tab_niri(builder: &mut Builder<'_>, themes: &[String]) {
         "%",
     );
     if !stationary {
-        builder.toggle(
-            tr("settings-niri-auto-theme-label"),
-            tr("settings-niri-auto-theme-desc"),
-            keys::niri::BACKDROP_AUTO_THEME,
-        );
-        builder.theme_dropdown(
-            tr("settings-niri-theme-label"),
-            tr("settings-niri-theme-desc"),
-            keys::niri::BACKDROP_THEME,
-            themes,
-        );
+        niri_recolour(builder, themes);
     }
+}
+
+fn niri_source(builder: &mut Builder<'_>) {
+    builder.toggle(
+        tr("settings-niri-follow-label"),
+        tr("settings-niri-follow-desc"),
+        keys::niri::BACKDROP_FOLLOW_WALLPAPER,
+    );
+    builder.text_field(
+        tr("settings-niri-image-label"),
+        tr("settings-niri-image-desc"),
+        keys::niri::BACKDROP,
+        "~/Pictures/overview.jpg",
+    );
+}
+
+fn niri_recolour(builder: &mut Builder<'_>, themes: &[String]) {
+    builder.toggle(
+        tr("settings-niri-auto-theme-label"),
+        tr("settings-niri-auto-theme-desc"),
+        keys::niri::BACKDROP_AUTO_THEME,
+    );
+    builder.theme_dropdown(
+        tr("settings-niri-theme-label"),
+        tr("settings-niri-theme-desc"),
+        keys::niri::BACKDROP_THEME,
+        themes,
+    );
 }

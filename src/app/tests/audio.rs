@@ -248,7 +248,7 @@ fn settings_audio_groups_current_sources_and_commits_without_another_panel() {
     for kind in [MediaKind::Video, MediaKind::WallpaperEngine] {
         let mut app = test_app();
         app.panels.settings.open = true;
-        app.panels.settings.tab = "displays".into();
+        app.panels.settings.tab = "wallpapers".into();
         let status = |name: &str, source: &str, connected| OutputStatus {
             name: name.into(),
             target: format!("@monitor:{name}"),
@@ -366,7 +366,7 @@ fn settings_normalizes_linked_audio_and_cancels_abandoned_volume_edits() {
     use crate::frontend::audio_panel::AudioMsg;
     let mut app = test_app();
     app.panels.settings.open = true;
-    app.panels.settings.tab = "displays".into();
+    app.panels.settings.tab = "wallpapers".into();
     let source = |name: &str, mute, volume, connected| OutputStatus {
         name: name.into(),
         target: format!("@monitor:{name}"),
@@ -402,7 +402,7 @@ fn pending_volume_does_not_follow_replaced_wallpaper() {
     use crate::frontend::audio_panel::AudioMsg;
     let mut app = test_app();
     app.panels.settings.open = true;
-    app.panels.settings.tab = "displays".into();
+    app.panels.settings.tab = "wallpapers".into();
     let mut output = OutputStatus {
         name: "DP-1".into(),
         target: "@monitor:first".into(),
@@ -428,7 +428,7 @@ fn leaving_volume_view_cancels_drag_with_another_panel_retained() {
     use crate::frontend::audio_panel::{AudioMsg, AudioPanel};
     let mut app = test_app();
     app.panels.settings.open = true;
-    app.panels.settings.tab = "displays".into();
+    app.panels.settings.tab = "wallpapers".into();
     app.panels.audio = Some(AudioPanel::new());
     app.on_outputs(OutputsResult {
         outputs: vec![OutputStatus {

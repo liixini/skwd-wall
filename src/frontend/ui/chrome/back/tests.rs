@@ -2,7 +2,8 @@
 
 use iced::{Point, Rectangle, Size};
 
-use crate::frontend::scene::BackPanel;
+use crate::frontend::scene::layout::CardCorners;
+use crate::frontend::scene::{BackPanel, DrawingCardState};
 
 use super::background::{embedded_section_radii, masthead_divider};
 use super::layout::back_layout;
@@ -57,6 +58,7 @@ fn copy_actions_fit() {
             hw,
             hh,
             static_img: true,
+            drawing: Some(DrawingCardState::Draw),
             revealable: true,
             overview_available: true,
             tags: vec!["nature".into(), "landscape".into()],
@@ -68,6 +70,7 @@ fn copy_actions_fit() {
                 layout.actions.copy_image.unwrap(),
                 layout.actions.copy_path.unwrap(),
                 layout.actions.effects.unwrap(),
+                layout.actions.drawing.unwrap(),
                 layout.actions.reveal.unwrap(),
                 layout.actions.overview.unwrap(),
                 layout.actions.playlist,
@@ -94,6 +97,40 @@ fn copy_actions_fit() {
 }
 
 #[test]
+fn drawing_bounds_stable() {
+    for (embedded, hw, hh) in
+        [(true, 160.0, 300.0), (true, 450.0, 220.0), (false, 220.0, 250.0), (true, 160.0, 160.0)]
+    {
+        let mut panel = BackPanel {
+            embedded,
+            cx: 500.0,
+            cy: 400.0,
+            hw,
+            hh,
+            static_img: true,
+            drawing: Some(DrawingCardState::Draw),
+            revealable: true,
+            overview_available: true,
+            ..BackPanel::default()
+        };
+        for rtl in [false, true] {
+            let original = super::layout::back_layout_for(&panel, rtl).actions;
+            for state in [
+                DrawingCardState::Checking,
+                DrawingCardState::Drawn,
+                DrawingCardState::Preparing,
+                DrawingCardState::Paused,
+            ] {
+                panel.drawing = Some(state);
+                let current = super::layout::back_layout_for(&panel, rtl).actions;
+                assert_eq!(current.drawing, original.drawing);
+                assert_eq!(current.copy_path, original.copy_path);
+            }
+        }
+    }
+}
+
+#[test]
 fn masthead_divider_embedded() {
     let masthead = Rectangle::new(Point::new(190.0, 105.0), Size::new(900.0, 32.0));
     assert_eq!(masthead_divider(masthead, true), None);
@@ -111,7 +148,7 @@ fn embedded_sections_preserve_matching_square_and_rounded_corners() {
         hw: 260.0,
         hh: 340.0,
         edge_tilt: 72.0,
-        radii: [48.0, 0.0, 76.0, 0.0],
+        corners: CardCorners { sizes: [48.0, 0.0, 76.0, 0.0], cut: false },
         ..BackPanel::default()
     };
     let layout = back_layout(&panel);

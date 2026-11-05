@@ -1,6 +1,5 @@
 settings-performance-power-card = Portátil y energía
 settings-performance-power-card-desc = El selector deja de renderizar cuando se estabiliza. Los renderizadores de fondo siguen ejecutándose tras cerrarlo, por lo que tienen límites de batería separados.
-settings-performance-power-source-label = Fuente de alimentación actual
 settings-performance-power-battery-limited = Batería (límites automáticos activos)
 settings-performance-power-battery-unlimited = Batería (límites automáticos desactivados)
 settings-performance-power-external = Alimentación externa, escritorio o no disponible (límites automáticos inactivos)
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = Añadir miniaturas de fotogramas captura
 settings-performance-capture-we-desc = Renderiza escenas nativas en segundo plano. Reutiliza capturas válidas y conserva la vista previa si una escena falla. Puedes detener el proceso y continuar después.
 settings-performance-capture-we-action = Generar miniaturas
 settings-performance-capture-we-stop = Detener
+settings-performance-effective-label = Límites efectivos
+settings-performance-effective = Selector a { $fps } fps · El vídeo se pausa tras { $seconds } s inactivo · { $reason }
+settings-performance-effective-no-idle = Selector a { $fps } fps · La pausa del vídeo inactivo está desactivada · { $reason }
+settings-performance-effective-reason-battery = Con batería
+settings-performance-effective-reason-disabled = El ahorro de batería está desactivado
+settings-performance-effective-reason-external = Con alimentación externa

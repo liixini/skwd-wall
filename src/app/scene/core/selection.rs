@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::frontend::animation::{MotionTier, Spring};
+use crate::frontend::nav::step;
 use crate::frontend::scene::layout::{GridLayout, Mode};
 
 use super::layout_helpers::slice_scroll_steps;
@@ -133,14 +134,20 @@ impl SceneCore {
     }
 
     fn grid_follow(&mut self, idx: usize) {
-        let cell_h = self.gp.cell_h();
-        let view_h = self.gp.total_h();
-        let (row_top, item_h) = match self.gp.layout {
+        let gp = self.effective_grid_params();
+        let cell_h = gp.cell_h();
+        let view_h = gp.total_h();
+        let (row_top, item_h) = match gp.layout {
             GridLayout::Editorial => {
-                let block_h = self.gp.thumb_h * 2.0 + self.gp.gap_y;
-                ((idx / 5) as f32 * (block_h + self.gp.gap_y), block_h)
+                let block_items = self.editorial_block_items(gp.cols.max(1));
+                if block_items == 1 {
+                    (idx as f32 * cell_h, gp.thumb_h)
+                } else {
+                    let block_h = gp.thumb_h * 2.0 + gp.gap_y;
+                    ((idx / block_items) as f32 * (block_h + gp.gap_y), block_h)
+                }
             }
-            _ => ((idx / self.gp.cols.max(1)) as f32 * cell_h, cell_h),
+            _ => ((idx / gp.cols.max(1)) as f32 * cell_h, cell_h),
         };
         crate::frontend::nav::follow(&mut self.camera, row_top, item_h, view_h, f32::MAX);
     }
@@ -241,7 +248,7 @@ impl SceneCore {
     }
 
     pub fn grid_scroll(&mut self, rows: f32) {
-        let step = self.gp.cell_h();
+        let step = self.effective_grid_params().cell_h();
         self.camera.retarget(self.camera.target + rows * step);
         self.scroll_vel += rows.abs();
         self.motion.needs_frame = true;
@@ -268,14 +275,24 @@ impl SceneCore {
         if count == 0 {
             return;
         }
-        let steps = slice_scroll_steps(&mut self.scroll_accum, amount);
+        let steps = self.slice_steps(amount);
+        self.slice_move(steps, count, false);
+    }
+
+    pub fn slice_steps(&mut self, amount: f32) -> i64 {
+        slice_scroll_steps(&mut self.scroll_accum, amount)
+    }
+
+    pub fn slice_move(&mut self, steps: i64, count: usize, wrap: bool) {
+        if count == 0 {
+            return;
+        }
         if steps == 0 {
             self.motion.needs_frame = true;
             return;
         }
         self.scroll_vel += steps.unsigned_abs() as f32;
-        let max = count as i64 - 1;
-        let target = (self.current as i64 - steps).clamp(0, max) as usize;
+        let target = step(self.current, -(steps as i32), count, wrap).unwrap_or(self.current);
         self.set_current(target, count);
     }
 }

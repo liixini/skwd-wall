@@ -1,3 +1,8 @@
+settings-integrations-caelestia-card = Caelestia
+settings-integrations-caelestia-card-desc = যেকোনো অ্যাপে বেছে নেওয়া ওয়ালপেপার Skwd দিয়ে দেখান।
+settings-integrations-caelestia-sync-label = Caelestia ওয়ালপেপার সিঙ্ক করুন
+settings-integrations-caelestia-sync-desc = যেকোনো অ্যাপে বেছে নেওয়া ওয়ালপেপার Skwd দেখায়। Caelestia-র নির্বাচন আনলক করা ডিসপ্লেতে প্রয়োগ হয়।
+
 settings-integrations-plasma-card = KDE Plasma
 settings-integrations-lock-mode-label = লক স্ক্রিন ওয়ালপেপার
 settings-integrations-lock-mode-desc = অব্যবস্থাপিত Plasma-কে যেমন আছে তেমন রাখে। স্থির সবসময় নিচের ছবি ব্যবহার করে। অনুসরণ সর্বশেষ প্রয়োগ করা ওয়ালপেপার অনুসরণ করে।
@@ -33,7 +38,7 @@ settings-integrations-follow-desc = Skwd রং নিয়ন্ত্রণ �
 
 settings-section-lockscreens = লক স্ক্রিন
 settings-lockscreens-source-label = ছবির উৎস
-settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-source-help = "সর্বশেষ প্রয়োগ করা অনুসরণ" বর্তমান ওয়ালপেপারের ছবি ব্যবহার করে। "স্থির ছবি" নিচের ফাইলটি ব্যবহার করে। ভিডিও ও দৃশ্য থাকলে একটি স্থির ছবি ব্যবহার করে।
 settings-lockscreens-image-label = স্থির ছবি
 settings-lockscreens-image-desc = আগে থেকে থাকা ছবির পূর্ণ পথ দিন, যেমন ~/Pictures/lockscreen.jpg। চালু করা লক স্ক্রিনের জন্য Skwd ছবিটি কপি করে। এখানে ভিডিও ফাইল ব্যবহার করা যাবে না।
 settings-lockscreens-hyprlock-card = Hyprlock

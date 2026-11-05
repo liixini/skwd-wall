@@ -18,6 +18,7 @@ filter-bar-task-tags = الوسوم
 filter-bar-task-index = الفهرسة
 filter-bar-task-scan = الفحص
 filter-bar-task-download = التنزيل
+filter-bar-task-drawing = الرسومات
 filter-bar-state-running = قيد التشغيل
 filter-bar-state-paused = موقوف مؤقتًا
 filter-bar-state-done = اكتمل

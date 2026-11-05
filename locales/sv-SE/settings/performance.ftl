@@ -1,6 +1,5 @@
 settings-performance-power-card = Bärbar dator & ström
 settings-performance-power-card-desc = Väljaren slutar rendera när den stillnat. Bakgrundsrenderare fortsätter efter att den stängts och har därför egna batterigränser.
-settings-performance-power-source-label = Aktuell strömkälla
 settings-performance-power-battery-limited = Batteri (automatiska begränsningar är aktiva)
 settings-performance-power-battery-unlimited = Batteri (automatiska begränsningar är avstängda)
 settings-performance-power-external = Extern ström, stationär dator eller okänd (automatiska begränsningar är inaktiva)
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = Lägg till miniatyrbilder från renderad
 settings-performance-capture-we-desc = Rendera inbyggda scener i bakgrunden. Återanvänd giltiga bilder och behåll tidigare förhandsvisningar om en scen misslyckas. Du kan stoppa och fortsätta senare.
 settings-performance-capture-we-action = Skapa miniatyrbilder
 settings-performance-capture-we-stop = Stoppa
+settings-performance-effective-label = Effektiva gränser
+settings-performance-effective = { $fps } fps i väljaren · Video pausas efter { $seconds } s inaktivitet · { $reason }
+settings-performance-effective-no-idle = { $fps } fps i väljaren · Inaktivitetspaus för video är av · { $reason }
+settings-performance-effective-reason-battery = På batteri
+settings-performance-effective-reason-disabled = Batterispararen är av
+settings-performance-effective-reason-external = Med extern ström

@@ -5,8 +5,12 @@ use crate::frontend::browser::{BrowserIntent, BrowserMsg};
 use crate::frontend::theme::Palette;
 
 use super::model::{BrowserAct, browser_bar_items_compact, is_order_action};
-use crate::frontend::ui::bar::{BarItem, BarVisualStyle, draw_swatch_with_style, item_contains};
+use crate::frontend::ui::bar::{BarItem, item_contains};
+use crate::frontend::ui::misc::text_width;
 use crate::frontend::ui::{UI_FONT, mid_text, rtl, with_alpha};
+
+const LABEL_RULE_INSET: f32 = 92.0;
+const LABEL_RULE_GAP: f32 = 10.0;
 
 pub struct BrowserBar<'a> {
     pub browser: &'a crate::frontend::browser::Browser,
@@ -36,32 +40,9 @@ impl BrowserBar<'_> {
     fn message(action: &BrowserAct) -> BrowserIntent {
         match action {
             BrowserAct::Close => BrowserIntent::Close,
-            BrowserAct::Category(bit) => BrowserIntent::Update(BrowserMsg::ToggleCategory(*bit)),
-            BrowserAct::Sort(key) => BrowserIntent::Update(BrowserMsg::SetSort((*key).to_string())),
-            BrowserAct::Purity(purity) => BrowserIntent::Update(BrowserMsg::TogglePurity(*purity)),
-            BrowserAct::Color(value) => BrowserIntent::Update(BrowserMsg::SetColor(*value)),
-            BrowserAct::TopRange(key) => {
-                BrowserIntent::Update(BrowserMsg::SetTopRange((*key).to_string()))
-            }
-            BrowserAct::ResMode => BrowserIntent::Update(BrowserMsg::ToggleResExact),
-            BrowserAct::Atleast(key) => {
-                BrowserIntent::Update(BrowserMsg::SetAtleast((*key).to_string()))
-            }
-            BrowserAct::Atmost(key) => {
-                BrowserIntent::Update(BrowserMsg::SetAtmost((*key).to_string()))
-            }
             BrowserAct::Label => BrowserIntent::Capture,
-            BrowserAct::Ratios(key) => {
-                BrowserIntent::Update(BrowserMsg::SetRatios((*key).to_string()))
-            }
-            BrowserAct::Collection(id) => {
-                BrowserIntent::Update(BrowserMsg::SetCollection(id.clone()))
-            }
             BrowserAct::MaxDuration(key) => {
                 BrowserIntent::Update(BrowserMsg::SetMaxDuration((*key).to_string()))
-            }
-            BrowserAct::SteamFilter(kind, value) => {
-                BrowserIntent::Update(BrowserMsg::SteamFilter((*kind).to_string(), value.clone()))
             }
             BrowserAct::CatalogFilter(kind, value) => {
                 BrowserIntent::Update(BrowserMsg::CatalogFilter((*kind).to_string(), value.clone()))
@@ -151,30 +132,29 @@ fn draw_folio_item(
         frame.fill_text(mid_text(
             item.label.clone(),
             Point::new(lead_x(rtl, item, 0.0), item.y + item.h / 2.0),
-            with_alpha(palette.surface_text, 0.42),
+            with_alpha(palette.surface_text, super::SECTION_TEXT_ALPHA),
             item.text_size,
             UI_FONT,
             lead,
         ));
-        let line_w = (item.w - 92.0 * scale).max(0.0);
+        let inset = (LABEL_RULE_INSET * scale)
+            .max(text_width(&item.label, item.text_size, item.nerd) + LABEL_RULE_GAP * scale);
+        let line_w = (item.w - inset).max(0.0);
         if line_w > 0.0 {
             let line_x = lead_x(!rtl, item, 0.0);
             let line = canvas::Path::line(
                 Point::new(line_x, item.y + item.h / 2.0),
-                Point::new(lead_x(rtl, item, 92.0 * scale), item.y + item.h / 2.0),
+                Point::new(lead_x(rtl, item, inset), item.y + item.h / 2.0),
             );
             frame.stroke(
                 &line,
-                Stroke::default().with_color(with_alpha(palette.outline, 0.28)).with_width(1.0),
+                Stroke::default()
+                    .with_color(with_alpha(palette.outline, super::SECTION_RULE_ALPHA))
+                    .with_width(1.0),
             );
         }
         return;
     }
-    if let Some(index) = item.swatch {
-        draw_swatch_with_style(frame, item, index, hovered, palette, BarVisualStyle::Wall);
-        return;
-    }
-
     if is_order_action(action) {
         let bounds = canvas::Path::rectangle(Point::new(item.x, item.y), Size::new(item.w, item.h));
         if hovered {

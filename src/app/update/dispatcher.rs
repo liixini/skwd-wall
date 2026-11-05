@@ -7,18 +7,57 @@ use super::*;
 
 const COPY_IMAGE_ERROR: &str = "card-back-copy-image-failed";
 const COPY_PATH_ERROR: &str = "card-back-copy-path-failed";
+const WORKSHOP_LINK_ERROR: &str = "browser-link-failed";
 
 pub fn update(app: &mut App, message: Message) -> Task<Message> {
+    let output = app.runtime_state.overlay.and_then(crate::shell::picker_output);
+    super::warm::sync_output(app, output);
+    if (app.panels.strand.is_some()
+        || app.panels.arrange.is_some() && !arrange::preview::active(app))
+        && matches!(
+            &message,
+            Message::Click(..)
+                | Message::Wheel(_)
+                | Message::KeyPrev
+                | Message::KeyNext
+                | Message::KeyUp
+                | Message::KeyDown
+                | Message::KeyPage { .. }
+                | Message::KeyEdge { .. }
+                | Message::ApplyCurrent
+                | Message::KeyFlip
+                | Message::KeyFavourite
+                | Message::CycleMode { .. }
+        )
+    {
+        return Task::none();
+    }
     let detail_was_open = app.detail_open();
     let flip_was_open = app.scene.flip_open();
+    let drawing_card_before = app.flipped_drawing_key().map(str::to_owned);
     let stashed = app.runtime_state.stashed;
     let steam_client_selected = app.config.steam_uses_client();
     let audio_view = app.panels.audio_view();
     let frame = matches!(&message, Message::Daemon(crate::infrastructure::runtime::Wake::Frame(_)));
-    let sync_settings_preview =
-        !frame && !matches!(&message, Message::Viewport(..) | Message::MouseMoved(..));
-    let sync_filter_bar = !frame && !matches!(&message, Message::MouseMoved(..));
+    let sync_settings_preview = !frame
+        && !matches!(
+            &message,
+            Message::Viewport(..) | Message::MouseMoved(..) | Message::KeyReleased(_)
+        );
+    let sync_filter_bar =
+        !frame && !matches!(&message, Message::MouseMoved(..) | Message::KeyReleased(_));
+    app.input.held = false;
     let task = update_inner(app, message);
+    let task = Task::batch([task, arrange::inventory::resume(app)]);
+    let drawing_card_after = app.flipped_drawing_key().map(str::to_owned);
+    if drawing_card_after.is_some() && (!flip_was_open || drawing_card_after != drawing_card_before)
+    {
+        app.scene.set_card_drawing(
+            drawing_card_after.as_deref().expect("opened drawing card"),
+            crate::frontend::scene::DrawingCardState::Checking,
+        );
+        app.request_drawing_status();
+    }
     let subscribed_card_opened = app.scene.flip_open()
         && !flip_was_open
         && app
@@ -41,7 +80,16 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
 }
 
 pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
+    if arrange::preview::active(app) && !arrange::preview::allows(&message) {
+        return Task::none();
+    }
     match message {
+        Message::BrowserLinkOpened(result) => {
+            if let Err(error) = result {
+                app.show_toast(crate::i18n::tr_args!(WORKSHOP_LINK_ERROR, error => error));
+            }
+            Task::none()
+        }
         Message::WindowOpened { id, width, height } => {
             super::warm::adopt_first_window(app, id, width, height)
         }
@@ -77,25 +125,40 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
             if app.handle_wake(wake) {
                 app.retick();
             }
-            super::settings::sddm_rollback(app)
+            Task::batch([
+                super::settings::sddm_rollback(app),
+                super::settings::resume_weather_mode(app),
+            ])
         }
         Message::Viewport(width, height) => {
             app.scene.viewport = (width, height);
+            let output = app.runtime_state.picker_output.clone();
+            super::arrange::placement::select(app, output);
+            app.apply_layout();
             app.scene.touch();
             app.retick();
             Task::none()
         }
+        Message::Arrange(message) => arrange::update(app, message),
         Message::MouseMoved(x, y) => picker::mouse_moved(app, x, y),
         Message::Click(x, y, button) => picker::click(app, x, y, button),
         Message::Wheel(amount) => navigation::wheel(app, amount),
-        Message::KeyPrev => navigation::key_prev(app),
-        Message::KeyNext => navigation::key_next(app),
+        Message::KeyPrev => navigation::key_step(app, -1),
+        Message::KeyNext => navigation::key_step(app, 1),
         Message::ApplyCurrent => navigation::apply_current(app),
         Message::KeyFavourite => navigation::key_favourite(app),
         Message::KeyFlip => navigation::key_flip(app),
         Message::KeyReveal => navigation::key_reveal(app),
         Message::KeyEffects => navigation::key_effects(app),
         Message::KeyStudio => navigation::key_studio(app),
+        Message::KeyColourStudio => colour_studio::open(app),
+        Message::Studio(msg) => colour_studio::update(app, &msg),
+        Message::Strand(msg) => strand::update(app, msg),
+        Message::OpenWidgets => strand::open(app),
+        Message::StudioPixels(key, decoded) => {
+            colour_studio::pixels(app, &key, decoded);
+            Task::none()
+        }
         Message::SetColorFilter(value) => filters::set_color_filter(app, value),
         Message::SetTypeFilter(kind) => {
             app.change_filters(|filters| filters.kind = kind);
@@ -157,9 +220,7 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
         Message::ToggleSettings => panels::toggle_settings(app),
         Message::ToggleAudio => panels::toggle_audio(app),
         Message::TaskControl { id, action } => {
-            app.daemon
-                .client
-                .call("task.control", serde_json::json!({"id": id, "action": action.as_str()}));
+            control_task(app, &id, action);
             Task::none()
         }
         Message::Audio(message) => effects::audio_update(app, message),
@@ -227,7 +288,43 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
             }
             Task::none()
         }
+        Message::KeyReleased(key) => {
+            if app.input.down.as_ref() == Some(&key) {
+                app.input.down = None;
+            }
+            if app.input.quiet.as_ref() == Some(&key) {
+                app.input.quiet = None;
+            }
+            Task::none()
+        }
+        Message::WindowUnfocused => {
+            app.input.down = None;
+            app.input.quiet = None;
+            if app.panels.settings.keybind_capture.take().is_some() {
+                app.retick();
+            }
+            Task::none()
+        }
         Message::KeyPressed(key, modifiers) => {
+            app.input.held = app.input.down.replace(key.clone()).as_ref() == Some(&key);
+            if app.input.held && app.input.quiet.as_ref() == Some(&key) {
+                return Task::none();
+            }
+            if app.panels.strand.is_some() {
+                return strand::key(app, &key, modifiers);
+            }
+            if app.panels.arrange.is_some()
+                && (!arrange::preview::active(app)
+                    || matches!(
+                        key,
+                        iced::keyboard::Key::Named(iced::keyboard::key::Named::Escape)
+                    ))
+            {
+                return arrange::key(app, &key, modifiers);
+            }
+            if app.panels.colour_studio.is_some() {
+                return colour_studio::key(app, &key, modifiers);
+            }
             if app.panels.theme_designer.is_some() {
                 if matches!(key, iced::keyboard::Key::Named(iced::keyboard::key::Named::Escape)) {
                     return update_inner(app, Message::Exit);
@@ -235,11 +332,25 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
                 return Task::none();
             }
             if app.panels.settings.open && app.panels.settings.keybind_capture.is_some() {
+                if app.input.held {
+                    return Task::none();
+                }
                 return settings::keybind_capture_key(app, &key, modifiers);
             }
             if app.panels.settings.open
                 && let Some(message) = super::input::settings_key_message(&key, modifiers)
             {
+                if app.input.held
+                    && matches!(
+                        message,
+                        Message::Settings(crate::frontend::settings::SettingsMsg::Key(
+                            crate::frontend::settings::SettingsKey::Activate
+                                | crate::frontend::settings::SettingsKey::Space
+                        ))
+                    )
+                {
+                    return Task::none();
+                }
                 return update_inner(app, message);
             }
             if app.tags.cloud_open
@@ -261,11 +372,21 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
         Message::Sched(message) => schedule::update(app, message),
         Message::SetViewMode(mode) => settings::set_view_mode(app, &mode),
         Message::CycleMode { backwards } => settings::cycle_view_mode(app, backwards),
-        Message::Settings(message) => settings::update(app, message),
+        Message::Settings(message) => {
+            let changes = message.changes_config();
+            let task = settings::update(app, message);
+            if changes {
+                settings::reread_search(app);
+            }
+            task
+        }
         Message::FolderChosen(kind, index, result) => {
             super::settings_folders::folder_chosen(app, kind, index, result)
         }
+        Message::ConfigurationExported(result) => settings::configuration_exported(app, result),
+        Message::ConfigurationImported(result) => settings::configuration_imported(app, result),
         Message::SemanticModelImported(result) => settings::semantic_model_imported(app, result),
+        Message::DrawingPackChosen(result) => settings::drawing_pack_chosen(app, result),
         Message::SemanticModelDeleted(manifest, selected, result) => {
             settings::semantic_model_deleted(app, &manifest, selected.as_deref(), result)
         }
@@ -273,13 +394,9 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
             app.finish_settings_preview(&path, allocation);
             Task::none()
         }
-        Message::SetSettingsTab(tab) => settings::set_settings_tab(app, tab),
-        Message::ApplyPreset(mode, name) => settings::apply_preset(app, &mode, &name),
-        Message::SavePreset => settings::save_preset(app),
-        Message::PresetNameInput(text) => settings::preset_name_input(app, &text),
-        Message::DeletePreset(mode, name) => settings::delete_preset(app, &mode, &name),
-        Message::KeyUp => navigation::key_up(app),
-        Message::KeyDown => navigation::key_down(app),
+        Message::SetSettingsTab(tab) => settings::set_settings_tab(app, &tab),
+        Message::KeyUp => navigation::key_row(app, -1),
+        Message::KeyDown => navigation::key_row(app, 1),
         Message::KeyPage { backwards } => navigation::key_page(app, backwards),
         Message::KeyEdge { last } => navigation::key_edge(app, last),
         Message::Tag(message) => tags::update(app, message),
@@ -320,4 +437,11 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
             Task::none()
         }
     }
+}
+
+pub(super) fn control_task(app: &App, id: &str, action: crate::contracts::daemon::TaskControl) {
+    app.daemon.client.call(
+        wall_proto::rpc::TASK_CONTROL,
+        serde_json::json!({"id": id, "action": action.as_str()}),
+    );
 }

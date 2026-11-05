@@ -24,10 +24,10 @@ pub(super) fn add_profile(app: &mut App) -> Task<Message> {
     save_profiles(app, profiles);
     app.init_settings_inputs();
     app.panels.settings.select_profile(index + 1);
-    app.retick();
-    iced::widget::operation::focus(crate::frontend::settings::workbench_input_id(&profile_path(
-        index, NAME,
-    )))
+    let key = profile_path(index, NAME);
+    let token =
+        crate::frontend::settings::token_key(&key, 0, crate::frontend::settings::TokenSide::Body);
+    super::settings::update(app, crate::frontend::settings::SettingsMsg::EditToken(token, key))
 }
 
 pub(super) fn remove_profile(app: &mut App, index: usize) {

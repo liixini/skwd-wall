@@ -1,5 +1,3 @@
-settings-tab-language = भाषा
-settings-tab-note-language = पिकर और सेटिंग्स में उपयोग होने वाली भाषा चुनें।
 settings-language-card = इंटरफ़ेस भाषा
 settings-language-card-desc = बदलाव तुरंत लागू होते हैं और अगली बार खोलने के लिए सहेजे जाते हैं।
 settings-language-choice-label = भाषा

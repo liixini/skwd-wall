@@ -28,8 +28,16 @@ impl App {
                 false
             }
             Wake::Ipc(message) => self.handle_ipc(message),
+            Wake::Desktop(desktop) => {
+                crate::app::update::strand::delivered(self, desktop);
+                true
+            }
             Wake::Decoded => {
                 self.drain_decodes();
+                true
+            }
+            Wake::BrowserPreview { key, generation, size, result } => {
+                self.on_browser_preview_decoded(&key, generation, size, result);
                 true
             }
             Wake::EffectSrc { card, source, rgba, w, h } => {

@@ -18,6 +18,7 @@ filter-bar-task-tags = ٹیگز
 filter-bar-task-index = انڈیکس
 filter-bar-task-scan = اسکین
 filter-bar-task-download = ڈاؤن لوڈ
+filter-bar-task-drawing = ڈرائنگز
 filter-bar-state-running = جاری
 filter-bar-state-paused = رکا ہوا
 filter-bar-state-done = مکمل

@@ -8,6 +8,8 @@ use super::super::FrameDemand;
 use super::layout_helpers::{center_layout, clamp_inset};
 use super::model::SceneCore;
 
+const FRAME_SHOWN_REASON: &str = "frame_shown";
+
 impl SceneCore {
     pub fn set_direct_thumbnails(&mut self, direct: bool) {
         self.direct_thumbnails = direct;
@@ -122,9 +124,7 @@ impl SceneCore {
             return;
         }
         self.motion.scale = scale;
-        let profile = self.motion.profile;
         self.retime_shared_motion();
-        profile.retime_spring_override(&mut self.card.flip, self.card.flip_duration_ms * scale);
         self.motion.needs_frame = true;
     }
 
@@ -137,9 +137,7 @@ impl SceneCore {
         let duration_ms = duration_ms.clamp(100.0, 5_000.0);
         if (self.card.flip_duration_ms - duration_ms).abs() > f32::EPSILON {
             self.card.flip_duration_ms = duration_ms;
-            self.motion
-                .profile
-                .retime_spring_override(&mut self.card.flip, duration_ms * self.motion.scale);
+            self.card.flip.retime(duration_ms);
         }
         self.card.flip_shader_enabled = animate_shader;
         self.card.flip_back_enabled = animate_back;
@@ -185,6 +183,8 @@ impl SceneCore {
             "sandy_ring"
         } else if self.motion.transition.is_some() {
             "transition"
+        } else if self.frame_shown.is_some() {
+            FRAME_SHOWN_REASON
         } else if !self.motion.entrance.settled() {
             "entrance"
         } else if !self.collection_open.settled() {
@@ -246,6 +246,7 @@ impl SceneCore {
             demand = FrameDemand::Preview;
         }
         if self.motion.transition.is_some()
+            || self.frame_shown.is_some()
             || (!self.motion.entrance.settled() && self.motion.launch_anim != LaunchAnim::Fade)
             || !self.camera_settled()
             || !self.collection_open.settled()
@@ -433,7 +434,7 @@ impl SceneCore {
         sp: SliceParams,
         gp: GridParams,
         hp: HexParams,
-        xp: ExtraParams,
+        xp: &ExtraParams,
         animate: bool,
     ) {
         let topology_changed = match self.mode {
@@ -455,7 +456,7 @@ impl SceneCore {
         self.hp_target = hp;
         let speed_changed = self.xp_target.depth.navigation_ms != xp.depth.navigation_ms
             || self.xp_target.collection.speed != xp.collection.speed;
-        self.xp_target = xp;
+        self.xp_target = *xp;
         if speed_changed {
             self.retime_shared_motion();
         }
@@ -463,13 +464,14 @@ impl SceneCore {
             self.sp = sp;
             self.gp = gp;
             self.hp = hp;
-            self.xp = xp;
+            self.xp = *xp;
         }
         self.motion.needs_frame = true;
     }
 
     pub fn set_grid_params(&mut self, gp: GridParams, animate: bool) {
-        self.set_params(self.sp, gp, self.hp, self.xp, animate);
+        let xp = self.xp;
+        self.set_params(self.sp, gp, self.hp, &xp, animate);
     }
 
     pub(super) fn morph_params(&mut self, dt: f32) {

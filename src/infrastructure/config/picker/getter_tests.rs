@@ -7,9 +7,15 @@ use serde_json::{Value, json};
 fn cfg(data: Value) -> Config {
     Config {
         data,
+        layout: None,
+        effective: std::sync::OnceLock::new(),
+        layout_cache: std::sync::OnceLock::new(),
+        palette_previews: std::sync::OnceLock::new(),
+        overview: crate::contracts::settings::OverviewMemo::default(),
         config_path: std::env::temp_dir().join("skwd_getter_test.json"),
         small: false,
         transient: false,
+        writes: super::document::Writes::default(),
         on_battery: false,
     }
 }
@@ -18,6 +24,26 @@ fn battery_cfg(data: Value) -> Config {
     let mut config = cfg(data);
     config.on_battery = true;
     config
+}
+
+#[test]
+fn preset_duration_selection() {
+    for spec in wall_proto::transitions::TRANSITIONS {
+        let Some(duration) = wall_proto::transitions::preset_duration_ms(spec.key) else {
+            continue;
+        };
+        let mut config = cfg(json!({"transition": {
+            "shader": spec.key, "durationMs": 4_000
+        }}));
+        assert_eq!(config.transition_duration_ms(), duration);
+        config.set_key(skwd_config::keys::transition::PRESET_TIMING, json!(false));
+        assert_eq!(config.transition_duration_ms(), 4_000);
+        assert_eq!(config.num_path(skwd_config::keys::transition::DURATION_MS), 4_000.0);
+    }
+    for shader in ["random", "chromatic-bloom", "sand-helix"] {
+        let config = cfg(json!({"transition": {"shader": shader, "durationMs": 750}}));
+        assert_eq!(config.transition_duration_ms(), 750);
+    }
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -43,8 +69,10 @@ fn slices_default_to_touching_edges_and_preserve_explicit_spacing() {
 #[test]
 fn battery_saver_fps_cap() {
     assert_eq!(cfg(json!({})).max_fps(), 120.0);
+    assert_eq!(cfg(json!({})).effective_video_idle_seconds(), 0);
     assert!(!cfg(json!({})).battery_saver_active());
     assert_eq!(battery_cfg(json!({})).max_fps(), 60.0);
+    assert_eq!(battery_cfg(json!({})).effective_video_idle_seconds(), 120);
     assert!(battery_cfg(json!({})).battery_saver_active());
     assert_eq!(
         battery_cfg(json!({
@@ -57,10 +85,19 @@ fn battery_saver_fps_cap() {
     assert_eq!(
         battery_cfg(json!({
             "general": {"maxFps": 144},
-            "performance": {"batterySaver": false}
+            "paper": {"idlePauseSeconds": 300},
+            "performance": {"batterySaver": false, "batteryVideoIdleSeconds": 90}
         }))
         .max_fps(),
         144.0
+    );
+    assert_eq!(
+        battery_cfg(json!({
+            "paper": {"idlePauseSeconds": 300},
+            "performance": {"batteryVideoIdleSeconds": 90}
+        }))
+        .effective_video_idle_seconds(),
+        90
     );
     assert!(!battery_cfg(json!({"performance": {"batterySaver": false}})).battery_saver_active());
 }
@@ -161,14 +198,37 @@ fn slice_getters() {
 
 #[test]
 fn corners_round_toggle() {
+    let sizes = |conf: &Config| conf.corners(&skwd_config::corners::SLICES).sizes();
     let off = sel(json!({"roundCorners": false, "cornerTL": 12.0}));
-    assert_eq!(off.slice_corners(), [0.0; 4]);
+    assert_eq!(sizes(&off), [0.0; 4]);
     let on = sel(json!({
         "roundCorners": true, "cornerTL": 1.0, "cornerTR": 2.0, "cornerBR": 3.0, "cornerBL": 4.0
     }));
-    assert_eq!(on.slice_corners(), [1.0, 2.0, 3.0, 4.0]);
+    assert_eq!(sizes(&on), [1.0, 2.0, 3.0, 4.0]);
     let base = sel(json!({"roundCorners": true, "cornerRadius": 8.0}));
-    assert_eq!(base.slice_corners(), [8.0; 4]);
+    assert_eq!(sizes(&base), [8.0; 4]);
+}
+
+#[test]
+fn corner_paths_fall_back() {
+    let old = sel(json!({"gridRoundCorners": false, "gridCornerRadius": 18.0}));
+    assert_eq!(old.str_path(skwd_config::keys::selector::GRID_CORNER_STYLE), "straight");
+    assert_eq!(old.num_path(skwd_config::keys::selector::GRID_CORNER_BR), 18.0);
+    assert!(old.flag_default_config(skwd_config::keys::selector::GRID_CORNERS_SAME));
+    let uneven = sel(json!({"roundCorners": true, "cornerTL": 3.0}));
+    assert!(!uneven.flag_default_config(skwd_config::keys::selector::CORNERS_SAME));
+}
+
+#[test]
+fn legacy_same_draws_values() {
+    let old = sel(json!({
+        "cornerStyle": "round", "cornersSame": true, "cornerTL": 3.0, "cornerTR": 9.0
+    }));
+    let slices = old.corners(&skwd_config::corners::SLICES);
+    assert!(!slices.same);
+    assert_eq!(slices.sizes(), [3.0, 9.0, 16.0, 16.0]);
+    let shared = sel(json!({"cornerStyle": "round", "cornersSame": true, "cornerAll": 7.0}));
+    assert_eq!(shared.corners(&skwd_config::corners::SLICES).sizes(), [7.0; 4]);
 }
 
 #[test]
@@ -243,15 +303,14 @@ fn grid_getters() {
     assert_eq!((conf.grid_cylinder_bend(), conf.grid_cylinder_radius()), (-0.65, 840.0));
     assert_eq!(conf.grid_gap_x(), 14.0);
     assert_eq!(conf.grid_gap_y(), 22.0);
-    assert!(!conf.grid_round_corners());
-    assert_eq!(conf.grid_corner_radius(), 18.0);
+    let grid = conf.corners(&skwd_config::corners::GRID);
+    assert_eq!((grid.style, grid.values), (skwd_config::corners::CornerStyle::Straight, [18.0; 4]));
     assert_eq!(conf.grid_border_width(), 4.0);
 
     let defaults = sel(json!({}));
     assert_eq!(defaults.grid_gap_x(), 8.0);
     assert_eq!(defaults.grid_gap_y(), 8.0);
-    assert!(defaults.grid_round_corners());
-    assert_eq!(defaults.grid_corner_radius(), 6.0);
+    assert_eq!(defaults.corners(&skwd_config::corners::GRID).sizes(), [6.0; 4]);
     assert_eq!(defaults.grid_border_width(), 2.0);
     assert_eq!((defaults.grid_cylinder_bend(), defaults.grid_cylinder_radius()), (0.65, 720.0));
     assert_eq!(sel(json!({"gridLayout": "cylinder"})).grid_layout(), "cylinder");
@@ -298,6 +357,59 @@ fn wobble_offset_getters() {
     assert_eq!(
         cfg(json!({"filterBar": {"offsetX": 10.0, "offsetY": 20.0}})).filter_bar_offset(),
         (10.0, 20.0)
+    );
+}
+
+#[test]
+fn picker_frame_bounds() {
+    assert_eq!(cfg(json!({})).picker_frame(), None);
+    assert_eq!(
+        sel(json!({"frameEnabled": true, "frameX": 90, "frameY": 75,
+            "frameWidth": 40, "frameHeight": 35}))
+        .picker_frame(),
+        Some([0.6, 0.65, 0.4, 0.35])
+    );
+    assert_eq!(
+        cfg(json!({"filterBar": {"buttonOrder": " sort, folder, , random "}})).filter_bar_order(),
+        vec!["sort", "folder", "random"]
+    );
+    assert_eq!(
+        cfg(json!({"filterBar": {"hiddenButtons": " colors, , audio "}}))
+            .filter_bar_hidden_buttons(),
+        vec!["colors", "audio"]
+    );
+}
+
+#[test]
+fn bar_position_getter() {
+    assert_eq!(cfg(json!({})).filter_bar_position(), None);
+    assert_eq!(
+        cfg(json!({"filterBar": {"positionX": 25, "positionY": 40}})).filter_bar_position(),
+        None
+    );
+    assert_eq!(
+        cfg(json!({"filterBar": {"positionEnabled": true, "positionX": 25, "positionY": 40}}))
+            .filter_bar_position(),
+        Some((0.25, 0.4))
+    );
+}
+
+#[test]
+fn search_position_getter() {
+    assert_eq!(cfg(json!({})).tag_cloud_position(), None);
+    assert_eq!(
+        sel(json!({"tagCloudPositionX": 25, "tagCloudPositionY": 40})).tag_cloud_position(),
+        None
+    );
+    assert_eq!(
+        sel(json!({"tagCloudPositionEnabled": true, "tagCloudPositionX": 25, "tagCloudPositionY": 40}))
+            .tag_cloud_position(),
+        Some((0.25, 0.4))
+    );
+    assert_eq!(
+        sel(json!({"tagCloudPositionEnabled": true, "tagCloudPositionX": 120, "tagCloudPositionY": -10}))
+            .tag_cloud_position(),
+        Some((1.0, 0.0))
     );
 }
 
@@ -499,25 +611,6 @@ fn browser_grid_sizes() {
 }
 
 #[test]
-fn selector_mode_degrades() {
-    for (mode, expected) in [
-        ("slices", "slices"),
-        ("grid", "grid"),
-        ("wall", "grid"),
-        ("hex", "hex"),
-        ("sandy", "sandy"),
-        ("nova", "sandy"),
-        ("hand", "hand"),
-        ("depth", "depth"),
-    ] {
-        assert_eq!(sel(json!({"displayMode": mode})).selector_mode(), expected);
-    }
-    for mode in ["spiral", "mosaic", "cascade", "warp", "fluid", "lens", "shelves"] {
-        assert_eq!(sel(json!({"displayMode": mode})).selector_mode(), "slices");
-    }
-}
-
-#[test]
 fn hand_getters_default_and_clamp() {
     let def = cfg(json!({}));
     assert_eq!(def.hand_count(), 5);
@@ -547,7 +640,7 @@ fn hand_getters_default_and_clamp() {
     assert_eq!(def.hand_fan_angle(), 12.0);
     assert_eq!(def.hand_fan_roll(), 8.5);
     assert_eq!(def.hand_arch(), 20.0);
-    assert_eq!(def.hand_corner_radius(), 0.0);
+    assert_eq!(def.corners(&skwd_config::corners::HAND).sizes(), [0.0; 4]);
     assert_eq!(def.hand_skew(), 0.0);
     assert_eq!(def.hand_backdrop_blur(), 1.0);
     assert_eq!(sel(json!({"handCount": 1})).hand_count(), 2);

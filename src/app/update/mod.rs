@@ -1,7 +1,9 @@
 #[allow(clippy::wildcard_imports)]
 use super::*;
 
+pub(in crate::app) mod arrange;
 mod browser;
+pub(in crate::app) mod colour_studio;
 mod dispatcher;
 mod effects;
 mod filters;
@@ -14,10 +16,15 @@ mod post_update;
 mod scene_properties;
 mod schedule;
 mod settings;
+pub(in crate::app) use settings::reread_search;
 pub(in crate::app) mod settings_background;
+mod settings_colour;
 mod settings_folders;
+mod settings_home;
+mod settings_layouts;
 pub(in crate::app) mod settings_policy;
 mod settings_profiles;
+pub(in crate::app) mod strand;
 mod tags;
 pub(crate) mod theme;
 mod ui_command;

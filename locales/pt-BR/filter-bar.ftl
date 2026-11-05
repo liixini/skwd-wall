@@ -18,6 +18,7 @@ filter-bar-task-tags = Tags
 filter-bar-task-index = Índice
 filter-bar-task-scan = Varredura
 filter-bar-task-download = Download
+filter-bar-task-drawing = Desenhos
 filter-bar-state-running = Em execução
 filter-bar-state-paused = Pausado
 filter-bar-state-done = Concluído

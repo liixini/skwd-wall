@@ -45,6 +45,7 @@ impl App {
     }
 
     fn weather_action_error(&mut self, error: &str) {
+        self.panels.settings.weather_after_follow = None;
         self.show_toast(crate::i18n::tr_args!(OUTDOOR_ACTION_ERROR, error => error));
         self.call_tracked(wall_proto::rpc::WALL_WEATHER, serde_json::json!({}), Pending::Weather);
         self.retick();
@@ -64,6 +65,7 @@ impl App {
     #[expect(clippy::too_many_lines, reason = "RPC error dispatch boundary")]
     pub(in crate::app) fn rpc_error(&mut self, kind: Pending, err: String) {
         match kind {
+            Pending::WidgetScene => crate::app::update::strand::failed(self, &err),
             Pending::Weather => self.weather_rpc_error(),
             Pending::WeatherCandidates { category, query, generation } => {
                 let review = &mut self.panels.settings;
@@ -78,6 +80,27 @@ impl App {
                 }
             }
             Pending::WeatherAction => self.weather_action_error(&err),
+            Pending::DrawingStatus | Pending::DrawingAction => {
+                self.show_toast(
+                    crate::i18n::tr_args!(crate::app::constants::DRAWING_ERROR, error => err),
+                );
+                if matches!(kind, Pending::DrawingAction) {
+                    self.request_drawing_status();
+                }
+                self.invalidate_settings();
+                self.retick();
+            }
+            Pending::DrawingCardAction { key, enabled } => {
+                self.show_toast(
+                    crate::i18n::tr_args!(crate::app::constants::DRAWING_CARD_FAILED, error => err),
+                );
+                if enabled && self.flipped_drawing_key() == Some(key.as_str()) {
+                    self.scene
+                        .set_card_drawing(&key, crate::frontend::scene::DrawingCardState::Draw);
+                    self.retick();
+                }
+                self.request_drawing_status();
+            }
             Pending::Status => {
                 self.daemon.steam_client_available = None;
                 if self.daemon.steam_refresh_needed {
@@ -106,6 +129,9 @@ impl App {
             }
             Pending::AudioPause => {
                 self.error_toast("audio-playback-error", &err);
+            }
+            Pending::Studio { key, schemes, .. } => {
+                crate::app::update::colour_studio::failed(self, &key, schemes, &err);
             }
             Pending::CurrentTheme { .. } => {
                 if let Some(designer) = self.panels.theme_designer.as_mut() {
@@ -146,9 +172,23 @@ impl App {
                 }
                 self.retick();
             }
-            Pending::BrowserPreview { source, .. } => {
-                if let Some(br) = self.source_browser.browser_for_source_mut(source) {
-                    br.session.error = Some(err);
+            Pending::BrowserPreview { source, id, url } => {
+                self.fail_browser_preview(
+                    &crate::contracts::browser::PreviewIdentity { source, id, url },
+                    err,
+                );
+                self.retick();
+            }
+            Pending::BrowserDetails { source, id } => {
+                if let Some(br) = self.source_browser.browser_for_source_mut(source)
+                    && br
+                        .session
+                        .preview
+                        .and_then(|index| br.session.items.get(index))
+                        .is_some_and(|item| item.id == id)
+                {
+                    br.view.details_loading = false;
+                    br.view.details_error = Some(err);
                 }
                 self.retick();
             }
@@ -184,6 +224,7 @@ impl App {
             Pending::ActivityApply { token } => {
                 self.complete_activity_request(&token, ActivityCompletion::Failed(err));
             }
+            Pending::ArrangeOutputs => crate::app::update::arrange::inventory::failed(self, err),
             _ => {}
         }
     }
@@ -221,6 +262,14 @@ impl App {
             };
         }
         match kind {
+            Pending::WidgetScene => {
+                let desk = decoded!(
+                    wall_proto::rpc::WIDGETS_SCENE,
+                    result,
+                    crate::infrastructure::rpc_results::decode_widget_desk,
+                );
+                crate::app::update::strand::scene(self, desk);
+            }
             Pending::RemoveWallpaper { .. } => {
                 decoded!(
                     wall_proto::rpc::WALL_REMOVE,
@@ -264,6 +313,7 @@ impl App {
                                             );
                                         candidate.set_dark(dark);
                                         candidate.colors = variant.colors;
+                                        candidate.hover = variant.hover;
                                     }
                                 }
                                 candidate.set_dark(current.dark);
@@ -324,6 +374,14 @@ impl App {
                     &backend,
                 );
             }
+            Pending::Studio { key, area, schemes } => {
+                let snapshot = decoded!(
+                    wall_proto::rpc::THEME_STUDIO,
+                    result,
+                    crate::infrastructure::rpc_results::decode_studio,
+                );
+                crate::app::update::colour_studio::loaded(self, &key, area, schemes, snapshot);
+            }
             Pending::ThemePreviews { backend } => self.on_theme_previews(
                 decoded!(
                     "theme.previews",
@@ -331,6 +389,14 @@ impl App {
                     crate::infrastructure::rpc_results::decode_theme_previews,
                 ),
                 &backend,
+            ),
+            Pending::ArrangeOutputs => crate::app::update::arrange::inventory::received(
+                self,
+                decoded!(
+                    wall_proto::rpc::WALL_OUTPUTS,
+                    result,
+                    crate::infrastructure::rpc_results::decode_outputs,
+                ),
             ),
             Pending::Outputs => self.on_outputs(decoded!(
                 "wall.outputs",
@@ -437,7 +503,46 @@ impl App {
                 ),
                 source,
             ),
-            Pending::BrowserPreview { .. } => {}
+            Pending::BrowserPreview { source, id, url } => {
+                if let Some(path) =
+                    crate::infrastructure::browser::decode_preview_ready_path(result)
+                {
+                    self.adopt_browser_preview(
+                        &crate::contracts::browser::PreviewIdentity { source, id, url },
+                        &path,
+                        None,
+                    );
+                }
+            }
+            Pending::BrowserDetails { source, id } => {
+                let gallery = decoded!(
+                    wall_proto::rpc::SOURCE_DETAILS,
+                    result,
+                    crate::infrastructure::rpc_results::decode_workshop_gallery,
+                );
+                if gallery.id == id
+                    && let Some(browser) = self.source_browser.browser_for_source_mut(source)
+                {
+                    if browser
+                        .session
+                        .preview
+                        .and_then(|index| browser.session.items.get(index))
+                        .is_some_and(|item| item.id == id)
+                    {
+                        browser.view.details_loading = false;
+                        browser.view.details_error = None;
+                    }
+                    if let Some(item) = browser.item_mut(&id) {
+                        let details = item.workshop.get_or_insert_default();
+                        details.previews = gallery.previews;
+                        if !gallery.creator_name.is_empty() {
+                            details.creator_name = gallery.creator_name;
+                        }
+                        item.details_ready = true;
+                    }
+                }
+                self.request_workshop_media();
+            }
             Pending::BrowserDownload { source, id } => self.on_browser_download(
                 decoded!(
                     "browser.download",
@@ -524,6 +629,25 @@ impl App {
                     wall_proto::rpc::WALL_WEATHER,
                     result,
                     crate::infrastructure::rpc_results::decode_weather,
+                ));
+            }
+            Pending::DrawingStatus => {
+                self.adopt_drawing_status(decoded!(
+                    wall_proto::rpc::DRAWING_STATUS,
+                    result,
+                    crate::infrastructure::rpc_results::decode_drawing_status,
+                ));
+            }
+            Pending::DrawingAction => {
+                self.adopt_external_config();
+                self.request_drawing_status();
+            }
+            Pending::DrawingCardAction { .. } => {
+                self.adopt_external_config();
+                self.adopt_drawing_status(decoded!(
+                    wall_proto::rpc::DRAWING_SET_ENABLED,
+                    result,
+                    crate::infrastructure::rpc_results::decode_drawing_status,
                 ));
             }
             Pending::WeatherPlaylists => self.on_weather_playlists(decoded!(

@@ -42,7 +42,7 @@ fn destructive_actions_arm() {
     for id in [ActionId::ClearCache, ActionId::OptimizeImages] {
         assert!(id.is_destructive(), "{id:?}");
     }
-    for id in [ActionId::RecomputeColors, ActionId::RefreshBackdrop, ActionId::ResetMotionSlow] {
+    for id in [ActionId::RecomputeColors, ActionId::RefreshBackdrop] {
         assert!(!id.is_destructive(), "{id:?}");
     }
 }
@@ -50,13 +50,13 @@ fn destructive_actions_arm() {
 #[test]
 fn disabled_choices_are_skipped_by_keyboard_navigation() {
     let control = Control::Chips {
-        path: String::from("paper.videoEngine"),
+        path: String::from(skwd_config::keys::display::FILL_MODE),
         options: vec![
-            (String::from("vulkan"), String::from("Vulkan")),
-            (String::from("tinier"), String::from("Tinier")),
+            (String::from("fill"), String::from("Fill")),
+            (String::from("fit"), String::from("Fit")),
         ],
-        current: String::from("tinier"),
-        disabled: vec![String::from("tinier")],
+        current: String::from("fit"),
+        disabled: vec![String::from("fit")],
         background: None,
     };
 

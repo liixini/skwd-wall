@@ -1,3 +1,8 @@
+settings-integrations-caelestia-card = Caelestia
+settings-integrations-caelestia-card-desc = Skwd показывает обои, выбранные в любом из двух приложений.
+settings-integrations-caelestia-sync-label = Синхронизировать обои Caelestia
+settings-integrations-caelestia-sync-desc = Skwd показывает обои, выбранные в любом из двух приложений. Выбор в Caelestia применяется к разблокированным экранам.
+
 settings-integrations-plasma-card = KDE Plasma
 settings-integrations-lock-mode-label = Обои экрана блокировки
 settings-integrations-lock-mode-desc = «Не управлять» не трогает Plasma. «Статичное изображение» всегда использует изображение ниже. «Последние применённые» следует за недавно применёнными обоями.
@@ -33,7 +38,7 @@ settings-integrations-follow-desc = Следовать Skwd, когда он у�
 
 settings-section-lockscreens = Экраны блокировки
 settings-lockscreens-source-label = Источник изображения
-settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-source-help = «Как последнее применённое» использует изображение текущих обоев. «Статичное изображение» использует файл ниже. Видео и сцены используют статичное изображение, если оно есть.
 settings-lockscreens-image-label = Статичное изображение
 settings-lockscreens-image-desc = Укажите полный путь к существующему изображению, например ~/Pictures/lockscreen.jpg. Skwd копирует его для включённых экранов блокировки. Здесь нельзя использовать видеофайл.
 settings-lockscreens-hyprlock-card = Hyprlock

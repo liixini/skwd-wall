@@ -1,6 +1,5 @@
 settings-performance-power-card = Notebook e energia
 settings-performance-power-card-desc = O seletor para de renderizar quando se estabiliza. Os renderizadores de papel de parede continuam rodando depois que ele fecha, por isso têm limites de bateria separados.
-settings-performance-power-source-label = Fonte de energia atual
 settings-performance-power-battery-limited = Bateria (limites automáticos ativos)
 settings-performance-power-battery-unlimited = Bateria (limites automáticos desativados)
 settings-performance-power-external = Energia externa, desktop ou indisponível (limites automáticos inativos)
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = Adicionar miniaturas de quadros capturad
 settings-performance-capture-we-desc = Captura cenas nativas em segundo plano. Reutiliza capturas válidas e mantém as pré-visualizações existentes se uma cena falhar. Você pode parar e continuar depois.
 settings-performance-capture-we-action = Gerar miniaturas
 settings-performance-capture-we-stop = Parar
+settings-performance-effective-label = Limites efetivos
+settings-performance-effective = Seletor a { $fps } fps · O vídeo pausa após { $seconds } s parado · { $reason }
+settings-performance-effective-no-idle = Seletor a { $fps } fps · A pausa do vídeo parado está desativada · { $reason }
+settings-performance-effective-reason-battery = Na bateria
+settings-performance-effective-reason-disabled = A economia de bateria está desativada
+settings-performance-effective-reason-external = Na energia externa

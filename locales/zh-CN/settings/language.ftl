@@ -1,5 +1,3 @@
-settings-tab-language = 语言
-settings-tab-note-language = 选择选择器和设置使用的语言。
 settings-language-card = 界面语言
 settings-language-card-desc = 更改会立即生效，并在下次启动时保留。
 settings-language-choice-label = 语言

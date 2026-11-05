@@ -1,6 +1,5 @@
 settings-performance-power-card = 笔记本与电源
 settings-performance-power-card-desc = 选择器静止后会停止渲染。壁纸渲染器在选择器关闭后仍会继续运行，因此它们有单独的电池限制。
-settings-performance-power-source-label = 当前电源
 settings-performance-power-battery-limited = 电池（自动限制已生效）
 settings-performance-power-battery-unlimited = 电池（自动限制已禁用）
 settings-performance-power-external = 外接电源、台式机或无法获取（自动限制未生效）
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = 为所有 WE 壁纸添加捕获帧缩略
 settings-performance-capture-we-desc = 在后台捕获原生场景。复用有效的捕获结果，如果场景失败则保留现有预览。可以停止后再继续。
 settings-performance-capture-we-action = 生成缩略图
 settings-performance-capture-we-stop = 停止
+settings-performance-effective-label = 实际限制
+settings-performance-effective = 选择器 { $fps } fps · 视频空闲 { $seconds } 秒后暂停 · { $reason }
+settings-performance-effective-no-idle = 选择器 { $fps } fps · 视频空闲暂停已关闭 · { $reason }
+settings-performance-effective-reason-battery = 使用电池
+settings-performance-effective-reason-disabled = 节电模式已关闭
+settings-performance-effective-reason-external = 使用外接电源

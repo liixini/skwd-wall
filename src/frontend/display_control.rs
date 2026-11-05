@@ -2,7 +2,6 @@ use iced::widget::container;
 use iced::{Alignment, Element, Length};
 
 use crate::app::Message;
-use crate::frontend::audio_panel::AudioMsg;
 use crate::frontend::effects::EffectsMsg;
 use crate::frontend::theme::Palette;
 use crate::frontend::ui::{label, row, with_alpha};
@@ -40,24 +39,6 @@ impl DisplayControl {
                 "audio-wallpaper-playing"
             })
             .into(),
-        }
-    }
-
-    pub fn activate(&self) -> Message {
-        match self {
-            Self::Colours { target, .. } => {
-                Message::Effects(EffectsMsg::MonitorTheme(target.clone()))
-            }
-            Self::Audio { target, muted, source_preview, .. } => {
-                if *source_preview {
-                    Message::Effects(EffectsMsg::SrcMute(!muted))
-                } else {
-                    Message::Audio(AudioMsg::MonMute(target.clone(), !muted))
-                }
-            }
-            Self::Playback { target, manual, .. } => {
-                Message::Audio(AudioMsg::MonPause(target.clone(), !manual))
-            }
         }
     }
 

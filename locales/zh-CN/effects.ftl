@@ -81,4 +81,3 @@ effects-activity-inactive-desc = 对于非当前活动，只能更改壁纸分�
 effects-activity-unavailable = 所选活动不可用。请选择现有活动后重试。
 effects-activity-saved = 已为 { $activity } 保存。
 effects-activity-unassigned = 未分配 Skwd 壁纸
-effects-activity-preparing = 正在为 { $activity } 准备壁纸。

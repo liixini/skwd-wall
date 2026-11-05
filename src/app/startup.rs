@@ -1,13 +1,14 @@
 use std::sync::{Arc, Mutex, OnceLock};
 
 use futures_channel::mpsc::{UnboundedReceiver, UnboundedSender, unbounded};
+use skwd_config::corners;
 
 use crate::contracts::preview::UploadQueue;
 use crate::domain::library::filter::Filters;
 use crate::frontend::animation::MotionProfile;
 use crate::frontend::scene::layout::{
-    ExtraParams, GridLayout, GridParams, HexCurve, HexParams, HexShape, MIN_HEX_R, Mode,
-    SliceParams, StageParams,
+    CardCorners, ExtraParams, GridLayout, GridParams, HexCurve, HexParams, HexShape, MIN_HEX_R,
+    Mode, SliceParams, StageParams,
 };
 use crate::frontend::theme::Palette;
 use crate::infrastructure::config::Config;
@@ -106,7 +107,7 @@ impl App {
             daemon,
             preview_resources: PreviewResources::new(pool, uploads),
             config,
-            theme: ThemeState::new(palette, motion),
+            theme: ThemeState::new(&palette, motion),
             library_session: LibrarySession::new(filters, wallpaper_dir, video_dir),
             scene,
             chrome: ChromeState::new(filter_bar_visible, filter_bar_vertical, motion),
@@ -183,7 +184,7 @@ fn spawn_hud_ticker(tx: &UnboundedSender<Wake>) {
 fn init_scene(config: &Config, tx: UnboundedSender<Wake>) -> SceneCore {
     let layout = layout_params(config);
     let mut scene =
-        SceneCore::new(layout.mode, layout.slices, layout.grid, layout.hex, layout.extra);
+        SceneCore::new(layout.mode, layout.slices, layout.grid, layout.hex, &layout.extra);
     scene.set_motion_profile(MotionProfile::new(
         config.motion_fast_ms(),
         config.motion_standard_ms(),
@@ -242,7 +243,7 @@ pub(crate) fn layout_params(config: &Config) -> LayoutParams {
         skew: config.skew_offset(),
         edge_tilt: config.slice_edge_tilt(),
         visible_count: config.visible_count(),
-        corners: config.slice_corners(),
+        corners: card_corners(config, &corners::SLICES),
         parallax: config.slice_parallax(),
         shadows: config.slice_shadows(),
         wobble: config.slice_wobble(),
@@ -252,7 +253,7 @@ pub(crate) fn layout_params(config: &Config) -> LayoutParams {
         sp.shadows = config.depth_shadows();
         sp.slice_h = config.depth_height();
         sp.visible_count = config.depth_count() as usize;
-        sp.corners = [config.depth_corners(); 4];
+        sp.corners = card_corners(config, &corners::DEPTH);
         sp.skew = config.depth_skew();
     }
     let [
@@ -272,7 +273,7 @@ pub(crate) fn layout_params(config: &Config) -> LayoutParams {
         thumb_h: config.grid_thumb_height(),
         gap_x: config.grid_gap_x(),
         gap_y: config.grid_gap_y(),
-        corner_radius: if config.grid_round_corners() { config.grid_corner_radius() } else { 0.0 },
+        corners: card_corners(config, &corners::GRID),
         border_width: config.grid_border_width(),
         layout: GridLayout::from_key(&config.grid_layout()),
         stagger: config.grid_stagger(),
@@ -349,7 +350,7 @@ pub(crate) fn layout_params(config: &Config) -> LayoutParams {
             spacing: config.collection_spacing(),
             count: config.collection_count(),
             tilt: config.collection_tilt(),
-            corners: config.collection_corners(),
+            corners: card_corners(config, &corners::COLLECTION),
             speed: config.collection_speed(),
         },
 
@@ -373,7 +374,7 @@ pub(crate) fn layout_params(config: &Config) -> LayoutParams {
             swap_loop: config.sandy_swap_loop(),
             swap_style: config.sandy_swap_style_index(),
             skew: config.sandy_skew(),
-            corners: config.slice_corners(),
+            corners: card_corners(config, &corners::SLICES),
             edge_speed: config.sandy_edge_speed(),
             ring_size: config.sandy_ring_size(),
             ring_spin: config.sandy_ring_spin(),
@@ -387,6 +388,10 @@ pub(crate) fn layout_params(config: &Config) -> LayoutParams {
         hand: hand_params(config),
     };
     LayoutParams { mode, slices: sp, grid: gp, hex: hp, extra: xp }
+}
+
+fn card_corners(config: &Config, keys: &corners::CornerKeys) -> CardCorners {
+    CardCorners::read(&config.corners(keys))
 }
 
 fn hand_params(config: &Config) -> crate::frontend::scene::hand::HandParams {
@@ -403,7 +408,7 @@ fn hand_params(config: &Config) -> crate::frontend::scene::hand::HandParams {
         fan_angle: config.hand_fan_angle(),
         fan_roll: config.hand_fan_roll(),
         arch: config.hand_arch(),
-        radius: config.hand_corner_radius(),
+        corners: card_corners(config, &corners::HAND),
         skew: config.hand_skew(),
         blur: config.hand_backdrop_blur(),
         axis: Axis::from_key(&config.hand_ribbon_axis()),

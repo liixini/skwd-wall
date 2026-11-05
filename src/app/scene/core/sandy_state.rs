@@ -8,6 +8,8 @@ use crate::frontend::scene::sandy::{
 
 use super::model::{RebuildCtx, SceneCore};
 
+const SELECT_DISTANCE: f32 = 8.0;
+
 impl SceneCore {
     pub fn sandy_settle_now(&mut self) {
         self.sandy.prog.snap(1.0);
@@ -27,8 +29,19 @@ impl SceneCore {
 
     pub fn sandy_pointer(&mut self, x: f32, y: f32, hit: Option<usize>, count: usize) {
         let (vw, vh) = self.viewport;
-        let local_y = y - self.xp.sandy.offset_y * vh * 0.5;
-        let pan = edge_pan(x, local_y, vw, vh, self.xp.sandy.strip_h());
+        let frame = self.picker_frame.and_then(|_| self.picker_frame_bounds());
+        if frame.is_some_and(|bounds| !bounds.contains(iced::Point::new(x, y))) {
+            if self.sandy.edge_pan != 0.0 || self.sandy.cam_free {
+                self.sandy.edge_pan = 0.0;
+                self.sandy.cam_free = false;
+                self.motion.needs_frame = true;
+            }
+            return;
+        }
+        let (source_x, source_y) = self.unplace_pointer(x, y);
+        let edge_x = self.frame_pointer(x, y).0;
+        let local_y = source_y - self.xp.sandy.offset_y * vh * 0.5;
+        let pan = edge_pan(edge_x, local_y, vw, vh, self.xp.sandy.strip_h());
         if pan != self.sandy.edge_pan {
             self.sandy.edge_pan = pan;
             self.motion.needs_frame = true;
@@ -53,10 +66,11 @@ impl SceneCore {
         if idx == self.current {
             return;
         }
-        let far_enough =
-            self.sandy.sel_pos.is_none_or(|(sx, sy)| (x - sx).abs() + (y - sy).abs() >= 8.0);
+        let far_enough = self.sandy.sel_pos.is_none_or(|(sx, sy)| {
+            (source_x - sx).abs() + (source_y - sy).abs() >= SELECT_DISTANCE
+        });
         if far_enough {
-            self.sandy.sel_pos = Some((x, y));
+            self.sandy.sel_pos = Some((source_x, source_y));
             self.set_current(idx, count);
             self.sandy.cam_free = true;
         }

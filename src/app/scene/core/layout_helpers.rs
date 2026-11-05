@@ -1,5 +1,11 @@
 use crate::frontend::scene::InstanceRaw;
 
+pub(super) const EDITORIAL_CARDS: usize = 5;
+pub(super) const EDITORIAL_HERO_COLUMNS: usize = 2;
+pub(super) const EDITORIAL_STAGGER_GAIN: f32 = 0.16;
+pub(super) const EDITORIAL_HERO_MIN: f32 = 0.35;
+pub(super) const EDITORIAL_HERO_MAX: f32 = 0.72;
+
 pub(super) const THUMB_W: f32 = 640.0;
 pub(super) const THUMB_H: f32 = 360.0;
 pub(super) const TOP_BAR: f32 = 50.0;
@@ -49,7 +55,7 @@ pub(super) struct CardSpec {
     pub(super) hh: f32,
     pub(super) skew: f32,
     pub(super) edge_tilt: f32,
-    pub(super) radii: [f32; 4],
+    pub(super) corners: crate::frontend::scene::layout::CardCorners,
     pub(super) hex: bool,
     pub(super) view: u8,
     pub(super) chrome_radius: f32,

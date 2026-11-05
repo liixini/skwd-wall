@@ -8,3 +8,6 @@ settings-displays-lock-label = ロック
 settings-displays-lock-desc = このモニターの壁紙はマルチピッカーからのみ更新します。
 settings-displays-empty-label = ディスプレイを検出中
 settings-displays-empty-desc = 壁紙サービスがディスプレイを報告すると、現在の壁紙がここに表示されます。
+settings-displays-default-placement-label = 既定の配置
+settings-displays-default-placement-desc = 個別の配置を設定していないすべてのディスプレイで使われます。
+settings-displays-use-global = 全体設定を使う · { $mode }

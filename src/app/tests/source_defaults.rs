@@ -41,7 +41,8 @@ fn source_defaults_reach_requests_without_changing_factory_defaults() {
         panic!("Steam request expected")
     };
     assert_eq!(request.request_type, "Scene");
-    assert_eq!(request.category, "Nature");
+    assert_eq!(request.tags, ["Nature"]);
+    assert!(request.excluded_tags.is_empty());
     assert_eq!(request.resolution, "3840 x 2160");
     assert_eq!(request.trend_days, 3);
 }
@@ -293,4 +294,29 @@ fn each_source_chooses_when_to_submit_filters() {
     assert_eq!(calls.len(), 1);
     assert_eq!(calls[0].1["categories"], "101");
     assert_eq!(calls[0].1["purity"], "110");
+}
+
+#[test]
+fn steam_filters_route() {
+    use crate::frontend::browser::{
+        BrowserMsg, STEAM_DAYS_FILTER, STEAM_NSFW_FILTER, STEAM_NSFW_VALUE,
+        STEAM_RESOLUTION_FILTER, STEAM_TYPE_FILTER,
+    };
+    let mut app = test_app();
+    app.source_browser.browser = Some(Browser::new(Source::Steam));
+    app.run_browser_search(false);
+    for (kind, value) in [
+        (STEAM_TYPE_FILTER, "Video"),
+        (STEAM_RESOLUTION_FILTER, "3840 x 2160"),
+        (STEAM_DAYS_FILTER, "1"),
+        (STEAM_NSFW_FILTER, STEAM_NSFW_VALUE),
+    ] {
+        let _ =
+            update(&mut app, Message::Browser(BrowserMsg::SteamFilter(kind.into(), value.into())));
+    }
+    let request = &app.source_browser.browser.as_ref().expect("browser").request;
+    assert_eq!(request.steam.kind, "Video");
+    assert_eq!(request.steam.resolution, "3840 x 2160");
+    assert_eq!(request.steam.trend_days, "1");
+    assert!(request.nsfw);
 }

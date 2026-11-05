@@ -22,5 +22,8 @@ pub fn dark_chrome(base: &Palette) -> Palette {
         background: Color { r: 0.03, g: 0.035, b: 0.05, a: 1.0 },
         outline: Color { r: 0.42, g: 0.44, b: 0.5, a: 1.0 },
         tertiary: ensure_bright(base.tertiary),
+        secondary: ensure_bright(base.secondary),
+        error: ensure_bright(base.error),
+        ..*base
     }
 }

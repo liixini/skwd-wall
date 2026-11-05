@@ -2,6 +2,7 @@ use iced::widget::canvas::{Frame, Path, Text};
 use iced::{Point, Rectangle, Size, Vector, border};
 
 use crate::frontend::scene::BackPanel;
+use crate::frontend::scene::layout::CardCorners;
 
 use super::layout::BackLayout;
 
@@ -78,6 +79,16 @@ impl BackGeometry {
                 bottom_left: radii[3],
             },
         ))
+    }
+
+    pub(super) fn outline(self, rectangle: Rectangle, corners: CardCorners) -> Path {
+        if !corners.cut {
+            return self.rounded_rectangle(rectangle, corners.sizes);
+        }
+        let across = self.m11.hypot(self.m12).max(f32::EPSILON);
+        let down = self.m21.hypot(self.m22).max(f32::EPSILON);
+        let cuts = corners.sizes.map(|size| [size / across, size / down]);
+        self.path(&crate::frontend::components::chamfered(rectangle, cuts))
     }
 
     pub(super) fn line(self, from: Point, to: Point) -> Path {

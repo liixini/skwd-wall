@@ -43,6 +43,14 @@ impl Config {
         self.on_battery && skwd_config::battery_saver_enabled(&self.data)
     }
 
+    pub fn effective_video_idle_seconds(&self) -> u32 {
+        let configured = self
+            .num_path(skwd_config::keys::paper::IDLE_PAUSE_SECONDS)
+            .clamp(0.0, u32::MAX as f64)
+            .round() as u32;
+        skwd_config::effective_video_idle_seconds(&self.data, self.on_battery, configured)
+    }
+
     pub fn frame_interval(&self) -> std::time::Duration {
         std::time::Duration::from_secs_f32(1.0 / self.max_fps())
     }

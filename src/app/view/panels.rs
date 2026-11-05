@@ -91,6 +91,9 @@ pub(super) fn panel_layers(app: &App) -> Vec<Element<'_, Message>> {
     if let Some(panel) = &app.panels.audio {
         layers.push(panel.view(app.scene.viewport, app.config.ui_scale(), &app.theme.palette));
     }
+    if let Some(studio) = &app.panels.colour_studio {
+        layers.push(studio.view(&app.theme.palette, app.config.ui_scale()));
+    }
     layers
 }
 

@@ -8,3 +8,6 @@ settings-displays-lock-label = Lås
 settings-displays-lock-desc = Uppdatera endast skärmens bakgrund genom flerväljaren.
 settings-displays-empty-label = Identifierar skärmar
 settings-displays-empty-desc = Aktuella bakgrundsbilder visas när bakgrundstjänsten rapporterar sina skärmar.
+settings-displays-default-placement-label = Standardplacering
+settings-displays-default-placement-desc = Används av varje skärm som inte har en egen placeringsinställning.
+settings-displays-use-global = Använd globalt · { $mode }

@@ -17,11 +17,11 @@ pub(super) fn profile(cfg: &dyn SettingsSource, path: String) -> Row {
     if !options.iter().any(|(name, _)| name == &current) {
         options.push((current.clone(), tr_args!(PROFILE_MISSING_MESSAGE, name => &current)));
     }
-    Row {
-        title: tr("settings-app-themes-profile-label").into(),
-        desc: tr("settings-app-themes-profile-desc").into(),
-        control: Control::Dropdown { path, options, current, palettes: cfg.palette_colors() },
-    }
+    Row::of(
+        tr("settings-app-themes-profile-label").into(),
+        tr("settings-app-themes-profile-desc").into(),
+        Control::Dropdown { path, options, current, palettes: cfg.palette_colors() },
+    )
 }
 
 pub(super) fn rows(cfg: &dyn SettingsSource, result: Option<&AppThemesResult>) -> Vec<Row> {
@@ -45,37 +45,37 @@ pub(super) fn rows(cfg: &dyn SettingsSource, result: Option<&AppThemesResult>) -
                     profile.desc = tr("settings-app-themes-busy").into();
                     profile.control = Control::Static;
                 }
-                Row {
-                    title: app.name.clone(),
-                    desc: tr("settings-app-themes-desc").into(),
-                    control: Control::Details {
+                Row::of(
+                    app.name.clone(),
+                    tr("settings-app-themes-desc").into(),
+                    Control::Details {
                         id: format!("app-profile:{}", app.id),
                         summary,
                         rows: vec![
                             profile,
-                            Row {
-                                title: app.name.clone(),
-                                desc: String::new(),
-                                control: Control::AppTheme { app: app.clone(), index },
-                            },
+                            Row::of(
+                                app.name.clone(),
+                                String::new(),
+                                Control::AppTheme { app: app.clone(), index },
+                            ),
                         ],
                     },
-                }
+                )
             })
             .collect()
     });
-    rows.push(Row {
-        title: tr("settings-app-themes-scan").into(),
-        desc: tr(if result.is_some() {
+    rows.push(Row::of(
+        tr("settings-app-themes-scan").into(),
+        tr(if result.is_some() {
             "settings-app-themes-scan-desc"
         } else {
             "settings-app-themes-loading"
         })
         .into(),
-        control: Control::ActionBtn {
+        Control::ActionBtn {
             id: ActionId::RefreshAppThemes,
             label: tr("settings-app-themes-refresh").into(),
         },
-    });
+    ));
     rows
 }

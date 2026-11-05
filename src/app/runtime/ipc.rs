@@ -35,7 +35,11 @@ impl App {
         self.call_tracked("wall.outputs", json!({}), Pending::Outputs);
         crate::app::helpers::request_activities(self);
         self.call_tracked("status", json!({}), Pending::Status);
+        crate::app::update::strand::resume(self);
         self.call_tracked(wall_proto::rpc::WALL_WEATHER, json!({}), Pending::Weather);
+        if self.panels.settings.open || self.flipped_drawing_key().is_some() {
+            self.request_drawing_status();
+        }
         self.call_tracked(wall_proto::rpc::PLAYLIST_LIST, json!({}), Pending::WeatherPlaylists);
         self.call_tracked("task.list", json!({}), Pending::TaskList);
         if self.source_browser.browser.is_some() {
@@ -52,6 +56,8 @@ impl App {
 
     fn ipc_disconnected(&mut self) {
         self.daemon.weather = None;
+        self.daemon.drawing = None;
+        self.scene.clear_card_drawing();
         self.daemon.steam_client_available = None;
         self.daemon.steam_refresh_needed = false;
         self.scene.touch();
@@ -78,6 +84,11 @@ impl App {
         let Some(kind) = self.daemon.pending.remove(&id) else {
             return false;
         };
+        if matches!(kind, Pending::ArrangeOutputs)
+            && self.panels.arrange.as_ref().is_none_or(|session| session.outputs.request != id)
+        {
+            return false;
+        }
         if matches!(kind, Pending::Activities | Pending::ActivityOutputs { .. })
             && !self.panels.effects.as_ref().is_some_and(|effects| {
                 if matches!(kind, Pending::Activities) {
@@ -104,7 +115,10 @@ impl App {
         let Some(result) = result else {
             if matches!(
                 kind,
-                Pending::Status | Pending::WeatherAction | Pending::LockScreenSet { .. }
+                Pending::Status
+                    | Pending::WeatherAction
+                    | Pending::LockScreenSet { .. }
+                    | Pending::ArrangeOutputs
             ) {
                 self.rpc_error(kind, crate::i18n::tr("status-daemon-lost").to_string());
             } else if matches!(

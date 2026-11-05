@@ -51,7 +51,7 @@ impl KeyBindingGroup {
     }
 }
 
-pub const KEY_BINDINGS: [KeyBindingDescriptor; 46] = [
+pub const KEY_BINDINGS: [KeyBindingDescriptor; 48] = [
     KeyBindingDescriptor {
         action: InputAction::Select,
         path: skwd_config::keys::keybind::SELECT,
@@ -98,6 +98,18 @@ pub const KEY_BINDINGS: [KeyBindingDescriptor; 46] = [
         action: InputAction::Studio,
         path: skwd_config::keys::keybind::STUDIO,
         title_key: "keybind-studio",
+        group: KeyBindingGroup::Wallpaper,
+    },
+    KeyBindingDescriptor {
+        action: InputAction::ColourStudio,
+        path: skwd_config::keys::keybind::COLOUR_STUDIO,
+        title_key: "keybind-colour-studio",
+        group: KeyBindingGroup::Wallpaper,
+    },
+    KeyBindingDescriptor {
+        action: InputAction::Widgets,
+        path: skwd_config::keys::keybind::WIDGETS,
+        title_key: "keybind-widgets",
         group: KeyBindingGroup::Wallpaper,
     },
     KeyBindingDescriptor {

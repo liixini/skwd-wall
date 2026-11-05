@@ -1,0 +1,10 @@
+pub const LIBRARY: &str = "library";
+pub const SOURCES: &str = "sources";
+pub const PICKER: &str = "picker";
+pub const DISPLAYS: &str = "displays";
+pub const PLAYBACK: &str = "playback";
+pub const TRANSITIONS: &str = "transitions";
+pub const THEME: &str = "theme";
+pub const AUTOMATION: &str = "automation";
+pub const INTEGRATIONS: &str = "integrations";
+pub const APP: &str = "app";

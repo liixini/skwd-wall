@@ -12,7 +12,7 @@ pub(super) fn animate_placement(app: &mut App, path: &str, old: &str, new: &str)
     app.panels
         .settings
         .bar_reveals
-        .entry(format!("background:{path}"))
+        .entry(BackgroundControl::reveal_id(path))
         .or_insert_with(|| motion.tween(visible(old), MotionTier::Fast))
         .retarget(visible(new));
 }
@@ -95,7 +95,7 @@ pub(super) fn commit(app: &mut App, output: &str) -> Task<Message> {
 
 pub(in crate::app) fn sync_monitors(app: &mut App) {
     for (id, reveal) in &mut app.panels.settings.bar_reveals {
-        let Some(path) = id.strip_prefix("background:") else {
+        let Some(path) = id.strip_prefix(BackgroundControl::REVEAL_PREFIX) else {
             continue;
         };
         let selected = app.config.str_path(path);
@@ -117,7 +117,7 @@ pub(in crate::app) fn sync_monitors(app: &mut App) {
                 selected
             };
             monitor.background_reveal =
-                app.panels.settings.bar_reveals.get(&format!("background:{path}")).map_or(
+                app.panels.settings.bar_reveals.get(&BackgroundControl::reveal_id(&path)).map_or(
                     if matches!(selected.as_str(), "center" | "fit") { 1.0 } else { 0.0 },
                     |value| value.x,
                 );

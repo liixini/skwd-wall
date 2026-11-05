@@ -1,9 +1,45 @@
-use crate::contracts::settings::{GraphicsCard, SettingsSource};
+use std::sync::{Arc, OnceLock};
+
+use crate::contracts::settings::{GraphicsCard, Overview, Scan, SettingsSource};
 use crate::domain::input::InputMap;
 use crate::infrastructure::config::Config;
 
 const DARK_MODE: &str = "dark";
 const LIGHT_MODE: &str = "light";
+
+impl Config {
+    pub(crate) fn palette_previews(&self) -> &[(String, Vec<String>)] {
+        static PRESETS: OnceLock<Vec<(String, Vec<String>)>> = OnceLock::new();
+        self.palette_previews.get_or_init(|| {
+            let mode = skwd_config::theme_mode(self.root());
+            let dark = match mode.as_str() {
+                DARK_MODE => Some(true),
+                LIGHT_MODE => Some(false),
+                _ => None,
+            };
+            let mut palettes = PRESETS
+                .get_or_init(|| {
+                    skwd_palette::PRESETS
+                        .iter()
+                        .filter_map(|(key, _)| {
+                            crate::domain::theme::Candidate::from_preset(key)
+                                .map(|palette| (key.to_string(), palette.preview_colors()))
+                        })
+                        .collect()
+                })
+                .clone();
+            palettes.extend(
+                crate::infrastructure::theme::saved_palettes(
+                    self.array_slice(skwd_config::keys::theme::SAVED_THEMES),
+                    dark,
+                )
+                .into_iter()
+                .map(|(name, palette)| (name, palette.preview_colors())),
+            );
+            palettes
+        })
+    }
+}
 
 impl SettingsSource for Config {
     fn default_semantic_model_available(&self) -> bool {
@@ -109,16 +145,8 @@ impl SettingsSource for Config {
         Config::display_mode(self)
     }
 
-    fn selector_mode(&self) -> String {
-        Config::selector_mode(self)
-    }
-
-    fn selector_preset_names(&self, mode: &str) -> Vec<String> {
-        self.selector_presets(mode).into_iter().map(|(name, _)| name).collect()
-    }
-
-    fn selected_preset(&self, mode: &str) -> Option<String> {
-        Config::selected_preset(self, mode)
+    fn saved_layouts(&self) -> crate::contracts::settings::SavedLayouts {
+        self.saved_layouts_view()
     }
 
     fn sandy_grain(&self) -> f32 {
@@ -156,28 +184,7 @@ impl SettingsSource for Config {
     }
 
     fn palette_colors(&self) -> Vec<(String, Vec<String>)> {
-        let mode = skwd_config::theme_mode(self.root());
-        let dark = match mode.as_str() {
-            DARK_MODE => Some(true),
-            LIGHT_MODE => Some(false),
-            _ => None,
-        };
-        let mut palettes: Vec<_> = skwd_palette::PRESETS
-            .iter()
-            .filter_map(|(key, _)| {
-                crate::domain::theme::Candidate::from_preset(key)
-                    .map(|palette| (key.to_string(), palette.preview_colors()))
-            })
-            .collect();
-        palettes.extend(
-            crate::infrastructure::theme::saved_palettes(
-                self.array_slice(skwd_config::keys::theme::SAVED_THEMES),
-                dark,
-            )
-            .into_iter()
-            .map(|(name, palette)| (name, palette.preview_colors())),
-        );
-        palettes
+        self.palette_previews().to_vec()
     }
 
     fn palette_presets(&self) -> Vec<(String, String)> {
@@ -211,6 +218,18 @@ impl SettingsSource for Config {
 
     fn on_battery_power(&self) -> bool {
         Config::on_battery_power(self)
+    }
+
+    fn effective_picker_fps(&self) -> u32 {
+        self.max_fps().round().clamp(1.0, u32::MAX as f32) as u32
+    }
+
+    fn effective_video_idle_seconds(&self) -> u32 {
+        Config::effective_video_idle_seconds(self)
+    }
+
+    fn overview(&self, stamp: u64, scan: Scan<'_>) -> Arc<Overview> {
+        self.overview.get(stamp, scan)
     }
 }
 

@@ -1,7 +1,10 @@
-use crate::frontend::scene::layout::{GridLayout, signed_hash};
+use crate::frontend::scene::layout::{GridLayout, GridParams, signed_hash};
 use crate::frontend::scene::{InstanceRaw, roll_in_cut};
 
-use super::layout_helpers::{CardSpec, color4};
+use super::layout_helpers::{
+    CardSpec, EDITORIAL_CARDS, EDITORIAL_HERO_COLUMNS, EDITORIAL_HERO_MAX, EDITORIAL_HERO_MIN,
+    EDITORIAL_STAGGER_GAIN, color4,
+};
 use super::model::{RebuildCtx, RebuildSinks, SceneCore};
 
 impl SceneCore {
@@ -12,7 +15,7 @@ impl SceneCore {
         entrance: f32,
     ) -> Option<[f32; 4]> {
         let (vw, vh) = self.viewport;
-        let gp = self.gp;
+        let gp = self.effective_grid_params();
         let count = ctx.filtered.len();
         let total_w = gp.total_w();
         let view_h = gp.total_h();
@@ -20,7 +23,7 @@ impl SceneCore {
         if count == 0 {
             return None;
         }
-        let placements = self.grid_placements(ctx, total_w);
+        let placements = self.grid_placements(ctx, gp, total_w);
         let content_h = placements.iter().map(|place| place.2 + place.4).fold(0.0_f32, f32::max);
         let max_scroll = (content_h - view_h).max(0.0);
         if self.layout_camera_anchor {
@@ -36,7 +39,11 @@ impl SceneCore {
         let cam = self.camera.x;
         let left = cx - total_w * 0.5;
         let top = cy - view_h * 0.5;
-        let frame = [left.max(0.0), top.max(0.0), (left + total_w).min(vw), (top + view_h).min(vh)];
+        let frame = if self.picker_frame.is_some() {
+            [left, top, left + total_w, top + view_h]
+        } else {
+            [left.max(0.0), top.max(0.0), (left + total_w).min(vw), (top + view_h).min(vh)]
+        };
 
         self.vis_lo = count - 1;
         self.vis_hi = 0;
@@ -69,12 +76,22 @@ impl SceneCore {
         Some(frame)
     }
 
+    pub(super) fn editorial_block_items(&self, cols: usize) -> usize {
+        if self.picker_frame.is_none() {
+            EDITORIAL_CARDS
+        } else if cols == 1 {
+            1
+        } else {
+            1 + cols.saturating_sub(EDITORIAL_HERO_COLUMNS).max(1) * 2
+        }
+    }
+
     fn grid_placements(
         &self,
         ctx: &RebuildCtx<'_>,
+        gp: GridParams,
         total_w: f32,
     ) -> Vec<(usize, f32, f32, f32, f32)> {
-        let gp = self.gp;
         let count = ctx.filtered.len();
         let cols = gp.cols.max(1);
         let mut out = match gp.layout {
@@ -149,28 +166,43 @@ impl SceneCore {
             }
             GridLayout::Editorial => {
                 let mut out = Vec::with_capacity(count);
-                let block_h = gp.thumb_h * 2.0 + gp.gap_y;
-                let hero_fraction = (0.5 + 0.16 * gp.stagger).clamp(0.35, 0.72);
-                let hero_w = (total_w * hero_fraction).max(1.0);
-                let side_w = (total_w - hero_w - gp.gap_x).max(1.0);
-                let small_w = ((side_w - gp.gap_x) * 0.5).max(1.0);
-                let small_h = ((block_h - gp.gap_y) * 0.5).max(1.0);
-                for start in (0..count).step_by(5) {
-                    let block = start / 5;
-                    let y = block as f32 * (block_h + gp.gap_y);
-                    let hero_right = block % 2 == 1;
-                    let hero_x = if hero_right { side_w + gp.gap_x } else { 0.0 };
-                    out.push((start, hero_x, y, hero_w, block_h));
-                    for step in 1..5 {
-                        let idx = start + step;
-                        if idx >= count {
-                            break;
+                let block_items = self.editorial_block_items(cols);
+                if block_items == 1 {
+                    for idx in 0..count {
+                        out.push((idx, 0.0, idx as f32 * gp.cell_h(), total_w, gp.thumb_h));
+                    }
+                } else {
+                    let block_h = gp.thumb_h * 2.0 + gp.gap_y;
+                    let side_cols = (block_items - 1) / 2;
+                    let hero_fraction = (if self.picker_frame.is_some() {
+                        EDITORIAL_HERO_COLUMNS as f32 / cols as f32
+                    } else {
+                        0.5
+                    } + EDITORIAL_STAGGER_GAIN * gp.stagger)
+                        .clamp(EDITORIAL_HERO_MIN, EDITORIAL_HERO_MAX);
+                    let hero_w = (total_w * hero_fraction).max(1.0);
+                    let side_w = (total_w - hero_w - gp.gap_x).max(1.0);
+                    let small_w = ((side_w - gp.gap_x * side_cols.saturating_sub(1) as f32)
+                        / side_cols as f32)
+                        .max(1.0);
+                    let small_h = ((block_h - gp.gap_y) * 0.5).max(1.0);
+                    for start in (0..count).step_by(block_items) {
+                        let block = start / block_items;
+                        let y = block as f32 * (block_h + gp.gap_y);
+                        let hero_right = block % 2 == 1;
+                        let hero_x = if hero_right { side_w + gp.gap_x } else { 0.0 };
+                        out.push((start, hero_x, y, hero_w, block_h));
+                        for step in 1..block_items {
+                            let idx = start + step;
+                            if idx >= count {
+                                break;
+                            }
+                            let slot = step - 1;
+                            let x0 = if hero_right { 0.0 } else { hero_w + gp.gap_x };
+                            let x = x0 + (slot % side_cols) as f32 * (small_w + gp.gap_x);
+                            let sy = y + (slot / side_cols) as f32 * (small_h + gp.gap_y);
+                            out.push((idx, x, sy, small_w, small_h));
                         }
-                        let slot = step - 1;
-                        let x0 = if hero_right { 0.0 } else { hero_w + gp.gap_x };
-                        let x = x0 + (slot % 2) as f32 * (small_w + gp.gap_x);
-                        let sy = y + (slot / 2) as f32 * (small_h + gp.gap_y);
-                        out.push((idx, x, sy, small_w, small_h));
                     }
                 }
                 out
@@ -226,17 +258,17 @@ impl SceneCore {
         let focus = if idx == self.current && self.user_engaged { gp.selected_scale } else { 1.0 };
         let hw = width * focus * 0.5;
         let hh = height * focus * 0.5;
-        let radius = gp.corner_radius.clamp(0.0, hw.min(hh));
+        let corners = gp.corners.clamped(hw.min(hh));
         let border_width = gp.border_width.clamp(0.0, (hw.min(hh) - 1.0).max(0.0));
         let roll = self.flip_roll_for(store_idx, cell_x, cell_y);
-        let outer = InstanceRaw {
+        let mut outer = InstanceRaw {
             rect: [cell_x, cell_y, hw, hh],
-            radii: [radius; 4],
             fill: color4(ctx.palette.surface, 0.6 * entrance),
             params: [0.0, 0.0, entrance, 0.0],
             misc: [0, 0, 1, 0],
             ..Default::default()
         };
+        corners.stamp(&mut outer);
         sinks.instances.push(outer);
         let (mut body, hit) = self.place_card(
             ctx,
@@ -251,10 +283,10 @@ impl SceneCore {
                 hh,
                 skew: 0.0,
                 edge_tilt: 0.0,
-                radii: [radius; 4],
+                corners,
                 hex: false,
                 view: 1,
-                chrome_radius: radius,
+                chrome_radius: corners.sizes[0],
                 opacity: entrance,
                 chrome_opacity: entrance * roll,
                 body_inset: 0.0,

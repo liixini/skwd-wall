@@ -48,7 +48,6 @@ settings-app-themes-config-found = پیکربندی پیدا شد
 settings-app-themes-config-create = در نخستین استفاده پیکربندی می‌سازد
 settings-app-themes-on = روشن
 settings-app-themes-off = خاموش
-settings-app-themes-hide = پنهان کردن جزئیات
 settings-app-themes-details = جزئیات
 settings-app-themes-custom-conflict = این برنامه از خروجی سفارشی Skwd استفاده می‌کند که خودکار قابل جابه‌جایی نیست. پیش از خاموش کردن «اجرای خروجی سفارشی»، خروجی‌های پوسته را باز کنید و الگو، فایل خروجی و فرمان بازخوانی آن را بررسی کنید. برای ادامهٔ استفاده از آن، روشن بگذارید.
 settings-app-themes-other-owner = ابزار پوستهٔ دیگری به این برنامه وصل است. پیش از فعال کردن Skwd، آن یکپارچه‌سازی را قطع کنید.

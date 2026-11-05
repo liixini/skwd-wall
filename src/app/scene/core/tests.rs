@@ -3,10 +3,11 @@
 use std::time::{Duration, Instant};
 
 use crate::contracts::preview::UploadQueue;
+use crate::contracts::rendering::CHAMFER;
 use crate::domain::library::catalog::{Catalog, Wallpaper, WallpaperKind};
 use crate::frontend::animation::{MotionProfile, MotionTier, Spring, Tween};
 use crate::frontend::scene::layout::{
-    ExtraParams, GridLayout, GridParams, HexParams, Mode, SliceParams, StageParams,
+    CardCorners, ExtraParams, GridLayout, GridParams, HexParams, Mode, SliceParams, StageParams,
 };
 use crate::frontend::scene::{InstanceRaw, RenderSnapshot, cell_key, sandy};
 use crate::frontend::theme::Palette;
@@ -88,7 +89,7 @@ fn test_scene(mode: Mode) -> SceneCore {
         skew: 0.0,
         edge_tilt: 0.0,
         visible_count: 5,
-        corners: [8.0; 4],
+        corners: CardCorners::round(8.0),
         wobble: false,
         wobble_strength: 1.0,
         parallax: false,
@@ -103,7 +104,7 @@ fn test_scene(mode: Mode) -> SceneCore {
         curve_strength: 0.0,
         ..HexParams::default()
     };
-    SceneCore::new(mode, sp, gp, hp, test_extra())
+    SceneCore::new(mode, sp, gp, hp, &test_extra())
 }
 
 #[test]
@@ -119,12 +120,13 @@ fn layout_crossfade_vs_morph() {
 
     let mut resized = scene.gp_target;
     resized.thumb_w += 40.0;
-    scene.set_params(scene.sp_target, resized, scene.hp_target, scene.xp_target, true);
+    let xp = scene.xp_target;
+    scene.set_params(scene.sp_target, resized, scene.hp_target, &xp, true);
     assert!(!scene.layout_transition_active());
 
     let mut topology = resized;
     topology.layout = GridLayout::Editorial;
-    scene.set_params(scene.sp_target, topology, scene.hp_target, scene.xp_target, true);
+    scene.set_params(scene.sp_target, topology, scene.hp_target, &xp, true);
     assert!(scene.layout_transition_active());
 }
 
@@ -152,7 +154,7 @@ fn test_extra() -> ExtraParams {
             swap_loop: false,
             swap_style: 0.0,
             skew: 12.0,
-            corners: [0.0; 4],
+            corners: CardCorners::default(),
             edge_speed: 14.0,
             ring_size: 1.0,
             ring_spin: 1.0,
@@ -1503,7 +1505,7 @@ fn rendered_scene_with_setup(
         curve_strength: 0.0,
         ..HexParams::default()
     };
-    let mut scene = SceneCore::new(mode, sp, gp, hp, test_extra());
+    let mut scene = SceneCore::new(mode, sp, gp, hp, &test_extra());
     scene.viewport = (1200.0, 700.0);
     scene.set_filter_bar_footprint(bar);
     let uploads: UploadQueue = Arc::new(Mutex::new(Vec::new()));
@@ -1552,6 +1554,297 @@ fn rendered_scene_with_setup(
     scene.render.clone()
 }
 
+#[test]
+fn framed_hits_match_cards() {
+    for mode in [Mode::Slices, Mode::Hex, Mode::Grid, Mode::Sandy, Mode::Hand] {
+        let snap = rendered_scene_with_setup(mode, base_sp(), base_gp(), 20, None, 0.0, |scene| {
+            scene.set_picker_frame(Some([0.1, 0.2, 0.6, 0.5]));
+        });
+        assert_eq!(snap.clip, Some([120.0, 140.0, 840.0, 490.0]));
+        assert!(!snap.hits.is_empty(), "{mode:?}");
+        for hit in &snap.hits {
+            assert!(hit.contains(hit.cx, hit.cy), "{mode:?}");
+        }
+        let top = &snap.hits[0];
+        assert_eq!(
+            snap.hits.iter().find(|hit| hit.contains(top.cx, top.cy)).unwrap().index,
+            top.index
+        );
+    }
+}
+
+#[test]
+fn grid_frame_adds_cards() {
+    let grid = GridParams { thumb_w: 150.0, thumb_h: 90.0, ..base_gp() };
+    let render = |width| {
+        rendered_scene_with_setup(Mode::Grid, base_sp(), grid, 40, None, 0.0, |scene| {
+            scene.set_picker_frame(Some([0.1, 0.2, width, 0.5]));
+        })
+    };
+    let small = render(0.3);
+    let wide = render(0.6);
+    assert!(wide.hits.len() > small.hits.len());
+    let small_card = small.hits.iter().find(|hit| hit.index == 0).unwrap();
+    let wide_card = wide.hits.iter().find(|hit| hit.index == 0).unwrap();
+    assert_eq!((small_card.hw, small_card.hh), (wide_card.hw, wide_card.hh));
+}
+
+#[test]
+fn grid_content_changes_cards() {
+    let frame = [0.1, 0.2, 0.6, 0.5];
+    let render = |thumb_w| {
+        rendered_scene_with_setup(
+            Mode::Grid,
+            base_sp(),
+            GridParams { thumb_w, ..base_gp() },
+            40,
+            None,
+            0.0,
+            |scene| scene.set_picker_frame(Some(frame)),
+        )
+    };
+    let small = render(100.0);
+    let large = render(150.0);
+    assert_eq!(small.clip, large.clip);
+    assert!(small.hits.len() > large.hits.len());
+    let small_card = small.hits.iter().find(|hit| hit.index == 0).unwrap();
+    let large_card = large.hits.iter().find(|hit| hit.index == 0).unwrap();
+    assert!(small_card.hw < large_card.hw);
+}
+
+#[test]
+fn shown_frame_overrides_target() {
+    let mut scene = test_scene(Mode::Grid);
+    scene.viewport = (1200.0, 700.0);
+    scene.set_picker_frame(Some([0.2, 0.2, 0.5, 0.5]));
+    let target = scene.picker_frame_bounds().unwrap();
+    let shown = iced::Rectangle { x: 120.0, ..target };
+    scene.show_frame(Some(shown));
+    assert_eq!(scene.picker_frame_bounds(), Some(shown));
+    assert_eq!(scene.configured_frame_bounds(), Some(target));
+    assert_eq!(scene.frame_demand(), crate::app::scene::FrameDemand::Motion);
+    scene.show_frame(None);
+    assert_eq!(scene.picker_frame_bounds(), Some(target));
+}
+
+#[test]
+fn shown_frame_moves_cards() {
+    let render = |shift: f32| {
+        rendered_scene_with_setup(Mode::Grid, base_sp(), base_gp(), 20, None, 0.0, |scene| {
+            scene.set_picker_frame(Some([0.2, 0.2, 0.5, 0.5]));
+            let target = scene.picker_frame_bounds().unwrap();
+            scene.show_frame(Some(iced::Rectangle { x: target.x - shift, ..target }));
+        })
+    };
+    let x = |snap: &RenderSnapshot| snap.hits.iter().find(|hit| hit.index == 0).unwrap().cx;
+    assert!(x(&render(120.0)) < x(&render(60.0)));
+    assert!(x(&render(60.0)) < x(&render(0.0)));
+}
+
+#[test]
+fn editorial_columns_retile() {
+    let render = |width| {
+        rendered_scene_with_setup(
+            Mode::Grid,
+            base_sp(),
+            GridParams { layout: GridLayout::Editorial, ..base_gp() },
+            20,
+            None,
+            0.0,
+            |scene| scene.set_picker_frame(Some([0.1, 0.2, width, 0.5])),
+        )
+    };
+    let four = render(0.4);
+    let five = render(0.5);
+    let card = |snap: &RenderSnapshot| {
+        let hit = snap.hits.iter().find(|hit| hit.index == 5).unwrap();
+        (hit.cx, hit.cy, hit.hw, hit.hh)
+    };
+    assert_ne!(card(&four), card(&five));
+    assert!(five.hits.iter().any(|hit| hit.index == 6));
+}
+
+#[test]
+fn editorial_legacy_blocks() {
+    let mut scene = test_scene(Mode::Grid);
+    scene.gp.layout = GridLayout::Editorial;
+    scene.gp.cols = 5;
+    assert_eq!(scene.editorial_block_items(5), super::layout_helpers::EDITORIAL_CARDS);
+    let snap = rendered_scene_with_count_and_bar(Mode::Grid, base_sp(), scene.gp, 20, None);
+    let hero = snap.hits.iter().find(|hit| hit.index == 5).unwrap();
+    let small = snap.hits.iter().find(|hit| hit.index == 6).unwrap();
+    assert!(hero.hw > small.hw);
+}
+
+#[test]
+fn editorial_narrow_frames() {
+    let frame = [0.1, 0.2, 0.6, 0.5];
+    for cols in [1, 2] {
+        let snap = rendered_scene_with_setup(
+            Mode::Grid,
+            base_sp(),
+            GridParams { cols, layout: GridLayout::Editorial, ..base_gp() },
+            20,
+            None,
+            0.0,
+            |scene| scene.set_picker_frame(Some(frame)),
+        );
+        let clip = snap.clip.unwrap();
+        assert!(!snap.hits.is_empty());
+        for hit in &snap.hits {
+            assert!([hit.cx, hit.cy, hit.hw, hit.hh].into_iter().all(f32::is_finite));
+            assert!(hit.cx - hit.hw >= clip[0] - 0.01);
+            assert!(hit.cx + hit.hw <= clip[2] + 0.01);
+        }
+    }
+}
+
+#[test]
+fn editorial_follow_blocks() {
+    let mut scene = test_scene(Mode::Grid);
+    scene.viewport = (1200.0, 700.0);
+    scene.gp.layout = GridLayout::Editorial;
+    scene.gp.cols = 5;
+    scene.gp.rows = 2;
+    scene.kb_nav = true;
+    scene.set_picker_frame(Some([0.1, 0.2, 0.6, 0.3]));
+    let block_items = scene.editorial_block_items(scene.effective_grid_params().cols);
+    scene.set_current(block_items - 1, 20);
+    assert_eq!(scene.camera.target, 0.0);
+    scene.set_current(block_items, 20);
+    assert!(scene.camera.target > 0.0);
+}
+
+#[test]
+fn framed_grid_navigation() {
+    let mut scene = test_scene(Mode::Grid);
+    scene.viewport = (1200.0, 700.0);
+    scene.gp.rows = 3;
+    scene.set_picker_frame(Some([0.1, 0.2, 0.3, 0.3]));
+    let gp = scene.effective_grid_params();
+    scene.grid_scroll(1.0);
+    assert_eq!(scene.camera.target, gp.cell_h());
+    assert_eq!(gp.cell_h(), scene.gp.cell_h());
+    scene.camera.snap(0.0);
+    scene.kb_nav = true;
+    scene.set_current(12, 20);
+    assert!(scene.camera.target > 0.0);
+
+    let snap = rendered_scene_with_setup(
+        Mode::Grid,
+        base_sp(),
+        GridParams { rows: 3, ..base_gp() },
+        20,
+        None,
+        0.0,
+        |scene| {
+            scene.set_picker_frame(Some([0.1, 0.2, 0.3, 0.3]));
+            scene.kb_nav = true;
+            scene.set_current(12, 20);
+            scene.camera.snap(scene.camera.target);
+        },
+    );
+    let selected = snap.hits.iter().find(|hit| hit.index == 12).unwrap();
+    let clip = snap.clip.unwrap();
+    assert!(selected.cy - selected.hh >= clip[1]);
+    assert!(selected.cy + selected.hh <= clip[3]);
+}
+
+#[test]
+fn framed_pointer_modes() {
+    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 1000.0, height: 600.0 };
+    let mut hand = test_scene(Mode::Hand);
+    hand.viewport = (1000.0, 600.0);
+    hand.set_picker_frame(Some([0.2, 0.2, 0.6, 0.6]));
+    hand.natural_frame = Some(bounds);
+    let place = hand.picker_placement().unwrap();
+    let (x, y) = place.point(750.0, 150.0);
+    hand.hand_pointer(x, y, None);
+    let (tx, ty) = crate::frontend::scene::hand::tilt_target(
+        750.0,
+        150.0,
+        hand.viewport.0,
+        hand.viewport.1,
+        hand.xp.hand.tilt,
+    );
+    assert!((hand.hand.rig_x.target - tx).abs() < 0.01);
+    assert!((hand.hand.rig_y.target - ty).abs() < 0.01);
+    let (start_x, start_y) = place.point(500.0, 300.0);
+    let (end_x, end_y) = place.point(600.0, 300.0);
+    hand.hand_drag_start(start_x, start_y);
+    hand.hand_pointer(end_x, end_y, None);
+    let (drag_x, drag_y) = hand.hand.drag.unwrap();
+    assert!((drag_x - 600.0).abs() < 0.01 && (drag_y - 300.0).abs() < 0.01);
+
+    let mut sandy = test_scene(Mode::Sandy);
+    sandy.viewport = (1000.0, 600.0);
+    sandy.set_picker_frame(Some([0.2, 0.2, 0.6, 0.6]));
+    sandy.natural_frame = Some(bounds);
+    let y = crate::frontend::scene::sandy::strip_bottom(600.0) - 10.0;
+    let (edge_x, edge_y) = sandy.picker_placement().unwrap().point(10.0, y);
+    sandy.sandy_pointer(edge_x, edge_y, None, 20);
+    assert!(sandy.sandy.edge_pan < 0.0);
+    sandy.sandy_pointer(100.0, edge_y, None, 20);
+    assert_eq!(sandy.sandy.edge_pan, 0.0);
+    assert!(!sandy.sandy.cam_free);
+}
+
+#[test]
+fn framed_detail_source() {
+    let mut scene = test_scene(Mode::Grid);
+    scene.viewport = (1000.0, 600.0);
+    scene.set_picker_frame(Some([0.2, 0.2, 0.6, 0.6]));
+    scene.natural_frame = Some(iced::Rectangle { x: 0.0, y: 0.0, width: 1000.0, height: 600.0 });
+    let (x, y) = scene.picker_placement().unwrap().point(500.0, 300.0);
+    scene.open_detail(0, [x, y, 60.0, 30.0]);
+    for (actual, expected) in scene.card.det_src.into_iter().zip([500.0, 300.0, 60.0, 30.0]) {
+        assert!((actual - expected).abs() < 0.01);
+    }
+}
+
+#[test]
+fn framed_collection_projection() {
+    use crate::rendering::scene::PROJECTED;
+
+    for open in [0.0, 0.5, 1.0] {
+        let snap = rendered_scene_with_setup(
+            Mode::Collection,
+            base_sp(),
+            base_gp(),
+            20,
+            None,
+            0.0,
+            |scene| {
+                scene.set_picker_frame(Some([0.1, 0.2, 0.6, 0.5]));
+                scene.select_collection(0, 20);
+                scene.collection_open.snap(open);
+            },
+        );
+        let projected: Vec<_> = snap
+            .instances
+            .iter()
+            .filter(|inst| inst.misc[0] > 0 && inst.misc[3] & PROJECTED != 0)
+            .collect();
+        assert!(!snap.hits.is_empty());
+        assert_eq!(projected.len(), snap.hits.len());
+        for (body, hit) in projected.into_iter().zip(snap.hits.iter().rev()) {
+            let quad = hit.quad.unwrap();
+            for (actual, expected) in [
+                (body.quad_a[0], quad[0][0]),
+                (body.quad_a[1], quad[0][1]),
+                (body.quad_a[2], quad[1][0]),
+                (body.quad_a[3], quad[1][1]),
+                (body.quad_b[0], quad[2][0]),
+                (body.quad_b[1], quad[2][1]),
+                (body.quad_b[2], quad[3][0]),
+                (body.quad_b[3], quad[3][1]),
+            ] {
+                assert!((actual - expected).abs() < 0.01);
+            }
+        }
+    }
+}
+
 fn base_sp() -> SliceParams {
     SliceParams {
         offset_x: 0.0,
@@ -1563,7 +1856,7 @@ fn base_sp() -> SliceParams {
         skew: 0.0,
         edge_tilt: 0.0,
         visible_count: 5,
-        corners: [0.0; 4],
+        corners: CardCorners::default(),
         wobble: false,
         wobble_strength: 1.0,
         parallax: false,
@@ -1579,7 +1872,7 @@ fn base_gp() -> GridParams {
         thumb_h: 60.0,
         gap_x: 8.0,
         gap_y: 8.0,
-        corner_radius: 6.0,
+        corners: CardCorners::round(6.0),
         border_width: 2.0,
         ..GridParams::default()
     }
@@ -1712,12 +2005,15 @@ fn appearance_settings_reach_render() {
     assert!(!small.hits.is_empty() && !large.hits.is_empty());
     assert!(large.hits[0].hw > small.hits[0].hw, "{} vs {}", large.hits[0].hw, small.hits[0].hw);
 
-    let sharp =
-        rendered_scene(Mode::Grid, base_sp(), GridParams { corner_radius: 0.0, ..base_gp() });
+    let sharp = rendered_scene(
+        Mode::Grid,
+        base_sp(),
+        GridParams { corners: CardCorners::default(), ..base_gp() },
+    );
     let round = rendered_scene(
         Mode::Grid,
         base_sp(),
-        GridParams { corner_radius: 18.0, border_width: 4.0, ..base_gp() },
+        GridParams { corners: CardCorners::round(18.0), border_width: 4.0, ..base_gp() },
     );
     assert!(
         max_radius(&round) >= 18.0 && max_radius(&sharp) == 0.0,
@@ -1746,10 +2042,16 @@ fn appearance_settings_reach_render() {
     assert_eq!(tilted.hits[0].edge_tilt, 48.0);
     assert_eq!(tilted.instances.last().expect("slice body").shape[0], 48.0);
 
-    let sharp =
-        rendered_scene(Mode::Slices, SliceParams { corners: [0.0; 4], ..base_sp() }, base_gp());
-    let round =
-        rendered_scene(Mode::Slices, SliceParams { corners: [16.0; 4], ..base_sp() }, base_gp());
+    let sharp = rendered_scene(
+        Mode::Slices,
+        SliceParams { corners: CardCorners::default(), ..base_sp() },
+        base_gp(),
+    );
+    let round = rendered_scene(
+        Mode::Slices,
+        SliceParams { corners: CardCorners::round(16.0), ..base_sp() },
+        base_gp(),
+    );
     assert!(
         max_radius(&round) > max_radius(&sharp) && max_radius(&round) >= 15.0,
         "sharp={}, round={}",
@@ -2144,7 +2446,7 @@ fn grid_thumbnail_spacing_matches_configured_gaps() {
                 scene.viewport = (1280.0, 720.0);
                 scene.gp.gap_x = gap;
                 scene.gp.gap_y = gap;
-                scene.gp.corner_radius = 0.0;
+                scene.gp.corners = CardCorners::default();
                 scene.gp.border_width = border;
                 scene.hover = hover;
                 scene.motion.entrance.snap(1.0);
@@ -2389,7 +2691,7 @@ fn hand_hover_lift_settles_and_bob_holds_frames() {
     assert!(!scene.is_animating(), "held by {}", scene.anim_reason());
     let mut bob = scene.xp_target;
     bob.hand.bob = true;
-    scene.set_params(scene.sp_target, scene.gp_target, scene.hp_target, bob, false);
+    scene.set_params(scene.sp_target, scene.gp_target, scene.hp_target, &bob, false);
     hand_frames(&mut scene, &mut fixture, &mut now, 1);
     assert!(scene.is_animating());
     assert_eq!(scene.anim_reason(), "hand_bob");
@@ -2880,7 +3182,7 @@ fn hand_rebuild_bench() {
     let mut now = Instant::now();
     let mut ribbon = scene.xp_target;
     ribbon.hand.moves = [false, false, false, true, false];
-    scene.set_params(scene.sp_target, scene.gp_target, scene.hp_target, ribbon, false);
+    scene.set_params(scene.sp_target, scene.gp_target, scene.hp_target, &ribbon, false);
     scene.reset_to_index(0, 40);
     hand_frames(&mut scene, &mut fixture, &mut now, 10);
     let started = Instant::now();
@@ -2918,7 +3220,7 @@ fn hand_steep_cuts_still_land_every_ribbon_on_its_back() {
         let mut steep = scene.xp_target;
         steep.hand.cut = cut;
         steep.hand.variance = variance;
-        scene.set_params(scene.sp_target, scene.gp_target, scene.hp_target, steep, false);
+        scene.set_params(scene.sp_target, scene.gp_target, scene.hp_target, &steep, false);
         scene.reset_to_index(0, 12);
         hand_frames(&mut scene, &mut fixture, &mut now, 2);
         scene.toggle_flip(scene.current);
@@ -3337,8 +3639,8 @@ fn collection_settings_change_geometry_and_settle() {
     params.collection.size = 25.0;
     params.collection.tilt = 0.0;
     params.collection.count = 3.0;
-    params.collection.corners = 30.0;
-    scene.set_params(scene.sp, scene.gp, scene.hp, params, true);
+    params.collection.corners = CardCorners::round(30.0);
+    scene.set_params(scene.sp, scene.gp, scene.hp, &params, true);
     rebuild_collection_test(&mut scene, 30, 180);
     assert!(!scene.is_animating());
     let after = scene.render.hits.iter().find(|h| h.index == 10).unwrap();
@@ -3357,7 +3659,7 @@ fn layout_motion_speed_changes_navigation_and_collection_opening() {
             let mut params = scene.xp;
             params.depth.navigation_ms = 25000.0 / speed;
             params.collection.speed = speed;
-            scene.set_params(scene.sp, scene.gp, scene.hp, params, false);
+            scene.set_params(scene.sp, scene.gp, scene.hp, &params, false);
             scene.camera.retarget(10.0);
             scene.collection_open.retarget(1.0);
             scene.camera.tick(0.05);
@@ -3380,7 +3682,7 @@ fn depth_camera_finishes_below_a_pixel_without_a_final_snap() {
         let mut scene = test_scene(Mode::Depth);
         let mut params = scene.xp;
         params.depth.navigation_ms = duration;
-        scene.set_params(scene.sp, scene.gp, scene.hp, params, false);
+        scene.set_params(scene.sp, scene.gp, scene.hp, &params, false);
         scene.camera.snap(10.0);
         scene.camera.retarget(11.0);
         let mut previous = scene.camera.x;
@@ -3534,17 +3836,84 @@ fn depth_and_slices_shadows_toggle_without_changing_cards() {
 }
 
 #[test]
+fn chamfer_reaches_cards() {
+    let cut = CardCorners { sizes: [10.0; 4], cut: true };
+    for (mode, sp, gp) in [
+        (Mode::Grid, base_sp(), GridParams { corners: cut, ..base_gp() }),
+        (Mode::Slices, SliceParams { corners: cut, ..base_sp() }, base_gp()),
+        (Mode::Depth, SliceParams { corners: cut, ..base_sp() }, base_gp()),
+    ] {
+        let snap = rendered_scene(mode, sp, gp);
+        let cards: Vec<_> = snap.instances.iter().filter(|inst| inst.radii[0] > 0.0).collect();
+        assert!(!cards.is_empty(), "{mode:?}");
+        let flagged = |inst: &&InstanceRaw| inst.misc[3] & CHAMFER != 0;
+        assert!(cards.iter().all(flagged), "{mode:?}");
+    }
+}
+
+#[test]
+fn chamfer_reaches_extras() {
+    let cut = CardCorners { sizes: [10.0; 4], cut: true };
+    for mode in [Mode::Hand, Mode::Collection, Mode::Sandy] {
+        let snap = rendered_scene_with_setup(mode, base_sp(), base_gp(), 8, None, 0.0, |scene| {
+            scene.xp.hand.corners = cut;
+            scene.xp.collection.corners = cut;
+            scene.xp.sandy.corners = cut;
+            scene.xp_target = scene.xp;
+        });
+        let cards: Vec<_> =
+            snap.instances.iter().filter(|inst| inst.misc[0] > 0 && inst.radii[0] > 0.0).collect();
+        assert!(!cards.is_empty(), "{mode:?}");
+        assert!(cards.iter().all(|inst| inst.misc[3] & CHAMFER != 0), "{mode:?}");
+    }
+}
+
+#[test]
+fn chamfer_reaches_hand_slats() {
+    use crate::rendering::scene::{GHOST, PROJECTED};
+    let cut = CardCorners { sizes: [10.0; 4], cut: true };
+    let mut scene = hand_scene();
+    scene.set_card_flip_options(400.0, true, true);
+    scene.xp.hand.corners = cut;
+    scene.xp_target = scene.xp;
+    let mut fixture = hand_fixture(12);
+    let mut now = Instant::now();
+    hand_frames(&mut scene, &mut fixture, &mut now, 2);
+    let cur = fixture.1[scene.current] as usize;
+    let atlas = fixture.5.as_mut().expect("atlas");
+    atlas.near.acquire(cur);
+    atlas.near.mark_ready(cur);
+    scene.touch();
+    hand_frames(&mut scene, &mut fixture, &mut now, 2);
+    scene.hand_reveal_toggle();
+    let (mut slats, mut ghosts) = (0, 0);
+    for _ in 0..240 {
+        hand_frames(&mut scene, &mut fixture, &mut now, 1);
+        for inst in scene.render.instances.iter().filter(|inst| inst.radii[0] > 0.0) {
+            assert!(inst.misc[3] & CHAMFER != 0);
+            slats += usize::from(inst.misc[3] & PROJECTED != 0);
+            ghosts += usize::from(inst.misc[3] & GHOST != 0);
+        }
+    }
+    assert!(slats > 0 && ghosts > 0, "slats {slats} ghosts {ghosts}");
+    scene.toggle_flip(scene.current);
+    hand_frames(&mut scene, &mut fixture, &mut now, 100);
+    let panel = scene.render.back.as_ref().expect("ribbon panel");
+    assert_eq!(panel.corners, cut);
+}
+
+#[test]
 fn unframed_depth_rectangles_use_clean_edges_without_affecting_rounded_or_skewed_cards() {
     for (mode, enabled, corners, skew, clean) in [
-        (Mode::Depth, false, [0.0; 4], 0.0, true),
-        (Mode::Depth, true, [0.0; 4], 0.0, false),
-        (Mode::Depth, false, [12.0; 4], 0.0, false),
-        (Mode::Depth, false, [0.0; 4], 20.0, false),
-        (Mode::Slices, false, [0.0; 4], 0.0, false),
+        (Mode::Depth, false, 0.0, 0.0, true),
+        (Mode::Depth, true, 0.0, 0.0, false),
+        (Mode::Depth, false, 12.0, 0.0, false),
+        (Mode::Depth, false, 0.0, 20.0, false),
+        (Mode::Slices, false, 0.0, 0.0, false),
     ] {
         let snap = rendered_scene_with_setup(
             mode,
-            SliceParams { skew, corners, ..base_sp() },
+            SliceParams { skew, corners: CardCorners::round(corners), ..base_sp() },
             base_gp(),
             30,
             None,
@@ -3560,4 +3929,119 @@ fn unframed_depth_rectangles_use_clean_edges_without_affecting_rounded_or_skewed
             assert_eq!(body.misc[3] & crate::rendering::scene::UNFRAMED_RECT != 0, clean);
         }
     }
+}
+
+const FLIP_FRAME: Duration = Duration::from_micros(16_667);
+const FLIP_SCALE: f32 = 0.5;
+
+fn flipping(mode: Mode, ms: f32, run: impl FnOnce(&mut SceneCore, &mut dyn FnMut(&mut SceneCore))) {
+    use std::sync::{Arc, Mutex};
+    let mut scene = test_scene(mode);
+    scene.viewport = (1000.0, 600.0);
+    scene.set_motion_scale(FLIP_SCALE);
+    scene.xp.hand.speed = 2.0;
+    scene.set_card_flip_options(ms, true, true);
+    let uploads: UploadQueue = Arc::new(Mutex::new(Vec::new()));
+    let (tx, _rx) = futures_channel::mpsc::unbounded();
+    let pool = DecodePool::start(uploads.clone(), tx, 0);
+    let mut store = Catalog::default();
+    for name in ["a", "b", "c"] {
+        store.items.push(Wallpaper {
+            key: name.into(),
+            name: name.into(),
+            thumb: format!("/tmp/{name}.png"),
+            path: format!("/tmp/{name}.png"),
+            kind: WallpaperKind::Static,
+            ..Default::default()
+        });
+    }
+    let filtered: Vec<u32> = vec![0, 1, 2];
+    let pal = Palette::default();
+    let mut atlas = Some(AtlasMap::new(3));
+    scene.motion.entrance.snap(1.0);
+    scene.motion.visibility.snap(1.0);
+    scene.set_current(1, 3);
+    let mut now = Instant::now();
+    let mut tick = |scene: &mut SceneCore| {
+        now += FLIP_FRAME;
+        let ctx = RebuildCtx {
+            catalog: &store,
+            filtered: &filtered,
+            atlas: &mut atlas,
+            pool: &pool,
+            palette: &pal,
+            uploads: &uploads,
+            hover_fades: None,
+        };
+        scene.tick(now, ctx);
+    };
+    tick(&mut scene);
+    run(&mut scene, &mut tick);
+}
+
+fn frame_ms(frames: usize) -> f32 {
+    frames as f32 * FLIP_FRAME.as_secs_f32() * 1000.0
+}
+
+fn flip_times(mode: Mode, ms: f32) -> [f32; 2] {
+    let mut times = [0.0; 2];
+    flipping(mode, ms, |scene, tick| {
+        for (leg, target) in [1.0, 0.0].into_iter().enumerate() {
+            match (mode, target > 0.5) {
+                (Mode::Grid, true) => scene.open_detail(1, [500.0, 300.0, 80.0, 60.0]),
+                (_, true) => scene.toggle_flip(1),
+                (_, false) => scene.close_flip(),
+            }
+            let done = |scene: &SceneCore| match mode {
+                Mode::Grid => scene.card.det_p == target,
+                Mode::Hand => scene.hand.flip_p == target && scene.card.flip.settled(),
+                _ => scene.card.flip.x == target && scene.card.flip.settled(),
+            };
+            let mut frames = 0;
+            while !done(scene) {
+                tick(scene);
+                frames += 1;
+                assert!(frames < 1000, "flip never settled");
+            }
+            times[leg] = frame_ms(frames);
+        }
+    });
+    times
+}
+
+#[test]
+fn flip_takes_override() {
+    let frame = frame_ms(1);
+    let standard = MotionProfile::default().duration_ms(MotionTier::Standard) * FLIP_SCALE;
+    for mode in [Mode::Slices, Mode::Hand, Mode::Grid] {
+        for ms in [300.0, 2000.0] {
+            let expected = if mode == Mode::Grid { standard } else { ms };
+            for took in flip_times(mode, ms) {
+                assert!((took - expected).abs() <= frame, "{mode:?} {ms}: {took}");
+            }
+        }
+    }
+}
+
+#[test]
+fn flip_reverses_smoothly() {
+    const MS: f32 = 2000.0;
+    flipping(Mode::Slices, MS, |scene, tick| {
+        scene.toggle_flip(1);
+        for _ in 0..30 {
+            tick(scene);
+        }
+        let turned = scene.card.flip.x;
+        scene.close_flip();
+        assert_eq!(scene.card.flip.x, turned);
+        let (mut last, mut frames) = (turned, 0);
+        while scene.card.flip.x > 0.0 {
+            tick(scene);
+            frames += 1;
+            let step = last - scene.card.flip.x;
+            assert!((0.0..0.05).contains(&step), "jump {step} at {frames}");
+            last = scene.card.flip.x;
+        }
+        assert!((frame_ms(frames) - MS * turned).abs() <= frame_ms(1), "{frames} frames");
+    });
 }

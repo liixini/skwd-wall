@@ -14,40 +14,27 @@ use crate::contracts::settings::SettingsSource;
 use crate::frontend::animation::{MotionProfile, Tween};
 use crate::frontend::components::with_alpha;
 use crate::frontend::theme::Palette;
+use crate::frontend::ui::calm::{self, tint};
 use crate::frontend::ui::{
-    FOLIO_INDEX_WIDTH, FOLIO_RULE_ALPHA, TYPE_SMALL, end, folio_horizontal_rule, label,
-    legible_type_scale, logical_padding, mirror_x, row, rtl, sentence_case, start,
+    FOLIO_RULE_ALPHA, TWISTY_CLOSED, TWISTY_OPEN, TYPE_SMALL, end, folio_horizontal_rule, label,
+    legible_type_scale, logical_padding, mirror_x, motion_slot, row, start,
 };
 use crate::i18n::tr;
 
+use super::super::SETTINGS_MOTION;
 use super::super::{
-    ActionId, Card, Control, Row, SettingsFocus, SettingsMsg, SettingsSearchResult,
-    build_tab_with_runtime_status, visible_tabs,
+    ActionId, Card, Control, HOME_LEAD, KEYS_SHEET, KeysCtx, Place, PlaceSource, Row, Section,
+    SectionId, SettingsFocus, SettingsMsg, SettingsSearchResult, place_keys, place_title,
 };
+use super::appearance::{INDEX, METRICS, navigation_icon};
 use super::control;
+use super::search_page;
+use super::sections::{self, Block, CalmCtx, Paint, SURFACE};
 
 const GLYPH_FADE: f32 = 1.0;
 
-fn category_note(tab: &str) -> &'static str {
-    tr(match tab {
-        "picker" => "settings-tab-note-picker",
-        "filter" => "settings-tab-note-filter",
-        "position" => "settings-tab-note-position",
-        "displays" => "settings-tab-note-displays",
-        "motion" => "settings-tab-note-motion",
-        "playback" => "settings-tab-note-playback",
-        "performance" => "settings-tab-note-performance",
-        "library" => "settings-tab-note-library",
-        "sources" => "settings-tab-note-sources",
-        "automation" => "settings-tab-note-automation",
-        "theme" => "settings-tab-note-theme",
-        "integrations" => "settings-tab-note-integrations",
-        "language" => "settings-tab-note-language",
-        _ => "settings-tab-note-default",
-    })
-}
-
 pub struct SourceCtx<'a> {
+    pub layout_premade: Option<usize>,
     pub config: &'a dyn SettingsSource,
     pub values: &'a HashMap<String, String>,
     pub themes: &'a [String],
@@ -63,7 +50,13 @@ pub struct SourceCtx<'a> {
     pub weather_pending: bool,
     pub playlists: &'a [crate::contracts::playlists::Playlist],
     pub sddm_themes: &'a [String],
+    pub drawing: Option<&'a crate::contracts::settings::drawing::Status>,
+    pub drawing_selection: Option<&'a str>,
+    pub drawing_view_count: usize,
+    pub drawing_library: bool,
+    pub connected: bool,
     pub thumbnail_task: Option<&'a crate::contracts::daemon::TaskStatus>,
+    pub drawing_task: Option<&'a crate::contracts::daemon::TaskStatus>,
     pub analysis: String,
 }
 
@@ -76,15 +69,14 @@ impl SourceCtx<'_> {
         )
     }
 
-    fn cards(&self, tab: &str) -> Vec<(Card, Vec<Row>)> {
-        let mut cards = build_tab_with_runtime_status(
-            tab,
-            self.config,
-            self.themes,
-            self.folders,
-            &self.analysis,
-            self.backends,
-            super::super::RuntimeStatus {
+    fn place_source(&self) -> PlaceSource<'_> {
+        PlaceSource {
+            cfg: self.config,
+            themes: self.themes,
+            folders: self.folders,
+            analysis: &self.analysis,
+            backends: self.backends,
+            runtime: super::super::RuntimeStatus {
                 outputs: self.outputs,
                 statuses: self.output_statuses,
                 previews: Some(self.output_previews),
@@ -95,43 +87,73 @@ impl SourceCtx<'_> {
                 weather_pending: self.weather_pending,
                 playlists: self.playlists,
                 sddm_themes: self.sddm_themes,
+                drawing: self.drawing,
+                drawing_selection: self.drawing_selection,
+                drawing_view_count: self.drawing_view_count,
+                drawing_job: super::super::DrawingJob {
+                    library: self.drawing_library,
+                    running: self.drawing_task.is_some_and(|task| task.state.is_active()),
+                },
+                connected: self.connected,
+                layout_premade: self.layout_premade,
             },
-        );
-        if let Some(task) = self.thumbnail_task {
-            for row in cards.iter_mut().flat_map(|(_, rows)| rows) {
-                if let super::super::Control::ActionBtn {
-                    id: ActionId::CaptureWeThumbnails,
-                    label,
-                } = &mut row.control
-                {
-                    let state = match &task.state {
-                        crate::contracts::daemon::TaskState::Running => {
-                            tr("filter-bar-state-running")
-                        }
-                        crate::contracts::daemon::TaskState::Paused => {
-                            tr("filter-bar-state-paused")
-                        }
-                        crate::contracts::daemon::TaskState::Completed => {
-                            tr("filter-bar-state-done")
-                        }
-                        crate::contracts::daemon::TaskState::Failed => {
-                            tr("filter-bar-state-failed")
-                        }
-                        crate::contracts::daemon::TaskState::Cancelled => {
-                            tr("filter-bar-state-stopped")
-                        }
-                        crate::contracts::daemon::TaskState::Other(state) => state.as_str(),
-                    };
-                    row.desc =
-                        format!("{state} · {} / {} · {}", task.progress, task.total, task.detail);
-                    if task.state.is_active() {
-                        *label = tr("settings-performance-capture-we-stop").into();
-                    }
+        }
+    }
+
+    pub(crate) fn cards(&self, category: &str) -> Vec<(Card, Vec<Row>)> {
+        self.place_source().cards(category)
+    }
+
+    pub(crate) fn place(&self, key: &str) -> Place {
+        let mut place = self.place_source().place(key);
+        let rows = place.sections.iter_mut().flat_map(|section| &mut section.groups);
+        for row in rows.flat_map(|group| &mut group.rows) {
+            let super::super::Control::ActionBtn { id, label } = &mut row.control else {
+                continue;
+            };
+            let (task, stop, skipped) = match id {
+                ActionId::CaptureWeThumbnails => {
+                    (self.thumbnail_task, tr("settings-performance-capture-we-stop"), 0)
                 }
+                ActionId::PrepareAllDrawings => (
+                    self.drawing_task,
+                    tr("settings-drawing-library-stop"),
+                    self.drawing.map_or(0, |status| status.failed),
+                ),
+                _ => continue,
+            };
+            let Some(task) = task else {
+                continue;
+            };
+            row.desc = task_progress(task);
+            if skipped > 0 {
+                row.desc = format!(
+                    "{} · {}",
+                    row.desc,
+                    crate::i18n::tr_args!(super::super::tabs::DRAWING_SKIPPED, count => skipped)
+                );
+            }
+            if task.state.is_active() {
+                *label = stop.into();
             }
         }
-        cards
+        place
     }
+}
+
+fn task_progress(task: &crate::contracts::daemon::TaskStatus) -> String {
+    use crate::contracts::daemon::TaskState;
+
+    let state = match &task.state {
+        TaskState::Running => tr("filter-bar-state-running"),
+        TaskState::Paused => tr("filter-bar-state-paused"),
+        TaskState::Completed => tr("filter-bar-state-done"),
+        TaskState::Failed => tr("filter-bar-state-failed"),
+        TaskState::Cancelled => tr("filter-bar-state-stopped"),
+        TaskState::Other(state) => state.as_str(),
+    };
+    let progress = format!("{state} · {} / {}", task.progress, task.total);
+    if task.detail.is_empty() { progress } else { format!("{progress} · {}", task.detail) }
 }
 
 #[derive(Clone, Copy)]
@@ -146,13 +168,17 @@ pub struct FocusCtx<'a> {
 }
 
 impl<'a> FocusCtx<'a> {
+    pub(super) fn lit(&self, area: SettingsFocus, index: usize) -> bool {
+        self.keyboard_focus == area && self.focused_control == index
+    }
+
     fn on(&self, area: SettingsFocus, index: usize) -> (bool, Option<usize>) {
-        let focused = self.keyboard_focus == area && self.focused_control == index;
+        let focused = self.lit(area, index);
         (focused, if focused { self.focused_choice } else { None })
     }
 
     pub(super) fn reveals(&self) -> control::Reveals<'a> {
-        control::Reveals { bars: self.bar_reveals, folds: self.expanded_details }
+        control::Reveals { bars: self.bar_reveals }
     }
 
     fn bar(&self, id: &str) -> (bool, f32) {
@@ -168,13 +194,6 @@ pub struct ChromeCtx<'a> {
     pub palette: &'a Palette,
 }
 
-pub struct KeybindCaptureView {
-    pub title: String,
-    pub binding: String,
-    pub edited: bool,
-    pub conflict: Option<String>,
-}
-
 pub struct ProcessPickerView {
     pub targets: Vec<String>,
     pub running: Vec<String>,
@@ -187,8 +206,6 @@ pub struct ProcessPickerView {
 pub struct ProfilesCtx<'a> {
     pub selected: usize,
     pub filter: &'a str,
-    pub enter: f32,
-    pub marker: f32,
 }
 
 #[derive(Clone, Copy)]
@@ -197,136 +214,113 @@ pub struct FoldersCtx<'a> {
     pub undo: Option<(crate::contracts::settings::FolderKind, &'a str)>,
 }
 
-enum Page<'a> {
-    Profiles(super::profiles_page::ProfilesView<'a>),
-    Folders(super::folders_page::FoldersView<'a>),
-}
-
-fn page_view<'a>(
-    tab: &str,
-    section: usize,
-    source: &SourceCtx<'a>,
-    focus: FocusCtx<'a>,
-    profiles: ProfilesCtx<'a>,
-    folders: FoldersCtx<'a>,
-) -> Option<Page<'a>> {
-    use super::super::PageSection;
-    match super::super::page_section(tab, section)? {
-        PageSection::Profiles => Some(Page::Profiles(super::profiles_page::ProfilesView {
-            page: super::super::profiles_page(
-                source.config,
-                source.folders,
-                profiles.selected,
-                profiles.filter,
-            ),
-            filter: profiles.filter,
-            enter: profiles.enter,
-            marker: profiles.marker,
-            values: source.values,
-            reveals: focus.reveals(),
-            armed: focus.armed,
-        })),
-        PageSection::Folders(kind) => Some(Page::Folders(super::folders_page::FoldersView {
-            ledger: super::super::folder_ledger(source.config, kind, source.library_watch),
-            draft: folders.drafts.get(kind.key()).map_or("", String::as_str),
-            undo: folders.undo.filter(|(undone, _)| *undone == kind).map(|(_, path)| path),
-            values: source.values,
-            editing: focus.active_input,
-            bars: focus.bar_reveals,
-        })),
-    }
-}
-
 pub struct WorkbenchInput<'a> {
+    pub layouts: super::super::LayoutsUi,
     pub source: SourceCtx<'a>,
     pub focus: FocusCtx<'a>,
     pub chrome: ChromeCtx<'a>,
+    pub calm: CalmCtx,
     pub profiles: ProfilesCtx<'a>,
     pub folders: FoldersCtx<'a>,
     pub preview_path: &'a str,
     pub transition_preview: Option<iced::advanced::image::Handle>,
     pub tab_transition: f32,
+    pub page_transition: f32,
+    pub emblem_transition: f32,
+    pub previous: Option<&'a super::super::PageSnapshot>,
     pub tab: &'a str,
-    pub selected_section: usize,
     pub search_open: bool,
     pub search_query: &'a str,
     pub search_results: &'a [SettingsSearchResult],
-    pub keybind_capture: Option<KeybindCaptureView>,
+    pub search_total: usize,
+    pub search_at: Option<usize>,
+    pub keys: KeysCtx<'a>,
     pub process_picker: Option<ProcessPickerView>,
     pub weather_review: Option<super::weather_review::WeatherReviewView>,
 }
 
 pub fn settings_workbench<'a>(input: WorkbenchInput<'a>) -> Element<'a, Message> {
     let WorkbenchInput {
+        layouts,
         source,
         focus,
         chrome,
+        calm,
         profiles,
         folders,
         preview_path,
         transition_preview,
         tab_transition,
+        page_transition,
+        emblem_transition,
+        previous,
         tab,
-        selected_section,
         search_open,
         search_query,
         search_results,
-        keybind_capture,
+        search_total,
+        search_at,
+        keys,
         process_picker,
         weather_review,
     } = input;
     let ChromeCtx { viewport, scale, entrance, palette } = chrome;
-    let motion = source.motion();
-    let cards = source.cards(tab);
-    let selected_section = selected_section.min(cards.len().saturating_sub(1));
-    let sections: Vec<(usize, &'static str)> =
-        cards.iter().enumerate().map(|(index, (card, _))| (index, card.title)).collect();
-    let (card, settings) = cards.into_iter().nth(selected_section).unwrap_or_else(|| {
-        (Card { title: tr("settings-section-general"), subtitle: "" }, Vec::new())
-    });
-    let has_selected_preset = settings.iter().any(|setting| {
-        matches!(&setting.control, Control::Presets { items, .. } if items.iter().any(|(_, active)| *active))
-    });
+    let scale = super::appearance::sheet_scale(viewport, scale);
+    let place = source.place(tab);
     let reveal = crate::frontend::animation::smoothstep(entrance.clamp(0.0, 1.0));
-    let branch_reveal = crate::frontend::animation::smoothstep(tab_transition.clamp(0.0, 1.0));
-    let (panel_width, panel_height) = crate::frontend::ui::folio_sheet_dims(viewport, scale);
-    let tabs = visible_tabs(source.config);
-    let active_tab = tabs.iter().position(|(key, _)| *key == tab).unwrap_or(0);
-
-    let index = navigation(
-        &tabs,
-        active_tab,
-        tab,
-        &sections,
-        selected_section,
-        focus.keyboard_focus == SettingsFocus::Index,
-        focus.keyboard_focus == SettingsFocus::Sections,
+    let (panel_width, panel_height) = super::appearance::sheet_size(viewport, scale);
+    let surface_reveal = (entrance * SETTINGS_MOTION.open_ms / SETTINGS_MOTION.surface_ms).min(1.0);
+    let trace_reveal = SETTINGS_MOTION
+        .stroke
+        .at((entrance * SETTINGS_MOTION.open_ms / SETTINGS_MOTION.trace_ms).min(1.0));
+    let places = place_keys().map(|key| (key, place_title(key)));
+    let overview = super::super::home::overview(&source.place_source());
+    let index = navigation(&NavigationInput {
+        places: &places,
+        overview: &overview,
+        selected: place.key,
+        note: if search_open { tr(search_page::INDEX_NOTE) } else { place.index_note },
+        previous: previous.map(|old| old.place.key),
+        travel: SETTINGS_MOTION.roll.at(tab_transition),
         scale,
         palette,
-        GLYPH_FADE,
-        branch_reveal,
+        entrance,
         search_open,
         search_query,
-        search_results,
-    );
-    let page = page_view(tab, selected_section, &source, focus, profiles, folders);
-    let reading = reading_surface(
-        ReadingInput {
-            tab,
-            card,
-            settings,
-            page,
-            transition_preview,
-            values: source.values,
-            has_selected_preset,
-            available_width: panel_width - FOLIO_INDEX_WIDTH * scale.max(0.9),
-            scale,
-            palette,
-            fade: GLYPH_FADE,
-            motion,
-        },
+    });
+    let pages = PageInput { source: &source, focus, profiles, folders, keys };
+    let paint = Paint {
+        values: source.values,
         focus,
-    );
+        calm,
+        scale,
+        palette,
+        motion: source.motion(),
+        body: panel_width - METRICS.index * scale - reading_inset(scale),
+        dim: false,
+        reading: sections::reading_height(panel_height, scale),
+        owner: 0,
+        undivided: false,
+        trim: crate::frontend::settings::Trim::None,
+    };
+    let found = search_open.then_some(search_page::Found {
+        query: search_query,
+        results: search_results,
+        total: search_total,
+        at: search_at,
+    });
+    let reading = reading_surface(ReadingInput {
+        found,
+        layouts,
+        place,
+        pages,
+        preview: transition_preview,
+        entrance,
+        transition: SETTINGS_MOTION.roll.at(page_transition),
+        emblem_transition,
+        previous,
+        paint,
+    });
     let atmosphere: Element<'a, Message> = if preview_path.is_empty() {
         iced::widget::Space::new().width(Length::Fill).height(Length::Fill).into()
     } else {
@@ -334,35 +328,34 @@ pub fn settings_workbench<'a>(input: WorkbenchInput<'a>) -> Element<'a, Message>
             .width(Length::Fill)
             .height(Length::Fill)
             .content_fit(iced::ContentFit::Cover)
-            .opacity(0.045 * reveal)
+            .opacity(METRICS.atmosphere * surface_reveal)
             .into()
     };
-    let page = container(stack![
-        atmosphere,
-        iced::widget::canvas(Blueprint { palette: *palette, fade: reveal })
-            .width(Length::Fill)
+    let blueprint = iced::widget::canvas(Blueprint { palette: *palette, fade: surface_reveal })
+        .width(Length::Fill)
+        .height(Length::Fill);
+    let page = container(stack![atmosphere, blueprint, reading])
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(move |_| super::appearance::surface(palette, surface_reveal));
+    let body = mouse_area(
+        row![container(index).width(Length::Fixed(METRICS.index * scale)), page]
             .height(Length::Fill),
-        reading,
+    )
+    .on_press(Message::Settings(SettingsMsg::ClosePop));
+    let panel = container(stack![
+        body,
+        iced::widget::canvas(super::appearance::Ornament::Frame {
+            palette: *palette,
+            progress: trace_reveal,
+            index_width: METRICS.index * scale,
+        })
+        .width(Length::Fill)
+        .height(Length::Fill),
     ])
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .style(move |_| {
-        crate::frontend::ui::bg_style(Background::Color(with_alpha(
-            palette.surface,
-            0.965 * reveal,
-        )))
-    });
-    let body = row![
-        container(index).width(Length::Fixed(FOLIO_INDEX_WIDTH * scale.max(0.9))),
-        container(page).width(Length::Fill),
-    ]
-    .spacing(0.0)
-    .height(Length::Fill);
-    let panel = container(body)
-        .width(Length::Fixed(panel_width))
-        .height(Length::Fixed(panel_height))
-        .clip(true)
-        .style(move |_| crate::frontend::ui::folio_sheet_panel_style(palette, reveal));
+    .width(Length::Fixed(panel_width))
+    .height(Length::Fixed(panel_height))
+    .clip(true);
     let mut layers = stack![
         mouse_area(
             container(text(""))
@@ -377,9 +370,6 @@ pub fn settings_workbench<'a>(input: WorkbenchInput<'a>) -> Element<'a, Message>
             .center_x(Length::Fill)
             .center_y(Length::Fill),
     ];
-    if let Some(capture) = keybind_capture {
-        layers = layers.push(keybind_capture_layer(capture, scale, palette, reveal));
-    }
     if let Some(picker) = process_picker {
         layers = layers.push(process_picker_layer(picker, scale, palette, reveal));
     }
@@ -609,7 +599,7 @@ fn process_picker_layer(
                     ))
                 }),
             iced::widget::canvas(IndexRail {
-                active: rail_active,
+                active: rail_active as f32,
                 count: rail_count,
                 notches: false,
                 palette: *palette,
@@ -642,104 +632,6 @@ fn process_picker_layer(
     .into()
 }
 
-fn keybind_capture_layer(
-    capture: KeybindCaptureView,
-    scale: f32,
-    palette: &Palette,
-    reveal: f32,
-) -> Element<'_, Message> {
-    let KeybindCaptureView { title, binding, edited, conflict } = capture;
-    let action_scale = scale * 0.82;
-    let action = |label_key: &'static str, active: bool, message: Message| {
-        crate::frontend::ui::folio_action(
-            tr(label_key),
-            active,
-            Some(message),
-            Length::Fixed(crate::frontend::ui::folio_action_width(tr(label_key), action_scale)),
-            action_scale,
-            palette,
-        )
-    };
-    let pad = mouse_area(
-        container(label(
-            binding,
-            22.0,
-            scale,
-            with_alpha(if edited { palette.primary } else { palette.surface_text }, GLYPH_FADE),
-        ))
-        .width(Length::Fill)
-        .center_x(Length::Fill)
-        .padding([20.0 * scale, 12.0 * scale])
-        .style(move |_| {
-            crate::frontend::ui::box_style(
-                with_alpha(palette.surface_container, 0.55),
-                with_alpha(if edited { palette.primary } else { palette.outline }, 0.75),
-            )
-        }),
-    )
-    .on_press(Message::Settings(SettingsMsg::KeybindCaptureClick(
-        crate::domain::input::MouseButton::Left,
-    )))
-    .on_right_press(Message::Settings(SettingsMsg::KeybindCaptureClick(
-        crate::domain::input::MouseButton::Right,
-    )))
-    .on_middle_press(Message::Settings(SettingsMsg::KeybindCaptureClick(
-        crate::domain::input::MouseButton::Middle,
-    )));
-    let mut body = column![
-        label(title, 14.0, scale, with_alpha(palette.surface_text, GLYPH_FADE)),
-        pad,
-        label(
-            tr("settings-keybind-capture-hint"),
-            TYPE_SMALL,
-            scale,
-            with_alpha(palette.surface_text, 0.58),
-        )
-        .line_height(iced::widget::text::LineHeight::Relative(1.35)),
-    ]
-    .spacing(10.0 * scale);
-    if let Some(conflict) = conflict {
-        body =
-            body.push(label(conflict, TYPE_SMALL, scale, with_alpha(palette.tertiary, GLYPH_FADE)));
-    }
-    body = body.push(
-        row![
-            action("settings-keybind-capture-default", false, {
-                Message::Settings(SettingsMsg::KeybindCaptureDefault)
-            }),
-            action("settings-keybind-capture-unbind", false, {
-                Message::Settings(SettingsMsg::KeybindCaptureUnbind)
-            }),
-            container(text("")).width(Length::Fill),
-            action("settings-keybind-capture-cancel", false, {
-                Message::Settings(SettingsMsg::KeybindCaptureCancel)
-            }),
-            action("settings-keybind-capture-ok", true, {
-                Message::Settings(SettingsMsg::KeybindCaptureApply)
-            }),
-        ]
-        .spacing(8.0 * scale)
-        .align_y(Alignment::Center),
-    );
-    let panel = mouse_area(
-        container(body)
-            .width(Length::Fixed(390.0 * scale.max(0.9)))
-            .padding([18.0 * scale, 20.0 * scale])
-            .style(move |_| crate::frontend::ui::folio_sheet_panel_style(palette, reveal)),
-    )
-    .on_press(Message::Noop);
-    mouse_area(
-        container(panel)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .center_x(Length::Fill)
-            .center_y(Length::Fill)
-            .style(move |_| crate::frontend::ui::folio_scrim_style(0.6 * reveal)),
-    )
-    .on_press(Message::Settings(SettingsMsg::KeybindCaptureCancel))
-    .into()
-}
-
 pub fn picker_layout_workbench<'a>(
     source: &SourceCtx<'a>,
     focus: FocusCtx<'a>,
@@ -753,9 +645,6 @@ pub fn picker_layout_workbench<'a>(
         .into_iter()
         .nth(LAYOUT_SECTION)
         .map_or_else(Vec::new, |(_, rows)| rows);
-    let has_selected_preset = rows.iter().any(|row| {
-        matches!(&row.control, Control::Presets { items, .. } if items.iter().any(|(_, active)| *active))
-    });
     let reveal = crate::frontend::animation::smoothstep(entrance.clamp(0.0, 1.0));
     let panel_width = super::super::picker_layout_studio_width(viewport.0, scale);
     let panel_height = (viewport.1 - 36.0 * scale).max(360.0);
@@ -763,17 +652,11 @@ pub fn picker_layout_workbench<'a>(
     let mut pinned = column![].spacing(10.0 * scale);
     let mut controls = column![].spacing(13.0 * scale);
     for (index, setting) in rows.into_iter().enumerate() {
-        let is_pinned = setting.title == tr("settings-selector-display-mode-label")
-            || matches!(
-                &setting.control,
-                Control::TextField { key, .. } if key == super::super::PRESET_NAME_KEY
-            )
-            || matches!(&setting.control, Control::Presets { .. });
+        let is_pinned = setting.title == tr("settings-selector-display-mode-label");
         let field = picker_layout_field(
             setting,
             index,
             source.values,
-            has_selected_preset,
             focus,
             panel_width - 42.0 * scale,
             scale,
@@ -841,7 +724,7 @@ pub fn picker_layout_workbench<'a>(
         left: 0.0,
     }))
     .direction(crate::frontend::ui::thin_vbar())
-    .style(crate::frontend::ui::scroll_style(with_alpha(palette.outline, 0.72)))
+    .style(crate::frontend::ui::outline_scroll(palette.outline))
     .height(Length::Fill);
     let page = column![intro, pinned, scroll]
         .spacing(15.0 * scale)
@@ -872,7 +755,7 @@ pub fn picker_layout_workbench<'a>(
                     with_alpha(palette.outline, 0.72 * reveal),
                 );
                 style.shadow = iced::Shadow {
-                    color: with_alpha(Color::BLACK, 0.4 * reveal),
+                    color: with_alpha(palette.shadow, 0.4 * reveal),
                     offset: iced::Vector::new(8.0, 14.0),
                     blur_radius: 36.0,
                 };
@@ -893,7 +776,6 @@ fn picker_layout_field<'a>(
     setting: Row,
     index: usize,
     values: &'a HashMap<String, String>,
-    has_selected_preset: bool,
     focus: FocusCtx<'_>,
     available_width: f32,
     scale: f32,
@@ -901,27 +783,12 @@ fn picker_layout_field<'a>(
     fade: f32,
     motion: MotionProfile,
 ) -> Element<'a, Message> {
-    if matches!(setting.control, Control::AppTheme { .. }) {
-        return field(
-            setting,
-            index,
-            values,
-            has_selected_preset,
-            focus,
-            available_width,
-            scale,
-            palette,
-            fade,
-            motion,
-        );
-    }
     if setting.control.is_inline_editor() {
         let (focused, focused_choice) = focus.on(SettingsFocus::Controls, index);
         return compact_inline_field(
             setting,
             index,
             values,
-            has_selected_preset,
             focused,
             focused_choice,
             available_width,
@@ -936,7 +803,6 @@ fn picker_layout_field<'a>(
             setting,
             index,
             values,
-            has_selected_preset,
             focus,
             available_width,
             scale,
@@ -947,7 +813,7 @@ fn picker_layout_field<'a>(
     }
     let (focused, focused_choice) = focus.on(SettingsFocus::Controls, index);
     if setting.control.is_compact_action() {
-        return compact_action_field(
+        return compact_action_field(ActionField {
             setting,
             index,
             focused,
@@ -955,7 +821,8 @@ fn picker_layout_field<'a>(
             scale,
             palette,
             fade,
-        );
+            motion,
+        });
     }
     let locked = focus.active_input.is_some_and(|key| match &setting.control {
         Control::Number { key: control_key, .. }
@@ -971,7 +838,6 @@ fn picker_layout_field<'a>(
     let widget = control::widget(
         setting.control,
         values,
-        has_selected_preset,
         focused,
         focused_choice,
         available_width,
@@ -1007,299 +873,170 @@ fn picker_layout_field<'a>(
     .into()
 }
 
-fn navigation<'a>(
-    tabs: &[(&'static str, &'static str)],
-    active_tab: usize,
-    selected_tab: &str,
-    sections: &[(usize, &'static str)],
-    selected_section: usize,
-    index_focused: bool,
-    section_focused: bool,
+#[derive(Clone, Copy)]
+struct NavigationInput<'a, 'b> {
+    places: &'b [(&'static str, &'static str)],
+    overview: &'b crate::contracts::settings::Overview,
+    selected: &'a str,
+    note: &'a str,
+    previous: Option<&'a str>,
+    travel: f32,
     scale: f32,
     palette: &'a Palette,
-    fade: f32,
-    branch_reveal: f32,
+    entrance: f32,
     search_open: bool,
     search_query: &'a str,
-    search_results: &'a [SettingsSearchResult],
-) -> Element<'a, Message> {
-    let search = search_control(search_open, search_query, search_results, scale, palette, fade);
-    let content: Element<'a, Message> = if search_open {
-        search_result_list(search_query, search_results, scale, palette, fade)
-    } else {
-        let mut tree = column![].spacing(1.0 * scale);
-        for (key, label) in tabs.iter().copied() {
-            let active = key == selected_tab;
-            let category = button(
-                row![
-                    text(if active {
-                        crate::frontend::ui::TWISTY_OPEN
-                    } else if rtl() {
-                        "◂"
-                    } else {
-                        crate::frontend::ui::TWISTY_CLOSED
-                    })
-                    .font(crate::frontend::ui::UI_FONT)
-                    .size(10.0 * legible_type_scale(scale)),
-                    text(sentence_case(label))
-                        .font(crate::frontend::ui::UI_FONT)
-                        .size(12.5 * legible_type_scale(scale)),
-                    container(text("")).width(Length::Fill),
-                ]
-                .spacing(9.0 * scale)
-                .align_y(Alignment::Center),
-            )
-            .width(Length::Fill)
-            .padding([8.0 * scale, 8.0 * scale])
-            .on_press(Message::Settings(SettingsMsg::SelectTab(key.to_string())))
-            .style(move |_theme, status| {
-                line_button_style(active, index_focused && active, palette, fade, status)
-            });
-            tree = tree.push(category);
-            if active {
-                tree = tree.push(section_branch(
-                    sections,
-                    selected_section,
-                    section_focused,
-                    scale,
-                    palette,
-                    fade,
-                    branch_reveal,
-                ));
-            }
-        }
-        tree.into()
-    };
-    let tree = scrollable(content)
-        .direction(iced::widget::scrollable::Direction::Vertical(
-            iced::widget::scrollable::Scrollbar::hidden(),
-        ))
-        .height(Length::Fill);
-    let tracker: Element<'a, Message> = if search_open {
-        container(text("")).width(Length::Fixed(14.0 * scale)).into()
-    } else {
-        iced::widget::canvas(IndexRail {
-            active: active_tab,
-            count: tabs.len(),
-            notches: true,
-            palette: *palette,
-            fade,
-        })
-        .width(Length::Fixed(14.0 * scale.max(0.9)))
-        .height(Length::Fill)
+}
+
+struct PlaceEntry {
+    key: &'static str,
+    title: &'static str,
+    active: bool,
+    fade: f32,
+    badge: Option<String>,
+}
+
+fn place_entry(entry: PlaceEntry, scale: f32, palette: &Palette) -> Element<'_, Message> {
+    let PlaceEntry { key, title, active, fade, badge } = entry;
+    let twisty = if active { TWISTY_OPEN } else { TWISTY_CLOSED };
+    let line = row![
+        container(label(twisty, INDEX.glyph, scale, with_alpha(palette.surface_text, fade)))
+            .width(Length::Fixed(INDEX.glyph_width * scale)),
+        container(label(title, INDEX.row_size, scale, with_alpha(palette.surface_text, fade)))
+            .width(Length::Fill),
+    ]
+    .push_maybe(
+        badge.map(|badge| label(badge, INDEX.badge, scale, with_alpha(palette.primary, fade))),
+    )
+    .spacing(INDEX.row_gap * scale)
+    .align_y(Alignment::Center);
+    button(line)
+        .width(Length::Fill)
+        .padding(INDEX.row_padding * scale)
+        .on_press(Message::Settings(SettingsMsg::SelectTab(key.to_owned())))
+        .style(move |_theme, status| calm::style::item(palette.background, palette, active, status))
         .into()
-    };
-    crate::frontend::ui::folio_index_shell(
-        tr("settings-nav-heading"),
-        category_note(selected_tab),
-        vec![search, row![tree, tracker].spacing(9.0 * scale).height(Length::Fill).into()],
-        17.0,
+}
+
+fn navigation<'a>(input: &NavigationInput<'a, '_>) -> Element<'a, Message> {
+    let NavigationInput {
+        places,
+        overview,
+        selected,
+        note,
+        previous,
+        travel,
         scale,
         palette,
-    )
+        entrance,
+        search_open,
+        search_query,
+    } = *input;
+    let search = search_control(search_open, search_query, scale, palette, GLYPH_FADE);
+    let mut list = column![].spacing(1.0);
+    for (order, (key, title)) in places.iter().copied().enumerate() {
+        let active = key == selected && !search_open;
+        let fade = SETTINGS_MOTION.entrance(entrance, order, true);
+        let badge = super::super::home::badge(key, overview);
+        let entry = PlaceEntry { key, title, active, fade, badge };
+        list = list.push(motion_slot(
+            place_entry(entry, scale, palette),
+            None,
+            fade,
+            Some(INDEX.travel * scale),
+        ));
+    }
+    let position = |key: &str| places.iter().position(|(place, _)| *place == key).unwrap_or(0);
+    let target = position(selected) as f32;
+    let from = previous.map_or(target, |key| position(key) as f32);
+    let content: Element<'a, Message> = row![
+        container(list).width(Length::Fill),
+        iced::widget::canvas(IndexRail {
+            active: if search_open { 0.0 } else { from + (target - from) * travel },
+            count: places.len(),
+            notches: true,
+            palette: *palette,
+            fade: GLYPH_FADE,
+        })
+        .width(Length::Fixed(INDEX.rail * scale))
+        .height(Length::Fill),
+    ]
+    .spacing(INDEX.rail_gap * scale)
+    .height(Length::Fill)
+    .into();
+    let surface_fade = (entrance * SETTINGS_MOTION.open_ms / SETTINGS_MOTION.surface_ms).min(1.0);
+    let head = column![
+        label(
+            tr("settings-index-title"),
+            INDEX.title,
+            scale,
+            with_alpha(palette.surface_text, surface_fade)
+        ),
+        label(
+            note,
+            INDEX.note,
+            scale,
+            tint(palette.background, palette.surface_text, INDEX.note_alpha * surface_fade)
+        )
+        .line_height(iced::widget::text::LineHeight::Relative(INDEX.note_leading)),
+    ]
+    .spacing(INDEX.head_gap * scale);
+    let [top, right, bottom, left] = INDEX.padding.map(|px| px * scale);
+    let mut lines = column![head, search, content];
+    if search_open {
+        lines = lines.push(search_page::keys(scale, palette));
+    }
+    container(lines.spacing(INDEX.gap * scale).height(Length::Fill))
+        .padding(Padding { top, right, bottom, left })
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(move |_| {
+            crate::frontend::ui::bg_style(Background::Color(with_alpha(
+                palette.background,
+                INDEX.fill * surface_fade,
+            )))
+        })
+        .into()
 }
 
 fn search_control<'a>(
     open: bool,
     query: &'a str,
-    results: &[SettingsSearchResult],
     scale: f32,
     palette: &'a Palette,
     fade: f32,
 ) -> Element<'a, Message> {
     if open {
-        let submit = results.first().map_or(Message::Noop, |result| {
-            Message::Settings(SettingsMsg::OpenSearchResult(
-                result.tab.clone(),
-                result.section,
-                result.row,
-            ))
-        });
+        return search_page::field(query, scale, palette);
+    }
+    button(
         row![
-            label("⌕", 15.0, scale, with_alpha(palette.primary, fade)),
-            text_input(tr("settings-nav-search"), query)
-                .id(super::super::settings_search_input_id())
-                .font(crate::frontend::ui::UI_FONT)
-                .on_input(|value| Message::Settings(SettingsMsg::SearchInput(value)))
-                .on_submit(submit)
-                .size(12.0 * legible_type_scale(scale))
-                .padding([7.0 * scale, 6.0 * scale])
-                .width(Length::Fill)
-                .style(move |_theme, _status| {
-                    crate::frontend::ui::workbench_input_style(
-                        with_alpha(palette.surface_text, fade),
-                        with_alpha(palette.primary, fade),
-                    )
-                }),
-            button(
-                text("×").font(crate::frontend::ui::UI_FONT).size(14.0 * legible_type_scale(scale))
-            )
-            .padding([5.0 * scale, 8.0 * scale])
-            .on_press(Message::Settings(SettingsMsg::SearchClose))
-            .style(move |_theme, status| {
-                line_button_style(false, false, palette, fade, status)
-            }),
+            label("⌕", INDEX.search_glyph, scale, with_alpha(palette.primary, fade)),
+            label(
+                tr("settings-nav-search"),
+                INDEX.search_size,
+                scale,
+                with_alpha(palette.surface_text, fade)
+            ),
+            container(text("")).width(Length::Fill),
+            label(
+                tr("settings-nav-search-shortcut"),
+                INDEX.shortcut,
+                scale,
+                tint(palette.background, palette.surface_text, INDEX.shortcut_alpha * fade)
+            ),
         ]
-        .spacing(7.0 * scale)
-        .align_y(Alignment::Center)
-        .into()
-    } else {
-        button(
-            row![
-                label("⌕", 15.0, scale, with_alpha(palette.primary, fade)),
-                text(tr("settings-nav-search"))
-                    .font(crate::frontend::ui::UI_FONT)
-                    .size(11.5 * legible_type_scale(scale)),
-                container(text("")).width(Length::Fill),
-                label(
-                    tr("settings-nav-search-shortcut"),
-                    9.0,
-                    scale,
-                    with_alpha(palette.surface_text, 0.42 * fade)
-                ),
-            ]
-            .spacing(8.0 * scale)
-            .align_y(Alignment::Center),
-        )
-        .width(Length::Fill)
-        .padding([8.0 * scale, 8.0 * scale])
-        .on_press(Message::Settings(SettingsMsg::SearchOpen))
-        .style(move |_theme, status| line_button_style(false, false, palette, fade, status))
-        .into()
-    }
+        .spacing(INDEX.row_gap * scale)
+        .align_y(Alignment::Center),
+    )
+    .width(Length::Fill)
+    .padding(INDEX.row_padding * scale)
+    .on_press(Message::Settings(SettingsMsg::SearchOpen))
+    .style(move |_theme, status| calm::style::item(palette.background, palette, false, status))
+    .into()
 }
 
-fn search_result_list<'a>(
-    query: &str,
-    results: &'a [SettingsSearchResult],
-    scale: f32,
-    palette: &'a Palette,
-    fade: f32,
-) -> Element<'a, Message> {
-    if results.is_empty() {
-        return container(label(
-            if query.trim().is_empty() {
-                tr("settings-nav-search-empty-hint")
-            } else {
-                tr("settings-nav-search-no-results")
-            },
-            10.5,
-            scale,
-            with_alpha(palette.surface_text, 0.5 * fade),
-        ))
-        .padding([12.0 * scale, 8.0 * scale])
-        .into();
-    }
-    let mut list = column![].spacing(1.0 * scale);
-    for result in results {
-        list = list.push(
-            button(
-                column![
-                    text(&result.title)
-                        .font(crate::frontend::ui::UI_FONT)
-                        .size(12.0 * legible_type_scale(scale)),
-                    label(
-                        format!(
-                            "{}  /  {}",
-                            sentence_case(&result.tab_label),
-                            result.section_title,
-                        ),
-                        9.0,
-                        scale,
-                        with_alpha(palette.primary, 0.72 * fade),
-                    ),
-                ]
-                .spacing(3.0 * scale),
-            )
-            .width(Length::Fill)
-            .padding([9.0 * scale, 8.0 * scale])
-            .on_press(Message::Settings(SettingsMsg::OpenSearchResult(
-                result.tab.clone(),
-                result.section,
-                result.row,
-            )))
-            .style(move |_theme, status| line_button_style(false, false, palette, fade, status)),
-        );
-    }
-    list.into()
-}
-
-fn section_branch<'a>(
-    sections: &[(usize, &'static str)],
-    selected: usize,
-    keyboard_focused: bool,
-    scale: f32,
-    palette: &'a Palette,
-    fade: f32,
-    reveal: f32,
-) -> Element<'a, Message> {
-    let mut children = column![].spacing(1.0 * scale);
-    for (index, title) in sections.iter().copied() {
-        let active = index == selected;
-        children = children.push(
-            button(
-                row![
-                    label(
-                        if active { "◆" } else { "◇" },
-                        8.0,
-                        scale,
-                        with_alpha(palette.primary, if active { fade } else { 0.44 * fade }),
-                    ),
-                    text(title)
-                        .font(crate::frontend::ui::UI_FONT)
-                        .size(11.5 * legible_type_scale(scale)),
-                    container(text("")).width(Length::Fill),
-                ]
-                .spacing(9.0 * scale)
-                .align_y(Alignment::Center),
-            )
-            .width(Length::Fill)
-            .padding([7.0 * scale, 7.0 * scale])
-            .on_press(Message::Settings(SettingsMsg::SelectSection(index)))
-            .style(move |_theme, status| {
-                line_button_style(active, keyboard_focused && active, palette, fade, status)
-            }),
-        );
-    }
-    let guide =
-        container(text("")).width(Length::Fixed(1.0)).height(Length::Fill).style(move |_| {
-            crate::frontend::ui::bg_style(Background::Color(with_alpha(
-                palette.primary,
-                0.42 * fade * reveal,
-            )))
-        });
-    container(row![guide, children].spacing(9.0 * scale))
-        .width(Length::Fill)
-        .height(Length::Fixed(branch_height(sections.len(), scale, reveal)))
-        .padding(logical_padding(2.0 * scale, 0.0, 4.0 * scale, 17.0 * scale))
-        .clip(true)
-        .into()
-}
-
-fn branch_height(section_count: usize, scale: f32, reveal: f32) -> f32 {
-    (section_count as f32 * 36.0 * scale.max(1.0) + 6.0 * scale) * reveal.clamp(0.0, 1.0)
-}
-
-struct ReadingInput<'a> {
-    tab: &'a str,
-    card: Card,
-    settings: Vec<Row>,
-    page: Option<Page<'a>>,
-    transition_preview: Option<iced::advanced::image::Handle>,
-    values: &'a HashMap<String, String>,
-    has_selected_preset: bool,
-    available_width: f32,
-    scale: f32,
-    palette: &'a Palette,
-    fade: f32,
-    motion: MotionProfile,
-}
-
-fn take_transition_preview(settings: &mut Vec<Row>) -> bool {
-    let present = settings.iter().any(|row| matches!(row.control, Control::Preview));
-    settings.retain(|row| !matches!(row.control, Control::Preview));
-    present
-}
+const STAGE_HEIGHT: f32 = 9.0 / 16.0;
 
 fn transition_preview_stage<'a>(
     handle: Option<iced::advanced::image::Handle>,
@@ -1308,7 +1045,7 @@ fn transition_preview_stage<'a>(
     palette: &'a Palette,
     fade: f32,
 ) -> Element<'a, Message> {
-    let height = (width * 9.0 / 16.0).clamp(250.0 * scale, 430.0 * scale);
+    let height = width * STAGE_HEIGHT;
     let frame: Element<'a, Message> = if let Some(handle) = handle {
         image(handle)
             .width(Length::Fill)
@@ -1341,308 +1078,318 @@ fn transition_preview_stage<'a>(
         .into()
 }
 
-fn reading_columns(available_width: f32, scale: f32) -> (f32, f32, bool) {
-    let content_width = (available_width - 76.0 * scale).max(1.0);
-    let column_width = ((content_width - 34.0 * scale) * 0.5).max(1.0);
-    (content_width, column_width, column_width < 260.0 * scale)
+struct PageInput<'a, 'b> {
+    source: &'b SourceCtx<'a>,
+    focus: FocusCtx<'a>,
+    profiles: ProfilesCtx<'a>,
+    folders: FoldersCtx<'a>,
+    keys: KeysCtx<'a>,
 }
 
-fn reading_surface<'a>(input: ReadingInput<'a>, focus: FocusCtx<'_>) -> Element<'a, Message> {
-    let ReadingInput {
-        tab,
-        card,
-        mut settings,
-        page,
-        transition_preview,
-        values,
-        has_selected_preset,
-        available_width,
-        scale,
-        palette,
-        fade,
-        motion,
-    } = input;
-    let (section_title, section_subtitle) = (card.title, card.subtitle);
-    let header = column![
-        row![
-            text(section_title)
-                .font(crate::frontend::ui::UI_FONT)
-                .size(46.0 * scale.clamp(0.88, 1.08))
-                .line_height(iced::widget::text::LineHeight::Relative(1.0))
-                .color(with_alpha(palette.surface_text, fade)),
-            container(text("")).width(Length::Fill),
-            crate::frontend::ui::folio_icon_action(
-                crate::frontend::ui::EYE_CLOSED,
-                Message::Stash,
-                scale,
-                palette,
-            ),
-            crate::frontend::ui::folio_action(
-                "×",
-                false,
-                Some(Message::ToggleSettings),
-                Length::Shrink,
-                scale,
-                palette,
-            ),
-        ]
-        .spacing(8.0 * scale)
-        .align_y(Alignment::Start),
-        container(
-            label(
-                if section_subtitle.is_empty() { category_note(tab) } else { section_subtitle },
-                TYPE_SMALL,
-                scale,
-                with_alpha(palette.surface_text, 0.56 * fade),
-            )
-            .line_height(iced::widget::text::LineHeight::Relative(1.4)),
-        )
-        .width(Length::Fill),
-        folio_horizontal_rule(with_alpha(palette.outline, FOLIO_RULE_ALPHA * fade)),
-    ]
-    .spacing(12.0 * scale);
-    let (content_width, column_width, single_column) = reading_columns(available_width, scale);
-    let has_transition_preview = take_transition_preview(&mut settings);
-    let paint = super::page::Paint { scale, palette, fade, motion };
-    let controls = match page {
-        Some(Page::Profiles(view)) => super::profiles_page::profiles_page(view, paint),
-        Some(Page::Folders(view)) => super::folders_page::folders_page(view, paint),
-        None => field_grid(
-            settings,
-            tab == "sources" || single_column,
-            values,
-            has_selected_preset,
-            focus,
-            column_width,
-            scale,
-            palette,
-            fade,
-            motion,
-        ),
-    };
-    let mut page = column![header, controls].spacing(28.0 * scale);
-    if has_transition_preview {
-        page = page.push(transition_preview_stage(
-            transition_preview,
-            content_width,
-            scale,
-            palette,
-            fade,
-        ));
-    }
-    scrollable(container(page).width(Length::Fill).padding(Padding {
-        top: 34.0 * scale,
-        right: 38.0 * scale,
-        bottom: 48.0 * scale,
-        left: 38.0 * scale,
-    }))
-    .direction(iced::widget::scrollable::Direction::Vertical(
-        iced::widget::scrollable::Scrollbar::hidden(),
-    ))
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .into()
-}
-
-fn field_grid<'a>(
-    settings: Vec<Row>,
-    full_width: bool,
-    values: &'a HashMap<String, String>,
-    has_selected_preset: bool,
-    focus: FocusCtx<'_>,
-    column_width: f32,
-    scale: f32,
-    palette: &'a Palette,
-    fade: f32,
-    motion: MotionProfile,
-) -> Element<'a, Message> {
-    if settings.is_empty() {
-        return label(
-            tr("settings-section-empty"),
-            12.0,
-            scale,
-            with_alpha(palette.surface_text, 0.56 * fade),
-        )
-        .into();
-    }
-
-    let mut remaining: Vec<_> = settings.into_iter().enumerate().collect();
-    let mut page = column![].spacing(30.0 * scale);
-    while !remaining.is_empty() {
-        if full_width || remaining[0].1.control.is_wide_field() {
-            let (index, setting) = remaining.remove(0);
-            page = page.push(field(
-                setting,
-                index,
-                values,
-                has_selected_preset,
-                focus,
-                column_width * 2.0 + 34.0 * scale,
-                scale,
-                palette,
-                fade,
-                motion,
-            ));
-            continue;
+impl<'a> PageInput<'a, '_> {
+    fn outgoing(&self, old: &Section, index: usize, paint: Paint<'a>) -> Element<'a, Message> {
+        if old.id == KEYS_SHEET {
+            let map = self.source.config.bindings();
+            return super::keybinds_page::sheet(old, &map, KeysCtx::default(), paint);
         }
-        let compact = remaining[0].1.control.is_compact_field();
-        let count = remaining
-            .iter()
-            .take_while(|(_, row)| row.control.is_compact_field() == compact)
-            .count();
-        let group: Vec<_> = remaining.drain(..count).collect();
-        page = page.push(if compact {
-            compact_field_grid(
-                group,
-                values,
-                has_selected_preset,
-                focus,
-                column_width,
-                scale,
-                palette,
-                fade,
-                motion,
-            )
-        } else {
-            regular_field_grid(
-                group,
-                values,
-                has_selected_preset,
-                focus,
-                column_width,
-                scale,
-                palette,
-                fade,
-                motion,
-            )
-        });
+        if old.id == HOME_LEAD {
+            return super::home_page::lead(old, paint);
+        }
+        sections::header(old, index, paint)
     }
-    page.into()
-}
 
-#[allow(clippy::too_many_arguments)]
-fn regular_field_grid<'a>(
-    settings: Vec<(usize, Row)>,
-    values: &'a HashMap<String, String>,
-    has_selected_preset: bool,
-    focus: FocusCtx<'_>,
-    column_width: f32,
-    scale: f32,
-    palette: &'a Palette,
-    fade: f32,
-    motion: MotionProfile,
-) -> Element<'a, Message> {
-    let mut grid = column![].spacing(30.0 * scale);
-    let mut settings = settings.into_iter();
-    while let Some((left_index, left)) = settings.next() {
-        let left = field(
-            left,
-            left_index,
-            values,
-            has_selected_preset,
-            focus,
-            column_width,
-            scale,
-            palette,
-            fade,
-            motion,
-        );
-        let pair: Element<'a, Message> = if let Some((right_index, right)) = settings.next() {
-            let right = field(
-                right,
-                right_index,
-                values,
-                has_selected_preset,
-                focus,
-                column_width,
-                scale,
-                palette,
-                fade,
-                motion,
-            );
-            row![
-                container(left).width(Length::FillPortion(1)),
-                container(text("")).width(Length::Fixed(1.0)).height(Length::Fill).style(
-                    move |_| crate::frontend::ui::bg_style(Background::Color(with_alpha(
-                        palette.outline,
-                        0.34 * fade,
-                    )))
-                ),
-                container(right).width(Length::FillPortion(1)),
-            ]
-            .spacing(17.0 * scale)
-            .align_y(Alignment::Start)
-            .into()
-        } else {
-            row![
-                container(left).width(Length::FillPortion(1)),
-                container(text("")).width(Length::FillPortion(1)),
-            ]
-            .spacing(35.0 * scale)
-            .align_y(Alignment::Start)
-            .into()
+    fn parts(
+        &self,
+        section: SectionId,
+        base: usize,
+        paint: Paint<'a>,
+    ) -> Vec<Element<'a, Message>> {
+        let ctx = super::super::PageCtx {
+            cfg: self.source.config,
+            folders: self.source.folders,
+            watch: self.source.library_watch,
+            profiles: self.profiles,
+            lists: self.folders,
+            folds: self.focus.expanded_details,
         };
-        grid = grid.push(pair);
+        super::library_page::parts(section, ctx, base, paint)
     }
-    grid.into()
 }
 
-#[allow(clippy::too_many_arguments)]
-fn compact_field_grid<'a>(
-    mut settings: Vec<(usize, Row)>,
-    values: &'a HashMap<String, String>,
-    has_selected_preset: bool,
-    focus: FocusCtx<'_>,
-    column_width: f32,
-    scale: f32,
-    palette: &'a Palette,
-    fade: f32,
-    motion: MotionProfile,
-) -> Element<'a, Message> {
-    let right = settings.split_off(settings.len().div_ceil(2));
-    let mut left_column = column![].spacing(0.0);
-    for (index, setting) in settings {
-        left_column = left_column.push(field(
-            setting,
-            index,
-            values,
-            has_selected_preset,
-            focus,
-            column_width,
-            scale,
-            palette,
-            fade,
-            motion,
-        ));
-    }
-    let mut right_column = column![].spacing(0.0);
-    for (index, setting) in right {
-        right_column = right_column.push(field(
-            setting,
-            index,
-            values,
-            has_selected_preset,
-            focus,
-            column_width,
-            scale,
-            palette,
-            fade,
-            motion,
-        ));
-    }
-    row![
-        container(left_column).width(Length::FillPortion(1)),
-        container(text("")).width(Length::Fixed(1.0)).height(Length::Fill).style(move |_| {
-            crate::frontend::ui::bg_style(Background::Color(with_alpha(
-                palette.outline,
-                0.34 * fade,
-            )))
-        }),
-        container(right_column).width(Length::FillPortion(1)),
+struct ReadingInput<'a, 'b> {
+    found: Option<search_page::Found<'a>>,
+    layouts: super::super::LayoutsUi,
+    place: Place,
+    pages: PageInput<'a, 'b>,
+    preview: Option<iced::advanced::image::Handle>,
+    entrance: f32,
+    transition: f32,
+    emblem_transition: f32,
+    previous: Option<&'a super::super::PageSnapshot>,
+    paint: Paint<'a>,
+}
+
+fn reading_inset(scale: f32) -> f32 {
+    let [_, right, _, left] = SURFACE.padding;
+    (right + left) * scale + sections::body_inset(scale)
+}
+
+fn emblem<'a>(key: &str, elapsed_ms: f32, paint: Paint<'a>) -> Element<'a, Message> {
+    let size = METRICS.emblem * paint.scale;
+    stack![
+        iced::widget::canvas(super::appearance::Ornament::Emblem {
+            palette: *paint.palette,
+            elapsed_ms,
+        })
+        .width(Length::Fixed(size))
+        .height(Length::Fixed(size)),
+        container(navigation_icon(
+            super::appearance::place_icon(key),
+            super::appearance::EMBLEM_ICON_SIZE * paint.scale,
+            with_alpha(paint.palette.primary, GLYPH_FADE)
+        ))
+        .center_x(Length::Fill)
+        .center_y(Length::Fill),
     ]
-    .spacing(17.0 * scale)
-    .align_y(Alignment::Start)
+    .width(Length::Fixed(size))
+    .height(Length::Fixed(size))
     .into()
+}
+
+fn same_header(
+    old: &Section,
+    new: &Section,
+    old_inputs: &HashMap<String, String>,
+    paint: Paint<'_>,
+) -> bool {
+    old.title == new.title
+        && old.desc == new.desc
+        && old.say.text == new.say.text
+        && old.say.notes == new.say.notes
+        && old.head.len() == new.head.len()
+        && old
+            .head
+            .iter()
+            .zip(&new.head)
+            .all(|(old_row, new_row)| unchanged_row(old_row, new_row, old_inputs, paint.values))
+        && old.say.tokens.len() == new.say.tokens.len()
+        && old.say.tokens == new.say.tokens
+        && old.say.rows().all(|at| match (old.row(at), new.row(at)) {
+            (Some(old_row), Some(new_row)) => {
+                unchanged_row(old_row, new_row, old_inputs, paint.values)
+            }
+            _ => false,
+        })
+}
+
+fn section_blocks<'a>(
+    place: Place,
+    pages: &PageInput<'a, '_>,
+    preview: Option<&iced::advanced::image::Handle>,
+    paint: Paint<'a>,
+) -> Vec<(Section, Element<'a, Message>)> {
+    place
+        .sections
+        .into_iter()
+        .enumerate()
+        .map(|(index, mut section)| {
+            let header = section.clone();
+            if section.id == KEYS_SHEET {
+                let map = pages.source.config.bindings();
+                return (header, super::keybinds_page::sheet(&section, &map, pages.keys, paint));
+            }
+            if section.id == HOME_LEAD {
+                return (header, super::home_page::lead(&section, paint));
+            }
+            let mut lead = Vec::new();
+            if paint.calm.open == Some(section.id) || paint.calm.closing == Some(section.id) {
+                lead.extend(pages.parts(section.id, section.rows().count(), paint));
+            }
+            let mut gutter = super::super::is_picker_layout_section(Some(section.id))
+                .then(|| sections::layout_entry(paint));
+            for group in &mut section.groups {
+                let before = group.rows.len();
+                group.rows.retain(|row| !matches!(row.control, Control::Preview));
+                if group.rows.len() != before {
+                    gutter = Some(transition_preview_stage(
+                        preview.cloned(),
+                        sections::stage_width(paint.scale),
+                        paint.scale,
+                        paint.palette,
+                        GLYPH_FADE,
+                    ));
+                }
+            }
+            (header, sections::block(Block { index, section, lead, gutter }, paint))
+        })
+        .collect()
+}
+
+fn page_spacing(key: &str) -> (f32, f32) {
+    match key {
+        super::super::place::KEYBINDS => {
+            (super::keybinds_page::SHEET_GAP, super::keybinds_page::MARK_GUTTER)
+        }
+        super::super::place::HOME => (super::home_page::LEAD.gap, 0.0),
+        _ => (SURFACE.gap, 0.0),
+    }
+}
+
+fn reading_surface<'a>(input: ReadingInput<'a, '_>) -> Element<'a, Message> {
+    let ReadingInput {
+        found,
+        layouts,
+        place,
+        pages,
+        preview,
+        entrance,
+        transition,
+        emblem_transition,
+        previous,
+        paint,
+    } = input;
+    if let Some(found) = found {
+        return search_page::page(found, paint);
+    }
+    let previous = previous.filter(|_| transition < 1.0);
+    let unchanged = previous.is_none_or(|old| old.place.key == place.key);
+    let progress = if unchanged { 1.0 } else { transition };
+    let current = if place.key == super::super::place::LAYOUT {
+        let strip =
+            super::strip::strip(&pages.source.config.saved_layouts(), layouts, progress, paint);
+        sections::strip_heading(place.title, strip, progress, paint)
+    } else {
+        sections::heading(place.title, place.note, progress, paint)
+    };
+    let old_heading = previous.filter(|_| !unchanged).map(|old| {
+        let note = if old.place.key == super::super::place::LAYOUT { "" } else { old.place.note };
+        sections::heading(old.place.title, note, 1.0 - transition, paint)
+    });
+    let emblem_time = if entrance < 1.0 {
+        entrance * SETTINGS_MOTION.open_ms
+    } else {
+        emblem_transition * SETTINGS_MOTION.emblem_ms
+    };
+    let head = row![
+        emblem(place.key, emblem_time, paint),
+        container(motion_slot(current, old_heading, progress, None)).width(Length::Fill),
+    ]
+    .push_maybe(place.strip.then(|| sections::palette_strip(paint)))
+    .push(sections::close_button(paint))
+    .push(crate::frontend::ui::folio_icon_action(
+        crate::frontend::ui::EYE_CLOSED,
+        Message::Stash,
+        paint.scale,
+        paint.palette,
+    ))
+    .spacing(SURFACE.head_spacing * paint.scale)
+    .align_y(Alignment::Start);
+    let head = column![head, sections::rule(paint, SURFACE.head_rule)]
+        .spacing(SURFACE.head_gap * paint.scale);
+    let sheet = place.key == super::super::place::KEYBINDS;
+    let spacing = page_spacing(place.key);
+    let blocks = section_blocks(place, &pages, preview.as_ref(), paint);
+    let count = blocks.len();
+    let old_sections = previous.map_or(&[][..], |old| old.place.sections.as_slice());
+    let old_paint = |snapshot: &'a super::super::PageSnapshot| Paint {
+        values: &snapshot.inputs,
+        calm: CalmCtx { open: None, busy: 0.0, pop: None, edit: None, ..paint.calm },
+        ..paint
+    };
+    let mut rows = Vec::new();
+    for (index, (section, block)) in blocks.into_iter().enumerate() {
+        let old = old_sections.get(index);
+        let same = previous.is_some_and(|snapshot| {
+            old.is_some_and(|old| same_header(old, &section, &snapshot.inputs, paint))
+        });
+        let progress = match previous {
+            Some(_) if !same => transition,
+            Some(_) => 1.0,
+            None => SETTINGS_MOTION.entrance(entrance, index, false),
+        };
+        let outgoing = previous
+            .filter(|_| !same)
+            .and_then(|snapshot| old.map(|old| pages.outgoing(old, index, old_paint(snapshot))));
+        let open = [paint.calm.open, paint.calm.closing].contains(&Some(section.id));
+        rows.push((motion_slot(block, outgoing, progress, None).into(), open));
+    }
+    if let Some(snapshot) = previous {
+        for (index, old) in old_sections.iter().enumerate().skip(count) {
+            let outgoing = pages.outgoing(old, index, old_paint(snapshot));
+            let empty = iced::widget::Space::new().height(Length::Fixed(0.0)).into();
+            rows.push((motion_slot(empty, Some(outgoing), transition, None).into(), false));
+        }
+    }
+    if !sheet {
+        rows.push((sections::rule(paint, SURFACE.secs_rule), false));
+    }
+    let scroll = scrollable(calm::page(rows, paint.size(SURFACE.foot)))
+        .id(super::super::settings_reading_id())
+        .direction(iced::widget::scrollable::Direction::Vertical(
+            iced::widget::scrollable::Scrollbar::hidden(),
+        ))
+        .width(Length::Fill)
+        .height(Length::Fill);
+    let [top, right, bottom, left] = SURFACE.padding.map(|px| px * paint.scale);
+    let (gap, gutter) = spacing;
+    let gutter = gutter * paint.scale;
+    column![container(head).padding(logical_padding(0.0, 0.0, 0.0, gutter)), scroll]
+        .spacing(gap * paint.scale)
+        .padding(logical_padding(top, right, bottom, left - gutter))
+        .height(Length::Fill)
+        .into()
+}
+
+fn unchanged_row(
+    old: &Row,
+    new: &Row,
+    old_inputs: &HashMap<String, String>,
+    new_inputs: &HashMap<String, String>,
+) -> bool {
+    if old.title != new.title || old.desc != new.desc || old.look != new.look {
+        return false;
+    }
+    match (&old.control, &new.control) {
+        (Control::Toggle { path: old_path, value: old_value }, Control::Toggle { path, value }) => {
+            old_path == path && old_value == value
+        }
+        (
+            Control::Number { key: old_key, path: old_path, unit: old_unit },
+            Control::Number { key, path, unit },
+        ) => old_path == path && old_unit == unit && old_inputs.get(old_key) == new_inputs.get(key),
+        (
+            Control::TextField { key: old_key, path: old_path, placeholder: old_hint, .. },
+            Control::TextField { key, path, placeholder, .. },
+        ) => {
+            old_path == path
+                && old_hint == placeholder
+                && old_inputs.get(old_key) == new_inputs.get(key)
+        }
+        (
+            Control::Dropdown { path: old_path, options: old_options, current: old_value, .. },
+            Control::Dropdown { path, options, current, .. },
+        ) => old_path == path && old_options == options && old_value == current,
+        (
+            Control::Chips {
+                path: old_path,
+                options: old_options,
+                current: old_value,
+                disabled: old_disabled,
+                ..
+            },
+            Control::Chips { path, options, current, disabled, .. },
+        ) => {
+            old_path == path
+                && old_options == options
+                && old_value == current
+                && old_disabled == disabled
+        }
+        (Control::ActionBtn { id: old_id, label: old_label }, Control::ActionBtn { id, label }) => {
+            old_id == id && old_label == label
+        }
+        (Control::Static, Control::Static) => true,
+        _ => false,
+    }
 }
 
 fn compact_field_copy(
@@ -1681,7 +1428,6 @@ fn compact_inline_field<'a>(
     setting: Row,
     index: usize,
     values: &'a HashMap<String, String>,
-    has_selected_preset: bool,
     focused: bool,
     focused_choice: Option<usize>,
     available_width: f32,
@@ -1690,7 +1436,7 @@ fn compact_inline_field<'a>(
     fade: f32,
     motion: MotionProfile,
 ) -> Element<'a, Message> {
-    let Row { title, desc, control } = setting;
+    let Row { title, desc, control, .. } = setting;
     let editor_width = match &control {
         Control::Number { .. } => (available_width * 0.34).clamp(118.0 * scale, 176.0 * scale),
         Control::TextField { .. } => (available_width * 0.42).clamp(142.0 * scale, 248.0 * scale),
@@ -1702,7 +1448,6 @@ fn compact_inline_field<'a>(
     let editor = control::widget(
         control,
         values,
-        has_selected_preset,
         focused,
         focused_choice,
         editor_width,
@@ -1724,45 +1469,44 @@ fn compact_inline_field<'a>(
     )
 }
 
-#[allow(clippy::too_many_arguments)]
-fn compact_action_field(
+struct ActionField<'a> {
     setting: Row,
     index: usize,
     focused: bool,
     available_width: f32,
     scale: f32,
-    palette: &Palette,
+    palette: &'a Palette,
     fade: f32,
-) -> Element<'_, Message> {
-    let Row { title, desc, control } = setting;
-    let (value, message, enabled, disabled) = match control {
+    motion: MotionProfile,
+}
+
+fn compact_action_field(input: ActionField<'_>) -> Element<'_, Message> {
+    let ActionField { setting, index, focused, available_width, scale, palette, fade, motion } =
+        input;
+    let Row { title, desc, control, .. } = setting;
+    let (value, identity, message) = match control {
         Control::Toggle { path, value } => (
             value,
+            super::diamond_toggle::ToggleIdentity::Path(path.clone()),
             SettingsMsg::Toggle(path, !value),
-            tr("settings-control-enabled"),
-            tr("settings-control-disabled"),
         ),
-        Control::ToggleAction { id, value } => (
-            value,
-            SettingsMsg::Run(id),
-            tr("settings-app-themes-on"),
-            tr("settings-app-themes-off"),
-        ),
-        _ => unreachable!("compact action field requires a toggle"),
+        Control::ToggleAction { id, value } => {
+            (value, super::diamond_toggle::ToggleIdentity::Action(id.clone()), SettingsMsg::Run(id))
+        }
+        _ => unreachable!("toggle field"),
     };
-    let action_scale = scale * 0.82;
-    let action_width = crate::frontend::ui::folio_action_width(enabled, action_scale)
-        .max(crate::frontend::ui::folio_action_width(disabled, action_scale));
-    let copy_width = (available_width - action_width - 44.0 * scale).max(72.0 * scale);
+    let copy_width = (available_width - METRICS.editor * scale - METRICS.row_gap * scale).max(1.0);
     let copy = compact_field_copy(&title, &desc, copy_width, scale, palette, fade);
-    let action = crate::frontend::ui::folio_action(
-        if value { enabled } else { disabled },
+    let action = super::diamond_toggle::diamond_toggle(super::diamond_toggle::ToggleSpec {
+        identity,
         value,
-        Some(Message::Settings(message)),
-        Length::Fixed(action_width),
-        action_scale,
-        palette,
-    );
+        focused,
+        scale,
+        fade,
+        palette: *palette,
+        message: Message::Settings(message),
+        motion,
+    });
     crate::frontend::ui::folio_action_bar(
         copy,
         focused,
@@ -1774,12 +1518,41 @@ fn compact_action_field(
     )
 }
 
+struct SelectionMetrics {
+    preview_width: f32,
+    preview_height: f32,
+    identity_share: f32,
+    identity_min: f32,
+    identity_max: f32,
+    side_gap: f32,
+    summary_min: f32,
+    bar: f32,
+    tray: f32,
+    live_row: f32,
+    background_row: f32,
+    picker: f32,
+}
+
+const SELECTION: SelectionMetrics = SelectionMetrics {
+    preview_width: 86.0,
+    preview_height: 48.0,
+    identity_share: 0.24,
+    identity_min: 110.0,
+    identity_max: 185.0,
+    side_gap: 96.0,
+    summary_min: 100.0,
+    bar: 68.0,
+    tray: 176.0,
+    live_row: 48.0,
+    background_row: 52.0,
+    picker: 192.0,
+};
+
 #[allow(clippy::too_many_arguments)]
 fn compact_group_field<'a>(
     setting: Row,
     index: usize,
     values: &'a HashMap<String, String>,
-    has_selected_preset: bool,
     focus: FocusCtx<'_>,
     available_width: f32,
     scale: f32,
@@ -1787,7 +1560,7 @@ fn compact_group_field<'a>(
     fade: f32,
     motion: MotionProfile,
 ) -> Element<'a, Message> {
-    let Row { title, desc, control } = setting;
+    let Row { title, desc, control, .. } = setting;
     let title = if title.is_empty() {
         tr("settings-selector-saved-styles-label").to_string()
     } else {
@@ -1795,27 +1568,17 @@ fn compact_group_field<'a>(
     };
     let id = control.compact_bar_id().expect("compact group requires a bar identity");
     let (expanded, reveal) = focus.bar(&id);
-    let (focused, _) = focus.on(SettingsFocus::Controls, index);
-    let is_stack_bar = matches!(&control, Control::StackBar { .. });
-    let description_in_tray = !is_stack_bar;
-    let summary = match &control {
-        Control::MotionWeights { weights } => {
-            weights
-                .iter()
-                .map(|(_, key, _)| values.get(key).map_or("0", String::as_str))
-                .collect::<Vec<_>>()
-                .join(" / ")
-                + " ms"
-        }
-        Control::StackBar { summary, .. } => summary.clone(),
-        _ => unreachable!("compact group requires multiple editors"),
+    let Control::StackBar { summary, preview, rows, .. } = control else {
+        unreachable!("compact group requires a stack bar")
     };
-    let content: Element<'a, Message> = if let Control::StackBar { preview, .. } = &control {
-        let preview_width = 86.0 * scale;
-        let preview_height = 48.0 * scale;
-        let identity_width = (available_width * 0.24).clamp(110.0 * scale, 185.0 * scale);
+    let content: Element<'a, Message> = {
+        let preview_width = SELECTION.preview_width * scale;
+        let preview_height = SELECTION.preview_height * scale;
+        let identity_width = (available_width * SELECTION.identity_share)
+            .clamp(SELECTION.identity_min * scale, SELECTION.identity_max * scale);
         let wallpaper_width =
-            (available_width - preview_width - identity_width - 96.0 * scale).max(100.0 * scale);
+            (available_width - preview_width - identity_width - SELECTION.side_gap * scale)
+                .max(SELECTION.summary_min * scale);
         let preview: Element<'a, Message> = preview.as_ref().map_or_else(
             || {
                 container(label("◇", 11.0, scale, with_alpha(palette.surface_text, 0.36 * fade)))
@@ -1849,117 +1612,70 @@ fn compact_group_field<'a>(
                 .into()
             },
         );
-        let title = crate::frontend::ui::ellipsize_text(
-            title.trim(),
-            12.5 * legible_type_scale(scale),
-            identity_width,
-        );
-        let desc = crate::frontend::ui::ellipsize_text(
-            desc.trim(),
-            TYPE_SMALL * legible_type_scale(scale),
-            identity_width,
-        );
-        let summary = crate::frontend::ui::ellipsize_text(
-            summary.trim(),
-            TYPE_SMALL * legible_type_scale(scale),
-            wallpaper_width,
-        );
         row![
             preview,
             column![
-                label(title, 12.5, scale, with_alpha(palette.surface_text, fade)),
-                label(desc, TYPE_SMALL, scale, with_alpha(palette.surface_text, 0.52 * fade)),
+                label(
+                    title.trim().to_string(),
+                    12.5,
+                    scale,
+                    with_alpha(palette.surface_text, fade)
+                ),
+                label(
+                    desc.trim().to_string(),
+                    TYPE_SMALL,
+                    scale,
+                    with_alpha(palette.surface_text, 0.52 * fade),
+                ),
             ]
             .width(Length::Fixed(identity_width))
             .spacing(1.0 * scale),
             container(text("")).width(Length::Fill),
-            label(summary, TYPE_SMALL, scale, with_alpha(palette.primary, fade))
+            label(summary.trim().to_string(), TYPE_SMALL, scale, with_alpha(palette.primary, fade))
                 .width(Length::Fixed(wallpaper_width))
-                .wrapping(iced::widget::text::Wrapping::None)
                 .align_x(end()),
         ]
         .spacing(12.0 * scale)
         .align_y(Alignment::Center)
         .into()
-    } else {
-        row![
-            label(title, 12.5, scale, with_alpha(palette.surface_text, fade)),
-            container(text("")).width(Length::Fill),
-            label(summary, TYPE_SMALL, scale, with_alpha(palette.primary, fade),)
-                .width(Length::Fixed((available_width * 0.42).max(90.0 * scale)))
-                .wrapping(iced::widget::text::Wrapping::None)
-                .align_x(end()),
-        ]
-        .spacing(10.0 * scale)
-        .align_y(Alignment::Center)
-        .into()
     };
-    let (editor, options_height) = match control {
-        Control::StackBar { rows, .. } => {
-            let live_height =
-                rows.iter().filter(|row| matches!(row.control, Control::Display(_))).count() as f32
-                    * 48.0;
-            let background_height: f32 = rows
-                .iter()
-                .filter_map(|row| {
-                    let Control::Chips { path, current, background: Some(background), .. } =
-                        &row.control
-                    else {
-                        return None;
-                    };
-                    let reveal = focus.bar_reveals.get(&format!("background:{path}")).map_or(
-                        if matches!(current.as_str(), "center" | "fit") { 1.0 } else { 0.0 },
-                        |value| value.x,
-                    );
-                    let picker =
-                        focus.bar_reveals.get(&background.picker_id()).map_or(0.0, |value| value.x);
-                    Some((52.0 + 192.0 * picker) * crate::frontend::animation::smoothstep(reveal))
-                })
-                .sum();
-            (
-                detail_rows(
-                    rows,
-                    index,
-                    values,
-                    has_selected_preset,
-                    available_width - 18.0 * scale,
-                    scale,
-                    palette,
-                    fade,
-                    focus,
-                    motion,
-                ),
-                176.0 + background_height + live_height,
+    let live_height = rows.iter().filter(|row| matches!(row.control, Control::Display(_))).count()
+        as f32
+        * SELECTION.live_row;
+    let background_height: f32 = rows
+        .iter()
+        .filter_map(|row| {
+            let Control::Chips { path, current, background: Some(background), .. } = &row.control
+            else {
+                return None;
+            };
+            let reveal = focus
+                .bar_reveals
+                .get(&super::super::background::BackgroundControl::reveal_id(path))
+                .map_or(
+                    if matches!(current.as_str(), "center" | "fit") { 1.0 } else { 0.0 },
+                    |value| value.x,
+                );
+            let picker =
+                focus.bar_reveals.get(&background.picker_id()).map_or(0.0, |value| value.x);
+            Some(
+                (SELECTION.background_row + SELECTION.picker * picker)
+                    * crate::frontend::animation::smoothstep(reveal),
             )
-        }
-        control => (
-            control::widget(
-                control,
-                values,
-                has_selected_preset,
-                focused,
-                None,
-                available_width - 42.0 * scale,
-                scale,
-                palette,
-                fade,
-                focus.armed,
-                motion,
-                Some(focus.reveals()),
-            ),
-            110.0,
-        ),
-    };
-    let options: Element<'a, Message> = if desc.trim().is_empty() || !description_in_tray {
-        editor
-    } else {
-        column![
-            label(desc, TYPE_SMALL, scale, with_alpha(palette.surface_text, 0.58 * fade),),
-            editor,
-        ]
-        .spacing(6.0 * scale)
-        .into()
-    };
+        })
+        .sum();
+    let options = detail_rows(
+        rows,
+        index,
+        values,
+        available_width - 18.0 * scale,
+        scale,
+        palette,
+        fade,
+        focus,
+        motion,
+    );
+    let options_height = SELECTION.tray + background_height + live_height;
     crate::frontend::ui::folio_stack_bar(
         content,
         expanded,
@@ -1968,18 +1684,17 @@ fn compact_group_field<'a>(
         Message::Settings(SettingsMsg::ToggleBar(id, index)),
         None,
         options,
-        if is_stack_bar { 68.0 } else { 42.0 },
+        SELECTION.bar,
         options_height,
         scale,
         palette,
     )
 }
 
-fn field<'a>(
+pub(super) fn field<'a>(
     setting: Row,
     index: usize,
     values: &'a HashMap<String, String>,
-    has_selected_preset: bool,
     focus: FocusCtx<'_>,
     available_width: f32,
     scale: f32,
@@ -1987,23 +1702,12 @@ fn field<'a>(
     fade: f32,
     motion: MotionProfile,
 ) -> Element<'a, Message> {
-    if let Control::AppTheme { app, index: app_index } = &setting.control {
-        return super::app_theme::view(
-            app.clone(),
-            super::app_theme::Position { row: index, app: *app_index },
-            focus.expanded_details.contains(&format!("app-theme:{}", app.id)),
-            focus.on(SettingsFocus::Controls, index).0,
-            scale,
-            palette,
-        );
-    }
     if setting.control.is_inline_editor() {
         let (focused, focused_choice) = focus.on(SettingsFocus::Controls, index);
         return compact_inline_field(
             setting,
             index,
             values,
-            has_selected_preset,
             focused,
             focused_choice,
             available_width,
@@ -2018,7 +1722,6 @@ fn field<'a>(
             setting,
             index,
             values,
-            has_selected_preset,
             focus,
             available_width,
             scale,
@@ -2028,18 +1731,7 @@ fn field<'a>(
         );
     }
     let (focused, focused_choice) = focus.on(SettingsFocus::Controls, index);
-    if setting.control.is_compact_action() {
-        return compact_action_field(
-            setting,
-            index,
-            focused,
-            available_width,
-            scale,
-            palette,
-            fade,
-        );
-    }
-    let Row { title, desc, control } = setting;
+    let Row { title, desc, control, .. } = setting;
     if matches!(control, Control::Segment) {
         return column![
             text(title)
@@ -2056,18 +1748,8 @@ fn field<'a>(
     }
     if let Control::Details { id, summary, rows } = control {
         let expanded = focus.expanded_details.contains(&id);
-        let body = detail_rows(
-            rows,
-            index,
-            values,
-            has_selected_preset,
-            available_width,
-            scale,
-            palette,
-            fade,
-            focus,
-            motion,
-        );
+        let body =
+            detail_rows(rows, index, values, available_width, scale, palette, fade, focus, motion);
         return crate::frontend::ui::folio_details(
             title,
             summary,
@@ -2084,9 +1766,6 @@ fn field<'a>(
         Control::Number { key: control_key, .. }
         | Control::TextField { key: control_key, .. }
         | Control::Resolution { key: control_key, .. } => control_key == key,
-        Control::MotionWeights { weights } => {
-            weights.iter().any(|(_, control_key, _)| control_key == key)
-        }
         _ => false,
     }) || focused && focused_choice.is_some();
     let title = if title.is_empty() {
@@ -2097,7 +1776,6 @@ fn field<'a>(
     let widget = control::widget(
         control,
         values,
-        has_selected_preset,
         focused,
         focused_choice,
         available_width,
@@ -2146,7 +1824,6 @@ fn detail_rows<'a>(
     rows: Vec<Row>,
     parent_index: usize,
     values: &'a HashMap<String, String>,
-    has_selected_preset: bool,
     available_width: f32,
     scale: f32,
     palette: &'a Palette,
@@ -2156,21 +1833,6 @@ fn detail_rows<'a>(
 ) -> Element<'a, Message> {
     let mut content = column![].spacing(15.0 * scale);
     for row in rows {
-        if matches!(row.control, Control::AppTheme { .. }) {
-            content = content.push(field(
-                row,
-                parent_index,
-                values,
-                has_selected_preset,
-                focus,
-                available_width,
-                scale,
-                palette,
-                fade,
-                motion,
-            ));
-            continue;
-        }
         if let Control::Display(control) = row.control {
             content = content.push(control.view(scale * 0.94, palette));
             continue;
@@ -2181,7 +1843,6 @@ fn detail_rows<'a>(
                 rows,
                 parent_index,
                 values,
-                has_selected_preset,
                 (available_width - 24.0 * scale).max(160.0 * scale),
                 scale * 0.94,
                 palette,
@@ -2207,7 +1868,6 @@ fn detail_rows<'a>(
                 row,
                 parent_index,
                 values,
-                has_selected_preset,
                 false,
                 None,
                 (available_width - 24.0 * scale).max(160.0 * scale),
@@ -2225,7 +1885,6 @@ fn detail_rows<'a>(
                 row,
                 parent_index,
                 values,
-                has_selected_preset,
                 nested_focus,
                 (available_width - 24.0 * scale).max(160.0 * scale),
                 scale * 0.94,
@@ -2236,22 +1895,22 @@ fn detail_rows<'a>(
             continue;
         }
         if row.control.is_compact_action() {
-            content = content.push(compact_action_field(
-                row,
-                parent_index,
-                false,
-                (available_width - 24.0 * scale).max(160.0 * scale),
-                scale * 0.94,
+            content = content.push(compact_action_field(ActionField {
+                setting: row,
+                index: parent_index,
+                focused: false,
+                available_width: (available_width - 24.0 * scale).max(160.0 * scale),
+                scale: scale * 0.94,
                 palette,
                 fade,
-            ));
+                motion,
+            }));
             continue;
         }
-        let Row { title, desc, control } = row;
+        let Row { title, desc, control, .. } = row;
         let widget = control::widget(
             control,
             values,
-            has_selected_preset,
             false,
             None,
             (available_width - 24.0 * scale).max(160.0 * scale),
@@ -2277,22 +1936,12 @@ fn detail_rows<'a>(
     content.into()
 }
 
-fn line_button_style(
-    active: bool,
-    focused: bool,
-    palette: &Palette,
-    fade: f32,
-    status: button::Status,
-) -> button::Style {
-    crate::frontend::ui::folio_line_button_style(active, focused, palette, fade, status)
-}
-
-fn tracker_position(active: usize, count: usize) -> f32 {
-    if count <= 1 { 0.0 } else { active.min(count - 1) as f32 / (count - 1) as f32 }
+fn tracker_position(active: f32, count: usize) -> f32 {
+    if count <= 1 { 0.0 } else { active.clamp(0.0, (count - 1) as f32) / (count - 1) as f32 }
 }
 
 struct IndexRail {
-    active: usize,
+    active: f32,
     count: usize,
     notches: bool,
     palette: Palette,
@@ -2322,7 +1971,7 @@ impl canvas::Program<Message> for IndexRail {
         );
         if self.notches {
             for index in 0..self.count {
-                let y = top + (bottom - top) * tracker_position(index, self.count);
+                let y = top + (bottom - top) * tracker_position(index as f32, self.count);
                 frame.stroke(
                     &Path::line(Point::new(x - 2.5, y), Point::new(x + 2.5, y)),
                     Stroke::default()
@@ -2361,8 +2010,8 @@ impl canvas::Program<Message> for Blueprint {
         _cursor: iced::mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         let mut frame = Frame::new(renderer, bounds.size());
-        let line = with_alpha(self.palette.outline, 0.075 * self.fade);
-        let accent = with_alpha(self.palette.primary, 0.09 * self.fade);
+        let line = tint(self.palette.surface, self.palette.outline, 0.075 * self.fade);
+        let accent = tint(self.palette.surface, self.palette.primary, 0.09 * self.fade);
         let centre =
             Point::new(mirror_x(bounds.width * 0.72, 0.0, bounds.width), bounds.height * 0.56);
         for radius in [90.0, 176.0, 264.0] {

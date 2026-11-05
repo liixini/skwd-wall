@@ -8,14 +8,27 @@ pub enum Wake {
     Frame(Instant),
     Ipc(IpcMsg),
     Decoded,
+    BrowserPreview {
+        key: crate::contracts::browser::PreviewIdentity,
+        generation: u64,
+        size: crate::contracts::browser::PreviewSize,
+        result: Result<crate::contracts::browser::PreviewFrames, String>,
+    },
     SelfTest(u32),
     HudTick,
     Toggle,
     Hide,
     Command(String),
     Query(#[allow(dead_code)] String, Reply),
-    EffectSrc { card: usize, source: String, rgba: Arc<Vec<u8>>, w: u32, h: u32 },
+    EffectSrc {
+        card: usize,
+        source: String,
+        rgba: Arc<Vec<u8>>,
+        w: u32,
+        h: u32,
+    },
     Semantic(crate::infrastructure::semantic::SemanticResult),
+    Desktop(Arc<crate::infrastructure::desktop::Desktop>),
 }
 
 type ReplyFn = Box<dyn FnOnce(&str) + Send>;

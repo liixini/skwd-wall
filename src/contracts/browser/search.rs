@@ -22,7 +22,8 @@ pub struct SteamSearch {
     pub query_type: u32,
     pub trend_days: u32,
     pub request_type: String,
-    pub category: String,
+    pub tags: Vec<String>,
+    pub excluded_tags: Vec<String>,
     pub resolution: String,
     pub allow_nsfw: bool,
     pub page: u32,
@@ -64,6 +65,7 @@ pub struct BrowserSearchResult {
     pub attribution_url: String,
     pub track_url: String,
     pub thumb_ready: bool,
+    pub workshop: Option<super::WorkshopDetails>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

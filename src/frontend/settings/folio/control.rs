@@ -1,27 +1,89 @@
+#[cfg(test)]
+mod tests;
+
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::time::{Duration, Instant};
 
-use iced::widget::canvas::{self, Frame, Path, Stroke};
+use iced::widget::canvas::{self, Frame, Stroke};
 use iced::widget::{button, column, container, stack, text, text_input};
-use iced::{Alignment, Border, Color, Element, Event, Length, Point, Rectangle, mouse, window};
+use iced::{Alignment, Border, Color, Element, Event, Length, Rectangle, mouse, window};
 
 use crate::app::Message;
+use crate::domain::library::filter::resolution_parts;
 use crate::frontend::animation::{MotionProfile, MotionTier};
 use crate::frontend::components::with_alpha;
 use crate::frontend::theme::Palette;
-use crate::frontend::ui::{
-    folio_diagonal_edges, folio_diagonal_wipe, label, legible_type_scale, mirror_x, row,
-};
+use crate::frontend::ui::calm;
+use crate::frontend::ui::{label, legible_type_scale, motion_slot, row};
 use crate::i18n::tr;
 
-use super::super::{ActionId, Control, PRESET_NAME_KEY, SettingsMsg};
+use super::super::{ActionId, Control, SettingsMsg};
+use super::cut_field;
+use super::diamond_toggle::{ToggleIdentity, ToggleSpec, diamond_toggle};
+use super::dropdown::{DropdownSpec, dropdown};
+use super::number_editor::{NumberSpec, number_editor};
 
+pub(super) const CONFIRM_KEY: &str = "settings-control-confirm";
 const BUTTON_FRAME: Duration = Duration::from_millis(16);
-const BUTTON_HEIGHT: f32 = 30.0;
-const BUTTON_MIN_WIDTH: f32 = 92.0;
+const COMPACT_BUTTON_HEIGHT: f32 = 30.0;
+const BUTTON_TEXT_SIZE: f32 = 11.0;
+const BUTTON_LINE_LEADING: f32 = 1.3;
+const WRAP_SLACK: f32 = 0.9;
+const BUTTON_TEXT_ALPHA: f32 = 0.9;
+const BUTTON_FILL_ALPHA: f32 = 0.96;
+const BUTTON_OUTLINE_ALPHA: f32 = 0.48;
+const PROCESS_EDITOR_WIDTH: f32 = 210.0;
+const PROCESS_PICK_WIDTH: f32 = 30.0;
+const PROCESS_EDITOR_GAP: f32 = 7.0;
+const PROCESS_TEXT_SIZE: f32 = 13.0;
+const PROCESS_PICK_LABEL: &str = "…";
+
+pub(super) fn label_width(label: &str, scale: f32) -> f32 {
+    crate::frontend::ui::cached_line_width(
+        label,
+        BUTTON_TEXT_SIZE * legible_type_scale(scale),
+        crate::frontend::ui::UI_FONT,
+    )
+}
 
 pub(super) fn button_width(label: &str, scale: f32) -> f32 {
-    crate::frontend::ui::folio_action_width_in(label, scale, BUTTON_MIN_WIDTH, f32::INFINITY)
+    let text = label_width(label, scale);
+    (text + crate::frontend::ui::FOLIO_BUTTON_INSET * scale)
+        .max(crate::frontend::ui::FOLIO_BUTTON_MIN_WIDTH * scale)
+}
+
+pub(super) fn fitted_button(label: &str, max: f32, scale: f32) -> (f32, ButtonHeight) {
+    let natural = button_width(label, scale);
+    if natural <= max {
+        return (natural, ButtonHeight::Compact);
+    }
+    let size = BUTTON_TEXT_SIZE * legible_type_scale(scale);
+    let room = (max - crate::frontend::ui::FOLIO_BUTTON_INSET * scale) * WRAP_SLACK;
+    (max, ButtonHeight::Lines(wrapped_lines(label, room, size)))
+}
+
+fn wrapped_lines(label: &str, room: f32, size: f32) -> usize {
+    let measure = |text: &str| {
+        crate::frontend::ui::cached_line_width(text, size, crate::frontend::ui::UI_FONT)
+    };
+    let space = measure(" ");
+    let mut lines = 1;
+    let mut line = 0.0;
+    for word in label.split_whitespace() {
+        let width = measure(word);
+        if line > 0.0 && line + space + width <= room {
+            line += space + width;
+            continue;
+        }
+        if line > 0.0 {
+            lines += 1;
+        }
+        let breaks = (width / room).ceil().max(1.0) as usize - 1;
+        lines += breaks;
+        line = width - breaks as f32 * room;
+    }
+    lines
 }
 
 #[derive(Debug, Default)]
@@ -67,6 +129,8 @@ struct ButtonFill {
     palette: Palette,
     fade: f32,
     motion: MotionProfile,
+    focused: bool,
+    scale: f32,
 }
 
 impl canvas::Program<Message> for ButtonFill {
@@ -96,15 +160,12 @@ impl canvas::Program<Message> for ButtonFill {
         cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         let mut frame = Frame::new(renderer, bounds.size());
-        let hovered = self.enabled && cursor.is_over(bounds);
         frame.fill(
-            &Path::rectangle(Point::ORIGIN, bounds.size()),
-            if hovered {
-                with_alpha(self.palette.surface_variant, 0.78 * self.fade)
-            } else if !self.enabled {
-                with_alpha(self.palette.surface_container, 0.42 * self.fade)
+            &cut_field::fill(bounds.size(), self.scale),
+            if self.enabled {
+                with_alpha(self.palette.background, BUTTON_FILL_ALPHA * self.fade)
             } else {
-                with_alpha(self.palette.surface_container, 0.92 * self.fade)
+                with_alpha(self.palette.surface_container, 0.42 * self.fade)
             },
         );
 
@@ -115,23 +176,33 @@ impl canvas::Program<Message> for ButtonFill {
         };
         if mix > 0.0 {
             let fill = if self.destructive {
-                with_alpha(self.palette.tertiary, 0.96 * self.fade)
+                with_alpha(self.palette.error, BUTTON_FILL_ALPHA * self.fade)
             } else {
-                with_alpha(self.palette.primary, 0.96 * self.fade)
+                with_alpha(self.palette.primary, BUTTON_FILL_ALPHA * self.fade)
             };
-            frame.fill(&folio_diagonal_wipe(bounds.width, bounds.height, mix), fill);
-            if mix < 1.0 {
-                let (top, bottom) = folio_diagonal_edges(bounds.width, bounds.height, mix);
-                let top = mirror_x(top, 0.0, bounds.width);
-                let bottom = mirror_x(bottom, 0.0, bounds.width);
-                frame.stroke(
-                    &Path::line(Point::new(top, 0.0), Point::new(bottom, bounds.height)),
-                    Stroke::default()
-                        .with_color(with_alpha(self.palette.tertiary, 0.9 * self.fade))
-                        .with_width(2.0),
-                );
-            }
+            frame.fill(&cut_field::wipe(bounds.size(), self.scale, mix), fill);
         }
+        let emphasized = self.focused || cursor.is_over(bounds);
+        let outline = if self.destructive {
+            self.palette.error
+        } else if emphasized {
+            self.palette.primary
+        } else {
+            self.palette.outline
+        };
+        let alpha = if !self.enabled {
+            0.18
+        } else if emphasized {
+            0.9
+        } else {
+            BUTTON_OUTLINE_ALPHA
+        };
+        frame.stroke(
+            &cut_field::outline(bounds.size(), self.scale),
+            Stroke::default()
+                .with_color(with_alpha(outline, alpha * self.fade))
+                .with_width(cut_field::BORDER_WIDTH * self.scale),
+        );
         vec![frame.into_geometry()]
     }
 }
@@ -139,7 +210,6 @@ impl canvas::Program<Message> for ButtonFill {
 fn overlay_style(
     active: bool,
     destructive: bool,
-    focused: bool,
     fade: f32,
     palette: &Palette,
     status: button::Status,
@@ -147,83 +217,123 @@ fn overlay_style(
     let hovered = matches!(status, button::Status::Hovered);
     let disabled = matches!(status, button::Status::Disabled);
     button::Style {
-        background: Some(Color::TRANSPARENT.into()),
+        background: None,
         text_color: if disabled {
             with_alpha(palette.surface_text, 0.34 * fade)
         } else if active {
             if destructive {
-                with_alpha(palette.background, fade)
+                with_alpha(palette.error_text, fade)
             } else {
                 with_alpha(palette.primary_text, fade)
             }
+        } else if hovered {
+            with_alpha(palette.hover_text, BUTTON_TEXT_ALPHA * fade)
         } else if destructive {
-            with_alpha(palette.tertiary, fade)
+            with_alpha(palette.error, fade)
         } else {
-            with_alpha(palette.surface_text, 0.9 * fade)
+            with_alpha(palette.surface_text, BUTTON_TEXT_ALPHA * fade)
         },
-        border: Border {
-            color: if disabled {
-                with_alpha(palette.outline, 0.18 * fade)
-            } else if destructive {
-                with_alpha(palette.tertiary, if hovered || focused { fade } else { 0.62 * fade })
-            } else {
-                with_alpha(
-                    if focused || hovered { palette.primary } else { palette.outline },
-                    if focused {
-                        fade
-                    } else if hovered {
-                        0.76 * fade
-                    } else {
-                        0.4 * fade
-                    },
-                )
-            },
-            width: if focused && !disabled { 2.0 } else { 1.0 },
-            radius: 0.0.into(),
-        },
+        border: Border::default(),
         ..Default::default()
     }
 }
 
-pub(super) fn fixed_button<'a>(
-    label: String,
-    active: bool,
-    destructive: bool,
-    message: Option<Message>,
-    focused: bool,
-    scale: f32,
-    palette: &'a Palette,
-    fade: f32,
-    width: f32,
-    motion: MotionProfile,
-) -> Element<'a, Message> {
+pub(super) enum ButtonHeight {
+    Compact,
+    Action,
+    Lines(usize),
+}
+
+impl ButtonHeight {
+    fn pixels(&self, scale: f32) -> f32 {
+        let fixed = scale.max(1.0);
+        match self {
+            Self::Compact => COMPACT_BUTTON_HEIGHT * fixed,
+            Self::Action => cut_field::HEIGHT * fixed,
+            Self::Lines(count) => {
+                let line = BUTTON_TEXT_SIZE * legible_type_scale(scale) * BUTTON_LINE_LEADING;
+                COMPACT_BUTTON_HEIGHT * fixed + count.saturating_sub(1) as f32 * line
+            }
+        }
+    }
+
+    fn wraps(&self) -> bool {
+        matches!(self, Self::Lines(_))
+    }
+}
+
+pub(super) struct ButtonSpec<'a> {
+    pub label: String,
+    pub active: bool,
+    pub destructive: bool,
+    pub message: Option<Message>,
+    pub focused: bool,
+    pub scale: f32,
+    pub palette: &'a Palette,
+    pub fade: f32,
+    pub width: f32,
+    pub height: ButtonHeight,
+    pub motion: MotionProfile,
+}
+
+fn caption<'a>(label: String, wraps: bool, scale: f32) -> Element<'a, Message> {
+    let size = BUTTON_TEXT_SIZE * legible_type_scale(scale);
+    let label = if wraps {
+        let inset = crate::frontend::ui::FOLIO_BUTTON_INSET * scale / 2.0;
+        let words = calm::Piece::Inked { text: label.into(), size, ink: None };
+        let spec = calm::prose(vec![words], calm::PLAIN_LEADING);
+        container(calm::sentence(calm::SentenceSpec { centred: true, ..spec }))
+            .padding([0.0, inset])
+    } else {
+        container(text(label).font(crate::frontend::ui::UI_FONT).size(size))
+    };
+    label
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .align_x(iced::alignment::Horizontal::Center)
+        .align_y(iced::alignment::Vertical::Center)
+        .into()
+}
+
+pub(super) fn fixed_button(spec: ButtonSpec<'_>) -> Element<'_, Message> {
+    let ButtonSpec {
+        label,
+        active,
+        destructive,
+        message,
+        focused,
+        scale,
+        palette,
+        fade,
+        width,
+        height,
+        motion,
+    } = spec;
     let enabled = message.is_some();
-    let backdrop: Element<'a, Message> = iced::widget::canvas(ButtonFill {
+    let backdrop: Element<'_, Message> = iced::widget::canvas(ButtonFill {
         active,
         destructive,
         enabled,
         palette: *palette,
         fade,
         motion,
+        focused,
+        scale,
     })
     .width(Length::Fill)
     .height(Length::Fill)
     .into();
-    let label = container(
-        text(label).font(crate::frontend::ui::UI_FONT).size(11.0 * legible_type_scale(scale)),
-    )
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .align_x(iced::alignment::Horizontal::Center)
-    .align_y(iced::alignment::Vertical::Center);
-    let hit_target = button(label).width(Length::Fill).height(Length::Fill).padding(0.0).style(
-        move |_theme, status| overlay_style(active, destructive, focused, fade, palette, status),
-    );
+    let label = caption(label, height.wraps(), scale);
+    let hit_target = button(label)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .padding(0.0)
+        .style(move |_theme, status| overlay_style(active, destructive, fade, palette, status));
     let hit_target =
         if let Some(message) = message { hit_target.on_press(message) } else { hit_target };
     container(stack![backdrop, hit_target])
         .width(Length::Fixed(width))
-        .height(Length::Fixed(BUTTON_HEIGHT * scale.max(1.0)))
+        .height(Length::Fixed(height.pixels(scale)))
         .clip(true)
         .into()
 }
@@ -240,18 +350,19 @@ fn option_button(
     motion: MotionProfile,
 ) -> Element<'_, Message> {
     let width = button_width(&label, scale);
-    fixed_button(
+    fixed_button(ButtonSpec {
         label,
         active,
         destructive,
-        Some(message),
+        message: Some(message),
         focused,
         scale,
         palette,
         fade,
         width,
+        height: ButtonHeight::Compact,
         motion,
-    )
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -280,18 +391,19 @@ fn choice_buttons<'a>(
                 palettes.iter().rev().find(|(name, _)| name == &key).map(|(_, colors)| colors);
             let message =
                 enabled.then(|| Message::Settings(SettingsMsg::Pick(path.to_owned(), key)));
-            let item = fixed_button(
+            let item = fixed_button(ButtonSpec {
                 label,
                 active,
-                false,
+                destructive: false,
                 message,
-                enabled && keyboard_focused && focused_choice == Some(index),
+                focused: enabled && keyboard_focused && focused_choice == Some(index),
                 scale,
                 palette,
                 fade,
                 width,
+                height: ButtonHeight::Compact,
                 motion,
-            );
+            });
             let item = if let Some(colors) = colors {
                 let mut strip = row![].width(Length::Fixed(width));
                 for color in colors {
@@ -336,13 +448,38 @@ fn wrapped_options(
 #[derive(Clone, Copy)]
 pub(super) struct Reveals<'a> {
     pub(super) bars: &'a HashMap<String, crate::frontend::animation::Tween>,
-    pub(super) folds: &'a std::collections::HashSet<String>,
+}
+
+fn control_key(control: &Control) -> Option<u64> {
+    let identity = match control {
+        Control::Number { key, .. }
+        | Control::TextField { key, .. }
+        | Control::Resolution { key, .. }
+        | Control::KeyBinding { key, .. } => Some(key.as_str()),
+        Control::Dropdown { path, .. } | Control::Chips { path, .. } => Some(path.as_str()),
+        Control::ActionBtn { id: ActionId::ChooseRunningProcess, .. } => {
+            Some(crate::contracts::settings::keys::playback::PROCESSES)
+        }
+        _ => None,
+    }
+    .map(str::to_owned)
+    .or_else(|| control.compact_bar_id())?;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    std::mem::discriminant(control).hash(&mut hasher);
+    identity.hash(&mut hasher);
+    Some(hasher.finish())
+}
+
+fn keyed_control(view: Element<'_, Message>, identity: Option<u64>) -> Element<'_, Message> {
+    match identity {
+        Some(identity) => motion_slot(view, None, 1.0, None).identity(identity).into(),
+        None => view,
+    }
 }
 
 pub(super) fn widget<'a>(
     control: Control,
     values: &'a HashMap<String, String>,
-    has_selected_preset: bool,
     keyboard_focused: bool,
     focused_choice: Option<usize>,
     available_width: f32,
@@ -353,80 +490,49 @@ pub(super) fn widget<'a>(
     motion: MotionProfile,
     reveals: Option<Reveals<'_>>,
 ) -> Element<'a, Message> {
-    match control {
+    let identity = control_key(&control);
+    let view = match control {
         Control::Display(control) => control.view(scale, palette),
         Control::AppTheme { app, .. } => {
             label(app.name, crate::frontend::ui::TYPE_SMALL, scale, palette.surface_text).into()
         }
-        Control::Toggle { path, value } => fixed_button(
-            if value {
-                tr("settings-control-enabled").into()
-            } else {
-                tr("settings-control-disabled").into()
-            },
-            value,
-            false,
-            Some(Message::Settings(SettingsMsg::Toggle(path, !value))),
-            keyboard_focused,
-            scale,
-            palette,
-            fade,
-            button_width(tr("settings-control-enabled"), scale)
-                .max(button_width(tr("settings-control-disabled"), scale)),
-            motion,
-        ),
-        Control::ToggleAction { id, value } => fixed_button(
-            if value {
-                tr("settings-app-themes-on").into()
-            } else {
-                tr("settings-app-themes-off").into()
-            },
-            value,
-            false,
-            Some(Message::Settings(SettingsMsg::Run(id))),
-            keyboard_focused,
-            scale,
-            palette,
-            fade,
-            button_width(tr("settings-app-themes-on"), scale)
-                .max(button_width(tr("settings-app-themes-off"), scale)),
-            motion,
-        ),
-        Control::Number { key, unit, .. } => {
-            let value = values.get(&key).map_or("", String::as_str);
-            let automatic = key == crate::contracts::settings::keys::transition::FPS;
-            let value = if automatic && value.parse::<f64>() == Ok(0.0) { "" } else { value };
-            let placeholder = if automatic { tr("settings-transitions-rate-auto") } else { "0" };
-            let message_key = key.clone();
-            row![
-                text_input(placeholder, value)
-                    .id(super::super::workbench_input_id(&key))
-                    .font(crate::frontend::ui::UI_FONT)
-                    .on_input(move |raw| Message::Settings(SettingsMsg::Input(
-                        message_key.clone(),
-                        raw,
-                    )))
-                    .on_submit(Message::Settings(SettingsMsg::Commit))
-                    .size(16.0 * legible_type_scale(scale))
-                    .padding([7.0 * scale, 10.0 * scale])
-                    .width(Length::Fill)
-                    .style(move |_theme, _status| {
-                        crate::frontend::ui::workbench_input_style(
-                            with_alpha(palette.surface_text, fade),
-                            with_alpha(palette.primary, fade),
-                        )
-                    }),
-                label(
-                    unit,
-                    crate::frontend::ui::TYPE_SMALL,
-                    scale,
-                    with_alpha(palette.surface_text, 0.56 * fade)
-                ),
-            ]
-            .spacing(8.0 * scale)
-            .align_y(Alignment::End)
-            .into()
+        Control::Colour { path, hex } => {
+            let picker = reveals
+                .and_then(|maps| {
+                    maps.bars.get(&crate::frontend::settings::colour::picker_id(&path))
+                })
+                .map_or(0.0, |value| value.x);
+            crate::frontend::settings::colour::view(&path, &hex, picker, scale, palette)
         }
+        Control::Toggle { path, value } => diamond_toggle(ToggleSpec {
+            identity: ToggleIdentity::Path(path.clone()),
+            value,
+            focused: keyboard_focused,
+            scale,
+            fade,
+            palette: *palette,
+            message: Message::Settings(SettingsMsg::Toggle(path, !value)),
+            motion,
+        }),
+        Control::ToggleAction { id, value } => diamond_toggle(ToggleSpec {
+            identity: ToggleIdentity::Action(id.clone()),
+            value,
+            focused: keyboard_focused,
+            scale,
+            fade,
+            palette: *palette,
+            message: Message::Settings(SettingsMsg::Run(id)),
+            motion,
+        }),
+        Control::Number { key, path, unit } => number_editor(NumberSpec {
+            raw: values.get(&key).map_or("", String::as_str),
+            key,
+            path,
+            unit,
+            scale,
+            fade,
+            palette,
+        }),
         Control::KeyBinding { path, default, .. } => {
             let value = values.get(&path).map_or("", String::as_str);
             let triggers = crate::domain::input::parse_binding(value)
@@ -461,10 +567,7 @@ pub(super) fn widget<'a>(
         }
         Control::TextField { key, placeholder, .. } => {
             let value = values.get(&key).map_or("", String::as_str);
-            let enabled = key != PRESET_NAME_KEY || has_selected_preset;
-            let hint =
-                if enabled { placeholder } else { tr("settings-selector-preset-rename-hint") };
-            let mut input = text_input(hint, value)
+            let mut input = text_input(placeholder, value)
                 .id(super::super::workbench_input_id(&key))
                 .font(crate::frontend::ui::UI_FONT)
                 .size(13.0 * legible_type_scale(scale))
@@ -476,48 +579,45 @@ pub(super) fn widget<'a>(
                         with_alpha(palette.primary, fade),
                     )
                 });
-            if enabled {
-                if key == PRESET_NAME_KEY {
-                    input = input.on_input(Message::PresetNameInput);
-                } else {
-                    let message_key = key.clone();
-                    input = input
-                        .on_input(move |raw| {
-                            Message::Settings(SettingsMsg::Input(message_key.clone(), raw))
-                        })
-                        .on_submit(Message::Settings(SettingsMsg::Commit));
-                }
-            }
+            let message_key = key.clone();
+            input = input
+                .on_input(move |raw| {
+                    Message::Settings(SettingsMsg::Input(message_key.clone(), raw))
+                })
+                .on_submit(Message::Settings(SettingsMsg::Commit));
             input.into()
         }
         Control::Resolution { key, width_placeholder, height_placeholder, .. } => {
             let value = values.get(&key).map_or("", String::as_str);
             let maximum = key.ends_with(".to");
             if maximum && value.is_empty() {
-                return row![
-                    label(
-                        tr("settings-filter-resolution-unlimited"),
-                        13.0,
-                        scale,
-                        with_alpha(palette.surface_text, fade)
-                    ),
-                    option_button(
-                        tr("settings-filter-resolution-set-limit").into(),
-                        false,
-                        false,
-                        Message::Settings(SettingsMsg::ResolutionLimit(key, true)),
-                        keyboard_focused,
-                        scale,
-                        palette,
-                        fade,
-                        motion,
-                    ),
-                ]
-                .spacing(12.0 * scale)
-                .align_y(Alignment::Center)
-                .into();
+                return keyed_control(
+                    row![
+                        label(
+                            tr("settings-filter-resolution-unlimited"),
+                            13.0,
+                            scale,
+                            with_alpha(palette.surface_text, fade)
+                        ),
+                        option_button(
+                            tr("settings-filter-resolution-set-limit").into(),
+                            false,
+                            false,
+                            Message::Settings(SettingsMsg::ResolutionLimit(key, true)),
+                            keyboard_focused,
+                            scale,
+                            palette,
+                            fade,
+                            motion,
+                        ),
+                    ]
+                    .spacing(12.0 * scale)
+                    .align_y(Alignment::Center)
+                    .into(),
+                    identity,
+                );
             }
-            let (width, height) = value.split_once(['x', 'X', '×']).unwrap_or(("", ""));
+            let (width, height) = resolution_parts(value);
             let width_key = key.clone();
             let height_key = key.clone();
             let width_input = text_input(width_placeholder, width)
@@ -606,20 +706,34 @@ pub(super) fn widget<'a>(
             }
             editor.into()
         }
-        Control::Dropdown { path, options, current, palettes } => choice_buttons(
-            &path,
-            options,
-            &current,
-            &[],
-            &palettes,
-            keyboard_focused,
-            focused_choice,
-            available_width,
-            scale,
-            palette,
-            fade,
-            motion,
-        ),
+        Control::Dropdown { path, options, current, palettes } => {
+            if palettes.is_empty() {
+                dropdown(DropdownSpec {
+                    path,
+                    options,
+                    current,
+                    scale,
+                    fade,
+                    palette,
+                    focused: keyboard_focused,
+                })
+            } else {
+                choice_buttons(
+                    &path,
+                    options,
+                    &current,
+                    &[],
+                    &palettes,
+                    keyboard_focused,
+                    focused_choice,
+                    available_width,
+                    scale,
+                    palette,
+                    fade,
+                    motion,
+                )
+            }
+        }
         Control::Chips { path, options, current, disabled, background } => {
             let choices = choice_buttons(
                 &path,
@@ -636,9 +750,12 @@ pub(super) fn widget<'a>(
                 motion,
             );
             if let Some(background) = background {
-                let shown = matches!(current.as_str(), "center" | "fit");
+                let shown = background.placement_visible;
                 let reveal = reveals
-                    .and_then(|maps| maps.bars.get(&format!("background:{path}")))
+                    .and_then(|maps| {
+                        maps.bars
+                            .get(&super::super::background::BackgroundControl::reveal_id(&path))
+                    })
                     .map_or(if shown { 1.0 } else { 0.0 }, |value| value.x);
                 let picker = reveals
                     .and_then(|maps| maps.bars.get(&background.picker_id()))
@@ -648,73 +765,69 @@ pub(super) fn widget<'a>(
                 choices
             }
         }
-        Control::MotionWeights { weights } => {
-            let mut group = row![].spacing(8.0 * scale);
-            for (label, key, reset) in weights {
-                let value = values.get(&key).map_or("", String::as_str);
-                let message_key = key.clone();
-                group = group.push(
-                    column![
-                        crate::frontend::ui::label(
-                            label,
-                            10.0,
-                            scale,
-                            with_alpha(palette.surface_text, 0.62 * fade),
-                        ),
-                        row![
-                            text_input("0", value)
-                                .id(super::super::workbench_input_id(&key))
-                                .font(crate::frontend::ui::UI_FONT)
-                                .on_input(move |raw| Message::Settings(SettingsMsg::Input(
-                                    message_key.clone(),
-                                    raw,
-                                )))
-                                .on_submit(Message::Settings(SettingsMsg::Commit))
-                                .size(13.0 * legible_type_scale(scale))
-                                .padding([6.0 * scale, 8.0 * scale])
-                                .style(move |_theme, _status| {
-                                    crate::frontend::ui::workbench_input_style(
-                                        with_alpha(palette.surface_text, fade),
-                                        with_alpha(palette.primary, fade),
-                                    )
-                                }),
-                            fixed_button(
-                                "↺".into(),
-                                false,
-                                false,
-                                Some(Message::Settings(SettingsMsg::Run(reset))),
-                                false,
-                                scale * 0.85,
-                                palette,
-                                fade,
-                                34.0 * scale,
-                                motion,
-                            ),
-                        ]
-                        .spacing(5.0 * scale),
-                    ]
-                    .spacing(5.0 * scale)
-                    .width(Length::FillPortion(1)),
+        Control::ActionBtn { id, label } => {
+            if id == ActionId::ChooseRunningProcess {
+                let key = crate::contracts::settings::keys::playback::PROCESSES;
+                let value = values.get(key).map_or("", String::as_str);
+                let message_key = key.to_string();
+                let input = text_input(tr("settings-playback-target-manual-placeholder"), value)
+                    .id(super::super::workbench_input_id(key))
+                    .font(crate::frontend::ui::UI_FONT)
+                    .on_input(move |raw| {
+                        Message::Settings(SettingsMsg::Input(message_key.clone(), raw))
+                    })
+                    .on_submit(Message::Settings(SettingsMsg::Commit))
+                    .size(PROCESS_TEXT_SIZE * legible_type_scale(scale))
+                    .padding([8.0 * scale, 10.0 * scale])
+                    .width(Length::Fixed(
+                        (PROCESS_EDITOR_WIDTH - PROCESS_PICK_WIDTH - PROCESS_EDITOR_GAP) * scale,
+                    ))
+                    .style(move |_theme, _status| {
+                        crate::frontend::ui::workbench_input_style(
+                            with_alpha(palette.surface_text, fade),
+                            with_alpha(palette.primary, fade),
+                        )
+                    });
+                let discover = crate::frontend::ui::folio_action(
+                    PROCESS_PICK_LABEL,
+                    false,
+                    Some(Message::Settings(SettingsMsg::Run(id))),
+                    Length::Fixed(PROCESS_PICK_WIDTH * scale),
+                    scale,
+                    palette,
+                );
+                let discover = iced::widget::tooltip(
+                    discover,
+                    text(label).font(crate::frontend::ui::UI_FONT),
+                    iced::widget::tooltip::Position::Top,
+                );
+                return keyed_control(
+                    row![input, discover]
+                        .spacing(PROCESS_EDITOR_GAP * scale)
+                        .width(Length::Fixed(PROCESS_EDITOR_WIDTH * scale))
+                        .align_y(Alignment::Center)
+                        .into(),
+                    identity,
                 );
             }
-            group.into()
-        }
-        Control::ActionBtn { id, label } => {
             let confirming = armed == Some(&id);
-            let confirmation = crate::i18n::tr_args!("settings-control-confirm", label => &label);
-            let width = button_width(&confirmation, scale).max(button_width(&label, scale));
-            fixed_button(
-                if confirming { confirmation } else { label },
-                confirming,
-                confirming,
-                Some(Message::Settings(SettingsMsg::Run(id))),
-                keyboard_focused,
+            let confirmation = crate::i18n::tr_args!(CONFIRM_KEY, label => &label);
+            let width = (cut_field::WIDTH * scale)
+                .max(button_width(&confirmation, scale))
+                .max(button_width(&label, scale));
+            fixed_button(ButtonSpec {
+                label: if confirming { confirmation } else { label },
+                active: confirming,
+                destructive: confirming,
+                message: Some(Message::Settings(SettingsMsg::Run(id))),
+                focused: keyboard_focused,
                 scale,
                 palette,
                 fade,
                 width,
+                height: ButtonHeight::Action,
                 motion,
-            )
+            })
         }
         Control::ActionChips { items } => wrapped_options(
             items
@@ -724,76 +837,25 @@ pub(super) fn widget<'a>(
                     let width = button_width(&label, scale);
                     (
                         width,
-                        fixed_button(
+                        fixed_button(ButtonSpec {
                             label,
-                            false,
-                            false,
-                            Some(Message::Settings(SettingsMsg::Run(id))),
-                            keyboard_focused && focused_choice == Some(index),
+                            active: false,
+                            destructive: false,
+                            message: Some(Message::Settings(SettingsMsg::Run(id))),
+                            focused: keyboard_focused && focused_choice == Some(index),
                             scale,
                             palette,
                             fade,
                             width,
+                            height: ButtonHeight::Compact,
                             motion,
-                        ),
+                        }),
                     )
                 })
                 .collect(),
             available_width,
             scale,
         ),
-        Control::Presets { mode, items } => {
-            let mut options = vec![(
-                button_width(tr("settings-selector-preset-save-current"), scale),
-                option_button(
-                    tr("settings-selector-preset-save-current").into(),
-                    false,
-                    false,
-                    Message::SavePreset,
-                    keyboard_focused && focused_choice == Some(0),
-                    scale,
-                    palette,
-                    fade,
-                    motion,
-                ),
-            )];
-            for (index, (name, active)) in items.into_iter().enumerate() {
-                let apply_index = 1 + index * 2;
-                let delete_index = apply_index + 1;
-                let width = button_width(&name, scale);
-                options.push((
-                    width,
-                    fixed_button(
-                        name.clone(),
-                        active,
-                        false,
-                        Some(Message::ApplyPreset(mode.clone(), name.clone())),
-                        keyboard_focused && focused_choice == Some(apply_index),
-                        scale,
-                        palette,
-                        fade,
-                        width,
-                        motion,
-                    ),
-                ));
-                options.push((
-                    34.0 * scale,
-                    fixed_button(
-                        "×".into(),
-                        false,
-                        true,
-                        Some(Message::DeletePreset(mode.clone(), name)),
-                        keyboard_focused && focused_choice == Some(delete_index),
-                        scale,
-                        palette,
-                        fade,
-                        34.0 * scale,
-                        motion,
-                    ),
-                ));
-            }
-            wrapped_options(options, available_width, scale)
-        }
         Control::Details { summary, .. } | Control::StackBar { summary, .. } => label(
             format!("▸ {summary}"),
             11.0,
@@ -816,5 +878,6 @@ pub(super) fn widget<'a>(
             with_alpha(palette.primary, fade),
         )
         .into(),
-    }
+    };
+    keyed_control(view, identity)
 }

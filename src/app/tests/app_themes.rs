@@ -52,16 +52,8 @@ fn app_search_targets_the_runtime_row_and_migration_is_explicit() {
     result["apps"][0]["can_adopt"] = json!(true);
     result["apps"][0]["state"] = json!("conflict");
     app.on_result(Pending::AppThemes, &result);
-    let found = crate::frontend::settings::search_settings(
-        "Kitty",
-        &app.config,
-        &[],
-        &[],
-        "",
-        &[],
-        app.daemon.app_themes.as_ref(),
-    );
-    assert_eq!(found[0].tab, "theme");
+    let found = crate::frontend::settings::search_settings("Kitty", app.place_source());
+    assert_eq!(found[0].tab, "colours");
     assert_eq!(found[0].row, 0);
     let _ = drain_calls(&app);
     let _ = update(&mut app, Message::Settings(SettingsMsg::Run(ActionId::AdoptAppTheme(0))));

@@ -1,12 +1,15 @@
 use crate::contracts::settings::keys;
 use crate::i18n::tr;
 
-use super::super::tables::{AWWW_FILTERS, AWWW_TYPES, ENGINES, FILL_MODES, VIDEO_ENGINES};
+use super::super::tables::{AWWW_FILTERS, AWWW_TYPES, ENGINES, FILL_MODES, STEAM_METHODS};
 use super::{ActionId, Builder};
 
 pub(super) fn tab_paper(builder: &mut Builder<'_>) {
     let cfg = builder.cfg;
-    builder.card(tr("settings-paper-engine-card"), tr("settings-paper-engine-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-paper-engine-card"),
+        tr("settings-paper-engine-card-desc"),
+    );
     builder.chips(
         tr("settings-paper-engine-label"),
         tr("settings-paper-engine-desc"),
@@ -36,22 +39,6 @@ pub(super) fn tab_paper(builder: &mut Builder<'_>) {
         keys::display::FILL_MODE,
         &fill_modes,
     );
-    builder
-        .card(tr("settings-paper-video-engine-card"), tr("settings-paper-video-engine-card-desc"));
-    let video_engines = VIDEO_ENGINES.map(|key| {
-        let label = match key {
-            "tinier" => "settings-paper-video-engine-tinier",
-            _ => "settings-paper-video-engine-vulkan",
-        };
-        (key, tr(label))
-    });
-    builder.chips_with_disabled(
-        tr("settings-paper-video-engine-label"),
-        tr("settings-paper-video-engine-desc"),
-        keys::paper::VIDEO_ENGINE,
-        &video_engines,
-        &["tinier"],
-    );
     builder.dropdown(
         tr("settings-paper-layer-label"),
         tr("settings-paper-layer-desc"),
@@ -66,13 +53,12 @@ pub(super) fn tab_paper(builder: &mut Builder<'_>) {
     if !cfg.flag(keys::niri::OVERVIEW_BACKDROP)
         || cfg.text(keys::niri::OVERVIEW_MODE) != "stationary"
     {
-        builder.toggle(
-            tr("settings-paper-overview-only-label"),
-            tr("settings-paper-overview-only-desc"),
-            keys::niri::OVERVIEW_ONLY_PLAYBACK,
-        );
+        overview_only(builder);
     }
-    builder.card(tr("settings-paper-performance-card"), tr("settings-paper-performance-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-paper-performance-card"),
+        tr("settings-paper-performance-card-desc"),
+    );
     builder.toggle(
         tr("settings-paper-multi-process-label"),
         tr("settings-paper-multi-process-desc"),
@@ -83,7 +69,10 @@ pub(super) fn tab_paper(builder: &mut Builder<'_>) {
         tr("settings-paper-performance-mode-desc"),
         keys::paper::PERFORMANCE_MODE,
     );
-    builder.card(tr("settings-playback-pause-title"), tr("settings-playback-pause-desc"));
+    builder.card(
+        crate::i18n::text("settings-playback-pause-title"),
+        tr("settings-playback-pause-desc"),
+    );
     builder.toggle(
         tr("settings-playback-process-enabled"),
         tr("settings-playback-process-desc"),
@@ -105,12 +94,13 @@ pub(super) fn tab_paper(builder: &mut Builder<'_>) {
         tr("settings-playback-maximized-desc"),
         keys::playback::MAXIMIZED,
     );
+    builder.toggle(
+        tr("settings-playback-focused"),
+        tr("settings-playback-focused-desc"),
+        keys::playback::FOCUSED,
+    );
     if cfg.is_niri() {
-        builder.toggle(
-            tr("settings-playback-full-width"),
-            tr("settings-playback-full-width-desc"),
-            keys::niri::FULL_WIDTH_PAUSE,
-        );
+        full_width_pause(builder);
     }
     builder.dropdown(
         tr("settings-playback-scope"),
@@ -131,92 +121,119 @@ pub(super) fn tab_paper(builder: &mut Builder<'_>) {
         "s",
     );
     if cfg.text(keys::paper::ENGINE) == "awww" {
-        builder.card(tr("settings-paper-awww-card"), "");
-        let awww_types = AWWW_TYPES.map(|key| {
-            let label = match key {
-                "simple" => "settings-paper-awww-type-simple",
-                "fade" => "settings-paper-awww-type-fade",
-                "wipe" => "settings-paper-awww-type-wipe",
-                "wave" => "settings-paper-awww-type-wave",
-                "grow" => "settings-paper-awww-type-grow",
-                "center" => "settings-paper-awww-type-center",
-                "outer" => "settings-paper-awww-type-outer",
-                "left" => "settings-paper-awww-type-left",
-                "right" => "settings-paper-awww-type-right",
-                "top" => "settings-paper-awww-type-top",
-                "bottom" => "settings-paper-awww-type-bottom",
-                "any" => "settings-paper-awww-type-any",
-                "random" => "settings-paper-awww-type-random",
-                _ => "settings-paper-awww-type-none",
-            };
-            (key, tr(label))
-        });
-        builder.dropdown(
-            tr("settings-paper-awww-type-label"),
-            "",
-            keys::paper::AWWW_TRANSITION_TYPE,
-            &awww_types,
-        );
-        builder.num(
-            tr("settings-paper-awww-duration-label"),
-            "",
-            keys::paper::AWWW_TRANSITION_DURATION_MS,
-            "ms",
-        );
-        builder.num(tr("settings-paper-awww-fps-label"), "", keys::paper::AWWW_TRANSITION_FPS, "");
-        builder.num(
-            tr("settings-paper-awww-step-label"),
-            tr("settings-paper-awww-step-desc"),
-            keys::paper::AWWW_TRANSITION_STEP,
-            "",
-        );
-        builder.num(
-            tr("settings-paper-awww-angle-label"),
-            "",
-            keys::paper::AWWW_TRANSITION_ANGLE,
-            "deg",
-        );
-        builder.num(
-            tr("settings-paper-awww-wave-width-label"),
-            "",
-            keys::paper::AWWW_TRANSITION_WAVE_WIDTH,
-            "",
-        );
-        builder.num(
-            tr("settings-paper-awww-wave-height-label"),
-            "",
-            keys::paper::AWWW_TRANSITION_WAVE_HEIGHT,
-            "",
-        );
-        builder.text_field(
-            tr("settings-paper-awww-pos-label"),
-            tr("settings-paper-awww-pos-desc"),
-            keys::paper::AWWW_TRANSITION_POS,
-            "center",
-        );
-        builder.toggle(
-            tr("settings-paper-awww-invert-y-label"),
-            tr("settings-paper-awww-invert-y-desc"),
-            keys::paper::AWWW_INVERT_Y,
-        );
-        builder.text_field(
-            tr("settings-paper-awww-bezier-label"),
-            tr("settings-paper-awww-bezier-desc"),
-            keys::paper::AWWW_TRANSITION_BEZIER,
-            "0.0,0.0,1.0,1.0",
-        );
-        builder.chips(
-            tr("settings-paper-awww-filter-label"),
-            tr("settings-paper-awww-filter-desc"),
-            keys::paper::AWWW_FILTER,
-            &AWWW_FILTERS,
-        );
+        tab_awww(builder);
     }
+}
+
+pub(super) fn tab_paper_asleep(builder: &mut Builder<'_>) {
+    tab_awww(builder);
+    builder.card(crate::i18n::text("settings-paper-engine-card"), "");
+    overview_only(builder);
+    full_width_pause(builder);
+}
+
+fn overview_only(builder: &mut Builder<'_>) {
+    builder.toggle(
+        tr("settings-paper-overview-only-label"),
+        tr("settings-paper-overview-only-desc"),
+        keys::niri::OVERVIEW_ONLY_PLAYBACK,
+    );
+}
+
+fn full_width_pause(builder: &mut Builder<'_>) {
+    builder.toggle(
+        tr("settings-playback-full-width"),
+        tr("settings-playback-full-width-desc"),
+        keys::niri::FULL_WIDTH_PAUSE,
+    );
+}
+
+fn tab_awww(builder: &mut Builder<'_>) {
+    builder.card(crate::i18n::text("settings-paper-awww-card"), "");
+    let awww_types = AWWW_TYPES.map(|key| {
+        let label = match key {
+            "simple" => "settings-paper-awww-type-simple",
+            "fade" => "settings-paper-awww-type-fade",
+            "wipe" => "settings-paper-awww-type-wipe",
+            "wave" => "settings-paper-awww-type-wave",
+            "grow" => "settings-paper-awww-type-grow",
+            "center" => "settings-paper-awww-type-center",
+            "outer" => "settings-paper-awww-type-outer",
+            "left" => "settings-paper-awww-type-left",
+            "right" => "settings-paper-awww-type-right",
+            "top" => "settings-paper-awww-type-top",
+            "bottom" => "settings-paper-awww-type-bottom",
+            "any" => "settings-paper-awww-type-any",
+            "random" => "settings-paper-awww-type-random",
+            _ => "settings-paper-awww-type-none",
+        };
+        (key, tr(label))
+    });
+    builder.dropdown(
+        tr("settings-paper-awww-type-label"),
+        "",
+        keys::paper::AWWW_TRANSITION_TYPE,
+        &awww_types,
+    );
+    builder.num(
+        tr("settings-paper-awww-duration-label"),
+        "",
+        keys::paper::AWWW_TRANSITION_DURATION_MS,
+        "ms",
+    );
+    builder.num(tr("settings-paper-awww-fps-label"), "", keys::paper::AWWW_TRANSITION_FPS, "");
+    builder.num(
+        tr("settings-paper-awww-step-label"),
+        tr("settings-paper-awww-step-desc"),
+        keys::paper::AWWW_TRANSITION_STEP,
+        "",
+    );
+    builder.num(
+        tr("settings-paper-awww-angle-label"),
+        "",
+        keys::paper::AWWW_TRANSITION_ANGLE,
+        "deg",
+    );
+    builder.num(
+        tr("settings-paper-awww-wave-width-label"),
+        "",
+        keys::paper::AWWW_TRANSITION_WAVE_WIDTH,
+        "",
+    );
+    builder.num(
+        tr("settings-paper-awww-wave-height-label"),
+        "",
+        keys::paper::AWWW_TRANSITION_WAVE_HEIGHT,
+        "",
+    );
+    builder.text_field(
+        tr("settings-paper-awww-pos-label"),
+        tr("settings-paper-awww-pos-desc"),
+        keys::paper::AWWW_TRANSITION_POS,
+        "center",
+    );
+    builder.toggle(
+        tr("settings-paper-awww-invert-y-label"),
+        tr("settings-paper-awww-invert-y-desc"),
+        keys::paper::AWWW_INVERT_Y,
+    );
+    builder.text_field(
+        tr("settings-paper-awww-bezier-label"),
+        tr("settings-paper-awww-bezier-desc"),
+        keys::paper::AWWW_TRANSITION_BEZIER,
+        "0.0,0.0,1.0,1.0",
+    );
+    builder.chips(
+        tr("settings-paper-awww-filter-label"),
+        tr("settings-paper-awww-filter-desc"),
+        keys::paper::AWWW_FILTER,
+        &AWWW_FILTERS,
+    );
 }
 
 pub(super) fn tab_wallhaven(builder: &mut Builder<'_>) {
     super::source_defaults::wallhaven(builder);
-    builder.card(tr("settings-wallhaven-grid-card"), "");
+    builder.card(crate::i18n::text("settings-wallhaven-grid-card"), "");
     builder.num(
         tr("settings-wallhaven-columns-label"),
         tr("settings-wallhaven-columns-desc"),
@@ -229,7 +246,7 @@ pub(super) fn tab_wallhaven(builder: &mut Builder<'_>) {
         keys::selector::WALLHAVEN_ROWS,
         "",
     );
-    builder.card(tr("settings-wallhaven-thumb-card"), "");
+    builder.card(crate::i18n::text("settings-wallhaven-thumb-card"), "");
     builder.num(
         tr("settings-wallhaven-width-label"),
         tr("settings-wallhaven-width-desc"),
@@ -242,8 +259,8 @@ pub(super) fn tab_wallhaven(builder: &mut Builder<'_>) {
         keys::selector::WALLHAVEN_THUMB_HEIGHT,
         "px",
     );
-    builder.card(tr("settings-wallhaven-api-card"), "");
-    builder.text_field(
+    builder.card(crate::i18n::text("settings-wallhaven-api-card"), "");
+    builder.secret_field(
         tr("settings-wallhaven-api-key-label"),
         tr("settings-wallhaven-api-key-desc"),
         keys::wallhaven::API_KEY,
@@ -259,7 +276,7 @@ pub(super) fn tab_wallhaven(builder: &mut Builder<'_>) {
 
 pub(super) fn tab_steam(builder: &mut Builder<'_>) {
     super::source_defaults::steam(builder);
-    builder.card(tr("settings-steam-grid-card"), "");
+    builder.card(crate::i18n::text("settings-steam-grid-card"), "");
     builder.num(
         tr("settings-steam-columns-label"),
         tr("settings-steam-columns-desc"),
@@ -272,7 +289,7 @@ pub(super) fn tab_steam(builder: &mut Builder<'_>) {
         keys::selector::STEAM_ROWS,
         "",
     );
-    builder.card(tr("settings-steam-thumb-card"), "");
+    builder.card(crate::i18n::text("settings-steam-thumb-card"), "");
     builder.num(
         tr("settings-steam-width-label"),
         tr("settings-steam-width-desc"),
@@ -285,14 +302,14 @@ pub(super) fn tab_steam(builder: &mut Builder<'_>) {
         keys::selector::STEAM_THUMB_HEIGHT,
         "px",
     );
-    builder.card(tr("settings-steam-backend-card"), "");
+    builder.card(crate::i18n::text("settings-steam-backend-card"), "");
     builder.dropdown(
         tr("settings-steam-backend-label"),
         tr("settings-steam-backend-desc"),
         keys::steam::BACKEND,
         &[
-            ("steam", tr("settings-steam-backend-steam")),
-            ("steamcmd", tr("settings-steam-backend-steamcmd")),
+            (STEAM_METHODS[0], tr("settings-steam-backend-steam")),
+            (STEAM_METHODS[1], tr("settings-steam-backend-steamcmd")),
         ],
     );
     builder.text_field(
@@ -301,13 +318,14 @@ pub(super) fn tab_steam(builder: &mut Builder<'_>) {
         keys::steam::USERNAME,
         tr("settings-steam-username-placeholder"),
     );
-    builder.text_field(
+    builder.secret_field(
         tr("settings-steam-api-key-label"),
         tr("settings-steam-api-key-desc"),
         keys::steam::API_KEY,
         tr("settings-steam-api-key-placeholder"),
     );
-    builder.card(tr("settings-steam-paths-card"), tr("settings-steam-paths-card-desc"));
+    builder
+        .card(crate::i18n::text("settings-steam-paths-card"), tr("settings-steam-paths-card-desc"));
     builder.text_field(
         tr("settings-steam-workshop-dir-label"),
         tr("settings-steam-workshop-dir-desc"),
@@ -330,7 +348,7 @@ pub(super) fn tab_steam(builder: &mut Builder<'_>) {
 
 pub(super) fn tab_wallpaper_engine(builder: &mut Builder<'_>) {
     builder.card(
-        tr("settings-wallpaper-engine-rendering-card"),
+        crate::i18n::text("settings-wallpaper-engine-rendering-card"),
         tr("settings-wallpaper-engine-rendering-card-desc"),
     );
     builder.num(
@@ -353,7 +371,7 @@ pub(super) fn tab_wallpaper_engine(builder: &mut Builder<'_>) {
             ("span", tr("settings-wallpaper-engine-scaling-span")),
         ],
     );
-    builder.card(tr("settings-wallpaper-engine-effects-card"), "");
+    builder.card(crate::i18n::text("settings-wallpaper-engine-effects-card"), "");
     builder.toggle(
         tr("settings-wallpaper-engine-particles-label"),
         tr("settings-wallpaper-engine-particles-desc"),
@@ -362,33 +380,42 @@ pub(super) fn tab_wallpaper_engine(builder: &mut Builder<'_>) {
 }
 
 pub(super) fn tab_sources(builder: &mut Builder<'_>) {
-    builder.card(tr("settings-sources-unsplash-card"), tr("settings-sources-unsplash-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-sources-unsplash-card"),
+        tr("settings-sources-unsplash-card-desc"),
+    );
     super::source_defaults::apply_button(builder, keys::sources::UNSPLASH_SHOW_APPLY_BUTTON);
     builder.toggle(
         tr("settings-sources-unsplash-enable-label"),
         tr("settings-sources-unsplash-enable-desc"),
         keys::sources::UNSPLASH_ENABLED,
     );
-    builder.text_field(
+    builder.secret_field(
         tr("settings-sources-unsplash-key-label"),
         tr("settings-sources-unsplash-key-desc"),
         keys::sources::UNSPLASH_ACCESS_KEY,
         tr("settings-sources-unsplash-key-placeholder"),
     );
-    builder.card(tr("settings-sources-pexels-card"), tr("settings-sources-pexels-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-sources-pexels-card"),
+        tr("settings-sources-pexels-card-desc"),
+    );
     super::source_defaults::apply_button(builder, keys::sources::PEXELS_SHOW_APPLY_BUTTON);
     builder.toggle(
         tr("settings-sources-pexels-enable-label"),
         tr("settings-sources-pexels-enable-desc"),
         keys::sources::PEXELS_ENABLED,
     );
-    builder.text_field(
+    builder.secret_field(
         tr("settings-sources-pexels-key-label"),
         tr("settings-sources-pexels-key-desc"),
         keys::sources::PEXELS_API_KEY,
         tr("settings-sources-pexels-key-placeholder"),
     );
-    builder.card(tr("settings-sources-youtube-card"), tr("settings-sources-youtube-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-sources-youtube-card"),
+        tr("settings-sources-youtube-card-desc"),
+    );
     super::source_defaults::apply_button(builder, keys::sources::YOUTUBE_SHOW_APPLY_BUTTON);
     builder.toggle(
         tr("settings-sources-youtube-enable-label"),
@@ -407,7 +434,10 @@ pub(super) fn tab_sources(builder: &mut Builder<'_>) {
         keys::sources::YOUTUBE_MAX_MINUTES,
         "min",
     );
-    builder.card(tr("settings-sources-bing-card"), tr("settings-sources-bing-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-sources-bing-card"),
+        tr("settings-sources-bing-card-desc"),
+    );
     builder.toggle(
         tr("settings-sources-bing-enable-label"),
         tr("settings-sources-bing-enable-desc"),
@@ -422,7 +452,10 @@ pub(super) fn tab_sources(builder: &mut Builder<'_>) {
 }
 
 pub(super) fn tab_search(builder: &mut Builder<'_>) {
-    builder.card(tr("settings-tagging-search-card"), tr("settings-tagging-search-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-tagging-search-card"),
+        tr("settings-tagging-search-card-desc"),
+    );
     builder.toggle(
         tr("settings-semantic-enabled-label"),
         tr("settings-semantic-enabled-desc"),
@@ -445,7 +478,10 @@ pub(super) fn tab_search(builder: &mut Builder<'_>) {
         tr("settings-tagging-describe-info-label"),
         tr("settings-tagging-describe-info-desc"),
     );
-    builder.card(tr("settings-tagging-models-card"), tr("settings-tagging-models-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-tagging-models-card"),
+        tr("settings-tagging-models-card-desc"),
+    );
     builder.action(
         tr("settings-tagging-model-import-label"),
         tr("settings-tagging-model-import-desc"),

@@ -62,7 +62,7 @@ fn key_event_routing() {
     assert!(matches!(
         settings_key_message(&keyboard::Key::Character(" ".into()), keyboard::Modifiers::default()),
         Some(Message::Settings(crate::frontend::settings::SettingsMsg::Key(
-            crate::frontend::settings::SettingsKey::Activate
+            crate::frontend::settings::SettingsKey::Space
         )))
     ));
     let km = crate::domain::input::InputMap::default();
@@ -113,6 +113,10 @@ fn key_event_routing() {
     ));
     assert!(matches!(
         key_message(&km, &keyboard::Key::Character("c".into()), none, PICKER),
+        Some(Message::KeyColourStudio)
+    ));
+    assert!(matches!(
+        key_message(&km, &keyboard::Key::Character("C".into()), shift, PICKER),
         Some(Message::ToggleThemePanel)
     ));
     assert!(matches!(
@@ -120,7 +124,10 @@ fn key_event_routing() {
         Some(Message::KeyFavourite)
     ));
     assert!(key_message(&km, &keyboard::Key::Character("i".into()), none, PICKER).is_none());
-    assert!(key_message(&km, &keyboard::Key::Character("e".into()), none, PICKER).is_none());
+    assert!(matches!(
+        key_message(&km, &keyboard::Key::Character("e".into()), none, PICKER),
+        Some(Message::OpenWidgets)
+    ));
     assert!(matches!(
         key_message(&km, &keyboard::Key::Character("?".into()), shift, PICKER),
         Some(Message::ToggleHelp)
@@ -136,14 +143,14 @@ fn colour_panel_shortcut_toggles_the_bottom_bar_panel() {
 
     let _ = update(
         &mut app,
-        Message::KeyPressed(keyboard::Key::Character("c".into()), keyboard::Modifiers::default()),
+        Message::KeyPressed(keyboard::Key::Character("C".into()), keyboard::Modifiers::SHIFT),
     );
     assert!(app.theme.bar_open);
     assert!(app.chrome.filter_bar_visible);
 
     let _ = update(
         &mut app,
-        Message::KeyPressed(keyboard::Key::Character("c".into()), keyboard::Modifiers::default()),
+        Message::KeyPressed(keyboard::Key::Character("C".into()), keyboard::Modifiers::SHIFT),
     );
     assert!(!app.theme.bar_open);
 }
@@ -496,6 +503,7 @@ fn grid_wheel_magnitude() {
 fn folder_menu_scroll() {
     let mut app = test_app();
     app.library_session.folder_options = (0..30).map(|i| format!("folder-{i}")).collect();
+    app.chrome.bar.menu = Some(crate::frontend::ui::MenuKind::Folders);
     let _ = update(&mut app, Message::FolderMenuScroll(50.0));
     assert!(app.chrome.bar.menu_scroll.target > 0.0);
     assert_eq!(app.chrome.bar.menu_scroll.x, 0.0);
@@ -787,16 +795,14 @@ fn keybind_capture_popup_flow() {
         Message::KeyPressed(keyboard::Key::Character("p".into()), keyboard::Modifiers::default()),
     );
     assert!(app.panels.settings.open);
+    assert!(app.panels.settings.keybind_capture.is_none());
     let _ = update(
         &mut app,
-        Message::KeyPressed(keyboard::Key::Character("x".into()), keyboard::Modifiers::default()),
+        Message::Settings(SettingsMsg::KeybindCapture("keys.playlists".into(), 0)),
     );
     let _ = update(
         &mut app,
-        Message::KeyPressed(
-            keyboard::Key::Named(keyboard::key::Named::Enter),
-            keyboard::Modifiers::default(),
-        ),
+        Message::KeyPressed(keyboard::Key::Character("x".into()), keyboard::Modifiers::default()),
     );
     assert!(app.panels.settings.keybind_capture.is_none());
     assert_eq!(app.config.str_path("keys.playlists"), "x");
@@ -811,10 +817,6 @@ fn keybind_capture_popup_flow() {
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::KeybindCapture("keys.playlists".into(), 0)),
-    );
-    let _ = update(
-        &mut app,
-        Message::KeyPressed(keyboard::Key::Character("z".into()), keyboard::Modifiers::default()),
     );
     let _ = update(
         &mut app,
@@ -859,13 +861,6 @@ fn keybind_capture_binds_and_resets() {
     let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCapture("keys.flip".into(), 0)));
     let mods = keyboard::Modifiers::CTRL | keyboard::Modifiers::SHIFT | keyboard::Modifiers::ALT;
     let _ = update(&mut app, Message::KeyPressed(keyboard::Key::Character("D".into()), mods));
-    let _ = update(
-        &mut app,
-        Message::KeyPressed(
-            keyboard::Key::Named(keyboard::key::Named::Enter),
-            keyboard::Modifiers::default(),
-        ),
-    );
     assert_eq!(app.config.str_path("keys.flip"), "ctrl+alt+shift+d");
     assert_eq!(
         app.input.bindings.lookup_key(
@@ -883,7 +878,6 @@ fn keybind_capture_binds_and_resets() {
     let _ = update(&mut app, Message::SetMods(Mods::new(false, true, false)));
     let _ =
         update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureClick(MouseButton::Middle)));
-    let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureApply));
     assert_eq!(app.config.str_path("keys.playlists"), "alt+middle-click");
     assert_eq!(
         app.input.bindings.lookup_mouse(
@@ -896,7 +890,6 @@ fn keybind_capture_binds_and_resets() {
     let _ =
         update(&mut app, Message::Settings(SettingsMsg::KeybindCapture("keys.select".into(), 0)));
     let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureUnbind));
-    let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureApply));
     assert_eq!(app.config.str_path("keys.select"), "none");
     assert_eq!(
         app.input
@@ -936,7 +929,6 @@ fn capture_steals_trigger() {
         &mut app,
         Message::KeyPressed(keyboard::Key::Character("p".into()), keyboard::Modifiers::default()),
     );
-    let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureApply));
     assert_eq!(
         app.input.bindings.lookup_key(&KeyId::Char("p".into()), Mods::NONE, PICKER),
         Some(InputAction::Settings)
@@ -1154,12 +1146,11 @@ fn choose_displays_shortcut_can_be_rebound_and_reset() {
     let _ = update(&mut app, Message::ToggleSettings);
     let _ =
         update(&mut app, Message::Settings(SettingsMsg::KeybindCapture("keys.effects".into(), 0)));
-    assert_eq!(app.panels.settings.keybind_capture.as_ref().unwrap().title_key, "keybind-effects");
+    assert_eq!(app.panels.settings.keybind_capture.as_ref().unwrap().action, InputAction::Effects);
     let _ = update(
         &mut app,
         Message::KeyPressed(keyboard::Key::Character("m".into()), keyboard::Modifiers::SHIFT),
     );
-    let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureApply));
     assert_eq!(app.config.str_path("keys.effects"), "shift+m");
     assert_eq!(
         app.input.bindings.lookup_key(
@@ -1177,6 +1168,7 @@ fn choose_displays_shortcut_can_be_rebound_and_reset() {
         Some(InputAction::Effects)
     );
     let _ = update(&mut app, Message::ToggleSettings);
+    let _ = update(&mut app, Message::KeyReleased(keyboard::Key::Character("m".into())));
     let _ = update(
         &mut app,
         Message::KeyPressed(keyboard::Key::Character("m".into()), keyboard::Modifiers::SHIFT),
@@ -1192,7 +1184,6 @@ fn choose_displays_shortcut_can_be_rebound_and_reset() {
     let _ = update(&mut app, Message::SetMods(Mods::new(false, true, false)));
     let _ =
         update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureClick(MouseButton::Middle)));
-    let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureApply));
     assert_eq!(app.config.str_path("keys.effects"), "alt+middle-click");
     assert_eq!(
         app.input.bindings.lookup_mouse(

@@ -53,7 +53,7 @@ pub struct BackPanel {
     pub hh: f32,
     pub skew: f32,
     pub edge_tilt: f32,
-    pub radii: [f32; 4],
+    pub corners: super::layout::CardCorners,
     pub progress: f32,
     pub coordinated_flip: bool,
     pub embedded: bool,
@@ -70,6 +70,7 @@ pub struct BackPanel {
     pub chip_pop: f32,
     pub pop_idx: i32,
     pub static_img: bool,
+    pub drawing: Option<DrawingCardState>,
     pub overview_available: bool,
     pub scene_properties: bool,
     pub reset_thumbnail: bool,
@@ -77,6 +78,39 @@ pub struct BackPanel {
     pub picture_behind: bool,
     pub removal: RemovalAction,
 }
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DrawingCardState {
+    #[default]
+    Checking,
+    Draw,
+    Drawn,
+    Preparing,
+    Paused,
+}
+
+impl DrawingCardState {
+    pub fn label(self) -> &'static str {
+        crate::i18n::tr(match self {
+            Self::Checking => DRAWING_CHECKING_LABEL,
+            Self::Draw => DRAWING_LABEL,
+            Self::Drawn => DRAWN_LABEL,
+            Self::Preparing => DRAWING_PROGRESS_LABEL,
+            Self::Paused => DRAWING_PAUSED_LABEL,
+        })
+    }
+
+    pub fn enabled(self) -> bool {
+        matches!(self, Self::Draw | Self::Drawn)
+    }
+}
+
+const DRAWING_CHECKING_LABEL: &str = "card-back-drawing-checking";
+const DRAWING_LABEL: &str = "card-back-draw";
+const DRAWN_LABEL: &str = "card-back-drawn";
+const DRAWING_PROGRESS_LABEL: &str = "card-back-drawing";
+const DRAWING_PAUSED_LABEL: &str = "card-back-drawing-paused";
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum RemovalAction {

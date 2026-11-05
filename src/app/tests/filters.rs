@@ -1,5 +1,10 @@
 use super::*;
 
+fn select_resolution_settings(app: &mut App) {
+    let _ = update(app, Message::SetSettingsTab(String::from("search")));
+    let _ = open_section(app, crate::i18n::tr("settings-bar-sizes"));
+}
+
 #[test]
 fn seed_fills_store() {
     let mut app = test_app();
@@ -150,7 +155,7 @@ fn resolution_preset_dimensions_store_a_width_and_height_pair() {
     use crate::frontend::settings::SettingsMsg;
 
     let mut app = test_app();
-    app.panels.settings.tab = String::from("filter");
+    select_resolution_settings(&mut app);
     let base = format!("{}.0", skwd_config::keys::filter_bar::RESOLUTION_PRESETS);
     app.config.array_push(
         skwd_config::keys::filter_bar::RESOLUTION_PRESETS,
@@ -181,7 +186,7 @@ fn resolution_preset_dimensions_store_a_width_and_height_pair() {
 fn resolution_presets_reject_invalid_drafts_and_keep_the_saved_range() {
     use crate::frontend::settings::{ActionId, SettingsMsg};
     let mut app = test_app();
-    app.panels.settings.tab = String::from("filter");
+    select_resolution_settings(&mut app);
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::Run(ActionId::CreateResolutionPresetBand("4k"))),
@@ -234,7 +239,7 @@ fn resolution_templates_filter_their_bounds_and_support_portrait() {
         ("8k", 7680, 4320, None),
     ] {
         let mut app = test_app();
-        app.panels.settings.tab = "filter".into();
+        select_resolution_settings(&mut app);
         let _ = update(
             &mut app,
             Message::Settings(SettingsMsg::Run(ActionId::CreateResolutionPresetBand(band))),
@@ -277,7 +282,7 @@ fn resolution_templates_filter_their_bounds_and_support_portrait() {
 fn custom_resolution_opens_a_valid_editable_range_and_restores_cancelled_input() {
     use crate::frontend::settings::{ActionId, SettingsKey, SettingsMsg};
     let mut app = test_app();
-    app.panels.settings.tab = "filter".into();
+    select_resolution_settings(&mut app);
     let _ = update(
         &mut app,
         Message::Settings(SettingsMsg::Run(ActionId::CreateResolutionPresetBand("custom"))),

@@ -13,7 +13,7 @@ const WEATHER_SEMANTIC_EMPTY: &str = "settings-weather-state-semantic-empty";
 const WEATHER_SEMANTIC_UNMAPPED: &str = "settings-weather-state-semantic-unmapped";
 const WEATHER_APPROVED_ACTIVE: &str = "settings-weather-state-approved-active";
 const WEATHER_APPROVED_EMPTY: &str = "settings-weather-state-approved-empty";
-const WEATHER_CATEGORIES: [(&str, &str, &str); 7] = [
+pub(in crate::frontend::settings) const WEATHER_CATEGORIES: [(&str, &str, &str); 7] = [
     ("clear", keys::weather::CLEAR, "schedule-weather-clear"),
     ("cloudy", keys::weather::CLOUDY, "schedule-weather-cloudy"),
     ("rainy", keys::weather::RAINY, "schedule-weather-rainy"),
@@ -22,7 +22,7 @@ const WEATHER_CATEGORIES: [(&str, &str, &str); 7] = [
     ("foggy", keys::weather::FOGGY, "schedule-weather-foggy"),
     ("windy", keys::weather::WINDY, "schedule-weather-windy"),
 ];
-const WEATHER_QUERIES: [(&str, &str); 7] = [
+pub(in crate::frontend::settings) const WEATHER_QUERIES: [(&str, &str); 7] = [
     (keys::weather::SEMANTIC_CLEAR, "schedule-weather-clear"),
     (keys::weather::SEMANTIC_CLOUDY, "schedule-weather-cloudy"),
     (keys::weather::SEMANTIC_RAINY, "schedule-weather-rainy"),
@@ -61,6 +61,16 @@ const WEATHER_SUNNY_LABEL: &str = "schedule-weather-sunny";
 const WEATHER_COUNT_VALUE: &str = "settings-weather-count-value";
 const WEATHER_FETCHED_AGO: &str = "settings-weather-fetched-ago";
 const OUTPUT_SEPARATOR: &str = ", ";
+
+pub(crate) fn following_outdoors(
+    cfg: &dyn crate::contracts::settings::SettingsSource,
+    weather: Option<&crate::contracts::daemon::WeatherStatus>,
+) -> bool {
+    weather.is_some_and(|status| {
+        status.enabled && status.source == crate::contracts::daemon::WeatherSource::Outdoors
+    }) || (cfg.flag(keys::weather::ENABLED)
+        && cfg.text(keys::weather::SOURCE) == keys::weather::SOURCE_OUTDOORS)
+}
 
 pub(crate) fn weather_category_label(category: &str) -> &'static str {
     WEATHER_CATEGORIES
@@ -126,7 +136,7 @@ pub(super) fn tab_general(
     themes: &[String],
     detected_outputs: &[String],
 ) {
-    builder.card(tr("settings-general-general-card"), "");
+    builder.card(crate::i18n::text("settings-general-general-card"), "");
     let configured = builder.cfg.text(keys::system::MONITOR);
     let mut outputs = detected_outputs.to_vec();
     outputs.sort();
@@ -156,7 +166,10 @@ pub(super) fn tab_general(
         crate::contracts::settings::schema::setting::general::UI_SCALE,
         "x",
     );
-    builder.card(tr("settings-general-features-card"), tr("settings-general-features-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-general-features-card"),
+        tr("settings-general-features-card-desc"),
+    );
     builder.toggle(
         tr("settings-general-feature-steam-label"),
         tr("settings-general-feature-steam-desc"),
@@ -167,7 +180,10 @@ pub(super) fn tab_general(
         tr("settings-general-feature-wallhaven-desc"),
         keys::features::WALLHAVEN,
     );
-    builder.card(tr("settings-general-audio-card"), tr("settings-general-audio-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-general-audio-card"),
+        tr("settings-general-audio-card-desc"),
+    );
     builder.toggle(
         tr("settings-general-mute-label"),
         tr("settings-general-mute-desc"),
@@ -185,7 +201,7 @@ pub(super) fn tab_general(
         keys::playback::MUTE_ON_OTHER_AUDIO,
     );
     builder.card(
-        tr("settings-general-auto-recolour-card"),
+        crate::i18n::text("settings-general-auto-recolour-card"),
         tr("settings-general-auto-recolour-card-desc"),
     );
     builder.toggle(
@@ -199,7 +215,7 @@ pub(super) fn tab_general(
         keys::effects::AUTO_THEME,
         themes,
     );
-    builder.card(tr("settings-general-behaviour-card"), "");
+    builder.card(crate::i18n::text("settings-general-behaviour-card"), "");
     builder.toggle(
         tr("settings-general-close-on-selection-label"),
         tr("settings-general-close-on-selection-desc"),
@@ -220,7 +236,7 @@ pub(super) fn tab_general(
         tr("settings-general-restore-desc"),
         keys::system::RESTORE_ON_STARTUP,
     );
-    builder.card(tr("settings-general-random-card"), "");
+    builder.card(crate::i18n::text("settings-general-random-card"), "");
     builder.toggle(
         tr("settings-general-rotate-label"),
         tr("settings-general-rotate-desc"),
@@ -255,7 +271,10 @@ pub(super) fn tab_general(
 }
 
 pub(super) fn tab_schedule(builder: &mut Builder<'_>) {
-    builder.card(tr("settings-schedule-schedule-card"), tr("settings-schedule-schedule-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-schedule-schedule-card"),
+        tr("settings-schedule-schedule-card-desc"),
+    );
     builder.toggle(
         tr("settings-schedule-enable-label"),
         tr("settings-schedule-enable-desc"),
@@ -272,7 +291,10 @@ pub(super) fn tab_schedule(builder: &mut Builder<'_>) {
         ActionId::OpenScheduleEditor,
         tr("settings-schedule-editor-action"),
     );
-    builder.card(tr("settings-schedule-location-card"), tr("settings-schedule-location-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-schedule-location-card"),
+        tr("settings-schedule-location-card-desc"),
+    );
     builder.text_field(
         tr("settings-filter-location-label"),
         tr("settings-filter-location-desc"),
@@ -299,11 +321,8 @@ pub(super) fn tab_weather(
     playlists: &[crate::contracts::playlists::Playlist],
     pending: bool,
 ) {
-    builder.card(tr("settings-weather-card"), tr("settings-weather-card-desc"));
-    let active = weather.is_some_and(|status| {
-        status.enabled && status.source == crate::contracts::daemon::WeatherSource::Outdoors
-    }) || (builder.cfg.flag(keys::weather::ENABLED)
-        && builder.cfg.text(keys::weather::SOURCE) == keys::weather::SOURCE_OUTDOORS);
+    builder.card(crate::i18n::text("settings-weather-card"), tr("settings-weather-card-desc"));
+    let active = following_outdoors(builder.cfg, weather);
     builder.action(
         tr("settings-outdoors-follow-label"),
         tr(if pending {
@@ -447,9 +466,9 @@ fn outdoor_output(
             (ActionId::OutdoorPin(output.output.clone()), tr("settings-outdoors-pin-action")),
         ]);
     }
-    let controls = vec![Row {
-        title: tr("settings-outdoors-display-actions").to_string(),
-        desc: tr(if pending {
+    let controls = vec![Row::of(
+        tr("settings-outdoors-display-actions").to_string(),
+        tr(if pending {
             "settings-outdoors-pending-desc"
         } else if held {
             "settings-outdoors-held-desc"
@@ -457,14 +476,14 @@ fn outdoor_output(
             "settings-outdoors-actions-desc"
         })
         .to_string(),
-        control: if pending || output.key.is_empty() {
+        if pending || output.key.is_empty() {
             Control::Static
         } else {
             Control::ActionChips {
                 items: actions.into_iter().map(|(id, label)| (id, label.to_string())).collect(),
             }
         },
-    }];
+    )];
     builder.row(
         &output.output,
         tr(if held {
@@ -653,14 +672,10 @@ fn weather_advanced_status(
 }
 
 pub(super) fn tab_performance(builder: &mut Builder<'_>) {
-    let battery_saver = builder.cfg.flag(keys::performance::BATTERY_SAVER);
-    let power_source = match (builder.cfg.on_battery_power(), battery_saver) {
-        (true, true) => tr("settings-performance-power-battery-limited"),
-        (true, false) => tr("settings-performance-power-battery-unlimited"),
-        (false, _) => tr("settings-performance-power-external"),
-    };
-    builder.card(tr("settings-performance-power-card"), tr("settings-performance-power-card-desc"));
-    builder.info(tr("settings-performance-power-source-label"), power_source);
+    builder.card(
+        crate::i18n::text("settings-performance-power-card"),
+        tr("settings-performance-power-card-desc"),
+    );
     let devices = builder.cfg.graphics_devices();
     let mut device_options =
         vec![(String::from("auto"), tr("settings-performance-device-auto").to_string())];
@@ -723,7 +738,7 @@ pub(super) fn tab_performance(builder: &mut Builder<'_>) {
         keys::performance::BATTERY_WALLPAPER_PERFORMANCE,
     );
     builder.card(
-        tr("settings-performance-rendering-card"),
+        crate::i18n::text("settings-performance-rendering-card"),
         tr("settings-performance-rendering-card-desc"),
     );
     builder.info(
@@ -748,7 +763,7 @@ pub(super) fn tab_performance(builder: &mut Builder<'_>) {
         keys::video_preview::ENABLED,
     );
     builder.card(
-        tr("settings-performance-image-opt-card"),
+        crate::i18n::text("settings-performance-image-opt-card"),
         tr("settings-performance-image-opt-card-desc"),
     );
     builder.toggle(
@@ -778,7 +793,10 @@ pub(super) fn tab_performance(builder: &mut Builder<'_>) {
         ActionId::OptimizeImages,
         tr("settings-performance-optimize-action"),
     );
-    builder.card(tr("settings-performance-trash-card"), tr("settings-performance-trash-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-performance-trash-card"),
+        tr("settings-performance-trash-card-desc"),
+    );
     builder.num(
         tr("settings-performance-retention-label"),
         tr("settings-performance-retention-desc"),
@@ -790,7 +808,7 @@ pub(super) fn tab_performance(builder: &mut Builder<'_>) {
         tr("settings-performance-auto-delete-desc"),
         keys::performance::AUTO_DELETE_IMAGE_TRASH,
     );
-    builder.card(tr("settings-performance-thumbs-card"), "");
+    builder.card(crate::i18n::text("settings-performance-thumbs-card"), "");
     builder.num(
         tr("settings-performance-thumb-jobs-label"),
         tr("settings-performance-thumb-jobs-desc"),
@@ -815,18 +833,34 @@ pub(super) fn tab_performance(builder: &mut Builder<'_>) {
         ActionId::RecomputeColors,
         tr("settings-performance-recompute-action"),
     );
-    builder.card(tr("settings-performance-bug-report-label"), "");
+    builder.card(crate::i18n::text("settings-performance-bug-report-label"), "");
     builder.action(
         tr("settings-performance-bug-report-label"),
         tr("settings-performance-bug-report-desc"),
         ActionId::GenerateBugReport,
         tr("settings-performance-bug-report-action"),
     );
+    builder.card(
+        crate::i18n::text("settings-configuration-transfer-card"),
+        tr("settings-configuration-transfer-card-desc"),
+    );
+    builder.action(
+        tr("settings-configuration-export-label"),
+        tr("settings-configuration-export-desc"),
+        ActionId::ExportConfiguration,
+        tr("settings-configuration-export-action"),
+    );
+    builder.action(
+        tr("settings-configuration-import-label"),
+        tr("settings-configuration-import-desc"),
+        ActionId::ImportConfiguration,
+        tr("settings-configuration-import-action"),
+    );
 }
 
 pub(super) fn tab_postprocessing(builder: &mut Builder<'_>) {
     let cfg = builder.cfg;
-    builder.card(tr("settings-postprocessing-behaviour-card"), "");
+    builder.card(crate::i18n::text("settings-postprocessing-behaviour-card"), "");
     builder.toggle(
         tr("settings-postprocessing-pick-only-label"),
         tr("settings-postprocessing-pick-only-desc"),
@@ -838,7 +872,7 @@ pub(super) fn tab_postprocessing(builder: &mut Builder<'_>) {
         keys::system::POST_PROCESS_ON_RESTORE,
     );
     builder.card(
-        tr("settings-postprocessing-commands-card"),
+        crate::i18n::text("settings-postprocessing-commands-card"),
         tr("settings-postprocessing-commands-card-desc"),
     );
     let post_types = POST_TYPES.map(|key| {
@@ -869,6 +903,7 @@ pub(super) fn tab_postprocessing(builder: &mut Builder<'_>) {
                 key: key.clone(),
                 path: key,
                 placeholder: tr("settings-postprocessing-command-placeholder"),
+                secret: false,
             },
         );
         builder.action(
@@ -890,7 +925,7 @@ pub(super) fn tab_keybinds(builder: &mut Builder<'_>) {
     let cfg = builder.cfg;
     let bindings = cfg.bindings();
     for group in crate::contracts::picker::KeyBindingGroup::ALL {
-        builder.card(tr(group.title_key()), tr(group.description_key()));
+        builder.card(crate::i18n::text(group.title_key()), tr(group.description_key()));
         if group == crate::contracts::picker::KeyBindingGroup::Navigation {
             let chips = crate::domain::input::NavKeys::ALL
                 .map(|keys| (ActionId::SetNavKeys(keys), tr(keys.label_key())));
@@ -913,7 +948,7 @@ pub(super) fn tab_keybinds(builder: &mut Builder<'_>) {
     let conflicts = bindings.conflicts();
     if !conflicts.is_empty() {
         builder.card(
-            tr("settings-keybinds-conflicts-card"),
+            crate::i18n::text("settings-keybinds-conflicts-card"),
             tr("settings-keybinds-conflicts-card-desc"),
         );
     }
@@ -927,7 +962,10 @@ pub(super) fn tab_keybinds(builder: &mut Builder<'_>) {
         let msg = settings_keybind_conflict(title(first), title(second), &bindings.label(first));
         builder.row(tr("settings-keybinds-conflict-label"), &msg, Control::Static);
     }
-    builder.card(tr("settings-keybinds-fixed-card"), tr("settings-keybinds-fixed-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-keybinds-fixed-card"),
+        tr("settings-keybinds-fixed-card-desc"),
+    );
     builder.row("Escape", tr("settings-keybinds-fixed-escape-desc"), Control::Static);
     builder.row(
         tr("settings-keybinds-mouse-scroll-label"),
@@ -939,7 +977,10 @@ pub(super) fn tab_keybinds(builder: &mut Builder<'_>) {
         tr("settings-keybinds-mouse-hover-desc"),
         Control::Static,
     );
-    builder.card(tr("settings-keybinds-reset-card"), tr("settings-keybinds-reset-desc"));
+    builder.card(
+        crate::i18n::text("settings-keybinds-reset-card"),
+        tr("settings-keybinds-reset-desc"),
+    );
     builder.action(
         tr("settings-keybinds-reset-label"),
         tr("settings-keybinds-reset-desc"),
@@ -949,9 +990,9 @@ pub(super) fn tab_keybinds(builder: &mut Builder<'_>) {
 }
 
 pub(super) fn tab_language(builder: &mut Builder<'_>) {
-    builder.card(tr("settings-language-card"), tr("settings-language-card-desc"));
+    builder.card(crate::i18n::text("settings-language-card"), tr("settings-language-card-desc"));
     let current = crate::i18n::language_choice(&builder.cfg.text(keys::general::LANGUAGE));
-    let mut options = vec![("auto", tr("settings-language-system"))];
+    let mut options = vec![(crate::i18n::SYSTEM_LANGUAGE, tr("settings-language-system"))];
     options
         .extend(crate::i18n::LANGUAGES.iter().map(|language| (language.tag, tr(language.label))));
     builder.dropdown_cur(

@@ -11,6 +11,16 @@ use super::super::*;
 
 const PREHEAT_DEBOUNCE: Duration = Duration::from_millis(120);
 
+pub(in crate::app) fn studio_deadline(
+    now: Instant,
+    studio: &crate::domain::studio::Studio,
+) -> Option<Instant> {
+    (studio.mode_choice == crate::domain::studio::ModeChoice::ByTime).then(|| {
+        let (effective, wait) = crate::infrastructure::theme::studio_time();
+        if studio.mode == effective { now + wait } else { now }
+    })
+}
+
 impl App {
     pub(in crate::app) fn schedule_frame(&mut self) {
         if self.runtime_state.stashed
@@ -43,7 +53,13 @@ impl App {
                 let wait_ms = TOAST_MS.saturating_sub(fade_ms) as u64;
                 (*since + Duration::from_millis(wait_ms)).max(now)
             });
-            [self.scene.preview_deadline(), toast].into_iter().flatten().min()
+            let studio = self
+                .panels
+                .colour_studio
+                .as_ref()
+                .and_then(|studio| studio_deadline(now, &studio.model));
+            let minute = self.panels.strand.as_ref().and_then(|strand| strand.minute);
+            [self.scene.preview_deadline(), toast, studio, minute].into_iter().flatten().min()
         };
         self.runtime_state.frame_clock.schedule(deadline);
     }
@@ -79,11 +95,9 @@ impl App {
 
     pub(in crate::app) fn wants_transition_preview(&self) -> bool {
         let transition_section = crate::frontend::settings::is_transition_preview_section(
-            &self.panels.settings.tab,
-            self.panels.settings.section,
+            self.panels.settings.open_section,
         );
         self.panels.settings.open
-            && self.panels.settings.tab == "motion"
             && transition_section
             && self.config.flag_default_true(skwd_config::keys::transition::ENABLED)
             && self.config.flag_default_true(skwd_config::keys::transition::PREVIEW)
@@ -111,8 +125,23 @@ impl App {
         demand_interval
     }
 
+    #[expect(clippy::too_many_lines, reason = "frame demand scheduling algorithm")]
     fn frame_demand(&self) -> FrameDemand {
         let mut demand = self.scene.frame_demand();
+        if self
+            .source_browser
+            .browser
+            .as_ref()
+            .is_some_and(|browser| browser.view.media.loading || browser.view.details_loading)
+        {
+            demand = demand.max(FrameDemand::Passive);
+        }
+        if self.source_browser.browser.is_some() && self.source_browser.media.handles.len() > 1 {
+            demand = demand.max(FrameDemand::Preview);
+        }
+        if self.source_browser.media.cards.visible {
+            demand = demand.max(FrameDemand::Preview);
+        }
         if self
             .runtime_state
             .demo
@@ -147,12 +176,14 @@ impl App {
         {
             demand = demand.max(FrameDemand::Preview);
         }
-        if (self.tags.cloud_open && !self.tags.cloud_entrance.settled())
+        if crate::app::update::arrange::animating(self)
+            || (self.tags.cloud_open && !self.tags.cloud_entrance.settled())
             || (self.panels.settings.open && !self.panels.settings.entrance.settled())
             || (self.panels.settings.open && !self.panels.settings.tab_anim.settled())
+            || (self.panels.settings.open && !self.panels.settings.emblem_anim.settled())
             || (self.panels.settings.open && !self.panels.settings.section_anim.settled())
             || (self.panels.settings.open && !self.panels.settings.control_anim.settled())
-            || (self.panels.settings.open && self.panels.settings.profile_animating())
+            || (self.panels.settings.open && self.panels.settings.sections_animating())
             || ((self.panels.settings.open || self.panels.effects.is_some())
                 && self.panels.settings.bars_animating())
             || self
@@ -175,6 +206,12 @@ impl App {
                 .theme_designer
                 .as_ref()
                 .is_some_and(crate::frontend::theme_designer::ThemeDesigner::animating)
+            || self
+                .panels
+                .colour_studio
+                .as_ref()
+                .is_some_and(crate::frontend::colour_studio::ColourStudio::animating)
+            || self.panels.strand.as_ref().is_some_and(crate::frontend::strand::Strand::animating)
             || (self.source_browser.browser.is_some() && !self.source_browser.entrance.settled())
             || self.chrome.filter_bar_animating()
         {
@@ -326,6 +363,7 @@ impl App {
     }
 
     pub(in crate::app) fn run_tick(&mut self, now: Instant) {
+        self.sync_browser_media(now);
         crate::app::update::drive_transition_preview(self);
         self.scene.input_idle =
             now.duration_since(self.input.last_activity) > std::time::Duration::from_secs(60);
@@ -354,6 +392,11 @@ impl App {
         if let Some(designer) = self.panels.theme_designer.as_mut() {
             designer.tick(dt);
         }
+        if let Some(studio) = self.panels.colour_studio.as_mut() {
+            studio.set_time_mode(crate::infrastructure::theme::studio_time().0);
+            studio.tick(dt);
+        }
+        crate::app::update::strand::tick(self, now, dt);
         let t0 = Instant::now();
         {
             crate::zone!("preheat");
@@ -494,6 +537,7 @@ impl App {
     }
 
     fn tick_overlays(&mut self, dt: f32) {
+        crate::app::update::arrange::tick(self, dt);
         if self.chrome.tick_filter_bar(dt) {
             self.chrome.bar.cache.clear();
         }
@@ -522,10 +566,13 @@ impl App {
         if self.panels.settings.open && !self.panels.settings.tab_anim.settled() {
             self.panels.settings.tab_anim.tick(dt);
         }
+        if self.panels.settings.open && !self.panels.settings.emblem_anim.settled() {
+            self.panels.settings.emblem_anim.tick(dt);
+        }
         if self.panels.settings.open {
             self.panels.settings.section_anim.tick(dt);
             self.panels.settings.control_anim.tick(dt);
-            self.panels.settings.tick_profile(dt);
+            self.panels.settings.tick_sections(dt);
         }
         if self.panels.settings.open || self.panels.effects.is_some() {
             self.panels.settings.tick_bars(dt);
@@ -533,3 +580,7 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "ticks_studio_time_tests.rs"]
+mod studio_time_tests;

@@ -8,3 +8,6 @@ settings-displays-lock-label = Bloquear
 settings-displays-lock-desc = Atualiza o papel de parede deste monitor apenas pelo seletor múltiplo.
 settings-displays-empty-label = Detectando telas
 settings-displays-empty-desc = Os papéis de parede atuais aparecerão quando o serviço de papel de parede informar as telas.
+settings-displays-default-placement-label = Posição padrão
+settings-displays-default-placement-desc = Usado por todas as telas que não têm uma posição própria.
+settings-displays-use-global = Usar a global · { $mode }

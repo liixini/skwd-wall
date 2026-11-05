@@ -1,6 +1,5 @@
 settings-paths-excluded-card = 除外するフォルダー
 settings-paths-excluded-card-desc = 画像と動画のライブラリで、これらのフォルダーとサブフォルダーを除外します。保存済みのメタデータは残ります。
-settings-paths-path-placeholder = フォルダーのパス
 settings-paths-source-card = 壁紙フォルダー
 settings-paths-source-card-desc = これらのフォルダーとサブフォルダーから画像と動画を検索します。変更するとライブラリが自動更新されます。
 settings-paths-folder-choose-action = フォルダーを選択
@@ -24,4 +23,3 @@ settings-paths-removed-excluded = 除外フォルダーを削除しました: { 
 settings-paths-watch-polling = ポーリング
 settings-paths-watch-error = 読み取れません
 settings-paths-watch-error-note = マウントされ読み取れるか確認してください。ポーリングは再試行を続けます。
-settings-paths-excluded-footer = 除外フォルダーはスキャンされないため、どのプロファイルでも表示できません。フォルダーを残したまま人前で隠すには、ライブラリ › プロファイルを使います。

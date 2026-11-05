@@ -3,6 +3,8 @@ use std::cmp::Ordering;
 use crate::domain::library::catalog::{Catalog, Wallpaper, WallpaperKind};
 use crate::domain::library::search::NumericQuery;
 
+const RESOLUTION_SEPARATORS: [char; 3] = ['x', 'X', '×'];
+
 pub const ALL_WALLPAPERS: &str = "*";
 
 #[derive(Debug, Clone, PartialEq)]
@@ -114,8 +116,12 @@ fn resolution_ok(filters: &Filters, item: &Wallpaper) -> bool {
     }
 }
 
+pub fn resolution_parts(value: &str) -> (&str, &str) {
+    value.split_once(RESOLUTION_SEPARATORS).unwrap_or_default()
+}
+
 pub fn parse_resolution(value: &str) -> Option<(i64, i64)> {
-    let (width, height) = value.split_once(['x', 'X', '×'])?;
+    let (width, height) = resolution_parts(value);
     let width = width.trim().parse::<i64>().ok()?;
     let height = height.trim().parse::<i64>().ok()?;
     (width > 0 && height > 0).then_some((width, height))

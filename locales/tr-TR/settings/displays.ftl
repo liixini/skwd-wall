@@ -8,3 +8,6 @@ settings-displays-lock-label = Kilitle
 settings-displays-lock-desc = Yalnızca bu monitörün duvar kâğıdını çoklu seçici aracılığıyla güncelleyin.
 settings-displays-empty-label = Ekranlar algılanıyor
 settings-displays-empty-desc = Duvar kâğıdı hizmeti ekranları bildirdiğinde mevcut duvar kâğıtları görünecek.
+settings-displays-default-placement-label = Varsayılan yerleşim
+settings-displays-default-placement-desc = Kendi yerleşim ayarı olmayan her ekran bunu kullanır.
+settings-displays-use-global = Genel ayarı kullan · { $mode }

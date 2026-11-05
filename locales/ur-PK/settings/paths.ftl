@@ -1,6 +1,5 @@
 settings-paths-excluded-card = خارج کیے گئے فولڈرز
 settings-paths-excluded-card-desc = تصویر اور ویڈیو لائبریری میں ان فولڈرز اور ان کے ذیلی فولڈرز کو چھوڑ دیں۔ محفوظ شدہ میٹا ڈیٹا برقرار رہتا ہے۔
-settings-paths-path-placeholder = فولڈر کا راستہ
 settings-paths-source-card = وال پیپر کے فولڈرز
 settings-paths-source-card-desc = ان فولڈرز اور ان کے ذیلی فولڈرز میں تصاویر اور ویڈیوز تلاش کریں۔ تبدیلیاں لائبریری کو خودکار طور پر تازہ کرتی ہیں۔
 settings-paths-folder-choose-action = فولڈر منتخب کریں
@@ -24,4 +23,3 @@ settings-paths-removed-excluded = خارج کردہ فولڈر ہٹا دیا گ�
 settings-paths-watch-polling = پولنگ
 settings-paths-watch-error = پڑھا نہیں جا سکتا
 settings-paths-watch-error-note = دیکھیں کہ یہ ماؤنٹ ہے اور پڑھا جا سکتا ہے۔ پولنگ دوبارہ کوشش کرتی رہتی ہے۔
-settings-paths-excluded-footer = خارج کردہ فولڈر کبھی اسکین نہیں ہوتے، اس لیے کوئی پروفائل انہیں نہیں دکھا سکتا۔ فولڈر رکھ کر عوامی جگہ چھپانے کے لیے لائبریری › پروفائل استعمال کریں۔

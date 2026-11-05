@@ -1,6 +1,5 @@
 settings-performance-power-card = ল্যাপটপ ও পাওয়ার
 settings-performance-power-card-desc = পিকার স্থির হলে রেন্ডারিং বন্ধ করে। ওয়ালপেপার রেন্ডারার পিকার বন্ধের পরেও চলতে থাকে, তাই তাদের আলাদা ব্যাটারি সীমা আছে।
-settings-performance-power-source-label = বর্তমান পাওয়ার সোর্স
 settings-performance-power-battery-limited = ব্যাটারি (স্বয়ংক্রিয় সীমা সক্রিয়)
 settings-performance-power-battery-unlimited = ব্যাটারি (স্বয়ংক্রিয় সীমা বন্ধ)
 settings-performance-power-external = বাহ্যিক পাওয়ার, ডেস্কটপ বা অজানা (স্বয়ংক্রিয় সীমা নিষ্ক্রিয়)
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = সব WE ওয়ালপেপার
 settings-performance-capture-we-desc = নেটিভ সিন ব্যাকগ্রাউন্ডে ক্যাপচার করুন। বৈধ ক্যাপচার পুনর্ব্যবহার করে এবং কোনো সিন ব্যর্থ হলে বিদ্যমান প্রিভিউ রাখে। আপনি থামিয়ে পরে চালিয়ে যেতে পারেন।
 settings-performance-capture-we-action = থাম্বনেইল তৈরি করুন
 settings-performance-capture-we-stop = থামান
+settings-performance-effective-label = কার্যকর সীমা
+settings-performance-effective = পিকার { $fps } fps · ভিডিও { $seconds } সেকেন্ড নিষ্ক্রিয় থাকার পর থামে · { $reason }
+settings-performance-effective-no-idle = পিকার { $fps } fps · নিষ্ক্রিয় ভিডিও বিরতি বন্ধ · { $reason }
+settings-performance-effective-reason-battery = ব্যাটারিতে
+settings-performance-effective-reason-disabled = ব্যাটারি সেভার বন্ধ
+settings-performance-effective-reason-external = বাইরের পাওয়ারে

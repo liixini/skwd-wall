@@ -2,14 +2,20 @@ use iced::widget::{
     Space, Stack, button, canvas, column, container, mouse_area, scrollable, stack, text,
     text_input,
 };
-use iced::{Alignment, Element, Length, Padding};
+use iced::{Alignment, Element, Length, Padding, Rectangle};
 
 use crate::frontend::scene::layout::Mode;
 use crate::frontend::ui::row;
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use super::chrome::card_h;
+
+const CLOUD_RISE_POWER: i32 = 3;
+const CLOUD_RISE: f32 = 16.0;
+const CLOUD_INNER_PAD: f32 = 36.0;
+const CLOUD_INNER_MIN: f32 = 120.0;
+const CLOUD_CARD_GAP: f32 = 14.0;
+const CLOUD_BOTTOM_MARGIN: f32 = 16.0;
 
 pub(crate) fn tag_intent_message(intent: crate::frontend::tagcloud::TagIntent) -> Message {
     match intent {
@@ -289,27 +295,28 @@ fn card_tag_drawer_bounds(
     (left, top, width, height)
 }
 
-pub(super) fn tag_cloud_layer(app: &App, vh: f32) -> Element<'_, Message> {
-    let scale = app.config.ui_scale();
-    let vw = app.scene.viewport.0;
-    let content_w = match app.scene.mode {
-        Mode::Grid => Some(app.scene.gp.total_w()),
-        Mode::Hex => Some(app.scene.hp.visible_band()),
+pub(crate) fn tag_cloud_bounds(app: &App, context: &super::layout::LayoutContext<'_>) -> Rectangle {
+    let scale = context.config.ui_scale();
+    let (vw, vh) = context.viewport;
+    let content_w = match context.params.mode {
+        Mode::Grid => Some(context.params.grid.total_w()),
+        Mode::Hex => Some(context.params.hex.visible_band()),
         _ => None,
     };
     let cloud_w = cloud_fit_width(
-        app.config.tag_cloud_width_override().map(|w| w as f32 * scale),
+        context.config.tag_cloud_width_override().map(|w| w as f32 * scale),
         content_w,
-        app.config.tag_cloud_width() * scale,
+        context.config.tag_cloud_width() * scale,
         vw,
-    );
-    let (cox, coy) = app.config.tag_cloud_offset();
-    let ent = app.tags.cloud_entrance.x;
-    let rise = (1.0 - ent).powi(3) * 16.0 * scale;
+    )
+    .min(vw.max(1.0));
+    let (cox, coy) = context.config.tag_cloud_offset();
+    let ent = context.entrance;
+    let rise = (1.0 - ent).powi(CLOUD_RISE_POWER) * CLOUD_RISE * scale;
     let entries = app.tag_cloud_entries();
-    let tag_inner_width = (cloud_w - 36.0 * scale).max(120.0);
+    let tag_inner_width = (cloud_w - CLOUD_INNER_PAD * scale).max(CLOUD_INNER_MIN);
     let content_rows = crate::frontend::ui::tag_cloud_row_count(&entries, tag_inner_width, scale);
-    let visible_rows = app.config.tag_cloud_rows();
+    let visible_rows = context.config.tag_cloud_rows();
     let cloud_h = cloud_fit_height(
         app.tags.matching_tags_open,
         app.tags.search_mode == SearchMode::Describe,
@@ -317,15 +324,53 @@ pub(super) fn tag_cloud_layer(app: &App, vh: f32) -> Element<'_, Message> {
         content_rows,
         vh,
         scale,
-    );
-    let cloud_top = if matches!(app.scene.mode, Mode::Sandy) {
+    )
+    .min(vh.max(1.0));
+    let default_top = if matches!(context.params.mode, Mode::Sandy) {
         let strip_top =
-            crate::frontend::scene::sandy::strip_bottom(vh) - app.scene.xp.sandy.strip_h();
-        (strip_top - crate::frontend::scene::sandy::BAR_GAP - cloud_h + coy).max(0.0) + rise
+            crate::frontend::scene::sandy::strip_bottom(vh) - context.params.extra.sandy.strip_h();
+        (strip_top - crate::frontend::scene::sandy::BAR_GAP - cloud_h + coy).max(0.0)
     } else {
-        (((vh + card_h(app, vh)) * 0.5 + 14.0 + coy).min(vh - cloud_h - 16.0)).max(0.0) + rise
+        (((vh + context.card_height()) * 0.5 + CLOUD_CARD_GAP + coy)
+            .min(vh - cloud_h - CLOUD_BOTTOM_MARGIN))
+        .max(0.0)
     };
-    let cloud_left = (((vw - cloud_w) * 0.5) + cox).max(0.0);
+    let (cloud_left, cloud_top) = if let Some((x, y)) = context.config.tag_cloud_position() {
+        (x * vw, y * vh)
+    } else {
+        (((vw - cloud_w) * 0.5 + cox).max(0.0), default_top)
+    };
+    Rectangle {
+        x: cloud_left.clamp(0.0, (vw - cloud_w).max(0.0)),
+        y: (cloud_top + rise).clamp(0.0, (vh - cloud_h).max(0.0)),
+        width: cloud_w,
+        height: cloud_h,
+    }
+}
+
+pub(crate) fn tag_cloud_target(app: &App, vh: f32) -> Rectangle {
+    let context = super::layout::LayoutContext::current(app, (app.scene.viewport.0, vh));
+    let rect = tag_cloud_bounds(app, &context);
+    crate::app::update::arrange::placement::resolve(
+        app,
+        crate::frontend::arrange::Target::Search,
+        rect,
+    )
+}
+
+pub(crate) fn tag_cloud_geometry(app: &App, vh: f32) -> Rectangle {
+    let rect = tag_cloud_target(app, vh);
+    app.panels
+        .arrange
+        .as_ref()
+        .and_then(|session| session.editor.shown(crate::frontend::arrange::Target::Search))
+        .map_or(rect, |shown| Rectangle { x: shown.x, y: shown.y, width: shown.w, height: shown.h })
+}
+
+pub(super) fn tag_cloud_layer(app: &App, vh: f32) -> Element<'_, Message> {
+    let scale = app.config.ui_scale();
+    let rect = tag_cloud_geometry(app, vh);
+    let entries = app.tag_cloud_entries();
     let cloud = crate::frontend::tagcloud::view(crate::frontend::tagcloud::CloudView {
         entries,
         db_empty: app.library_session.library.catalog().tags.is_empty(),
@@ -351,11 +396,11 @@ pub(super) fn tag_cloud_layer(app: &App, vh: f32) -> Element<'_, Message> {
         filtered_count: app.library_session.visible_count,
         sort_az: app.tags.sort_az,
         matching_tags_open: app.tags.matching_tags_open,
-        entrance: app.tags.cloud_entrance.x,
+        entrance: if app.panels.arrange.is_some() { 1.0 } else { app.tags.cloud_entrance.x },
         scroll: app.tags.cloud_scroll.x,
         scroll_target: app.tags.cloud_scroll.target,
-        width: cloud_w,
-        height: cloud_h,
+        width: rect.width,
+        height: rect.height,
         scale,
         pal: &app.theme.palette,
     })
@@ -363,7 +408,7 @@ pub(super) fn tag_cloud_layer(app: &App, vh: f32) -> Element<'_, Message> {
     container(iced::widget::mouse_area(cloud).on_press(Message::Noop))
         .width(Length::Fill)
         .align_x(Alignment::Start)
-        .padding(Padding { top: cloud_top, left: cloud_left, ..Padding::ZERO })
+        .padding(Padding { top: rect.y, left: rect.x, ..Padding::ZERO })
         .into()
 }
 

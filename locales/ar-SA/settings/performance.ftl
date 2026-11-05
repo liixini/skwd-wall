@@ -1,6 +1,5 @@
 settings-performance-power-card = الحاسوب المحمول والطاقة
 settings-performance-power-card-desc = يتوقف المنتقي عن التصيير عندما يستقر. تستمر مصيّرات الخلفيات في العمل بعد إغلاقه، لذا لها حدود بطارية منفصلة.
-settings-performance-power-source-label = مصدر الطاقة الحالي
 settings-performance-power-battery-limited = البطارية (الحدود التلقائية نشطة)
 settings-performance-power-battery-unlimited = البطارية (الحدود التلقائية معطّلة)
 settings-performance-power-external = طاقة خارجية أو حاسوب مكتبي أو غير متاح (الحدود التلقائية غير نشطة)
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = إضافة مصغرات من إطارا�
 settings-performance-capture-we-desc = التقاط المشاهد الأصلية في الخلفية. يُعاد استخدام الالتقاطات الصالحة وتبقى المعاينات الموجودة إن فشل مشهد. يمكنك الإيقاف والمتابعة لاحقًا.
 settings-performance-capture-we-action = توليد المصغرات
 settings-performance-capture-we-stop = إيقاف
+settings-performance-effective-label = الحدود الفعلية
+settings-performance-effective = المنتقي بمعدل { $fps } إطارًا في الثانية · يتوقف الفيديو مؤقتًا بعد { $seconds } ث من الخمول · { $reason }
+settings-performance-effective-no-idle = المنتقي بمعدل { $fps } إطارًا في الثانية · إيقاف الفيديو المؤقت عند الخمول معطّل · { $reason }
+settings-performance-effective-reason-battery = على البطارية
+settings-performance-effective-reason-disabled = توفير البطارية متوقف
+settings-performance-effective-reason-external = على طاقة خارجية

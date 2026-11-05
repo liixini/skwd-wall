@@ -1,5 +1,3 @@
-settings-tab-language = اللغة
-settings-tab-note-language = اختر اللغة المستخدمة في المنتقي والإعدادات.
 settings-language-card = لغة الواجهة
 settings-language-card-desc = تُطبّق التغييرات فورًا وتُحفظ للتشغيل التالي.
 settings-language-choice-label = اللغة

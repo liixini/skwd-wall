@@ -1,6 +1,5 @@
 settings-paths-excluded-card = المجلدات المستبعدة
 settings-paths-excluded-card-desc = تجاهل هذه المجلدات ومجلداتها الفرعية في مكتبة الصور والفيديو. تبقى البيانات الوصفية المحفوظة.
-settings-paths-path-placeholder = مسار المجلد
 settings-paths-source-card = مجلدات الخلفيات
 settings-paths-source-card-desc = افحص هذه المجلدات ومجلداتها الفرعية بحثًا عن الصور والفيديوهات. تُحدّث التغييرات المكتبة تلقائيًا.
 settings-paths-folder-choose-action = اختيار مجلد
@@ -29,4 +28,3 @@ settings-paths-removed-excluded = أُزيل المجلد المستبعد { $pa
 settings-paths-watch-polling = استطلاع
 settings-paths-watch-error = تتعذر القراءة
 settings-paths-watch-error-note = تحقق من أنه موصول وقابل للقراءة. يواصل الاستطلاع المحاولة.
-settings-paths-excluded-footer = المجلدات المستبعدة لا تُفحص أبدًا، فلا يستطيع أي ملف إظهارها. للإبقاء على مجلد مع إخفائه أمام الآخرين، استخدم المكتبة › الملفات.

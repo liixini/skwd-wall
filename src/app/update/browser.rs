@@ -4,7 +4,10 @@ use iced::Task;
 use super::super::*;
 
 use crate::contracts::browser::{ApplyKind, ApplyTarget};
-use crate::frontend::browser::BrowserMsg;
+use crate::frontend::browser::{
+    BrowserMsg, STEAM_DAYS_FILTER, STEAM_NSFW_FILTER, STEAM_NSFW_VALUE, STEAM_RESOLUTION_FILTER,
+    STEAM_TYPE_FILTER,
+};
 use crate::infrastructure::browser::RpcCall;
 
 pub(super) fn update(app: &mut App, msg: BrowserMsg) -> Task<Message> {
@@ -20,12 +23,18 @@ pub(super) fn update(app: &mut App, msg: BrowserMsg) -> Task<Message> {
         }
         BrowserMsg::SetSort(sort) => browser_edit(app, true, |br| br.request.sorting = sort),
         BrowserMsg::SteamFilter(kind, value) => browser_edit(app, true, |br| match kind.as_str() {
-            "type" => br.request.steam.kind = value,
-            "res" => br.request.steam.resolution = value,
-            "cat" => br.request.steam.category = value,
-            "days" => br.request.steam.trend_days = value,
-            "nsfw" => br.request.nsfw = value == "1",
+            STEAM_TYPE_FILTER => br.request.steam.kind = value,
+            STEAM_RESOLUTION_FILTER => br.request.steam.resolution = value,
+            STEAM_DAYS_FILTER => br.request.steam.trend_days = value,
+            STEAM_NSFW_FILTER => br.request.nsfw = value == STEAM_NSFW_VALUE,
             _ => {}
+        }),
+        BrowserMsg::SteamTag(tag, exclude) => browser_edit(app, true, |br| {
+            if exclude && !tag.is_empty() {
+                br.request.steam.exclude_tag(&tag);
+            } else {
+                br.request.steam.cycle_tag(&tag);
+            }
         }),
         BrowserMsg::CatalogFilter(kind, value) => {
             browser_edit(app, true, |br| match kind.as_str() {
@@ -86,6 +95,11 @@ pub(super) fn update(app: &mut App, msg: BrowserMsg) -> Task<Message> {
                 if br.request.wallhaven.collection == id { String::new() } else { id };
         }),
         BrowserMsg::WallInput(input) => match input {
+            crate::frontend::ui::BrowserWallInput::Leave => {
+                app.source_browser.wall.scene.hover = None;
+                browser_hover(app, None);
+                Task::none()
+            }
             crate::frontend::ui::BrowserWallInput::Pointer(x, y) => {
                 browser_wall_pointer(app, x, y);
                 Task::none()
@@ -113,6 +127,31 @@ pub(super) fn update(app: &mut App, msg: BrowserMsg) -> Task<Message> {
         BrowserMsg::OpenPreview(idx) => browser_open_preview(app, idx),
         BrowserMsg::ClosePreview => browser_close_preview(app),
         BrowserMsg::CopyWorkshopId(id) => iced::clipboard::write(id),
+        BrowserMsg::SelectPreview(asset) => {
+            if let Some(browser) = app.source_browser.browser.as_mut() {
+                browser.view.asset = asset;
+            }
+            app.sync_browser_media(std::time::Instant::now());
+            app.retick();
+            Task::none()
+        }
+        BrowserMsg::RetryPreview => {
+            app.retry_browser_preview();
+            Task::none()
+        }
+        BrowserMsg::RetryDetails => {
+            app.request_workshop_details();
+            Task::none()
+        }
+        BrowserMsg::ToggleDescription => {
+            if let Some(browser) = app.source_browser.browser.as_mut() {
+                browser.view.description_expanded = !browser.view.description_expanded;
+            }
+            Task::none()
+        }
+        BrowserMsg::OpenWorkshop => open_workshop_link(app, WorkshopLinkKind::Item),
+        BrowserMsg::OpenCreator => open_workshop_link(app, WorkshopLinkKind::Creator),
+        BrowserMsg::OpenVideo(index) => open_workshop_link(app, WorkshopLinkKind::Video(index)),
         BrowserMsg::Download(id) => browser_download(app, id),
     }
 }
@@ -443,8 +482,17 @@ pub(super) fn start_pending_download(app: &mut App, id: String, call: RpcCall) {
 
 pub(super) fn browser_open_preview(app: &mut App, idx: usize) -> Task<Message> {
     let cap = app.config.youtube_max_minutes().saturating_mul(60);
-    let req = app.source_browser.browser.as_mut().and_then(|br| {
+    let mut stepping = false;
+    if let Some(br) = app.source_browser.browser.as_mut() {
+        if idx >= br.session.items.len() {
+            return Task::none();
+        }
+        stepping = br.session.preview.is_some();
         br.session.preview = Some(idx);
+        br.view.asset = 0;
+        br.view.description_expanded = false;
+        br.view.details_loading = false;
+        br.view.details_error = None;
         if br.source == crate::frontend::browser::Source::Youtube
             && let Some(dur) = br.session.items.get(idx).map(|it| it.duration_secs)
             && dur > 0
@@ -453,19 +501,57 @@ pub(super) fn browser_open_preview(app: &mut App, idx: usize) -> Task<Message> {
             br.request.catalog.clip_start = String::from("0:00");
             br.request.catalog.clip_len = crate::frontend::browser::fmt_clock(len);
         }
-        br.session
-            .items
-            .get(idx)
-            .and_then(|item| (item.preview_path.is_none()).then(|| br.preview_request(item)))
-    });
-    if let Some(request) = req.filter(|request| !request.full_url.is_empty()) {
-        let source = request.source;
-        let id = request.id.clone();
-        let call = crate::infrastructure::browser::encode_preview(&request);
-        app.call_tracked(call.method, call.params, Pending::BrowserPreview { source, id });
     }
-    app.source_browser.preview_animation = 0.0;
+    if !stepping {
+        app.source_browser.preview_animation = 0.0;
+    }
     app.source_browser.preview_closing = false;
+    app.sync_browser_media(std::time::Instant::now());
+    app.request_workshop_details();
+    app.request_workshop_media();
     app.retick();
     Task::none()
+}
+
+#[derive(Clone, Copy)]
+enum WorkshopLinkKind {
+    Item,
+    Creator,
+    Video(usize),
+}
+
+fn open_workshop_link(app: &App, kind: WorkshopLinkKind) -> Task<Message> {
+    use crate::contracts::browser::{WorkshopLink, WorkshopPreview};
+    let Some(browser) = app
+        .source_browser
+        .browser
+        .as_ref()
+        .filter(|browser| browser.source == crate::contracts::browser::Source::Steam)
+    else {
+        return Task::none();
+    };
+    let Some(item) = browser.session.preview.and_then(|index| browser.session.items.get(index))
+    else {
+        return Task::none();
+    };
+    let link = match kind {
+        WorkshopLinkKind::Item => Some(WorkshopLink::Item(item.id.clone())),
+        WorkshopLinkKind::Creator => {
+            item.workshop.as_ref().map(|details| WorkshopLink::Creator(details.creator_id.clone()))
+        }
+        WorkshopLinkKind::Video(index) => {
+            item.workshop.as_ref().and_then(|details| details.previews.get(index)).and_then(
+                |preview| match preview {
+                    WorkshopPreview::Youtube { id } => Some(WorkshopLink::Video(id.clone())),
+                    WorkshopPreview::Image { .. } => None,
+                },
+            )
+        }
+    };
+    link.map_or_else(Task::none, |link| {
+        Task::perform(
+            async move { crate::infrastructure::browser::open_workshop_link(&link) },
+            Message::BrowserLinkOpened,
+        )
+    })
 }

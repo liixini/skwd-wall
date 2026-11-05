@@ -4,10 +4,6 @@ settings-selector-display-mode-desc = Duvar kâğıdı kartlarının seçicide n
 settings-selector-filter-motion-label = Filtre hareketi
 settings-selector-filter-motion-desc = Filtre sonuçları değiştiğinde kaydırmanın hızı. Paylaşılan üç hız, Hareket ayarlarındadır.
 settings-selector-presets-card = Ön ayarlar
-settings-selector-presets-card-desc = Mevcut düzen ayarlarını kaydedin veya kaydedilmiş bir küme uygulayın. Her görüntüleme modu kendi ön ayarlarını tutar.
-settings-selector-preset-name-label = Ad
-settings-selector-preset-name-desc = Seçili ön ayarı yeniden adlandırın. Mevcut olanı kaydet, otomatik adla yeni bir ön ayar oluşturur.
-settings-selector-preset-name-placeholder = Stil adı
 settings-selector-preset-generated-name = Stil { $number }
 settings-selector-saved-styles-label = Kaydedilmiş stiller
 settings-selector-live-preview-card = Renk önizlemesi
@@ -68,10 +64,6 @@ settings-selector-grid-gap-x-label = Yatay boşluk
 settings-selector-grid-gap-x-desc = Sütunlar arasında görünür kenar-kenar boşluğu.
 settings-selector-grid-gap-y-label = Dikey boşluk
 settings-selector-grid-gap-y-desc = Satırlar arasında görünür kenar-kenar boşluğu.
-settings-selector-grid-round-label = Yuvarlak köşeler
-settings-selector-grid-round-desc = Kapalıyken tüm Duvar kartları düz köşeler kullanır.
-settings-selector-grid-corner-radius-label = Köşe yarıçapı
-settings-selector-grid-corner-radius-desc = Yuvarlatılmış köşeler etkinleştirildiğinde kullanılan yuvarlaklık.
 settings-selector-performance-card = Performans
 settings-selector-performance-card-desc = Her tanecik ayrı geometridir. Daha büyük tanecikler daha az şekil ve çok daha az GPU işi demektir.
 settings-selector-sand-note-discrete = Bu yük, algılanan harici GPU için küçüktür. Aynı tanecik boyutu tümleşik GPU üzerinde yaklaşık 150 kat daha yavaş olabilir.
@@ -157,16 +149,6 @@ settings-selector-wobble-desc = Kartlar kaydırma yönünde bükülür ve kaydı
 settings-selector-wobble-strength-label = Dalgalanma kuvveti
 settings-selector-wobble-strength-desc = 100 değeri varsayılandır. 200 değeri bükülmeyi ve renk ayrımını iki katına çıkarır.
 settings-selector-corners-card = Köşeler
-settings-selector-round-corners-label = Köşeleri yuvarla
-settings-selector-round-corners-desc = Dilim kenarlarına köşe yarıçapı uygulayın.
-settings-selector-corner-tl-label = Sol üst
-settings-selector-corner-tl-desc = Sol üst köşe yarıçapı. 0 = kare.
-settings-selector-corner-tr-label = Sağ üst
-settings-selector-corner-tr-desc = Sağ üst köşe yarıçapı. 0 = kare.
-settings-selector-corner-br-label = Sağ alt
-settings-selector-corner-br-desc = Sağ alt köşe yarıçapı. 0 = kare.
-settings-selector-corner-bl-label = Sol alt
-settings-selector-corner-bl-desc = Sol alt köşenin yarıçapı. 0 = kare.
 settings-selector-card-flip-card = Kart çevirme
 settings-selector-card-flip-card-desc = Bir duvar kâğıdı kartının küçük resimden arkasındaki ayrıntılara nasıl geçeceğini seçin.
 settings-selector-flip-effect-label = Efekt
@@ -194,6 +176,12 @@ settings-selector-preview-delay-label = Önizleme gecikmesi
 settings-selector-preview-delay-desc = Üzerine gelindikten veya seçimden sonra önizlemeyi başlatmadan önce beklenecek süre (ms).
 settings-selector-tag-cloud-position-card = Arama paneli konumu
 settings-selector-tag-cloud-position-card-desc = Arama panelini piksel cinsinden yatay veya dikey olarak hareket ettirin. Pozitif yatay ofsetler onu sağa; pozitif dikey ofsetler onu aşağı hareket ettirir.
+settings-selector-tag-position-enabled-label = Ekran konumunu kullan
+settings-selector-tag-position-enabled-desc = Arama panelinin boyutu veya seçici stili değiştiğinde paneli bu ekran koordinatlarında tutar. Piksel ofsetlerini kullanmak için kapatın.
+settings-selector-tag-position-x-label = Sol kenar
+settings-selector-tag-position-x-desc = Arama panelinin sol kenarını ekran genişliğinin yüzdesi olarak belirleyin.
+settings-selector-tag-position-y-label = Üst kenar
+settings-selector-tag-position-y-desc = Arama panelinin üst kenarını ekran yüksekliğinin yüzdesi olarak belirleyin.
 settings-selector-tag-offset-x-label = Arama panelinin yatay ofseti
 settings-selector-tag-offset-x-desc = Bu seçiciye göre arama panelini sola veya sağa hareket ettirin.
 settings-selector-tag-offset-y-label = Arama panelinin dikey ofseti
@@ -201,7 +189,7 @@ settings-selector-tag-offset-y-desc = Bu seçiciye göre arama panelini yukarı 
 settings-selector-mode-slices = Dilimler
 settings-selector-mode-hex = Geometrik
 settings-selector-mode-wall = Duvar
-settings-selector-mode-sandy = Sandy
+settings-selector-mode-sandy = Kum
 settings-selector-gpu-tier-discrete = Harici
 settings-selector-gpu-tier-integrated = Tümleşik
 settings-selector-gpu-tier-other = Diğer
@@ -216,8 +204,6 @@ settings-selector-swap-style-weave = Dokuma
 settings-selector-swap-style-bloom = Parlama
 settings-selector-swap-style-flock = Sürü uçuşu
 settings-selector-swap-style-ring = Halka
-settings-selector-preset-rename-hint = Yeniden adlandırmak için bir stil seçin
-settings-selector-preset-save-current = Mevcut olanı kaydet
 
 settings-selector-mode-hand = Kart eli
 settings-selector-hand-card = Kart eli
@@ -273,7 +259,6 @@ settings-selector-hand-fan-roll-label = Yelpaze eğimi
 settings-selector-hand-fan-roll-desc = Elde açılan kartlar gibi her karta eklenen eğim. 0, kartları dik tutar.
 settings-selector-hand-arch-label = Yay
 settings-selector-hand-arch-desc = Dış kartların merkez kartın altına ne kadar düşeceği.
-settings-selector-hand-corner-radius-label = Köşe yarıçapı
 settings-selector-hand-skew-label = Eğiklik
 settings-selector-hand-skew-desc = Kartın dış hatlarını, piksel cinsinden yatay kaydırmayla paralelkenar biçimine eğin.
 settings-selector-hand-backdrop-blur-label = Arka plan bulanıklığı
@@ -286,6 +271,8 @@ settings-selector-start-position-desc = Baştan, son uyguladığınız duvar kâ
 settings-selector-start-position-beginning = Başlangıç
 settings-selector-start-position-applied = Son uygulanan duvar kâğıdı
 settings-selector-start-position-browsing = Son gezinme konumu
+settings-selector-loop-around-label = Uçlarda başa dön
+settings-selector-loop-around-desc = İlk veya son duvar kâğıdının ötesine geçmek seçimi diğer uca taşır. Basılı tutulan tuşlar, sayfa sayfa gezinme ve hızlı kaydırma önce uçta durur; başa dönmek için yeniden basın veya kaydırın. Çevrimiçi kaynaklar tüm sayfalar yüklendikten sonra başa döner. Duvar düzeninde ve çevrimiçi kaynaklarda fare tekerleği yalnızca görünümü kaydırır.
 
 settings-selector-mode-depth = Derinlik
 settings-selector-depth-card = Derinlik kartları
@@ -311,8 +298,6 @@ settings-selector-depth-count-desc = Mevcut seçim çevresindeki maksimum kart s
 settings-selector-depth-falloff-label = Derinlik azalması
 settings-selector-depth-falloff-desc = Merkezden uzaklaştıkça kart başına ölçek azalması, 0 ile 1 arasında. Sıfır, boyutlarını eşit tutar.
 
-settings-selector-depth-corners-label = Köşe yarıçapı
-settings-selector-depth-corners-desc = Kart köşelerini yuvarlayın. Sıfır kare köşeleri korur.
 
 settings-selector-depth-skew-label = Kart eğimi
 settings-selector-depth-skew-desc = Kart kenarlarını eğin. Sıfır onları dik tutar.
@@ -332,8 +317,6 @@ settings-selector-collection-count-desc = Yığındaki maksimum kart sayısı.
 settings-selector-collection-tilt-label = Yığının eğimi
 settings-selector-collection-tilt-desc = Yığını sizden uzağa eğin. Sıfır, kartları tam karşıdan gösterir.
 
-settings-selector-collection-corners-label = Köşe yarıçapı
-settings-selector-collection-corners-desc = Kart köşelerini yuvarlayın. Sıfır, kare köşeleri korur.
 
 settings-selector-collection-speed-label = Hareket hızı
 settings-selector-collection-speed-desc = Gezinmenin ve kart açıp kapatmanın hızı. Yüksek değerler daha hızlı hareket sağlar.

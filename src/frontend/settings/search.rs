@@ -1,11 +1,14 @@
 use crate::contracts::settings::SettingsSource;
 use crate::i18n::tr;
 
-use super::{Control, build_tab, visible_tabs};
+use super::tables::category_label;
+use super::{Control, Place, PlaceSource, Row, Section};
 
 const SECTION_MATCH: u32 = 3;
+const INSIDE_WORD_PENALTY: u32 = 6;
+const RESULT_LIMIT: usize = 7;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct SettingsSearchResult {
     pub tab: String,
     pub tab_label: String,
@@ -15,109 +18,326 @@ pub struct SettingsSearchResult {
     pub title: String,
     pub desc: String,
     pub value: String,
+    pub setting: Option<Row>,
+    pub home: Option<Section>,
+    pub wake: Option<String>,
+    pub elsewhere: bool,
     score: u32,
+    hidden: bool,
 }
 
-pub fn search_settings(
-    query: &str,
-    cfg: &dyn SettingsSource,
-    themes: &[String],
-    folders: &[String],
-    analysis: &str,
-    backends: &[String],
-    apps: Option<&crate::contracts::daemon::AppThemesResult>,
-) -> Vec<SettingsSearchResult> {
+impl SettingsSearchResult {
+    pub fn live(&self) -> Option<&Row> {
+        self.setting.as_ref().filter(|row| self.wake.is_none() && changes_here(&row.control))
+    }
+
+    fn move_to(&mut self, place: &Place, section: usize, row: usize) {
+        self.tab = place.key.to_string();
+        self.tab_label = place.title.to_string();
+        self.section_title.clone_from(&place.sections[section].title);
+        self.section = section;
+        self.row = row;
+    }
+
+    pub fn is(&self, other: &Self) -> bool {
+        match (&self.setting, &other.setting) {
+            (Some(_), Some(row)) => self.same(row),
+            (None, None) => {
+                self.tab == other.tab
+                    && self.section_title == other.section_title
+                    && self.title == other.title
+            }
+            _ => false,
+        }
+    }
+
+    fn same(&self, row: &Row) -> bool {
+        self.setting.as_ref().is_some_and(|setting| match setting.control.path() {
+            Some(path) => row.control.path() == Some(path),
+            None => row.title == setting.title && row.desc == setting.desc,
+        })
+    }
+}
+
+fn changes_here(control: &Control) -> bool {
+    super::tokenable(control)
+        || matches!(
+            control,
+            Control::Toggle { .. }
+                | Control::ToggleAction { .. }
+                | Control::Colour { .. }
+                | Control::Resolution { .. }
+                | Control::ActionBtn { .. }
+                | Control::ActionChips { .. }
+        )
+}
+
+#[derive(Debug, Default)]
+pub struct SearchHits {
+    pub shown: Vec<SettingsSearchResult>,
+    pub total: usize,
+}
+
+fn origin_label(section: &Section) -> &'static str {
+    category_label(section.id.category)
+}
+
+#[cfg(test)]
+pub fn search_settings(query: &str, source: PlaceSource<'_>) -> Vec<SettingsSearchResult> {
+    search_hits(query, source).shown
+}
+
+pub fn search_hits(query: &str, source: PlaceSource<'_>) -> SearchHits {
+    let places = source.places();
+    let mut shown = scan(query, &places, source);
+    let total = shown.len();
+    shown.truncate(RESULT_LIMIT);
+    for result in &mut shown {
+        settle(result, &places, source.cfg);
+    }
+    SearchHits { shown, total }
+}
+
+pub fn reread_settings(results: &mut Vec<SettingsSearchResult>, source: PlaceSource<'_>) -> bool {
+    let places = source.places();
+    let before = results.len();
+    results.retain_mut(|result| reread(result, &places, source));
+    results.len() == before
+}
+
+fn reread(result: &mut SettingsSearchResult, places: &[Place], source: PlaceSource<'_>) -> bool {
+    if result.setting.is_none() {
+        return true;
+    }
+    let shown = places.iter().find_map(|place| {
+        place.sections.iter().enumerate().find_map(|(at, section)| {
+            let row = section.rows().position(|row| result.same(row))?;
+            Some((place, at, row))
+        })
+    });
+    if let Some((place, section, row)) = shown {
+        result.move_to(place, section, row);
+        result.wake = None;
+        result.setting = None;
+        settle(result, places, source.cfg);
+        return true;
+    }
+    let asleep = places
+        .iter()
+        .flat_map(|place| source.asleep(place.key, &place.sections))
+        .find(|asleep| result.same(&asleep.row));
+    let Some(asleep) = asleep else {
+        return false;
+    };
+    let Some(landed) = landing(places, asleep.wakes) else {
+        return false;
+    };
+    result.move_to(landed.place, landed.section, landed.row);
+    result.wake = Some(landed.title());
+    result.value = control_value(&asleep.row.control, source.cfg);
+    result.setting = Some(asleep.row);
+    result.home = None;
+    true
+}
+
+fn settle(result: &mut SettingsSearchResult, places: &[Place], cfg: &dyn SettingsSource) {
+    if result.wake.is_some() {
+        return;
+    }
+    let home = places
+        .iter()
+        .find(|place| place.key == result.tab)
+        .and_then(|place| place.sections.get(result.section));
+    let Some(home) = home else {
+        return;
+    };
+    result.setting = home.row(result.row).cloned();
+    if let Some(row) = &result.setting {
+        result.value = control_value(&row.control, cfg);
+    }
+    result.home = Some(home.clone());
+}
+
+fn scan(query: &str, places: &[Place], source: PlaceSource<'_>) -> Vec<SettingsSearchResult> {
     let query = normalized(query);
     let terms: Vec<&str> = query.split_whitespace().collect();
     if terms.is_empty() {
         return Vec::new();
     }
+    let cfg = source.cfg;
     let mut results = Vec::new();
-    for (tab, tab_label) in visible_tabs(cfg) {
-        let cards = if apps.is_some() {
-            super::build_tab_with_runtime_status(
-                tab,
-                cfg,
-                themes,
-                folders,
-                analysis,
-                backends,
-                super::RuntimeStatus { app_themes: apps, ..super::RuntimeStatus::default() },
-            )
-        } else {
-            build_tab(tab, cfg, themes, folders, analysis, backends)
-        };
-        for (section, (card, rows)) in cards.into_iter().enumerate() {
-            if rows.is_empty() {
-                results.extend(page_result(&query, &terms, tab, tab_label, section, &card));
+    for place in places {
+        let tab_label = place.title;
+        for (section_index, section) in place.sections.iter().enumerate() {
+            let tab_text = normalized(&format!("{tab_label} {}", origin_label(section)));
+            if section.rows().next().is_none() {
+                results.extend(page_result(
+                    &query,
+                    &terms,
+                    place.key,
+                    &tab_text,
+                    section_index,
+                    section,
+                ));
                 continue;
             }
-            for (row, setting) in rows.into_iter().enumerate() {
-                if matches!(setting.control, Control::Segment) {
-                    continue;
-                }
-                let title = normalized(&setting.title);
-                let section_title = normalized(card.title);
-                let tab_text = normalized(tab_label);
-                let desc = normalized(&setting.desc);
-                let control = normalized(&control_search_text(&setting.control));
-                let mut haystack = format!("{title} {section_title} {tab_text} {desc} {control}");
-                add_aliases(&mut haystack);
-                if !terms.iter().all(|term| haystack.contains(term)) {
-                    continue;
-                }
-                let score = if title == query {
-                    0
-                } else if title.starts_with(&query) {
-                    1
-                } else if title.contains(&query) {
-                    2
-                } else if section_title.contains(&query) {
-                    SECTION_MATCH
-                } else if tab_text.contains(&query) {
-                    4
-                } else {
-                    5
-                };
-                results.push(SettingsSearchResult {
-                    tab: tab.to_string(),
-                    tab_label: tab_label.to_string(),
-                    section,
-                    section_title: card.title.to_string(),
+            for (row, setting) in section.rows().enumerate() {
+                let spot = Spot {
+                    tab: place.key,
+                    tab_label,
+                    tab_text: &tab_text,
+                    section: section_index,
+                    section_title: &section.title,
                     row,
-                    title: if setting.title.is_empty() {
-                        crate::i18n::tr("settings-selector-saved-styles-label").to_string()
-                    } else {
-                        setting.title
-                    },
-                    desc: setting.desc,
-                    value: control_value(&setting.control, cfg),
-                    score,
-                });
+                    hidden: section.say.parks(row).is_some(),
+                    wake: None,
+                };
+                results.extend(row_result(&query, &terms, &spot, setting, cfg));
             }
         }
+        for asleep in source.asleep(place.key, &place.sections) {
+            let Some(landed) = landing(places, asleep.wakes) else {
+                continue;
+            };
+            let tab_text = normalized(landed.place.title);
+            let wake = landed.title();
+            let spot = Spot {
+                tab: landed.place.key,
+                tab_label: landed.place.title,
+                tab_text: &tab_text,
+                section: landed.section,
+                section_title: &landed.place.sections[landed.section].title,
+                row: landed.row,
+                hidden: true,
+                wake: Some(&wake),
+            };
+            results.extend(row_result(&query, &terms, &spot, &asleep.row, cfg));
+        }
     }
+    rank(&mut results);
+    results
+}
+
+fn rank(results: &mut [SettingsSearchResult]) {
     results.sort_by(|left, right| {
         left.score
             .cmp(&right.score)
+            .then_with(|| left.hidden.cmp(&right.hidden))
             .then_with(|| left.title.cmp(&right.title))
             .then_with(|| left.tab_label.cmp(&right.tab_label))
     });
-    results.truncate(6);
-    results
+}
+
+struct Spot<'a> {
+    tab: &'a str,
+    tab_label: &'a str,
+    tab_text: &'a str,
+    section: usize,
+    section_title: &'a str,
+    row: usize,
+    hidden: bool,
+    wake: Option<&'a str>,
+}
+
+struct Landing<'a> {
+    place: &'a Place,
+    section: usize,
+    row: usize,
+}
+
+impl Landing<'_> {
+    fn title(&self) -> String {
+        let section = &self.place.sections[self.section];
+        section
+            .row(self.row)
+            .map(|row| row.title.as_str())
+            .filter(|title| !title.is_empty())
+            .unwrap_or(&section.title)
+            .to_string()
+    }
+}
+
+fn landing<'a>(places: &'a [Place], wakes: &str) -> Option<Landing<'a>> {
+    places.iter().find_map(|place| {
+        place.sections.iter().enumerate().find_map(|(section, candidate)| {
+            let row = candidate.rows().position(|row| row.control.path() == Some(wakes))?;
+            Some(Landing { place, section, row })
+        })
+    })
+}
+
+fn row_result(
+    query: &str,
+    terms: &[&str],
+    spot: &Spot<'_>,
+    setting: &Row,
+    cfg: &dyn SettingsSource,
+) -> Option<SettingsSearchResult> {
+    if matches!(setting.control, Control::Segment | Control::Preview) {
+        return None;
+    }
+    let section_title = normalized(spot.section_title);
+    let tab_text = spot.tab_text;
+    let title = normalized(&setting.title);
+    let desc = normalized(&setting.desc);
+    let control = normalized(&control_search_text(&setting.control));
+    let named = format!("{title} {section_title} {tab_text}");
+    let mut haystack = format!("{named} {desc} {control}");
+    add_aliases(&mut haystack);
+    if !terms.iter().all(|term| haystack.contains(term)) {
+        return None;
+    }
+    let score = if title == query {
+        0
+    } else if title.starts_with(query) {
+        1
+    } else if title.contains(query) {
+        2
+    } else if section_title.contains(query) {
+        SECTION_MATCH
+    } else if tab_text.contains(query) {
+        4
+    } else {
+        5
+    };
+    let whole_words =
+        terms.iter().all(|term| haystack.split_whitespace().any(|word| word.starts_with(term)));
+    let score = score + if whole_words { 0 } else { INSIDE_WORD_PENALTY };
+    Some(SettingsSearchResult {
+        tab: spot.tab.to_string(),
+        tab_label: spot.tab_label.to_string(),
+        section: spot.section,
+        section_title: spot.section_title.to_string(),
+        row: spot.row,
+        title: setting.look.own_title.clone().unwrap_or_else(|| {
+            if setting.title.is_empty() {
+                crate::i18n::tr("settings-selector-saved-styles-label").to_string()
+            } else {
+                setting.title.clone()
+            }
+        }),
+        desc: setting.desc.clone(),
+        value: spot.wake.map_or_else(String::new, |_| control_value(&setting.control, cfg)),
+        setting: spot.wake.map(|_| setting.clone()),
+        home: None,
+        wake: spot.wake.map(str::to_string),
+        elsewhere: !terms.iter().all(|term| named.contains(term)),
+        score,
+        hidden: spot.hidden,
+    })
 }
 
 fn page_result(
     query: &str,
     terms: &[&str],
     tab: &str,
-    tab_label: &str,
-    section: usize,
-    card: &super::Card,
+    tab_text: &str,
+    section_index: usize,
+    section: &Section,
 ) -> Option<SettingsSearchResult> {
-    let section_title = normalized(card.title);
-    let mut haystack =
-        format!("{section_title} {} {}", normalized(tab_label), normalized(card.subtitle));
+    let section_title = normalized(&section.title);
+    let named = format!("{section_title} {tab_text}");
+    let mut haystack = format!("{named} {}", normalized(&section.desc));
     add_aliases(&mut haystack);
     if !terms.iter().all(|term| haystack.contains(term)) {
         return None;
@@ -131,14 +351,19 @@ fn page_result(
     };
     Some(SettingsSearchResult {
         tab: tab.to_string(),
-        tab_label: tab_label.to_string(),
-        section,
-        section_title: card.title.to_string(),
+        tab_label: super::place_title(tab).to_string(),
+        section: section_index,
+        section_title: section.title.clone(),
         row: 0,
-        title: card.title.to_string(),
-        desc: card.subtitle.to_string(),
+        title: section.title.clone(),
+        desc: section.desc.clone(),
         value: String::new(),
+        setting: None,
+        home: None,
+        wake: None,
+        elsewhere: !terms.iter().all(|term| named.contains(term)),
         score,
+        hidden: false,
     })
 }
 
@@ -186,6 +411,7 @@ fn add_aliases(haystack: &mut String) {
 fn control_search_text(control: &Control) -> String {
     match control {
         Control::Display(control) => format!("{} {}", control.label(), control.summary()),
+        Control::Colour { path, hex } => format!("{path} {hex}"),
         Control::Toggle { path, value } => format!(
             "{path} {} {}",
             tr("settings-search-control-toggle"),
@@ -207,7 +433,7 @@ fn control_search_text(control: &Control) -> String {
         Control::Number { key, path, unit } => {
             format!("{key} {path} {unit} {}", tr("settings-search-control-number"))
         }
-        Control::TextField { key, path, placeholder } => {
+        Control::TextField { key, path, placeholder, .. } => {
             format!("{key} {path} {placeholder} {}", tr("settings-search-control-text"))
         }
         Control::Resolution { key, path, width_placeholder, height_placeholder } => format!(
@@ -235,13 +461,6 @@ fn control_search_text(control: &Control) -> String {
                 .join(" "),
             tr("settings-search-control-chips")
         ),
-        Control::MotionWeights { weights } => weights
-            .iter()
-            .map(|(label, path, _)| {
-                format!("{label} {path} {}", tr("settings-search-control-motion"))
-            })
-            .collect::<Vec<_>>()
-            .join(" "),
         Control::ActionBtn { label, .. } => {
             format!("{label} {}", tr("settings-search-control-action"))
         }
@@ -249,11 +468,6 @@ fn control_search_text(control: &Control) -> String {
             "{} {}",
             items.iter().map(|(_, label)| label.as_str()).collect::<Vec<_>>().join(" "),
             tr("settings-search-control-action")
-        ),
-        Control::Presets { mode, items } => format!(
-            "{mode} {} {}",
-            items.iter().map(|(name, _)| name.as_str()).collect::<Vec<_>>().join(" "),
-            tr("settings-search-control-presets")
         ),
         Control::Details { summary, rows, .. } | Control::StackBar { summary, rows, .. } => {
             format!(
@@ -279,9 +493,10 @@ fn control_search_text(control: &Control) -> String {
     }
 }
 
-fn control_value(control: &Control, cfg: &dyn SettingsSource) -> String {
+pub(super) fn control_value(control: &Control, cfg: &dyn SettingsSource) -> String {
     match control {
         Control::Display(control) => format!("{} {}", control.label(), control.summary()),
+        Control::Colour { hex, .. } => hex.clone(),
         Control::Toggle { value, .. } => {
             if *value {
                 String::from(tr("settings-control-enabled"))
@@ -302,9 +517,15 @@ fn control_value(control: &Control, cfg: &dyn SettingsSource) -> String {
             let value = crate::contracts::picker::format_config_number(cfg.number(path));
             if unit.is_empty() { value } else { format!("{value} {unit}") }
         }
-        Control::TextField { path, .. }
-        | Control::Resolution { path, .. }
-        | Control::KeyBinding { path, .. } => cfg.text(path),
+        Control::TextField { path, secret: true, .. } => {
+            let raw = cfg.text(path);
+            if raw.is_empty() { raw } else { super::masked(&raw) }
+        }
+        Control::KeyBinding { path, default, .. } => {
+            let bound = cfg.text(path);
+            if bound.is_empty() { (*default).to_string() } else { bound }
+        }
+        Control::TextField { path, .. } | Control::Resolution { path, .. } => cfg.text(path),
         Control::Dropdown { options, current, .. } => options
             .iter()
             .find(|(key, _)| key == current)
@@ -313,18 +534,9 @@ fn control_value(control: &Control, cfg: &dyn SettingsSource) -> String {
             .iter()
             .find(|(key, _)| key == current)
             .map_or_else(|| current.clone(), |(_, label)| label.clone()),
-        Control::MotionWeights { weights } => weights
-            .iter()
-            .map(|(label, path, _)| format!("{label} {} ms", cfg.number(path)))
-            .collect::<Vec<_>>()
-            .join(" · "),
         Control::ActionBtn { .. } | Control::ActionChips { .. } => {
             String::from(tr("settings-control-action"))
         }
-        Control::Presets { items, .. } => items
-            .iter()
-            .find(|(_, active)| *active)
-            .map_or_else(|| String::from(tr("settings-control-none")), |(name, _)| name.clone()),
         Control::Details { summary, .. } | Control::StackBar { summary, .. } => summary.clone(),
         Control::Segment => String::new(),
         Control::Static => String::from(tr("settings-control-status")),

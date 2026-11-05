@@ -65,9 +65,16 @@ pub(crate) fn apply_task(app: &mut App, filtered_index: usize) -> Task<Message> 
     };
     app.scene.set_current(filtered_index, app.library_session.filtered.len());
     let item = app.library_session.library.catalog().items[catalog_index as usize].clone();
+    apply_item(app, &item)
+}
+
+pub(crate) fn apply_item(app: &mut App, item: &Wallpaper) -> Task<Message> {
+    if app.panels.arrange.is_some() {
+        return Task::none();
+    }
     crate::app::update::theme::restore_wallpaper_settings(app, &item.key);
     let neighbors = collect_neighbors(app, &item.path);
-    let mut params = apply_params(&item, neighbors);
+    let mut params = apply_params(item, neighbors);
     info!("apply {} ({})", item.name, item.kind.as_str());
     let applied_key = item.key.clone();
     if !app.scope_picker_apply(&mut params) {
@@ -84,8 +91,7 @@ pub(crate) fn apply_task(app: &mut App, filtered_index: usize) -> Task<Message> 
     if app.scene.mode == crate::frontend::scene::layout::Mode::Sandy
         && app.config.flag_default_config(skwd_config::keys::transition::ENABLED)
     {
-        let duration =
-            app.config.num_path(skwd_config::keys::transition::DURATION_MS).max(0.0) as u64;
+        let duration = app.config.transition_duration_ms();
         app.scene.conceal_hero(
             std::time::Instant::now() + std::time::Duration::from_millis(duration + CONCEAL_PAD_MS),
         );

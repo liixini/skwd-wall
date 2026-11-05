@@ -13,7 +13,10 @@ use super::{Builder, keys};
 
 pub(super) fn wallhaven(builder: &mut Builder<'_>) {
     use keys::wallhaven as defaults;
-    builder.card(tr("settings-source-defaults-card"), tr("settings-source-defaults-desc"));
+    builder.card(
+        crate::i18n::text("settings-source-defaults-card"),
+        tr("settings-source-defaults-desc"),
+    );
     apply_button(builder, keys::sources::WALLHAVEN_SHOW_APPLY_BUTTON);
     builder.dropdown(
         tr("settings-source-default-sort"),
@@ -63,7 +66,10 @@ pub(super) fn wallhaven(builder: &mut Builder<'_>) {
 
 pub(super) fn steam(builder: &mut Builder<'_>) {
     use keys::steam as defaults;
-    builder.card(tr("settings-source-defaults-card"), tr("settings-source-defaults-desc"));
+    builder.card(
+        crate::i18n::text("settings-source-defaults-card"),
+        tr("settings-source-defaults-desc"),
+    );
     apply_button(builder, keys::sources::STEAM_SHOW_APPLY_BUTTON);
     builder.dropdown(
         tr("settings-source-default-sort"),

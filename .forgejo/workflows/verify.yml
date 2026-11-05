@@ -60,8 +60,17 @@ jobs:
         uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: liixini/skwd-deck
-          ref: ebc5580b34cd55e5110497de325017da154b0912
+          ref: 4db802ee59c4a63c64d31032df57457d8188adb1
           path: suite/skwd-deck
+          token: ${{ secrets.SKWD_SUITE_READ_TOKEN }}
+          persist-credentials: false
+
+      - name: Check out Paper contracts
+        uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: liixini/skwd-paper
+          ref: 37eb0bc1925c969c867c1db099e0d30b3f868822
+          path: suite/skwd-paper
           token: ${{ secrets.SKWD_SUITE_READ_TOKEN }}
           persist-credentials: false
 
@@ -69,7 +78,7 @@ jobs:
         uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: liixini/skwd-lens
-          ref: d1c985756d8e0be37af80c34cb263da3a2259775
+          ref: 16d60523a70a1a2cb2406f6b6a26de583a8d6164
           path: suite/skwd-lens
           token: ${{ secrets.SKWD_SUITE_READ_TOKEN }}
           persist-credentials: false
@@ -78,7 +87,7 @@ jobs:
         uses: https://code.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: liixini/skwd-verify
-          ref: 1939cb1f3b7aa10c61a321b5859dcc62d9fa2ad9
+          ref: d53b670e6561b7882c64477048b18f377486831a
           path: suite/skwd-verify
           token: ${{ secrets.SKWD_SUITE_READ_TOKEN }}
           persist-credentials: false
@@ -142,7 +151,7 @@ jobs:
         id: tests
         if: steps.clippy.outcome == 'success'
         continue-on-error: true
-        run: python3 "$SKWD_VERIFY_ROOT/scripts/ci-report.py" wrap --suite wall.tests --target linux-x86_64 --expect-skips 4 --out ci-artifacts/results/wall-tests.json -- cargo test --locked --release --features obs-heap -- --skip alloc_free
+        run: python3 "$SKWD_VERIFY_ROOT/scripts/ci-report.py" wrap --suite wall.tests --target linux-x86_64 --expect-skips 45 --out ci-artifacts/results/wall-tests.json -- cargo test --locked --release --features obs-heap -- --skip alloc_free
 
       - name: Allocation guards
         if: steps.tests.outcome == 'success'

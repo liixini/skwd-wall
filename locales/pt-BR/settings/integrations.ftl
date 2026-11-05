@@ -1,3 +1,8 @@
+settings-integrations-caelestia-card = Caelestia
+settings-integrations-caelestia-card-desc = Deixe o Skwd exibir os papéis de parede escolhidos em qualquer um dos aplicativos.
+settings-integrations-caelestia-sync-label = Sincronizar papéis de parede do Caelestia
+settings-integrations-caelestia-sync-desc = O Skwd exibe os papéis de parede escolhidos em qualquer um dos aplicativos. As escolhas do Caelestia são aplicadas às telas desbloqueadas.
+
 settings-integrations-plasma-card = KDE Plasma
 settings-integrations-lock-mode-label = Papel de parede da tela de bloqueio
 settings-integrations-lock-mode-desc = Não gerenciado deixa o Plasma como está. Imagem estática sempre usa a imagem abaixo. Seguir o último aplicado acompanha o papel de parede aplicado mais recentemente.
@@ -33,7 +38,7 @@ settings-integrations-follow-desc = Segue o Skwd quando ele controla as cores. D
 
 settings-section-lockscreens = Telas de bloqueio
 settings-lockscreens-source-label = Origem da imagem
-settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-source-help = Seguir o último aplicado usa a imagem do papel de parede atual. Imagem estática usa o arquivo abaixo. Vídeos e cenas usam uma imagem estática quando houver uma disponível.
 settings-lockscreens-image-label = Imagem estática
 settings-lockscreens-image-desc = Informe o caminho completo de uma imagem existente, por exemplo ~/Pictures/lockscreen.jpg. O Skwd a copia para as telas de bloqueio ativadas. Não é possível usar um arquivo de vídeo aqui.
 settings-lockscreens-hyprlock-card = Hyprlock

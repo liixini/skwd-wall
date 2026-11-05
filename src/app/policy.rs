@@ -33,12 +33,13 @@ pub(crate) fn needs_list_refresh(have: usize, changed: usize, total: Option<usiz
 
 pub(crate) fn scene_visibility(
     settings_open: bool,
-    tab: &str,
-    section: usize,
+    section: Option<crate::frontend::settings::SectionId>,
     hard_overlay: bool,
+    preview: bool,
 ) -> (bool, bool) {
     let design_mode = settings_open
-        && crate::frontend::settings::is_picker_layout_section(tab, section)
+        && preview
+        && crate::frontend::settings::is_picker_layout_section(section)
         && !hard_overlay;
     let scene_hidden = hard_overlay || (settings_open && !design_mode);
     (design_mode, scene_hidden)

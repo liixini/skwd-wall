@@ -8,6 +8,7 @@ pub struct ScenePrimitive {
     pub(crate) render: Arc<RendererSnapshot>,
     pub(crate) uploads: UploadQueue,
     pub(crate) pool: Arc<BufPool>,
+    pub(crate) fade: f32,
 }
 
 #[derive(Debug)]

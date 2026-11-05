@@ -3,7 +3,8 @@ use std::time::{Duration, Instant};
 use iced::widget::canvas::{self, Frame, Path, Stroke};
 use iced::widget::{button, column, container, stack, text};
 use iced::{
-    Alignment, Background, Border, Color, Element, Event, Length, Point, Rectangle, mouse, window,
+    Alignment, Background, Border, Color, Element, Event, Length, Point, Rectangle, Size, mouse,
+    window,
 };
 
 use crate::frontend::animation::{MotionProfile, MotionTier};
@@ -25,9 +26,18 @@ pub const FOLIO_INDEX_OUTLINE_ALPHA: f32 = 0.46;
 
 const FOLIO_ACTION_MIN_WIDTH: f32 = 52.0;
 const FOLIO_ACTION_MAX_WIDTH: f32 = 190.0;
+pub const FOLIO_BUTTON_MIN_WIDTH: f32 = 92.0;
+pub const FOLIO_BUTTON_INSET: f32 = 28.0;
+pub(crate) const FOLIO_FILL_ALPHA: f32 = 0.92;
+pub(crate) const FOLIO_OUTLINE_ALPHA: f32 = 0.4;
+pub(crate) const FOLIO_ACCENT_ALPHA: f32 = 0.86;
+pub(crate) const WIPE_FILL_ALPHA: f32 = 0.96;
+pub(crate) const WIPE_EDGE_ALPHA: f32 = 0.9;
+const WIPE_EDGE: f32 = 2.0;
 
 pub fn folio_action_width_in(action_label: &str, scale: f32, min: f32, max: f32) -> f32 {
-    (super::typography::text_width(action_label, 10.0, false) + 28.0).clamp(min, max) * scale
+    (super::typography::text_width(action_label, 10.0, false) + FOLIO_BUTTON_INSET).clamp(min, max)
+        * scale
 }
 
 pub fn folio_action_width(action_label: &str, scale: f32) -> f32 {
@@ -459,6 +469,23 @@ pub(crate) fn folio_diagonal_wipe(width: f32, height: f32, mix: f32) -> Path {
     })
 }
 
+pub(crate) fn folio_wipe(frame: &mut Frame, size: Size, mix: f32, fill: Color, edge: Color) {
+    if mix <= 0.0 {
+        return;
+    }
+    frame.fill(&folio_diagonal_wipe(size.width, size.height, mix), fill);
+    if mix < 1.0 {
+        let (top, bottom) = folio_diagonal_edges(size.width, size.height, mix);
+        frame.stroke(
+            &Path::line(
+                Point::new(mirror_x(top, 0.0, size.width), 0.0),
+                Point::new(mirror_x(bottom, 0.0, size.width), size.height),
+            ),
+            Stroke::default().with_color(edge).with_width(WIPE_EDGE),
+        );
+    }
+}
+
 struct FolioButtonFill {
     active: bool,
     destructive: bool,
@@ -490,37 +517,26 @@ impl<Message> canvas::Program<Message> for FolioButtonFill {
         renderer: &iced::Renderer,
         _theme: &iced::Theme,
         bounds: Rectangle,
-        cursor: mouse::Cursor,
+        _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         let mut frame = Frame::new(renderer, bounds.size());
-        let hovered = self.enabled && cursor.is_over(bounds);
         frame.fill(
             &Path::rectangle(Point::ORIGIN, bounds.size()),
-            if hovered {
-                with_alpha(self.palette.surface_variant, 0.78)
-            } else {
-                with_alpha(self.palette.surface_container, if self.enabled { 0.92 } else { 0.42 })
-            },
+            with_alpha(
+                self.palette.surface_container,
+                if self.enabled { FOLIO_FILL_ALPHA } else { 0.42 },
+            ),
         );
         let mix = crate::frontend::animation::smoothstep(state.mix.clamp(0.0, 1.0));
-        if self.enabled && mix > 0.0 {
-            let fill = if self.destructive { self.palette.tertiary } else { self.palette.primary };
-            frame.fill(
-                &folio_diagonal_wipe(bounds.width, bounds.height, mix),
-                with_alpha(fill, 0.96),
+        if self.enabled {
+            let fill = if self.destructive { self.palette.error } else { self.palette.primary };
+            folio_wipe(
+                &mut frame,
+                bounds.size(),
+                mix,
+                with_alpha(fill, WIPE_FILL_ALPHA),
+                with_alpha(self.palette.tertiary, WIPE_EDGE_ALPHA),
             );
-            if mix < 1.0 {
-                let (top, bottom) = folio_diagonal_edges(bounds.width, bounds.height, mix);
-                frame.stroke(
-                    &Path::line(
-                        Point::new(mirror_x(top, 0.0, bounds.width), 0.0),
-                        Point::new(mirror_x(bottom, 0.0, bounds.width), bounds.height),
-                    ),
-                    Stroke::default()
-                        .with_color(with_alpha(self.palette.tertiary, 0.9))
-                        .with_width(2.0),
-                );
-            }
         }
         vec![frame.into_geometry()]
     }
@@ -556,15 +572,21 @@ fn animated_action<'a, Message: Clone + 'a>(
         move |_theme, status| {
             let disabled = matches!(status, button::Status::Disabled);
             let hovered = matches!(status, button::Status::Hovered);
-            let accent = if destructive { palette.tertiary } else { palette.primary };
+            let accent = if destructive { palette.error } else { palette.primary };
             button::Style {
-                background: Some(Color::TRANSPARENT.into()),
+                background: Some(if hovered && !active && !disabled {
+                    with_alpha(palette.hover, 0.78).into()
+                } else {
+                    Color::TRANSPARENT.into()
+                }),
                 text_color: if disabled {
                     with_alpha(palette.surface_text, 0.3)
                 } else if active {
-                    if destructive { palette.background } else { palette.primary_text }
+                    if destructive { palette.error_text } else { palette.primary_text }
+                } else if hovered {
+                    palette.hover_text
                 } else if destructive {
-                    palette.tertiary
+                    palette.error
                 } else {
                     palette.surface_text
                 },
@@ -572,9 +594,9 @@ fn animated_action<'a, Message: Clone + 'a>(
                     color: if disabled {
                         with_alpha(palette.outline, 0.18)
                     } else if destructive || hovered || active {
-                        with_alpha(accent, 0.86)
+                        with_alpha(accent, FOLIO_ACCENT_ALPHA)
                     } else {
-                        with_alpha(palette.outline, 0.4)
+                        with_alpha(palette.outline, FOLIO_OUTLINE_ALPHA)
                     },
                     width: 1.0,
                     radius: 0.0.into(),

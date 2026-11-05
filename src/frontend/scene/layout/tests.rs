@@ -2,6 +2,21 @@
 
 use super::*;
 
+#[test]
+fn grid_frame_counts_cards() {
+    let grid = GridParams {
+        thumb_w: 150.0,
+        thumb_h: 90.0,
+        gap_x: 8.0,
+        gap_y: 8.0,
+        ..GridParams::default()
+    };
+    assert_eq!(grid.columns_in(grid.span_w(4)), 4);
+    assert_eq!(grid.rows_in(grid.span_h(3)), 3);
+    assert_eq!(grid.columns_in(grid.span_w(4) - 1.0), 3);
+    assert_eq!(grid.rows_in(grid.span_h(3) + grid.cell_h()), 4);
+}
+
 fn sp(slice_w: f32, spacing: f32, count: usize) -> SliceParams {
     SliceParams {
         offset_x: 0.0,
@@ -13,7 +28,7 @@ fn sp(slice_w: f32, spacing: f32, count: usize) -> SliceParams {
         skew: 10.0,
         edge_tilt: 0.0,
         visible_count: count,
-        corners: [8.0; 4],
+        corners: CardCorners::round(8.0),
         wobble: false,
         wobble_strength: 1.0,
         parallax: false,
@@ -383,4 +398,57 @@ fn projected_hit_follows_card_edges_in_both_windings() {
         assert!(!area.contains(0.0, 51.0));
     }
     assert!(!Hit { quad: Some([[0.0; 2]; 4]), ..hit(0.0, false) }.contains(0.0, 0.0));
+}
+
+#[test]
+fn cuts_clamp_like_radii() {
+    let cut = CardCorners { sizes: [64.0, 4.0, 64.0, 64.0], cut: true };
+    let round = CardCorners { cut: false, ..cut };
+    let sheared = cut.sheared(40.0, 300.0, 30.0, 6.0);
+    assert_eq!(sheared.sizes, round.sheared(40.0, 300.0, 30.0, 6.0).sizes);
+    assert!(sheared.cut);
+    let edge = ((40.0_f32 - 30.0).powi(2) + 6.0_f32.powi(2)).sqrt();
+    assert!(sheared.sizes.iter().all(|size| *size <= edge / 2.0 - 1.0));
+    assert_eq!(sheared.sizes[1], 4.0);
+    assert_eq!(cut.clamped(20.0).sizes, [20.0, 4.0, 20.0, 20.0]);
+    assert_eq!(cut.clamped(-3.0).sizes, [0.0; 4]);
+}
+
+#[test]
+fn stamp_sets_chamfer() {
+    let mut inst = InstanceRaw { misc: [0, 0, 0, CHAMFER | 2], ..InstanceRaw::default() };
+    CardCorners::round(9.0).stamp(&mut inst);
+    assert_eq!((inst.radii, inst.misc[3]), ([9.0; 4], 2));
+    CardCorners { sizes: [3.0; 4], cut: true }.stamp(&mut inst);
+    assert_eq!(inst.misc[3], CHAMFER | 2);
+}
+
+#[test]
+fn cut_holds_until_square() {
+    let mut corners = CardCorners { sizes: [20.0; 4], cut: true };
+    let square = CardCorners::default();
+    corners.morph_toward(&square, 0.5);
+    assert!(corners.cut && !corners.settled_to(&square));
+    for _ in 0..20 {
+        corners.morph_toward(&square, 0.5);
+    }
+    assert!(!corners.cut && corners.settled_to(&square));
+    corners.morph_toward(&CardCorners { sizes: [8.0; 4], cut: true }, 0.1);
+    assert!(corners.cut);
+}
+
+#[test]
+fn reads_config_corners() {
+    use skwd_config::corners::{CornerStyle, Corners};
+    let each = Corners {
+        style: CornerStyle::Chamfered,
+        same: false,
+        all: 1.0,
+        values: [1.0, 2.0, 3.0, 4.0],
+    };
+    assert_eq!(CardCorners::read(&each), CardCorners { sizes: [1.0, 2.0, 3.0, 4.0], cut: true });
+    let same = Corners { style: CornerStyle::Round, same: true, ..each };
+    assert_eq!(CardCorners::read(&same), CardCorners::round(1.0));
+    let straight = Corners { style: CornerStyle::Straight, ..each };
+    assert_eq!(CardCorners::read(&straight), CardCorners::default());
 }

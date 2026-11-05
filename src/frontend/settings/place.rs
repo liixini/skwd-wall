@@ -1,0 +1,10 @@
+pub const HOME: &str = "home";
+pub const LAYOUT: &str = "layout";
+pub const BAR: &str = "bar";
+pub const WALLPAPERS: &str = "wallpapers";
+pub const COLOURS: &str = "colours";
+pub const LIBRARY: &str = "library";
+pub const SOURCES: &str = "sources";
+pub const AUTOMATION: &str = "automation";
+pub const KEYBINDS: &str = "keybinds";
+pub const SYSTEM: &str = "system";

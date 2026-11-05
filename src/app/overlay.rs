@@ -13,6 +13,7 @@ pub(crate) enum Overlay {
     BrowserPreview,
     Browser,
     ThemeDesigner,
+    ColourStudio,
     ScheduleEditor,
     SceneProperties,
     Effects,
@@ -25,7 +26,7 @@ pub(crate) enum Overlay {
 }
 
 impl Overlay {
-    pub(crate) const ALL: [Overlay; 19] = [
+    pub(crate) const ALL: [Overlay; 20] = [
         Overlay::Help,
         Overlay::CardPicker,
         Overlay::AudioPanel,
@@ -36,6 +37,7 @@ impl Overlay {
         Overlay::BrowserPreview,
         Overlay::Browser,
         Overlay::ThemeDesigner,
+        Overlay::ColourStudio,
         Overlay::ScheduleEditor,
         Overlay::SceneProperties,
         Overlay::Effects,
@@ -47,8 +49,9 @@ impl Overlay {
         Overlay::Settings,
     ];
 
-    pub(crate) const ESC_ORDER: [Overlay; 19] = [
+    pub(crate) const ESC_ORDER: [Overlay; 20] = [
         Overlay::Help,
+        Overlay::ColourStudio,
         Overlay::CardPicker,
         Overlay::AudioPanel,
         Overlay::Playlists,
@@ -77,6 +80,7 @@ impl Overlay {
             | Overlay::Playlists
             | Overlay::Browser
             | Overlay::ThemeDesigner
+            | Overlay::ColourStudio
             | Overlay::ScheduleEditor
             | Overlay::SceneProperties
             | Overlay::Effects
@@ -117,6 +121,7 @@ impl App {
             }
             Overlay::Browser => self.source_browser.browser.is_some(),
             Overlay::ThemeDesigner => self.panels.theme_designer.is_some(),
+            Overlay::ColourStudio => self.panels.colour_studio.is_some(),
             Overlay::ScheduleEditor => self.panels.schedule.is_some(),
             Overlay::SceneProperties => self.panels.scene_properties.is_some(),
             Overlay::Effects => self.panels.effects.is_some(),
@@ -197,6 +202,10 @@ impl App {
             }
             Overlay::ThemeDesigner => {
                 self.panels.theme_designer = None;
+                self.retick();
+            }
+            Overlay::ColourStudio => {
+                self.panels.colour_studio = None;
                 self.retick();
             }
             Overlay::ScheduleEditor => {

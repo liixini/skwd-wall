@@ -47,7 +47,6 @@ settings-app-themes-config-found = Yapılandırma bulundu
 settings-app-themes-config-create = İlk kullanımda yapılandırma oluşturur
 settings-app-themes-on = Açık
 settings-app-themes-off = Kapalı
-settings-app-themes-hide = Ayrıntıları gizle
 settings-app-themes-details = Ayrıntılar
 settings-app-themes-custom-conflict = Bu uygulama, otomatik geçiş yapılamayan bir Skwd özel çıktısı kullanıyor. Özel çıktıyı çalıştır'ı kapatmadan önce Tema çıktıları'nı açıp şablonunu, çıktı dosyasını ve yeniden yükleme komutunu inceleyin. Kullanmaya devam etmek için açık bırakın.
 settings-app-themes-other-owner = Bu uygulamaya başka bir tema aracı bağlı. Skwd'yi etkinleştirmeden önce o entegrasyonun bağlantısını kesin.

@@ -1,5 +1,5 @@
 use crate::frontend::animation::{self as anim, MotionTier};
-use crate::frontend::scene::layout::{self, HexCurve, HexShape, Hit};
+use crate::frontend::scene::layout::{self, CardCorners, HexCurve, HexShape, Hit};
 use crate::frontend::scene::{InstanceRaw, roll_in_cut};
 
 use super::layout_helpers::{
@@ -233,7 +233,7 @@ impl SceneCore {
                 hh: hp.item_half_h() * ps,
                 skew: 0.0,
                 edge_tilt: 0.0,
-                radii: [0.0; 4],
+                corners: CardCorners::default(),
                 hex: true,
                 view: 2,
                 chrome_radius: 0.0,

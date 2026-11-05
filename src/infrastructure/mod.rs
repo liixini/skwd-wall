@@ -2,6 +2,8 @@ pub mod browser;
 pub mod capabilities;
 pub mod clipboard;
 pub mod config;
+pub mod config_pack;
+pub mod desktop;
 pub mod effects;
 pub mod executable;
 pub mod file_manager;

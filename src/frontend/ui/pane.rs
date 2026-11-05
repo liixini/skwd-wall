@@ -3,14 +3,30 @@ use iced::{Border, Color, Element, Event, Rectangle, mouse};
 
 use super::with_alpha;
 
+pub const BAR_WIDTH: f32 = 5.0;
+const BAR_MARGIN: f32 = 2.0;
+const OUTLINE_RAIL_ALPHA: f32 = 0.72;
+
+fn bar() -> iced::widget::scrollable::Scrollbar {
+    iced::widget::scrollable::Scrollbar::new()
+        .width(BAR_WIDTH)
+        .scroller_width(BAR_WIDTH)
+        .margin(BAR_MARGIN)
+}
+
 pub fn thin_vbar() -> iced::widget::scrollable::Direction {
-    use iced::widget::scrollable::{Direction, Scrollbar};
-    Direction::Vertical(Scrollbar::new().width(5.0).scroller_width(5.0).margin(2.0))
+    use iced::widget::scrollable::Direction;
+    Direction::Vertical(bar())
+}
+
+pub fn spaced_vbar(spacing: f32) -> iced::widget::scrollable::Direction {
+    use iced::widget::scrollable::Direction;
+    Direction::Vertical(bar().spacing(spacing))
 }
 
 pub fn thin_hbar() -> iced::widget::scrollable::Direction {
-    use iced::widget::scrollable::{Direction, Scrollbar};
-    Direction::Horizontal(Scrollbar::new().width(5.0).scroller_width(5.0).margin(2.0))
+    use iced::widget::scrollable::Direction;
+    Direction::Horizontal(bar())
 }
 
 pub fn scroll_style(
@@ -32,6 +48,12 @@ pub fn scroll_style(
         };
         scrollable::Style { vertical_rail: mk(), horizontal_rail: mk(), ..base }
     }
+}
+
+pub fn outline_scroll(
+    outline: Color,
+) -> impl Fn(&iced::Theme, iced::widget::scrollable::Status) -> iced::widget::scrollable::Style {
+    scroll_style(with_alpha(outline, OUTLINE_RAIL_ALPHA))
 }
 
 pub const PANE_WHEEL_STEP: f32 = 90.0;

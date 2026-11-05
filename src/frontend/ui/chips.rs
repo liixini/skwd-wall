@@ -156,9 +156,11 @@ const TAG_CHIP_GAP_X: f32 = 6.0;
 const TAG_CHIP_GAP_Y: f32 = 6.0;
 pub(crate) const TAG_CHIP_TEXT: f32 = 11.0;
 
+pub(crate) const EXCLUDED_MARK: &str = "\u{2212} ";
+
 fn chip_label(entry: &crate::domain::library::search::TagEntry) -> String {
     let up = entry.tag.to_uppercase();
-    if entry.excluded { format!("\u{2212} {up}") } else { up }
+    if entry.excluded { format!("{EXCLUDED_MARK}{up}") } else { up }
 }
 
 fn chip_count_label(entry: &crate::domain::library::search::TagEntry) -> String {
@@ -328,19 +330,19 @@ impl canvas::Program<crate::frontend::tagcloud::TagIntent> for TagChips<'_> {
                 (
                     control_background(pal, true, false),
                     control_border(pal, true, false),
-                    control_text(pal, true),
+                    control_text(pal, true, hovered),
                 )
             } else if hovered {
                 (
                     control_background(pal, false, true),
                     control_border(pal, false, true),
-                    control_text(pal, false),
+                    control_text(pal, false, true),
                 )
             } else {
                 (
                     control_background(pal, false, false),
                     control_border(pal, false, false),
-                    control_text(pal, false),
+                    control_text(pal, false, false),
                 )
             };
             frame.fill(&path, fade(fill));

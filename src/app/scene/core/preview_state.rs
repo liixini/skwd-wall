@@ -48,6 +48,14 @@ impl PreviewState {
 }
 
 impl SceneCore {
+    pub fn preview_config(&self) -> (bool, u64, u32) {
+        (
+            self.preview_state.preview_enabled,
+            self.preview_state.preview_delay_ms,
+            self.preview_state.live_fps,
+        )
+    }
+
     pub fn preview_deadline(&self) -> Option<Instant> {
         self.preview_state.pending_preview.map(|(_, at)| at)
     }

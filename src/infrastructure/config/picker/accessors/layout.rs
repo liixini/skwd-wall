@@ -29,9 +29,6 @@ impl Config {
     pub fn depth_falloff(&self) -> f32 {
         skwd_config::schema::setting::selector::DEPTH_FALLOFF_FACTOR.read(self.root()) as f32
     }
-    pub fn depth_corners(&self) -> f32 {
-        skwd_config::schema::setting::selector::DEPTH_CORNERS.read(self.root()) as f32
-    }
     pub fn depth_skew(&self) -> f32 {
         skwd_config::schema::setting::selector::DEPTH_SKEW.read(self.root()) as f32
     }
@@ -49,9 +46,6 @@ impl Config {
     }
     pub fn collection_tilt(&self) -> f32 {
         skwd_config::schema::setting::selector::COLLECTION_TILT.read(self.root()) as f32
-    }
-    pub fn collection_corners(&self) -> f32 {
-        skwd_config::schema::setting::selector::COLLECTION_CORNERS.read(self.root()) as f32
     }
     pub fn collection_speed(&self) -> f32 {
         skwd_config::schema::setting::selector::COLLECTION_SPEED.read(self.root()) as f32
@@ -79,6 +73,16 @@ impl Config {
         )
     }
 
+    pub fn tag_cloud_position(&self) -> Option<(f32, f32)> {
+        use skwd_config::schema::setting::selector as sel;
+
+        self.plate_position(
+            &sel::TAG_CLOUD_POSITION_ENABLED,
+            &sel::TAG_CLOUD_POSITION_X,
+            &sel::TAG_CLOUD_POSITION_Y,
+        )
+    }
+
     pub fn filter_swap_ms(&self) -> f32 {
         self.filter_swap_motion_ms()
     }
@@ -93,21 +97,22 @@ impl Config {
         slice_edge_tilt: sel_num(skwd_config::keys::selector::SLICE_EDGE_TILT, 0.0, 0.0) as f32;
         grid_thumb_width: sel_num(skwd_config::keys::selector::GRID_THUMB_WIDTH, 300.0, 220.0) as f32;
         grid_thumb_height: sel_num(skwd_config::keys::selector::GRID_THUMB_HEIGHT, 169.0, 124.0) as f32;
-        grid_round_corners: bool_setting(skwd_config::schema::setting::selector::GRID_ROUND_CORNERS);
         hex_radius: sel_num(skwd_config::keys::selector::HEX_RADIUS, 140.0, 100.0) as f32;
     }
 
-    pub fn slice_corners(&self) -> [f32; 4] {
-        if !self.bool_false_unless_true(skwd_config::keys::selector::ROUND_CORNERS) {
-            return [0.0; 4];
-        }
-        let base = self.num_at(skwd_config::keys::selector::CORNER_RADIUS, 16.0);
-        [
-            self.num_at(skwd_config::keys::selector::CORNER_TL, base) as f32,
-            self.num_at(skwd_config::keys::selector::CORNER_TR, base) as f32,
-            self.num_at(skwd_config::keys::selector::CORNER_BR, base) as f32,
-            self.num_at(skwd_config::keys::selector::CORNER_BL, base) as f32,
-        ]
+    pub fn corners(
+        &self,
+        keys: &skwd_config::corners::CornerKeys,
+    ) -> skwd_config::corners::Corners {
+        keys.read(self.root())
+    }
+
+    pub fn stored(&self, path: &str) -> Option<serde_json::Value> {
+        self.get(path).cloned()
+    }
+
+    pub fn corners_all_stored(&self, keys: &skwd_config::corners::CornerKeys) -> bool {
+        self.get(keys.all).is_some()
     }
 
     pub fn tag_cloud_width(&self) -> f32 {
@@ -149,10 +154,6 @@ impl Config {
         skwd_config::schema::setting::selector::GRID_GAP_Y.read(self.root()) as f32
     }
 
-    pub fn grid_corner_radius(&self) -> f32 {
-        skwd_config::schema::setting::selector::GRID_CORNER_RADIUS.read(self.root()) as f32
-    }
-
     pub fn grid_border_width(&self) -> f32 {
         skwd_config::schema::setting::selector::GRID_BORDER_WIDTH.read(self.root()) as f32
     }
@@ -177,13 +178,5 @@ impl Config {
         (self.sel_num(skwd_config::keys::selector::SLICE_WOBBLE_STRENGTH, 100.0, 100.0) as f32
             / 100.0)
             .clamp(0.0, 2.0)
-    }
-
-    pub fn selector_mode(&self) -> String {
-        use crate::contracts::picker::Mode;
-        String::from(match Mode::from_key(&self.display_mode()) {
-            Mode::Grid => "grid",
-            mode => mode.as_key(),
-        })
     }
 }

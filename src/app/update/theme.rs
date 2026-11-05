@@ -152,7 +152,7 @@ fn theme_save_apply(app: &mut App) -> Task<Message> {
     if let Some(designer) = &app.panels.theme_designer {
         let palette = crate::frontend::theme::Palette::from_candidate(&designer.candidate);
         app.theme.base_palette = palette;
-        app.start_fade(palette);
+        app.start_fade(&palette);
     }
     app.retick();
     Task::none()
@@ -199,7 +199,7 @@ fn theme_delete_saved(app: &mut App, name: &str) -> Task<Message> {
     if active && let Some(candidate) = crate::domain::theme::Candidate::from_preset("nord") {
         let palette = crate::frontend::theme::Palette::from_candidate(&candidate);
         app.theme.base_palette = palette;
-        app.start_fade(palette);
+        app.start_fade(&palette);
         app.daemon.client.call("wall.retheme", json!({}));
         app.invalidate_swatch();
         if let Some(designer) = app.panels.theme_designer.as_mut() {
@@ -437,11 +437,17 @@ pub(crate) fn wallpaper_theme_state_for(app: &App, key: &str) -> (String, bool) 
 }
 
 pub(crate) fn update_pinned_wallpaper_settings(app: &mut App) {
-    let Some(key) = selected_wallpaper_key(app) else { return };
+    if let Some(key) = selected_wallpaper_key(app) {
+        update_pinned_settings_for(app, &key);
+    }
+}
+
+pub(crate) fn update_pinned_settings_for(app: &mut App, key: &str) {
     let mut profiles = app.config.array_values(skwd_config::keys::theme::WALLPAPER_PROFILES);
-    let Some(profile) = profiles.iter_mut().find(|profile| {
-        profile["key"].as_str() == Some(key.as_str()) && profile["settingsPinned"] == true
-    }) else {
+    let Some(profile) = profiles
+        .iter_mut()
+        .find(|profile| profile["key"].as_str() == Some(key) && profile["settingsPinned"] == true)
+    else {
         return;
     };
     let settings = skwd_config::theme_profile::snapshot(app.config.root());

@@ -1,5 +1,3 @@
-settings-tab-language = زبان
-settings-tab-note-language = زبان انتخابگر و تنظیمات را انتخاب کنید.
 settings-language-card = زبان رابط کاربری
 settings-language-card-desc = تغییرات بلافاصله اعمال می‌شوند و برای اجرای بعدی ذخیره می‌شوند.
 settings-language-choice-label = زبان

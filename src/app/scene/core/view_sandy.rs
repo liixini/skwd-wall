@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::frontend::animation as anim;
-use crate::frontend::scene::layout::{HexShape, Hit};
+use crate::frontend::scene::layout::{CardCorners, HexShape, Hit};
 use crate::frontend::scene::sandy;
 use crate::frontend::scene::{
     InstanceRaw, SandySnap, card_flip_phases, card_flip_shader_payload, roll_in_cut,
@@ -153,7 +153,7 @@ impl SceneCore {
                 hh: shh,
                 skew: params.skew,
                 edge_tilt: 0.0,
-                radii: params.corners,
+                corners: params.corners.sheared(shw * 2.0, shh * 2.0, params.skew, 0.0),
                 hex: false,
                 view: 1,
                 chrome_radius: 0.0,
@@ -188,7 +188,7 @@ impl SceneCore {
             wanted,
             cur_store,
             [cx, cy, chw, chh],
-            [0.0; 4],
+            CardCorners::default(),
             0.0,
             0.0,
             true,
@@ -210,7 +210,7 @@ impl SceneCore {
                 chh,
                 0.0,
                 0.0,
-                [0.0; 4],
+                CardCorners::default(),
                 self.card.flip.x,
             ));
         }

@@ -1,5 +1,3 @@
-settings-tab-language = Dil
-settings-tab-note-language = Seçici ve ayarların kullandığı dili seçin.
 settings-language-card = Arayüz dili
 settings-language-card-desc = Değişiklikler hemen uygulanır ve bir sonraki başlatma için kaydedilir.
 settings-language-choice-label = Dil

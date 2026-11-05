@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::domain::input::InputMap;
 
 pub use crate::contracts::capabilities::{GraphicsCard, GraphicsTier};
@@ -15,9 +17,7 @@ pub trait SettingsSource {
     fn default_semantic_model_available(&self) -> bool;
 
     fn display_mode(&self) -> String;
-    fn selector_mode(&self) -> String;
-    fn selector_preset_names(&self, mode: &str) -> Vec<String>;
-    fn selected_preset(&self, mode: &str) -> Option<String>;
+    fn saved_layouts(&self) -> super::SavedLayouts;
     fn sandy_grain(&self) -> f32;
     fn sandy_swap_style(&self) -> String;
     fn launch_animation(&self) -> String;
@@ -35,6 +35,9 @@ pub trait SettingsSource {
     fn graphics_devices(&self) -> Vec<crate::contracts::capabilities::GraphicsDevice>;
     fn is_niri(&self) -> bool;
     fn on_battery_power(&self) -> bool;
+    fn effective_picker_fps(&self) -> u32;
+    fn effective_video_idle_seconds(&self) -> u32;
+    fn overview(&self, stamp: u64, scan: super::Scan<'_>) -> Arc<super::Overview>;
 }
 
 #[cfg(test)]

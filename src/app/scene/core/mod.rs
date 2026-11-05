@@ -1,5 +1,7 @@
 mod atlas_helpers;
 mod detail;
+mod flip;
+mod frame;
 mod hand_state;
 mod layout_helpers;
 mod lifecycle;

@@ -1,5 +1,3 @@
-settings-tab-language = Langue
-settings-tab-note-language = Choisissez la langue utilisée par le sélecteur et les réglages.
 settings-language-card = Langue de l’interface
 settings-language-card-desc = Les changements s’appliquent immédiatement et sont enregistrés pour le prochain lancement.
 settings-language-choice-label = Langue

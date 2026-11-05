@@ -8,3 +8,6 @@ settings-displays-lock-label = लॉक
 settings-displays-lock-desc = इस मॉनिटर का वॉलपेपर केवल मल्टीपिकर से बदलें।
 settings-displays-empty-label = डिस्प्ले खोजे जा रहे हैं
 settings-displays-empty-desc = वॉलपेपर सेवा के अपने डिस्प्ले बताने पर वर्तमान वॉलपेपर दिखेंगे।
+settings-displays-default-placement-label = डिफ़ॉल्ट जगह
+settings-displays-default-placement-desc = हर उस डिस्प्ले पर लागू होता है जिसकी अपनी जगह तय नहीं है।
+settings-displays-use-global = ग्लोबल का उपयोग करें · { $mode }

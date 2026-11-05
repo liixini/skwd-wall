@@ -1,7 +1,7 @@
 use super::action::InputScope;
 use super::{
     ActiveScopes, InputAction, InputMap, KeyId, KeySpec, Mods, MouseButton, MouseSpec, NavKeys,
-    Trigger, binding_config, binding_label, parse_binding, slot_triggers, with_slot,
+    Trigger, binding_config, binding_label, parse_binding, slot_triggers, with_slot, without,
 };
 
 const PICKER: ActiveScopes = ActiveScopes { fields: false, search: false, downloads: false };
@@ -67,12 +67,12 @@ fn label_config_round_trip() {
         ("tab", "Tab"),
         ("space", "Space"),
         ("click", "Click"),
-        ("right-click", "Right-click"),
+        ("right-click", "Right click"),
         ("ctrl+click", "Ctrl+Click"),
-        ("shift+middle-click", "Shift+Middle-click"),
+        ("shift+middle-click", "Shift+Middle click"),
     ] {
         let trigger = Trigger::parse(raw).expect(raw);
-        assert_eq!(trigger.label(), shown);
+        assert_eq!(crate::i18n::with_language("en-US", || trigger.label()), shown);
         assert_eq!(Trigger::parse(&trigger.config()), Some(trigger));
     }
     assert_eq!(key("ctrl+alt+shift+d").config(), "ctrl+alt+shift+d");
@@ -83,7 +83,14 @@ fn bindings_hold_several_triggers() {
     let triggers = parse_binding("i, right-click").expect("valid binding");
     assert_eq!(triggers, vec![key("i"), key("right-click")]);
     assert_eq!(binding_config(&triggers), "i, right-click");
-    assert_eq!(binding_label(&triggers), "I \u{b7} Right-click");
+    assert_eq!(
+        crate::i18n::with_language("en-US", || binding_label(&triggers)),
+        "I \u{b7} Right click"
+    );
+    assert_eq!(
+        crate::i18n::with_language("fr-FR", || binding_label(&triggers)),
+        "I \u{b7} Clic droit"
+    );
     assert_eq!(parse_binding("none"), Some(Vec::new()));
     assert_eq!(binding_config(&[]), "none");
     assert_eq!(parse_binding(""), None);
@@ -111,6 +118,10 @@ fn defaults_reachable() {
     assert_eq!(map.lookup_key(&KeyId::Enter, Mods::NONE, PICKER), Some(InputAction::Apply));
     assert_eq!(
         map.lookup_key(&KeyId::Char("c".into()), Mods::NONE, PICKER),
+        Some(InputAction::ColourStudio)
+    );
+    assert_eq!(
+        map.lookup_key(&KeyId::Char("c".into()), Mods::new(false, false, true), PICKER),
         Some(InputAction::ThemePanel)
     );
     assert_eq!(map.lookup_key(&KeyId::Tab, Mods::NONE, PICKER), Some(InputAction::TypeNext));
@@ -298,9 +309,9 @@ fn replacing_one_slot_keeps_the_other() {
     assert_eq!(with_slot(&triggers, 1, Some(key("h"))), vec![key("left"), key("h")]);
     assert_eq!(with_slot(&triggers, 0, Some(key("j"))), vec![key("j"), key("a")]);
     assert_eq!(with_slot(&triggers, 1, None), vec![key("left")]);
-    assert_eq!(with_slot(&triggers, 0, None), vec![key("a")]);
+    assert_eq!(with_slot(&triggers, 0, None), vec![key("a"), key("a")]);
     assert_eq!(with_slot(&triggers, 1, Some(key("left"))), vec![key("left")]);
-    assert_eq!(with_slot(&[], 1, Some(key("h"))), vec![key("h")]);
+    assert_eq!(with_slot(&[], 1, Some(key("h"))), vec![key("h"), key("h")]);
     let extra = parse_binding("left, a, h").expect("valid binding");
     assert_eq!(with_slot(&extra, 1, Some(key("k"))), vec![key("left"), key("k")]);
     assert_eq!(with_slot(&extra, 0, Some(key("up"))), vec![key("up"), key("a"), key("h")]);
@@ -348,4 +359,56 @@ fn page_and_edge_keys_parse_and_round_trip() {
     ] {
         assert_eq!(map.lookup_key(&id, Mods::NONE, PICKER), Some(action));
     }
+}
+
+#[test]
+fn empty_first_slot() {
+    let lone = with_slot(&[], 1, Some(key("h")));
+    assert!(slot_triggers(&lone, 0).is_empty());
+    assert_eq!(slot_triggers(&lone, 1), &[key("h")]);
+    let both = with_slot(&lone, 0, Some(key("left")));
+    assert_eq!(both, vec![key("left"), key("h")]);
+    let cleared = with_slot(&both, 0, None);
+    assert!(slot_triggers(&cleared, 0).is_empty());
+    assert_eq!(slot_triggers(&cleared, 1), &[key("h")]);
+    assert!(with_slot(&cleared, 1, None).is_empty());
+    assert_eq!(binding_label(&lone), "H");
+}
+
+#[test]
+fn stealing_keeps_slot_places() {
+    let pair = parse_binding("left, a").expect("valid binding");
+    let robbed = without(&pair, &key("left"));
+    assert!(slot_triggers(&robbed, 0).is_empty());
+    assert_eq!(slot_triggers(&robbed, 1), &[key("a")]);
+    let robbed = without(&pair, &key("a"));
+    assert_eq!(slot_triggers(&robbed, 0), &[key("left")]);
+    assert!(slot_triggers(&robbed, 1).is_empty());
+    assert!(without(&robbed, &key("left")).is_empty());
+}
+
+#[test]
+fn empty_slot_config() {
+    let lone = with_slot(&[], 1, Some(key("h")));
+    let text = binding_config(&lone);
+    assert_eq!(text, "h, h");
+    assert_eq!(parse_binding(&text), Some(lone));
+    for text in ["left, a", "left", "none", "left, a, h"] {
+        let read = parse_binding(text).expect(text);
+        let kept = if text == "none" { Vec::new() } else { read.clone() };
+        assert_eq!(binding_config(&kept), text);
+        assert_eq!(slot_triggers(&read, 0).len(), usize::from(text != "none"));
+    }
+}
+
+#[test]
+fn older_reader_key() {
+    let lone = with_slot(&[], 1, Some(key("h")));
+    let map = InputMap::from_bindings([(InputAction::NavLeft, binding_config(&lone))]);
+    assert_eq!(
+        map.lookup_key(&KeyId::Char("h".into()), Mods::NONE, PICKER),
+        Some(InputAction::NavLeft)
+    );
+    assert_eq!(map.triggers(InputAction::NavLeft), &[key("h"), key("h")]);
+    assert_eq!(parse_binding("none, h"), None);
 }

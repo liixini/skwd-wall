@@ -89,4 +89,3 @@ effects-activity-inactive-desc = برای فعالیت غیرفعال فقط م�
 effects-activity-unavailable = فعالیت انتخاب‌شده در دسترس نیست. یک فعالیت موجود را انتخاب کنید و دوباره تلاش کنید.
 effects-activity-saved = برای { $activity } ذخیره شد.
 effects-activity-unassigned = تصویر پس‌زمینهٔ Skwd اختصاص داده نشده
-effects-activity-preparing = در حال آماده‌سازی تصویر پس‌زمینه برای { $activity }.

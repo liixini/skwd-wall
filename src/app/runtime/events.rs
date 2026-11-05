@@ -36,22 +36,20 @@ impl App {
             ev::REMOTE_THUMB => self.on_remote_thumb(data),
             ev::PREVIEW_READY => {
                 let Ok(payload) = ev::PreviewReady::deserialize(data) else { return };
-                let adopted = self.source_browser.browser.as_mut().is_some_and(|br| {
-                    let current_id = br
-                        .session
-                        .preview
-                        .and_then(|index| br.session.items.get(index))
-                        .map(|item| item.id.as_str());
-                    if current_id != Some(payload.id.as_str()) {
-                        return false;
-                    }
-                    let Some(item) = br.item_mut(&payload.id) else { return false };
-                    item.preview_path = Some(payload.path.clone());
-                    true
-                });
-                if !adopted {
-                    let _ = std::fs::remove_file(&payload.path);
-                }
+                let source = crate::contracts::browser::Source::from_key(&payload.source)
+                    .or_else(|| self.source_browser.media.key.as_ref().map(|key| key.source));
+                let Some(source) = source else { return };
+                let url = if payload.url.is_empty() {
+                    let Some(active) = self.source_browser.media.key.as_ref() else { return };
+                    active.url.clone()
+                } else {
+                    payload.url
+                };
+                self.adopt_browser_preview(
+                    &crate::contracts::browser::PreviewIdentity { source, id: payload.id, url },
+                    &payload.path,
+                    (!payload.error.is_empty()).then_some(payload.error),
+                );
             }
             ev::DOWNLOAD => self.on_download(data),
             ev::TASK_STATUS => self.on_task_status(data),
@@ -160,7 +158,9 @@ impl App {
             ev::CONFIG_CHANGED => {
                 let outdoor_mode = self.outdoor_mode();
                 let location_key = self.outdoor_location_key();
-                self.adopt_external_config();
+                if self.adopt_external_config() {
+                    crate::app::update::reread_search(self);
+                }
                 let context_changed = outdoor_mode != self.outdoor_mode()
                     || (self.outdoor_mode() && location_key != self.outdoor_location_key());
                 if context_changed {
@@ -181,6 +181,26 @@ impl App {
             }
             ev::WEATHER_CHANGED => {
                 self.call_tracked(wall_proto::rpc::WALL_WEATHER, json!({}), Pending::Weather);
+            }
+            ev::DRAWING_STATUS => {
+                if self.panels.settings.open {
+                    self.request_drawing_status();
+                } else if let Ok(status) =
+                    crate::infrastructure::rpc_results::decode_drawing_status(data)
+                    && self.flipped_drawing_key() == Some(status.key.as_str())
+                {
+                    if matches!(
+                        status.phase,
+                        wall_proto::drawing::Phase::Ready
+                            | wall_proto::drawing::Phase::Failed
+                            | wall_proto::drawing::Phase::Cancelled
+                            | wall_proto::drawing::Phase::Paused
+                    ) {
+                        self.request_drawing_status();
+                    } else {
+                        self.adopt_drawing_status(status);
+                    }
+                }
             }
             ev::OUTPUTS_CHANGED => {
                 self.call_tracked("wall.outputs", json!({}), Pending::Outputs);
@@ -294,6 +314,9 @@ impl App {
     fn on_task_status(&mut self, data: &Value) {
         match crate::infrastructure::rpc_results::decode_task_status(data) {
             Ok(task) => {
+                if task.id == crate::contracts::settings::drawing::TASK && !task.state.is_active() {
+                    self.panels.settings.library_job = false;
+                }
                 self.daemon.tasks.update(task);
                 self.chrome.bar.cache.clear();
                 self.retick();
@@ -400,7 +423,8 @@ impl App {
             self.theme.preview_target
         );
         if self.theme.preview_target.is_none() {
-            self.start_fade(self.theme.base_palette);
+            let palette = self.theme.base_palette;
+            self.start_fade(&palette);
         }
         if self.theme.bar_open {
             self.set_base_swatch();

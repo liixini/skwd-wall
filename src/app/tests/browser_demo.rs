@@ -5,6 +5,8 @@ use super::{
 use serde_json::{Value, json};
 use std::time::Instant;
 
+use crate::contracts::browser::{WorkshopDetails, WorkshopPreview};
+
 fn command(app: &mut App, value: &str) {
     let _ = update(
         app,
@@ -40,6 +42,8 @@ fn browser_demo_commands_require_an_active_demo() {
     browser.session.items.push(browser_item("chosen"));
     browser.session.preview = Some(0);
     app.source_browser.browser = Some(browser);
+    app.sync_browser_media(Instant::now());
+    drain_calls(&app);
     let before = state(&app);
     for value in [
         "browser-demo source bing",
@@ -149,9 +153,24 @@ fn browser_demo_preview_resolves_a_stable_id_and_reports_readiness() {
         wall_proto::ev::PREVIEW_READY,
         &json!({"id": "chosen", "path": "/missing-demo-preview.png"}),
     );
-    assert_eq!(state(&app)["preview"]["ready"], true);
+    assert_eq!(state(&app)["preview"]["ready"], false);
     assert_eq!(state(&app)["preview"]["path"], "/missing-demo-preview.png");
     assert!(app.source_browser.browser.as_ref().unwrap().session.items[0].preview_path.is_none());
+}
+
+#[test]
+fn selects_gallery_asset() {
+    let mut app = demo_browser();
+    app.source_browser.browser.as_mut().unwrap().session.items[1].workshop =
+        Some(WorkshopDetails {
+            previews: vec![WorkshopPreview::Image { url: "https://x/gallery".into() }],
+            ..WorkshopDetails::default()
+        });
+    command(&mut app, "browser-demo preview chosen");
+    drain_calls(&app);
+    command(&mut app, "browser-demo asset 1");
+    assert_eq!(state(&app)["preview"]["asset"], 1);
+    assert_eq!(state(&app)["preview"]["media_count"], 2);
 }
 
 #[test]

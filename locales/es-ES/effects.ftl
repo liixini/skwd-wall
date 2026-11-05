@@ -89,4 +89,3 @@ effects-activity-inactive-desc = En una actividad inactiva solo puedes cambiar l
 effects-activity-unavailable = La actividad seleccionada no está disponible. Elige una actividad existente e inténtalo de nuevo.
 effects-activity-saved = Guardado para { $activity }.
 effects-activity-unassigned = Sin fondo de Skwd asignado
-effects-activity-preparing = Preparando el fondo para { $activity }.

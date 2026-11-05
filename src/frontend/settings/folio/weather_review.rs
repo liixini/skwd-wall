@@ -265,7 +265,7 @@ pub fn layer<'a>(
         scrollable(rows)
             .height(Length::Fill)
             .direction(crate::frontend::ui::thin_vbar())
-            .style(crate::frontend::ui::scroll_style(palette.primary)),
+            .style(crate::frontend::ui::outline_scroll(palette.outline)),
     ]
     .spacing(ITEM_GAP * scale);
     let panel = container(body)

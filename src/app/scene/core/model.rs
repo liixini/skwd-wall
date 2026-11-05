@@ -8,12 +8,14 @@ use crate::frontend::animation::{MotionProfile, MotionTier, Spring, Tween};
 use crate::frontend::scene::hand::{Move, PoseTween};
 use crate::frontend::scene::layout::{ExtraParams, GridParams, HexParams, Hit, Mode, SliceParams};
 use crate::frontend::scene::{
-    BackPanel, Chrome, InstanceRaw, LaunchAnim, RenderSnapshot, SandySnap, Transition,
+    BackPanel, Chrome, DrawingCardState, InstanceRaw, LaunchAnim, RenderSnapshot, SandySnap,
+    Transition,
 };
 use crate::frontend::theme::Palette;
 use crate::infrastructure::preview::DecodePool;
 use crate::rendering::scene::atlas::AtlasMap;
 
+use super::flip::FlipClock;
 use super::preview_state::PreviewState;
 
 pub struct SceneCore {
@@ -44,6 +46,9 @@ pub struct SceneCore {
     pub(super) hand: HandState,
     pub(super) motion: SceneMotionState,
     pub viewport: (f32, f32),
+    pub(super) picker_frame: Option<[f32; 4]>,
+    pub(super) frame_shown: Option<iced::Rectangle>,
+    pub(super) natural_frame: Option<iced::Rectangle>,
     pub render: Arc<RenderSnapshot>,
     pub last_mouse: Option<(f32, f32)>,
     pub input_idle: bool,
@@ -100,9 +105,10 @@ impl SceneMotionState {
 
 pub(super) struct CardState {
     pub(super) removal: crate::frontend::scene::RemovalAction,
+    pub(super) drawing: Option<(String, DrawingCardState)>,
     pub(super) flipped: Option<usize>,
     pub(super) flip_effect: u32,
-    pub(super) flip: Spring,
+    pub(super) flip: FlipClock,
     pub(super) flip_duration_ms: f32,
     pub(super) flip_shader_enabled: bool,
     pub(super) flip_back_enabled: bool,
@@ -133,9 +139,10 @@ impl CardState {
         let motion = MotionProfile::default();
         Self {
             removal: crate::frontend::scene::RemovalAction::Delete,
+            drawing: None,
             flipped: None,
             flip_effect: 0,
-            flip: motion.override_spring(0.0, 1500.0),
+            flip: FlipClock::new(1500.0),
             flip_duration_ms: 1500.0,
             flip_shader_enabled: true,
             flip_back_enabled: true,
@@ -359,18 +366,18 @@ impl SceneCore {
         sp: SliceParams,
         gp: GridParams,
         hp: HexParams,
-        xp: ExtraParams,
+        xp: &ExtraParams,
     ) -> Self {
         let mut scene = Self {
             mode,
             sp,
             gp,
             hp,
-            xp,
+            xp: *xp,
             sp_target: sp,
             gp_target: gp,
             hp_target: hp,
-            xp_target: xp,
+            xp_target: *xp,
             current: 0,
             hex_row: 0,
             hover: None,
@@ -392,6 +399,9 @@ impl SceneCore {
             hand: HandState::new(),
             motion: SceneMotionState::new(),
             viewport: (0.0, 0.0),
+            picker_frame: None,
+            frame_shown: None,
+            natural_frame: None,
             render: Arc::new(RenderSnapshot::default()),
             last_mouse: None,
             input_idle: false,

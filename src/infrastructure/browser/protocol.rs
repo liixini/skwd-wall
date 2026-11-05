@@ -55,8 +55,9 @@ fn encode_steam_search(request: &SteamSearch) -> RpcCall {
         .iter()
         .find_map(|(choice, tag)| (request.resolution == *choice).then_some(*tag))
         .unwrap_or(&request.resolution);
-    let tags: Vec<&str> = [request.request_type.as_str(), request.category.as_str(), resolution]
-        .into_iter()
+    let tags: Vec<&str> = std::iter::once(request.request_type.as_str())
+        .chain(request.tags.iter().map(String::as_str))
+        .chain(std::iter::once(resolution))
         .filter(|tag| !tag.is_empty())
         .collect();
     let excluded_tags: Vec<&str> = STEAM_UNSUPPORTED_TYPES
@@ -69,6 +70,7 @@ fn encode_steam_search(request: &SteamSearch) -> RpcCall {
                 .flatten()
                 .copied(),
         )
+        .chain(request.excluded_tags.iter().map(String::as_str))
         .collect();
     RpcCall {
         method: "steam.search",
@@ -136,7 +138,7 @@ pub fn encode_download(request: &DownloadRequest) -> RpcCall {
 }
 
 pub fn encode_preview(request: &PreviewRequest) -> RpcCall {
-    match request.source {
+    let mut call = match request.source {
         Source::Steam => RpcCall {
             method: "steam.preview",
             params: json!({ "id": request.id, "full_url": request.full_url }),
@@ -153,7 +155,12 @@ pub fn encode_preview(request: &PreviewRequest) -> RpcCall {
                 "full_url": request.full_url,
             }),
         },
+    };
+    if request.refresh {
+        const REFRESH: &str = "refresh";
+        call.params[REFRESH] = Value::Bool(true);
     }
+    call
 }
 
 pub fn encode_apply(target: &ApplyTarget) -> Value {
@@ -169,7 +176,6 @@ pub fn encode_apply(target: &ApplyTarget) -> Value {
     }
 }
 
-#[cfg(test)]
 pub fn decode_preview_ready_path(result: &Value) -> Option<String> {
     if result.get("status").and_then(Value::as_str) != Some("ready") {
         return None;

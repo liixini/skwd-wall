@@ -8,3 +8,6 @@ settings-displays-lock-label = Блокировка
 settings-displays-lock-desc = Обновлять обои этого монитора только через мультивыбор.
 settings-displays-empty-label = Поиск дисплеев
 settings-displays-empty-desc = Текущие обои появятся, когда служба обоев сообщит о своих дисплеях.
+settings-displays-default-placement-label = Размещение по умолчанию
+settings-displays-default-placement-desc = Применяется ко всем экранам, у которых нет собственного размещения.
+settings-displays-use-global = Использовать общее · { $mode }

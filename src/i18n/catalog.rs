@@ -234,6 +234,19 @@ fn format_message(bundle: &Bundle, key: &str, args: Option<&FluentArgs<'_>>) -> 
 }
 
 static SELECTED: AtomicU8 = AtomicU8::new(0);
+
+#[cfg(test)]
+thread_local! {
+    static THREAD_LANGUAGE: std::cell::Cell<Option<u8>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(test)]
+pub fn with_language<T>(requested: &str, body: impl FnOnce() -> T) -> T {
+    THREAD_LANGUAGE.set(Some(language_index(requested)));
+    let out = body();
+    THREAD_LANGUAGE.set(None);
+    out
+}
 static AUTOMATIC: LazyLock<u8> = LazyLock::new(|| {
     let vars = ["SKWD_WALL_LOCALE", "LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"]
         .map(|key| std::env::var(key).ok());
@@ -242,8 +255,10 @@ static AUTOMATIC: LazyLock<u8> = LazyLock::new(|| {
 static CATALOGS: [OnceLock<Catalog>; LANGUAGES.len()] =
     [const { OnceLock::new() }; LANGUAGES.len()];
 
+pub const SYSTEM_LANGUAGE: &str = "auto";
+
 pub fn language_choice(requested: &str) -> &'static str {
-    normalized_locale(requested).unwrap_or("auto")
+    normalized_locale(requested).unwrap_or(SYSTEM_LANGUAGE)
 }
 
 fn language_index(requested: &str) -> u8 {
@@ -258,6 +273,9 @@ pub fn set_language(requested: &str) {
 }
 
 fn active_index() -> usize {
+    #[cfg(test)]
+    let selected = THREAD_LANGUAGE.get().unwrap_or_else(|| SELECTED.load(Ordering::Relaxed));
+    #[cfg(not(test))]
     let selected = SELECTED.load(Ordering::Relaxed);
     let resolved = if selected == 0 { *AUTOMATIC } else { selected };
     usize::from(resolved.saturating_sub(1)).min(LANGUAGES.len() - 1)
@@ -286,6 +304,16 @@ pub fn format(key: &str, args: &FluentArgs<'_>) -> String {
 
 pub fn tr(key: &'static str) -> &'static str {
     catalog().text(key)
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct Text {
+    pub key: &'static str,
+    pub value: &'static str,
+}
+
+pub fn text(key: &'static str) -> Text {
+    Text { key, value: tr(key) }
 }
 
 pub fn settings_keybind_conflict(first: &str, second: &str, binding: &str) -> String {

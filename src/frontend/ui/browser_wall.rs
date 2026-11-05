@@ -5,6 +5,7 @@ use crate::frontend::browser::{BrowserIntent, BrowserMsg};
 
 #[derive(Debug, Clone, Copy)]
 pub enum BrowserWallInput {
+    Leave,
     Pointer(f32, f32),
     Click(f32, f32),
     Wheel(f32),
@@ -22,7 +23,13 @@ impl canvas::Program<BrowserIntent> for BrowserWallInputLayer {
         bounds: Rectangle,
         cursor: mouse::Cursor,
     ) -> Option<Action<BrowserIntent>> {
-        let position = cursor.position_in(bounds)?;
+        let Some(position) = cursor.position_in(bounds) else {
+            return matches!(event, Event::Mouse(mouse::Event::CursorMoved { .. })).then(|| {
+                Action::publish(BrowserIntent::Update(BrowserMsg::WallInput(
+                    BrowserWallInput::Leave,
+                )))
+            });
+        };
         let input = match event {
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
                 BrowserWallInput::Pointer(position.x, position.y)

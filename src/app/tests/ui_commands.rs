@@ -45,8 +45,13 @@ fn ui_commands() {
     cmd(&mut app, "mode slices");
     cmd(&mut app, "set components.wallpaperSelector.sliceEdgeTilt 72");
     cmd(&mut app, "preset save Slanted cards");
-    assert_eq!(app.config.selected_preset("slices").as_deref(), Some("Slanted cards"));
-    assert_eq!(app.config.selector_presets("slices")[0].1["sliceEdgeTilt"], json!(72.0));
+    let view = app.config.saved_layouts_view();
+    assert_eq!(view.current(), Some("Slanted cards"));
+    assert_eq!(view.names.len(), 2);
+    assert!(!view.dirty());
+    cmd(&mut app, "set components.wallpaperSelector.sliceEdgeTilt 10");
+    cmd(&mut app, "preset save Slanted cards");
+    assert_eq!(app.config.saved_layouts_view().names.len(), 2);
     cmd(&mut app, "mode wall");
     let camera_before = app.scene.camera_target();
     cmd(&mut app, "wheel -2");
@@ -681,9 +686,11 @@ fn demo_session_transient_restores_state() {
     cmd(&mut app, "colour any");
     assert_eq!(app.library_session.filters.color, -1);
     cmd(&mut app, "tab theme");
+    let mut now = Instant::now();
+    tick_frames(&mut app, &mut now, 60);
     cmd(&mut app, "section 1");
     assert!(app.panels.settings.open);
-    assert_eq!(app.panels.settings.tab, "theme");
+    assert_eq!(app.panels.settings.tab, "colours");
     assert_eq!(app.panels.settings.section, 1);
     cmd(&mut app, "open theme");
     cmd(&mut app, "recolour dracula");
@@ -782,6 +789,37 @@ fn demo_apply_video_transition_arm() {
     assert_eq!(apply["output"], "*");
     assert_eq!(apply["transition_shader"], "soft-warp-fade");
     assert_eq!(apply["transition_duration_ms"], 260);
+}
+
+#[test]
+fn demo_applies_studio_transitions() {
+    let mut app = test_app();
+    seed(
+        &mut app,
+        &[json!({
+            "key": "video:forest.mp4",
+            "name": "forest.mp4",
+            "type": "video",
+            "thumb": "/thumbs/forest.webp"
+        })],
+    );
+    let cmd = |app: &mut App, command: &str| {
+        let _ = update(
+            app,
+            Message::Daemon(crate::infrastructure::runtime::Wake::Command(command.to_string())),
+        );
+    };
+
+    cmd(&mut app, "demo begin");
+    cmd(&mut app, "select video:forest.mp4");
+    drain_calls(&app);
+    for shader in ["photo-cutout", "slat-turn", "crop-relay", "sunlit-arcade", "paper-heart"] {
+        cmd(&mut app, &format!("apply * {shader} 3400"));
+        let calls = drain_calls(&app);
+        let (_, apply) = calls.iter().find(|(method, _)| method == "wall.apply").expect(shader);
+        assert_eq!(apply["transition_shader"], shader);
+        assert_eq!(apply["transition_duration_ms"], 3400);
+    }
 }
 
 #[test]

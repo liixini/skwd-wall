@@ -1,9 +1,12 @@
 use std::path::PathBuf;
+use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use log::{info, warn};
 use serde_json::Value;
 
 use crate::contracts::picker::format_config_number as fmt_num;
+use crate::contracts::settings::OverviewMemo;
 
 #[cfg(unix)]
 fn secure_config_file(path: &std::path::Path) -> bool {
@@ -20,17 +23,51 @@ fn secure_config_file(_path: &std::path::Path) -> bool {
     false
 }
 
+#[derive(Default)]
+pub(crate) struct Writes {
+    held: AtomicBool,
+    pending: AtomicBool,
+}
+
+#[cfg(test)]
+thread_local! {
+    static PERSISTED: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(crate) fn persisted() -> usize {
+    PERSISTED.get()
+}
+
 #[allow(clippy::struct_field_names)]
 pub struct Config {
     pub(super) data: Value,
+    pub(super) layout: Option<super::profiles::LayoutTarget>,
+    pub(super) effective: OnceLock<Value>,
+    pub(super) layout_cache: OnceLock<Result<skwd_config::picker_layout::Layouts, String>>,
+    pub(crate) palette_previews: OnceLock<Vec<(String, Vec<String>)>>,
+    pub(crate) overview: crate::contracts::settings::OverviewMemo,
     pub config_path: PathBuf,
     pub(super) small: bool,
     pub(super) transient: bool,
+    pub(super) writes: Writes,
     pub(super) on_battery: bool,
 }
 
 impl Config {
+    pub(crate) fn transition_duration_ms(&self) -> u64 {
+        if self.flag_default_true(skwd_config::keys::transition::PRESET_TIMING)
+            && let Some(duration) = wall_proto::transitions::preset_duration_ms(
+                &self.str_path(skwd_config::keys::transition::SHADER),
+            )
+        {
+            return duration;
+        }
+        self.num_path(skwd_config::keys::transition::DURATION_MS) as u64
+    }
+
     skwd_config::getters! {
+        reduced_motion: bool_setting(skwd_config::schema::setting::motion::REDUCED);
         close_on_selection: bool_setting(skwd_config::schema::setting::general::CLOSE_ON_SELECTION);
         display_mode: text_setting(skwd_config::schema::setting::selector::DISPLAY_MODE);
         filter_bar_always_visible: bool_setting(skwd_config::schema::setting::general::FILTER_BAR_ALWAYS_VISIBLE);
@@ -44,6 +81,7 @@ impl Config {
         last_filter_orient: str(skwd_config::keys::filter_bar::LAST_ORIENT, "");
         last_filter_resolution: str(skwd_config::keys::filter_bar::LAST_RESOLUTION, "");
         last_filter_sort: str(skwd_config::keys::filter_bar::LAST_SORT, "color");
+        loop_around: off_unless_on(skwd_config::keys::selector::LOOP_AROUND);
         main_monitor: str(skwd_config::keys::system::MONITOR, "");
         sandy_swap_loop: off_unless_on(skwd_config::keys::selector::SANDY_SWAP_LOOP);
         sandy_video_out_live: on_unless_off(skwd_config::keys::selector::SANDY_OUTGOING_LIVE);
@@ -67,9 +105,15 @@ impl Config {
         canonicalize_picker_config(&mut data);
         Self {
             data,
+            layout: None,
+            effective: OnceLock::new(),
+            layout_cache: OnceLock::new(),
+            palette_previews: OnceLock::new(),
+            overview: OverviewMemo::default(),
             config_path: std::env::temp_dir().join("skwd_wall_test.json"),
             small: false,
             transient: false,
+            writes: Writes::default(),
             on_battery: false,
         }
     }
@@ -98,9 +142,15 @@ impl Config {
         canonicalize_picker_config(&mut data);
         Self {
             data,
+            layout: None,
+            effective: OnceLock::new(),
+            layout_cache: OnceLock::new(),
+            palette_previews: OnceLock::new(),
+            overview: OverviewMemo::default(),
             config_path,
             small: false,
             transient: false,
+            writes: Writes::default(),
             on_battery: skwd_config::on_battery_power(),
         }
     }
@@ -120,6 +170,10 @@ impl Config {
             && val != self.data
         {
             self.data = val;
+            self.palette_previews.take();
+            self.overview.take();
+            self.effective.take();
+            self.layout_cache.take();
             return true;
         }
         false
@@ -129,6 +183,7 @@ impl Config {
         let small = width <= 1600.0;
         let changed = self.small != small;
         self.small = small;
+        self.overview.take();
         changed
     }
 
@@ -145,19 +200,15 @@ impl Config {
     }
 
     pub(super) fn get(&self, path: &str) -> Option<&Value> {
-        skwd_config::get(&self.data, path)
+        skwd_config::get(self.root(), path)
     }
 
     pub(super) fn str_at(&self, path: &str, default: &str) -> String {
-        skwd_config::str_at(&self.data, path, default)
+        skwd_config::str_at(self.root(), path, default)
     }
 
     pub(super) fn num_at(&self, path: &str, default: f64) -> f64 {
-        skwd_config::num_at(&self.data, path, default)
-    }
-
-    pub(super) fn bool_false_unless_true(&self, path: &str) -> bool {
-        skwd_config::bool_false_unless_true(&self.data, path)
+        skwd_config::num_at(self.root(), path, default)
     }
 
     pub(super) fn sel_num(&self, key: &str, large: f64, small: f64) -> f64 {
@@ -165,78 +216,17 @@ impl Config {
         self.num_at(key, def)
     }
 
-    fn write_selector_presets(&mut self, mode: &str, list: Vec<(String, Value)>) {
-        let arr: Vec<Value> = list
-            .into_iter()
-            .map(|(name, params)| {
-                let mut obj = serde_json::Map::new();
-                obj.insert("name".into(), Value::String(name));
-                obj.insert("params".into(), params);
-                Value::Object(obj)
-            })
-            .collect();
-        self.save_key(&format!("components.wallpaperSelector.presets.{mode}"), Value::Array(arr));
-    }
-
-    pub fn set_selected_preset(&mut self, mode: &str, name: Option<&str>) {
-        let path = format!("components.wallpaperSelector.activePreset.{mode}");
-        self.save_key(&path, Value::String(name.unwrap_or("").to_string()));
-    }
-
-    pub fn save_selector_preset(&mut self, mode: &str, name: &str) {
-        let params = self.selector_preset_snapshot();
-        let mut list = self.selector_presets(mode);
-        if let Some(slot) = list.iter_mut().find(|(label, _)| label == name) {
-            slot.1 = params;
-        } else {
-            list.push((name.to_string(), params));
-        }
-        self.write_selector_presets(mode, list);
-        self.set_selected_preset(mode, Some(name));
-    }
-
-    pub fn delete_selector_preset(&mut self, mode: &str, name: &str) {
-        let list: Vec<(String, Value)> =
-            self.selector_presets(mode).into_iter().filter(|(label, _)| label != name).collect();
-        self.write_selector_presets(mode, list);
-        if self.selected_preset(mode).as_deref() == Some(name) {
-            self.set_selected_preset(mode, None);
-        }
-    }
-
-    pub fn rename_selected_preset(&mut self, mode: &str, new_name: &str) -> bool {
-        let new_name = new_name.trim();
-        let Some(old) = self.selected_preset(mode) else {
-            return false;
-        };
-        if new_name.is_empty() || new_name == old {
-            return false;
-        }
-        let mut list = self.selector_presets(mode);
-        let Some(slot) = list.iter_mut().find(|(label, _)| label == &old) else {
-            return false;
-        };
-        slot.0 = new_name.to_string();
-        self.write_selector_presets(mode, list);
-        self.set_selected_preset(mode, Some(new_name));
-        true
-    }
-
-    pub fn apply_selector_preset(&mut self, mode: &str, name: &str) {
-        let Some((_, params)) =
-            self.selector_presets(mode).into_iter().find(|(label, _)| label == name)
-        else {
-            return;
-        };
-        if let Some(obj) = params.as_object() {
-            for (key, value) in obj {
-                self.set_key(&format!("components.wallpaperSelector.{key}"), value.clone());
-            }
-        }
-        self.set_selected_preset(mode, Some(name));
-    }
-
     pub fn set_key(&mut self, path: &str, value: Value) {
+        if let Err(error) = self.set_keys(&[(path, value)]) {
+            warn!("config: layout edit rejected: {error}");
+        }
+    }
+
+    pub(super) fn write_key(&mut self, path: &str, value: Value) {
+        self.palette_previews.take();
+        self.overview.take();
+        self.effective.take();
+        self.layout_cache.take();
         let parts: Vec<&str> = path.split('.').collect();
         if !self.data.is_object() {
             self.data = Value::Object(serde_json::Map::new());
@@ -251,26 +241,48 @@ impl Config {
         put(cur, parts[parts.len() - 1], value);
     }
 
+    pub fn hold_writes(&self) {
+        self.writes.held.store(true, Ordering::Relaxed);
+    }
+
+    pub fn release_writes(&self) {
+        self.writes.held.store(false, Ordering::Relaxed);
+        if self.writes.pending.swap(false, Ordering::Relaxed) {
+            self.persist();
+        }
+    }
+
     pub fn persist(&self) {
-        if self.transient {
+        if self.writes.held.load(Ordering::Relaxed) {
+            self.writes.pending.store(true, Ordering::Relaxed);
             return;
+        }
+        if let Err(error) = self.try_persist() {
+            warn!("config: {error}");
+        }
+    }
+
+    pub(super) fn try_persist(&self) -> Result<(), String> {
+        if self.transient {
+            return Ok(());
         }
         let mut data = self.data.clone();
         canonicalize_picker_config(&mut data);
-        let text = match serde_json::to_string_pretty(&data) {
-            Ok(json) => format!("{json}\n"),
-            Err(err) => {
-                warn!("config serialize failed: {err}");
-                return;
-            }
-        };
+        let json = serde_json::to_string_pretty(&data)
+            .map_err(|err| format!("serialize failed: {err}"))?;
         if let Some(dir) = self.config_path.parent() {
             let _ = std::fs::create_dir_all(dir);
         }
-        match skwd_config::atomic_write_mode(&self.config_path, text.as_bytes(), Some(0o600)) {
-            Ok(()) => info!("config saved to {}", self.config_path.display()),
-            Err(err) => warn!("config write failed: {err}"),
-        }
+        skwd_config::atomic_write_mode(
+            &self.config_path,
+            format!("{json}\n").as_bytes(),
+            Some(0o600),
+        )
+        .map_err(|err| format!("write failed: {err}"))?;
+        #[cfg(test)]
+        PERSISTED.set(PERSISTED.get() + 1);
+        info!("config saved to {}", self.config_path.display());
+        Ok(())
     }
 
     pub fn save_key(&mut self, path: &str, value: Value) {
@@ -279,7 +291,7 @@ impl Config {
     }
 
     pub fn root(&self) -> &Value {
-        &self.data
+        self.effective_document()
     }
 
     pub fn begin_transient(&mut self) -> Value {
@@ -287,8 +299,16 @@ impl Config {
         self.data.clone()
     }
 
+    pub fn replace_document(&mut self, document: Value) {
+        self.data = document;
+        self.palette_previews.take();
+        self.overview.take();
+        self.effective.take();
+        self.layout_cache.take();
+    }
+
     pub fn restore_transient(&mut self, snapshot: Value) {
-        self.data = snapshot;
+        self.replace_document(snapshot);
         self.transient = false;
     }
 
@@ -298,17 +318,31 @@ impl Config {
     }
 
     pub fn remove_key(&mut self, path: &str) {
+        if let Err(error) = self.try_remove_key(path) {
+            warn!("config: layout edit rejected: {error}");
+        }
+    }
+
+    pub(super) fn try_remove_key(&mut self, path: &str) -> Result<(), String> {
+        if self.remove_layout_value(path)? {
+            return Ok(());
+        }
+        self.palette_previews.take();
+        self.overview.take();
+        self.effective.take();
+        self.layout_cache.take();
         let parts: Vec<&str> = path.split('.').collect();
         let mut cur = &mut self.data;
         for part in &parts[..parts.len() - 1] {
             match cur.as_object_mut().and_then(|obj| obj.get_mut(*part)) {
                 Some(next) => cur = next,
-                None => return,
+                None => return Ok(()),
             }
         }
         if let Some(obj) = cur.as_object_mut() {
             obj.remove(parts[parts.len() - 1]);
         }
+        Ok(())
     }
 
     pub fn browser_apply_button(&self, source: crate::contracts::browser::Source) -> bool {
@@ -330,6 +364,9 @@ impl Config {
     }
 
     pub fn flag_default_config(&self, path: &str) -> bool {
+        if let Some(same) = skwd_config::corners::same(self.root(), path) {
+            return same;
+        }
         skwd_config::schema::boolean_default(path).map_or_else(
             || self.get(path).and_then(Value::as_bool) == Some(true),
             |default| skwd_config::bool_at(self.root(), path, default),
@@ -342,6 +379,9 @@ impl Config {
         }
         if path == skwd_config::keys::we_render::ENGINE {
             return String::from("native");
+        }
+        if let Some(style) = skwd_config::corners::style(self.root(), path) {
+            return style.to_string();
         }
         if let Some(val) = self.get(path) {
             if let Some(text) = val.as_str() {
@@ -372,6 +412,9 @@ impl Config {
 
     #[allow(clippy::match_same_arms)]
     pub fn num_path(&self, path: &str) -> f64 {
+        if let Some(value) = skwd_config::corners::number(self.root(), path) {
+            return value;
+        }
         if let Some(value) = skwd_config::schema::read_number_with(self.root(), path, self.small) {
             return value;
         }
@@ -434,6 +477,10 @@ impl Config {
     }
 
     pub fn array_push(&mut self, path: &str, value: Value) {
+        self.palette_previews.take();
+        self.overview.take();
+        self.effective.take();
+        self.layout_cache.take();
         let needs_init = !matches!(self.get(path), Some(Value::Array(_)));
         if needs_init {
             self.set_key(path, Value::Array(Vec::new()));
@@ -453,6 +500,10 @@ impl Config {
     }
 
     pub fn array_remove(&mut self, path: &str, idx: usize) {
+        self.palette_previews.take();
+        self.overview.take();
+        self.effective.take();
+        self.layout_cache.take();
         let parts: Vec<&str> = path.split('.').collect();
         let mut cur = &mut self.data;
         for part in &parts {
@@ -478,7 +529,7 @@ impl Config {
     }
 }
 
-fn canonicalize_picker_config(data: &mut Value) {
+pub(super) fn canonicalize_picker_config(data: &mut Value) {
     skwd_config::canonicalize_depth_layout(data);
     skwd_config::canonicalize_paper_engine(data);
     skwd_config::canonicalize_we_renderer(data);

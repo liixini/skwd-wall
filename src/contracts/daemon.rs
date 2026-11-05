@@ -205,6 +205,7 @@ pub struct CardPickerCreateResult {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OutputStatus {
     pub name: String,
+    pub monitor: String,
     pub target: String,
     pub connected: bool,
     pub width: i32,
@@ -227,6 +228,7 @@ impl Default for OutputStatus {
     fn default() -> Self {
         Self {
             name: String::new(),
+            monitor: String::new(),
             target: String::new(),
             connected: true,
             width: 0,
@@ -248,6 +250,10 @@ impl Default for OutputStatus {
 }
 
 impl OutputStatus {
+    pub fn monitor(&self) -> &str {
+        if self.monitor.is_empty() { &self.name } else { &self.monitor }
+    }
+
     pub fn target(&self) -> &str {
         if self.target.is_empty() { &self.name } else { &self.target }
     }
@@ -287,13 +293,11 @@ pub struct ActivitiesResult {
 pub struct ActivityApplyResult {
     pub activity: String,
     pub visible: bool,
-    pub queued: bool,
 }
 
 pub enum ActivityCompletion {
     Applied { visible: bool },
     Failed(String),
-    Cancelled,
 }
 
 pub struct ActivityApplyEvent {
@@ -301,7 +305,7 @@ pub struct ActivityApplyEvent {
     pub request_id: u64,
     pub activity: String,
     pub output: String,
-    pub completion: Option<ActivityCompletion>,
+    pub completion: ActivityCompletion,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -486,6 +490,8 @@ pub struct PlaybackStatus {
     pub fullscreen_supported: bool,
     pub maximized_supported: bool,
     pub maximized_paused: bool,
+    pub focused_supported: bool,
+    pub focused_paused: bool,
     pub full_width_supported: bool,
     pub full_width_paused: bool,
     pub overview_paused: bool,
@@ -499,3 +505,5 @@ pub struct PlaybackStatus {
     pub available_processes: Vec<String>,
 }
 pub const APP_THEME_BUSY: &str = "busy";
+pub const APP_THEME_CONFLICT: &str = "conflict";
+pub const APP_THEME_INTERRUPTED: &str = "interrupted";

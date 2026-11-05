@@ -144,17 +144,18 @@ impl SceneCore {
         let is_current = idx == self.current;
         let is_hover = Some(idx) == self.hover;
         let roll = self.flip_roll_for(store_idx, item_cx, item_cy);
-        let radii = layout::slice_clamped_corners(sp.corners, w, sp.slice_h, sp.skew, sp.edge_tilt);
+        let corners = sp.corners.sheared(w, sp.slice_h, sp.skew, sp.edge_tilt);
         if sp.shadows {
             let (sh_x, sh_y, sh_a) = if is_current { (4.0, 10.0, 0.5) } else { (2.0, 5.0, 0.3) };
-            sinks.instances.push(InstanceRaw {
+            let mut shadow = InstanceRaw {
                 rect: [item_cx + sh_x, item_cy + sh_y, w * 0.5, sp.slice_h * 0.5],
-                radii,
                 fill: [0.0, 0.0, 0.0, sh_a],
                 params: [sp.skew, 0.0, opacity * roll, 0.0],
                 shape: [sp.edge_tilt, 0.0, 0.0, 0.0],
                 ..Default::default()
-            });
+            };
+            corners.stamp(&mut shadow);
+            sinks.instances.push(shadow);
         }
         let chrome_op = if self.card.flipped == Some(idx) {
             opacity * (1.0 - self.card.flip.x).clamp(0.0, 1.0)
@@ -174,10 +175,10 @@ impl SceneCore {
                 hh: sp.slice_h * 0.5,
                 skew: sp.skew,
                 edge_tilt: sp.edge_tilt,
-                radii,
+                corners,
                 hex: false,
                 view: 0,
-                chrome_radius: radii[0],
+                chrome_radius: corners.sizes[0],
                 opacity,
                 chrome_opacity: if self.mode == layout::Mode::Depth && !is_current {
                     0.0
@@ -205,7 +206,7 @@ impl SceneCore {
                 sp.slice_h * 0.5,
                 sp.skew,
                 sp.edge_tilt,
-                radii,
+                corners,
                 progress,
             ));
         }
@@ -236,7 +237,7 @@ impl SceneCore {
         if self.mode == layout::Mode::Depth && !self.xp.depth.selection_frame {
             body.border = [0.0; 4];
             body.params[1] = 0.0;
-            if sp.skew == 0.0 && sp.edge_tilt == 0.0 && radii == [0.0; 4] {
+            if sp.skew == 0.0 && sp.edge_tilt == 0.0 && corners.sizes == [0.0; 4] {
                 body.misc[3] |= crate::rendering::scene::UNFRAMED_RECT;
             }
         }

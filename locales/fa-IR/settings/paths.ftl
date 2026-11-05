@@ -1,6 +1,5 @@
 settings-paths-excluded-card = پوشه‌های مستثنا
 settings-paths-excluded-card-desc = این پوشه‌ها و زیرپوشه‌هایشان را در کتابخانهٔ تصویر و ویدیو نادیده بگیر. فرادادهٔ ذخیره‌شده باقی می‌ماند.
-settings-paths-path-placeholder = مسیر پوشه
 settings-paths-source-card = پوشه‌های تصویر زمینه
 settings-paths-source-card-desc = این پوشه‌ها و زیرپوشه‌هایشان را برای یافتن تصویر و ویدیو اسکن کنید. تغییرات، کتابخانه را خودکار به‌روز می‌کنند.
 settings-paths-folder-choose-action = انتخاب پوشه
@@ -24,4 +23,3 @@ settings-paths-removed-excluded = پوشهٔ مستثنا حذف شد: { $path }
 settings-paths-watch-polling = پرس‌وجوی دوره‌ای
 settings-paths-watch-error = خواندنی نیست
 settings-paths-watch-error-note = بررسی کنید که سوار شده و خواندنی باشد. پرس‌وجو به تلاش ادامه می‌دهد.
-settings-paths-excluded-footer = پوشه‌های مستثنا هرگز پویش نمی‌شوند، پس هیچ نمایه‌ای نمی‌تواند آن‌ها را نشان دهد. برای نگه داشتن پوشه و پنهان کردنش در جمع، از کتابخانه › نمایه‌ها استفاده کنید.

@@ -5,13 +5,25 @@ use crate::frontend::animation::Spring;
 
 #[test]
 fn step_clamps_dedups() {
-    assert_eq!(step(0, 1, 5), Some(1));
-    assert_eq!(step(4, 1, 5), None);
-    assert_eq!(step(0, -1, 5), None);
-    assert_eq!(step(2, -1, 5), Some(1));
-    assert_eq!(step(2, 10, 5), Some(4));
-    assert_eq!(step(0, 1, 0), None);
-    assert_eq!(step(0, 1, 1), None);
+    assert_eq!(step(0, 1, 5, false), Some(1));
+    assert_eq!(step(4, 1, 5, false), None);
+    assert_eq!(step(0, -1, 5, false), None);
+    assert_eq!(step(2, -1, 5, false), Some(1));
+    assert_eq!(step(2, 10, 5, false), Some(4));
+    assert_eq!(step(0, 1, 0, false), None);
+    assert_eq!(step(0, 1, 1, false), None);
+}
+
+#[test]
+fn step_wraps_from_edges() {
+    assert_eq!(step(0, -1, 5, true), Some(4));
+    assert_eq!(step(4, 1, 5, true), Some(0));
+    assert_eq!(step(0, -10, 5, true), Some(4));
+    assert_eq!(step(4, 10, 5, true), Some(0));
+    assert_eq!(step(2, -10, 5, true), Some(0));
+    assert_eq!(step(2, 10, 5, true), Some(4));
+    assert_eq!(step(0, 1, 1, true), None);
+    assert_eq!(step(0, -1, 0, true), None);
 }
 
 #[test]

@@ -17,6 +17,7 @@ pub struct SceneProgram {
     pub pool: Arc<BufPool>,
     pub frame_clock: FrameClock,
     pub pointer_enabled: bool,
+    pub fade: f32,
 }
 
 pub struct BrowserSceneProgram {
@@ -145,6 +146,7 @@ impl shader::Program<Message> for SceneProgram {
             render: self.render.renderer.clone(),
             uploads: self.uploads.clone(),
             pool: self.pool.clone(),
+            fade: self.fade,
         }
     }
 }

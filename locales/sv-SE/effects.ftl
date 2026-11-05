@@ -89,4 +89,3 @@ effects-activity-inactive-desc = För en inaktiv aktivitet kan du bara ändra ba
 effects-activity-unavailable = Den valda aktiviteten är inte tillgänglig. Välj en befintlig aktivitet och försök igen.
 effects-activity-saved = Sparad för { $activity }.
 effects-activity-unassigned = Ingen Skwd-bakgrund tilldelad
-effects-activity-preparing = Förbereder bakgrunden för { $activity }.

@@ -4,10 +4,6 @@ settings-selector-display-mode-desc = चुनें कि पिकर मे
 settings-selector-filter-motion-label = फ़िल्टर गति
 settings-selector-filter-motion-desc = फ़िल्टर परिणाम बदलने पर रोल कितनी तेज़ी से चलता है। तीनों साझा वेट Motion सेटिंग्स में हैं।
 settings-selector-presets-card = प्रीसेट
-settings-selector-presets-card-desc = वर्तमान लेआउट सेटिंग्स सहेजें या कोई सहेजा हुआ सेट लागू करें। हर डिस्प्ले मोड के अपने प्रीसेट होते हैं।
-settings-selector-preset-name-label = नाम
-settings-selector-preset-name-desc = चुने हुए प्रीसेट का नाम बदलें। वर्तमान सहेजें से स्वचालित नाम वाला नया प्रीसेट बनता है।
-settings-selector-preset-name-placeholder = स्टाइल का नाम
 settings-selector-preset-generated-name = स्टाइल { $number }
 settings-selector-saved-styles-label = सहेजी गई स्टाइलें
 settings-selector-live-preview-card = रंग पूर्वावलोकन
@@ -68,10 +64,6 @@ settings-selector-grid-gap-x-label = क्षैतिज अंतराल
 settings-selector-grid-gap-x-desc = स्तंभों के बीच किनारे से किनारे तक दिखने वाली जगह।
 settings-selector-grid-gap-y-label = ऊर्ध्वाधर अंतराल
 settings-selector-grid-gap-y-desc = पंक्तियों के बीच किनारे से किनारे तक दिखने वाली जगह।
-settings-selector-grid-round-label = गोल कोने
-settings-selector-grid-round-desc = बंद होने पर हर Wall कार्ड में सीधे कोने होते हैं।
-settings-selector-grid-corner-radius-label = कोने की त्रिज्या
-settings-selector-grid-corner-radius-desc = गोल कोने चालू होने पर उपयोग की जाने वाली गोलाई।
 settings-selector-performance-card = प्रदर्शन
 settings-selector-performance-card-desc = हर कण अलग ज्यामिति है। बड़े कण मतलब कम आकृतियाँ और GPU पर बहुत कम काम।
 settings-selector-sand-note-discrete = पहचाने गए डिस्क्रीट GPU के लिए यह लोड कम है। यही कण आकार इंटीग्रेटेड GPU पर लगभग 150 गुना धीमा हो सकता है।
@@ -131,7 +123,7 @@ settings-selector-outgoing-live-desc = पुराना वीडियो र
 settings-selector-ring-card = रिंग
 settings-selector-ring-card-desc = ये सेटिंग्स वॉलपेपरों में तेज़ी से चलते समय दिखने वाली घूमती कण रिंग को नियंत्रित करती हैं। 100 मान डिफ़ॉल्ट है।
 settings-selector-ring-size-label = आकार
-settings-selector-ring-size-desc = मुख्य छवि के सापेक्ष कक्षा का व्यास। रिंग फिर भी मुख्य छवि के पहलू अनुपात का पालन करती है; 100 डिज़ाइन किया गया आकार रखता है।
+settings-selector-ring-size-desc = मुख्य छवि के सापेक्ष कक्षा का व्यास। रिंग फिर भी मुख्य छवि के पहलू अनुपात का अनुसरण करती है; 100 डिज़ाइन किया गया आकार रखता है।
 settings-selector-ring-spin-label = घुमाव
 settings-selector-ring-spin-desc = बैंड की कक्षीय गति।
 settings-selector-ring-wave-label = लहर
@@ -157,16 +149,6 @@ settings-selector-wobble-desc = कार्ड स्क्रॉल की द
 settings-selector-wobble-strength-label = डगमगाहट तीव्रता
 settings-selector-wobble-strength-desc = 100 मान डिफ़ॉल्ट है। 200 मान मोड़ और रंग विभाजन को दोगुना करता है।
 settings-selector-corners-card = कोने
-settings-selector-round-corners-label = गोल कोने
-settings-selector-round-corners-desc = स्लाइस किनारों पर कोने की त्रिज्या लागू करें।
-settings-selector-corner-tl-label = ऊपर-बाएँ
-settings-selector-corner-tl-desc = ऊपर-बाएँ कोने की त्रिज्या। 0 = चौकोर।
-settings-selector-corner-tr-label = ऊपर-दाएँ
-settings-selector-corner-tr-desc = ऊपर-दाएँ कोने की त्रिज्या। 0 = चौकोर।
-settings-selector-corner-br-label = नीचे-दाएँ
-settings-selector-corner-br-desc = नीचे-दाएँ कोने की त्रिज्या। 0 = चौकोर।
-settings-selector-corner-bl-label = नीचे-बाएँ
-settings-selector-corner-bl-desc = नीचे-बाएँ कोने की त्रिज्या। 0 = चौकोर।
 settings-selector-card-flip-card = कार्ड फ़्लिप
 settings-selector-card-flip-card-desc = चुनें कि वॉलपेपर कार्ड अपने थंबनेल से पीछे के विवरण में कैसे बदले।
 settings-selector-flip-effect-label = प्रभाव
@@ -194,14 +176,20 @@ settings-selector-preview-delay-label = पूर्वावलोकन वि
 settings-selector-preview-delay-desc = होवर/चयन पर पूर्वावलोकन शुरू होने से पहले इतनी देर प्रतीक्षा करें (ms)।
 settings-selector-tag-cloud-position-card = खोज पैनल स्थिति
 settings-selector-tag-cloud-position-card-desc = खोज पैनल को पिक्सेल में क्षैतिज या ऊर्ध्वाधर दिशा में खिसकाएँ। धनात्मक क्षैतिज ऑफ़सेट उसे दाईं ओर ले जाते हैं; धनात्मक ऊर्ध्वाधर ऑफ़सेट नीचे।
+settings-selector-tag-position-enabled-label = स्क्रीन की स्थिति का उपयोग करें
+settings-selector-tag-position-enabled-desc = खोज पैनल का आकार या पिकर की शैली बदलने पर भी पैनल को इन स्क्रीन निर्देशांकों पर रखता है। पिक्सेल ऑफ़सेट इस्तेमाल करने के लिए बंद करें।
+settings-selector-tag-position-x-label = बायाँ किनारा
+settings-selector-tag-position-x-desc = खोज पैनल का बायाँ किनारा स्क्रीन की चौड़ाई के प्रतिशत के रूप में तय करें।
+settings-selector-tag-position-y-label = ऊपरी किनारा
+settings-selector-tag-position-y-desc = खोज पैनल का ऊपरी किनारा स्क्रीन की ऊँचाई के प्रतिशत के रूप में तय करें।
 settings-selector-tag-offset-x-label = खोज पैनल क्षैतिज ऑफ़सेट
 settings-selector-tag-offset-x-desc = खोज पैनल को इस पिकर के सापेक्ष बाएँ या दाएँ खिसकाएँ।
 settings-selector-tag-offset-y-label = खोज पैनल ऊर्ध्वाधर ऑफ़सेट
 settings-selector-tag-offset-y-desc = खोज पैनल को इस पिकर के सापेक्ष ऊपर या नीचे खिसकाएँ।
-settings-selector-mode-slices = Slices
-settings-selector-mode-hex = Geometric
-settings-selector-mode-wall = Wall
-settings-selector-mode-sandy = Sandy
+settings-selector-mode-slices = स्लाइस
+settings-selector-mode-hex = ज्यामितीय
+settings-selector-mode-wall = वॉल
+settings-selector-mode-sandy = रेत
 settings-selector-gpu-tier-discrete = डिस्क्रीट
 settings-selector-gpu-tier-integrated = इंटीग्रेटेड
 settings-selector-gpu-tier-other = अन्य
@@ -216,8 +204,6 @@ settings-selector-swap-style-weave = बुनाई
 settings-selector-swap-style-bloom = खिलना
 settings-selector-swap-style-flock = पक्षी झुंड
 settings-selector-swap-style-ring = रिंग
-settings-selector-preset-rename-hint = नाम बदलने के लिए कोई स्टाइल चुनें
-settings-selector-preset-save-current = वर्तमान सहेजें
 
 settings-selector-mode-hand = पत्तों का हाथ
 settings-selector-hand-card = पत्तों का हाथ
@@ -273,7 +259,6 @@ settings-selector-hand-fan-roll-label = पंखे का झुकाव
 settings-selector-hand-fan-roll-desc = हर कार्ड पर जोड़ा गया झुकाव, जैसे हाथ में फैले पत्ते। 0 उन्हें सीधा रखता है।
 settings-selector-hand-arch-label = मेहराब
 settings-selector-hand-arch-desc = बाहरी कार्ड केंद्र वाले कार्ड से कितना नीचे उतरें।
-settings-selector-hand-corner-radius-label = कोने की त्रिज्या
 settings-selector-hand-skew-label = तिरछापन
 settings-selector-hand-skew-desc = कार्ड की रूपरेखा को समांतर चतुर्भुज में तिरछा करें, क्षैतिज ऑफ़सेट के पिक्सेल में।
 settings-selector-hand-backdrop-blur-label = पृष्ठभूमि धुँधलापन
@@ -286,60 +271,58 @@ settings-selector-start-position-desc = शुरुआत से, आपके 
 settings-selector-start-position-beginning = शुरुआत
 settings-selector-start-position-applied = अंतिम लागू वॉलपेपर
 settings-selector-start-position-browsing = अंतिम ब्राउज़िंग स्थिति
+settings-selector-loop-around-label = किनारों पर लूप करें
+settings-selector-loop-around-desc = पहले या अंतिम वॉलपेपर से आगे जाने पर चयन दूसरे सिरे पर पहुँच जाता है। दबाकर रखी गई कुंजियाँ, पेज बदलना और तेज़ स्क्रॉल पहले सिरे पर रुकते हैं, इसलिए लूप करने के लिए फिर से दबाएँ या स्क्रॉल करें। ऑनलाइन स्रोत सभी पेज लोड होने के बाद लूप करते हैं। Wall लेआउट और ऑनलाइन स्रोतों में माउस व्हील केवल दृश्य को स्क्रॉल करता है।
 
-settings-selector-mode-depth = Depth
-settings-selector-depth-card = Depth cards
-settings-selector-depth-desc = Cards shrink toward the edges. As you scroll, artwork shifts inside each card according to its position in the row.
+settings-selector-mode-depth = गहराई
+settings-selector-depth-card = डेप्थ कार्ड
+settings-selector-depth-desc = कार्ड किनारों की ओर छोटे होते जाते हैं। स्क्रॉल करने पर हर कार्ड के भीतर की छवि पंक्ति में उसकी जगह के अनुसार खिसकती है।
 
-settings-selector-parallax-label = Image parallax
-settings-selector-parallax-desc = Shift artwork inside each card as it moves across the view. The image keeps moving through the visible edges.
+settings-selector-parallax-label = छवि पैरालैक्स
+settings-selector-parallax-desc = कार्ड के दृश्य में चलते समय उसके भीतर की छवि को खिसकाता है। छवि दिखने वाले किनारों के पार भी चलती रहती है।
 settings-selector-mode-collection = संग्रह
 settings-selector-collection-desc = माउस व्हील या तीर कुंजियों से झुके हुए कार्ड देखें। कार्ड बड़ा करने के लिए क्लिक करें; वापस जाने के लिए फिर क्लिक करें या Escape दबाएँ। लागू करने के लिए Enter दबाएँ। विवरण के लिए राइट-क्लिक करें।
 
-settings-selector-depth-height-label = Card height
-settings-selector-depth-height-desc = Height of the centre card. Large cards shrink to fit the screen.
+settings-selector-depth-height-label = कार्ड की ऊँचाई
+settings-selector-depth-height-desc = बीच वाले कार्ड की ऊँचाई। बड़े कार्ड स्क्रीन में समाने के लिए छोटे हो जाते हैं।
 
-settings-selector-depth-width-label = Card width
-settings-selector-depth-width-desc = Width of the centre card in pixels.
+settings-selector-depth-width-label = कार्ड की चौड़ाई
+settings-selector-depth-width-desc = बीच वाले कार्ड की चौड़ाई, पिक्सेल में।
 
-settings-selector-depth-spacing-label = Card spacing
-settings-selector-depth-spacing-desc = Distance between card centres in pixels before depth falloff.
+settings-selector-depth-spacing-label = कार्ड की दूरी
+settings-selector-depth-spacing-desc = गहराई के साथ घटाव लगने से पहले कार्डों के केंद्रों के बीच की दूरी, पिक्सेल में।
 
-settings-selector-depth-count-label = Visible cards
-settings-selector-depth-count-desc = Maximum number of cards around the current selection.
+settings-selector-depth-count-label = दिखने वाले कार्ड
+settings-selector-depth-count-desc = मौजूदा चयन के आसपास कार्डों की अधिकतम संख्या।
 
-settings-selector-depth-falloff-label = Depth falloff
-settings-selector-depth-falloff-desc = Scale reduction per card away from the centre, from 0 to 1. Zero keeps their sizes equal.
+settings-selector-depth-falloff-label = गहराई के साथ घटाव
+settings-selector-depth-falloff-desc = केंद्र से हर कार्ड दूर जाने पर आकार में कमी, 0 से 1 तक। शून्य रखने पर सभी आकार बराबर रहते हैं।
 
-settings-selector-depth-corners-label = Corner radius
-settings-selector-depth-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-depth-skew-label = Card skew
-settings-selector-depth-skew-desc = Slant the card edges. Zero keeps them upright.
+settings-selector-depth-skew-label = कार्ड का तिरछापन
+settings-selector-depth-skew-desc = कार्ड के किनारों को तिरछा करता है। शून्य रखने पर वे सीधे रहते हैं।
 
-settings-selector-depth-speed-label = Navigation duration
-settings-selector-depth-speed-desc = Time for a navigation movement in milliseconds. Lower values move faster.
+settings-selector-depth-speed-label = नेविगेशन की अवधि
+settings-selector-depth-speed-desc = एक नेविगेशन गति का समय, मिलीसेकंड में। कम मान से गति तेज़ होती है।
 
-settings-selector-collection-size-label = Card size
-settings-selector-collection-size-desc = Card width as a percentage of screen height.
+settings-selector-collection-size-label = कार्ड का आकार
+settings-selector-collection-size-desc = कार्ड की चौड़ाई, स्क्रीन की ऊँचाई के प्रतिशत के रूप में।
 
-settings-selector-collection-spacing-label = Stack spacing
-settings-selector-collection-spacing-desc = Vertical distance between stacked cards as a percentage of card size.
+settings-selector-collection-spacing-label = स्टैक की दूरी
+settings-selector-collection-spacing-desc = एक के ऊपर रखे कार्डों के बीच की खड़ी दूरी, कार्ड के आकार के प्रतिशत के रूप में।
 
-settings-selector-collection-count-label = Visible cards
-settings-selector-collection-count-desc = Maximum number of cards in the stack.
+settings-selector-collection-count-label = दिखने वाले कार्ड
+settings-selector-collection-count-desc = स्टैक में कार्डों की अधिकतम संख्या।
 
-settings-selector-collection-tilt-label = Stack tilt
-settings-selector-collection-tilt-desc = Tilt the stack away from you. Zero shows the cards face-on.
+settings-selector-collection-tilt-label = स्टैक का झुकाव
+settings-selector-collection-tilt-desc = स्टैक को अपने से दूर झुकाता है। शून्य रखने पर कार्ड सामने से दिखते हैं।
 
-settings-selector-collection-corners-label = Corner radius
-settings-selector-collection-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-collection-speed-label = Motion speed
-settings-selector-collection-speed-desc = Speed of navigation and opening or closing a card. Higher values move faster.
+settings-selector-collection-speed-label = गति की रफ़्तार
+settings-selector-collection-speed-desc = नेविगेशन और कार्ड खुलने या बंद होने की गति। ज़्यादा मान से गति तेज़ होती है।
 
-settings-selector-depth-frame-label = Selection frame
-settings-selector-depth-frame-desc = Draw a highlighted border around the selected card.
+settings-selector-depth-frame-label = चयन फ़्रेम
+settings-selector-depth-frame-desc = चुने हुए कार्ड के चारों ओर उभरा हुआ बॉर्डर बनाता है।
 
-settings-selector-shadows-label = Card shadows
-settings-selector-shadows-desc = Draw a shadow behind each card.
+settings-selector-shadows-label = कार्ड की छाया
+settings-selector-shadows-desc = हर कार्ड के पीछे छाया बनाता है।

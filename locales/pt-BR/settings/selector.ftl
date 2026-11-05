@@ -4,10 +4,6 @@ settings-selector-display-mode-desc = Escolha como os cartões de papel de pared
 settings-selector-filter-motion-label = Movimento do filtro
 settings-selector-filter-motion-desc = A velocidade da rolagem quando os resultados do filtro mudam. Os três pesos compartilhados ficam nas configurações de Movimento.
 settings-selector-presets-card = Predefinições
-settings-selector-presets-card-desc = Salve as configurações de layout atuais ou aplique um conjunto salvo. Cada modo de exibição tem as próprias predefinições.
-settings-selector-preset-name-label = Nome
-settings-selector-preset-name-desc = Renomeie a predefinição selecionada. Salvar atual cria uma nova predefinição com nome automático.
-settings-selector-preset-name-placeholder = Nome do estilo
 settings-selector-preset-generated-name = Estilo { $number }
 settings-selector-saved-styles-label = Estilos salvos
 settings-selector-live-preview-card = Pré-visualização de cores
@@ -68,10 +64,6 @@ settings-selector-grid-gap-x-label = Espaçamento horizontal
 settings-selector-grid-gap-x-desc = Espaço visível de borda a borda entre colunas.
 settings-selector-grid-gap-y-label = Espaçamento vertical
 settings-selector-grid-gap-y-desc = Espaço visível de borda a borda entre linhas.
-settings-selector-grid-round-label = Cantos arredondados
-settings-selector-grid-round-desc = Desativado usa cantos retos em todos os cartões do Mural.
-settings-selector-grid-corner-radius-label = Raio dos cantos
-settings-selector-grid-corner-radius-desc = Arredondamento usado enquanto os cantos arredondados estão ativados.
 settings-selector-performance-card = Desempenho
 settings-selector-performance-card-desc = Cada grão é uma geometria separada. Grãos maiores significam menos formas e muito menos trabalho da GPU.
 settings-selector-sand-note-discrete = Esta carga é pequena para a GPU dedicada detectada. O mesmo tamanho de grão pode ser cerca de 150 vezes mais lento em uma GPU integrada.
@@ -157,16 +149,6 @@ settings-selector-wobble-desc = Os cartões se curvam na direção da rolagem e 
 settings-selector-wobble-strength-label = Intensidade do balanço
 settings-selector-wobble-strength-desc = O valor 100 é o padrão. O valor 200 dobra a curvatura e a separação de cores.
 settings-selector-corners-card = Cantos
-settings-selector-round-corners-label = Arredondar cantos
-settings-selector-round-corners-desc = Aplica um raio de canto às bordas das fatias.
-settings-selector-corner-tl-label = Superior esquerdo
-settings-selector-corner-tl-desc = Raio do canto superior esquerdo. 0 = reto.
-settings-selector-corner-tr-label = Superior direito
-settings-selector-corner-tr-desc = Raio do canto superior direito. 0 = reto.
-settings-selector-corner-br-label = Inferior direito
-settings-selector-corner-br-desc = Raio do canto inferior direito. 0 = reto.
-settings-selector-corner-bl-label = Inferior esquerdo
-settings-selector-corner-bl-desc = Raio do canto inferior esquerdo. 0 = reto.
 settings-selector-card-flip-card = Virada do cartão
 settings-selector-card-flip-card-desc = Escolha como um cartão de papel de parede passa da miniatura para os detalhes no verso.
 settings-selector-flip-effect-label = Efeito
@@ -194,6 +176,12 @@ settings-selector-preview-delay-label = Atraso da pré-visualização
 settings-selector-preview-delay-desc = Tempo de espera ao passar o mouse ou selecionar antes de a pré-visualização começar (ms).
 settings-selector-tag-cloud-position-card = Posição do painel de busca
 settings-selector-tag-cloud-position-card-desc = Move o painel de busca na horizontal ou na vertical, em pixels. Deslocamentos horizontais positivos movem para a direita; verticais positivos movem para baixo.
+settings-selector-tag-position-enabled-label = Usar posição na tela
+settings-selector-tag-position-enabled-desc = Mantém o painel de busca nestas coordenadas da tela quando o tamanho dele ou o estilo do seletor muda. Desative para usar deslocamentos em pixels.
+settings-selector-tag-position-x-label = Borda esquerda
+settings-selector-tag-position-x-desc = Defina a borda esquerda do painel de busca como porcentagem da largura da tela.
+settings-selector-tag-position-y-label = Borda superior
+settings-selector-tag-position-y-desc = Defina a borda superior do painel de busca como porcentagem da altura da tela.
 settings-selector-tag-offset-x-label = Deslocamento horizontal do painel de busca
 settings-selector-tag-offset-x-desc = Move o painel de busca para a esquerda ou para a direita em relação a este seletor.
 settings-selector-tag-offset-y-label = Deslocamento vertical do painel de busca
@@ -216,8 +204,6 @@ settings-selector-swap-style-weave = Trama
 settings-selector-swap-style-bloom = Florescer
 settings-selector-swap-style-flock = Revoada
 settings-selector-swap-style-ring = Anel
-settings-selector-preset-rename-hint = Selecione um estilo para renomear
-settings-selector-preset-save-current = Salvar atual
 settings-selector-mode-hand = Mão de cartas
 settings-selector-hand-card = Mão de cartas
 settings-selector-hand-card-desc = Um leque de cartas altas seguradas como uma mão de baralho em perspectiva. Mova o ponteiro para inclinar a mão, arraste o palco para girá-la e role além da borda para distribuir a próxima mão.
@@ -272,7 +258,6 @@ settings-selector-hand-fan-roll-label = Rotação do leque
 settings-selector-hand-fan-roll-desc = Inclinação adicionada por carta, como cartas abertas na mão. 0 as mantém retas.
 settings-selector-hand-arch-label = Arco
 settings-selector-hand-arch-desc = Quanto as cartas externas descem abaixo da carta central.
-settings-selector-hand-corner-radius-label = Raio dos cantos
 settings-selector-hand-skew-label = Inclinação
 settings-selector-hand-skew-desc = Inclina o contorno da carta em um paralelogramo, em pixels de deslocamento horizontal.
 settings-selector-hand-backdrop-blur-label = Desfoque do fundo
@@ -285,60 +270,58 @@ settings-selector-start-position-desc = Abra no início, no último papel de par
 settings-selector-start-position-beginning = Início
 settings-selector-start-position-applied = Último papel de parede aplicado
 settings-selector-start-position-browsing = Última posição de navegação
+settings-selector-loop-around-label = Dar a volta nas pontas
+settings-selector-loop-around-desc = Passar do primeiro ou do último papel de parede leva à outra ponta. Teclas mantidas pressionadas, paginação e rolagem rápida param primeiro na ponta; pressione ou role de novo para dar a volta. Fontes online dão a volta depois que todas as páginas carregam. No layout Mural e nas fontes online, a roda do mouse só rola a visualização.
 
-settings-selector-mode-depth = Depth
-settings-selector-depth-card = Depth cards
-settings-selector-depth-desc = Cards shrink toward the edges. As you scroll, artwork shifts inside each card according to its position in the row.
+settings-selector-mode-depth = Profundidade
+settings-selector-depth-card = Cartões em profundidade
+settings-selector-depth-desc = Os cartões encolhem em direção às bordas. Ao rolar, a imagem se desloca dentro de cada cartão conforme a posição dele na fileira.
 
-settings-selector-parallax-label = Image parallax
-settings-selector-parallax-desc = Shift artwork inside each card as it moves across the view. The image keeps moving through the visible edges.
+settings-selector-parallax-label = Paralaxe da imagem
+settings-selector-parallax-desc = Desloca a imagem dentro de cada cartão enquanto ele se move pela visualização. A imagem continua se movendo até as bordas visíveis.
 settings-selector-mode-collection = Coleção
 settings-selector-collection-desc = Navegue por uma pilha inclinada com a roda do mouse ou as setas. Clique em um cartão para ampliá-lo; clique novamente ou pressione Escape para voltar. Pressione Enter para aplicar. Clique com o botão direito para ver os detalhes.
 
-settings-selector-depth-height-label = Card height
-settings-selector-depth-height-desc = Height of the centre card. Large cards shrink to fit the screen.
+settings-selector-depth-height-label = Altura dos cartões
+settings-selector-depth-height-desc = Altura do cartão central. Cartões grandes encolhem para caber na tela.
 
-settings-selector-depth-width-label = Card width
-settings-selector-depth-width-desc = Width of the centre card in pixels.
+settings-selector-depth-width-label = Largura dos cartões
+settings-selector-depth-width-desc = Largura do cartão central em pixels.
 
-settings-selector-depth-spacing-label = Card spacing
-settings-selector-depth-spacing-desc = Distance between card centres in pixels before depth falloff.
+settings-selector-depth-spacing-label = Espaçamento dos cartões
+settings-selector-depth-spacing-desc = Distância entre os centros dos cartões em pixels, antes da atenuação de profundidade.
 
-settings-selector-depth-count-label = Visible cards
-settings-selector-depth-count-desc = Maximum number of cards around the current selection.
+settings-selector-depth-count-label = Cartões visíveis
+settings-selector-depth-count-desc = Número máximo de cartões ao redor da seleção atual.
 
-settings-selector-depth-falloff-label = Depth falloff
-settings-selector-depth-falloff-desc = Scale reduction per card away from the centre, from 0 to 1. Zero keeps their sizes equal.
+settings-selector-depth-falloff-label = Atenuação de profundidade
+settings-selector-depth-falloff-desc = Redução de escala por cartão que se afasta do centro, de 0 a 1. Zero mantém os tamanhos iguais.
 
-settings-selector-depth-corners-label = Corner radius
-settings-selector-depth-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-depth-skew-label = Card skew
-settings-selector-depth-skew-desc = Slant the card edges. Zero keeps them upright.
+settings-selector-depth-skew-label = Inclinação dos cartões
+settings-selector-depth-skew-desc = Inclina as bordas dos cartões. Zero as mantém retas.
 
-settings-selector-depth-speed-label = Navigation duration
-settings-selector-depth-speed-desc = Time for a navigation movement in milliseconds. Lower values move faster.
+settings-selector-depth-speed-label = Duração da navegação
+settings-selector-depth-speed-desc = Tempo de um movimento de navegação em milissegundos. Valores menores são mais rápidos.
 
-settings-selector-collection-size-label = Card size
-settings-selector-collection-size-desc = Card width as a percentage of screen height.
+settings-selector-collection-size-label = Tamanho dos cartões
+settings-selector-collection-size-desc = Largura do cartão como porcentagem da altura da tela.
 
-settings-selector-collection-spacing-label = Stack spacing
-settings-selector-collection-spacing-desc = Vertical distance between stacked cards as a percentage of card size.
+settings-selector-collection-spacing-label = Espaçamento da pilha
+settings-selector-collection-spacing-desc = Distância vertical entre os cartões empilhados, como porcentagem do tamanho do cartão.
 
-settings-selector-collection-count-label = Visible cards
-settings-selector-collection-count-desc = Maximum number of cards in the stack.
+settings-selector-collection-count-label = Cartões visíveis
+settings-selector-collection-count-desc = Número máximo de cartões na pilha.
 
-settings-selector-collection-tilt-label = Stack tilt
-settings-selector-collection-tilt-desc = Tilt the stack away from you. Zero shows the cards face-on.
+settings-selector-collection-tilt-label = Inclinação da pilha
+settings-selector-collection-tilt-desc = Inclina a pilha para trás. Zero mostra os cartões de frente.
 
-settings-selector-collection-corners-label = Corner radius
-settings-selector-collection-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-collection-speed-label = Motion speed
-settings-selector-collection-speed-desc = Speed of navigation and opening or closing a card. Higher values move faster.
+settings-selector-collection-speed-label = Velocidade do movimento
+settings-selector-collection-speed-desc = Velocidade da navegação e da abertura ou fechamento de um cartão. Valores maiores são mais rápidos.
 
-settings-selector-depth-frame-label = Selection frame
-settings-selector-depth-frame-desc = Draw a highlighted border around the selected card.
+settings-selector-depth-frame-label = Moldura de seleção
+settings-selector-depth-frame-desc = Desenha uma borda em destaque ao redor do cartão selecionado.
 
-settings-selector-shadows-label = Card shadows
-settings-selector-shadows-desc = Draw a shadow behind each card.
+settings-selector-shadows-label = Sombras dos cartões
+settings-selector-shadows-desc = Desenha uma sombra atrás de cada cartão.

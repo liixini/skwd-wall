@@ -47,15 +47,22 @@ impl App {
             return;
         }
         self.panels.settings.open = false;
+        self.panels.settings.layout_studio = false;
+        self.panels.settings.close_sections();
+        self.panels.settings.previous = None;
+        self.panels.settings.pending = None;
         self.panels.settings.input_edit = None;
         self.panels.settings.keybind_capture = None;
         self.panels.settings.search_open = false;
         self.panels.settings.search_query.clear();
         self.panels.settings.search_results.clear();
+        self.panels.settings.search_at = None;
         self.panels.settings.focused_choice = None;
         self.panels.settings.armed = None;
         self.panels.settings.sddm_themes.clear();
         self.panels.settings.folder_undo = None;
+        self.panels.settings.drawing_library = false;
+        self.panels.settings.library_job = false;
         crate::app::update::settings_policy::flush_staged(self);
         self.release_settings_preview();
         self.retick();
@@ -77,10 +84,7 @@ impl App {
             self.release_settings_preview();
             return iced::Task::none();
         }
-        if crate::frontend::settings::is_picker_layout_section(
-            &self.panels.settings.tab,
-            self.panels.settings.section,
-        ) {
+        if crate::frontend::settings::is_picker_layout_section(self.panels.settings.open_section) {
             self.release_settings_preview();
             return iced::Task::none();
         }

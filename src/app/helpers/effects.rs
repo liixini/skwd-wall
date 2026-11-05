@@ -48,7 +48,7 @@ fn open_effects_inner(
     );
     effects.set_motion_profile(app.motion_profile());
     effects.set_mode(mode);
-    effects.set_chrome(crate::frontend::effects::dark_chrome(&app.theme.palette));
+    effects.set_chrome(&crate::frontend::effects::dark_chrome(&app.theme.palette));
     let preview_source = effects.display_source();
     if !preview_source.is_empty()
         && let Some((rgba, width, height)) = crate::infrastructure::preview::decode_effect_source(

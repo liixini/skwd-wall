@@ -4,10 +4,6 @@ settings-selector-display-mode-desc = Choose how wallpaper cards are arranged in
 settings-selector-filter-motion-label = Filter motion
 settings-selector-filter-motion-desc = How quickly the roll runs when filter results change. The three shared weights live in Motion settings.
 settings-selector-presets-card = Presets
-settings-selector-presets-card-desc = Save the current layout settings or apply a saved set. Each display mode keeps its own presets.
-settings-selector-preset-name-label = Name
-settings-selector-preset-name-desc = Rename the selected preset. Save current creates a new preset with an automatic name.
-settings-selector-preset-name-placeholder = Style name
 settings-selector-preset-generated-name = Style { $number }
 settings-selector-saved-styles-label = Saved styles
 settings-selector-live-preview-card = Colour preview
@@ -68,10 +64,6 @@ settings-selector-grid-gap-x-label = Horizontal spacing
 settings-selector-grid-gap-x-desc = Visible edge-to-edge space between columns.
 settings-selector-grid-gap-y-label = Vertical spacing
 settings-selector-grid-gap-y-desc = Visible edge-to-edge space between rows.
-settings-selector-grid-round-label = Rounded corners
-settings-selector-grid-round-desc = Off uses straight corners for every Wall card.
-settings-selector-grid-corner-radius-label = Corner radius
-settings-selector-grid-corner-radius-desc = Roundness used while rounded corners are enabled.
 settings-selector-performance-card = Performance
 settings-selector-performance-card-desc = Every grain is separate geometry. Larger grains mean fewer shapes and much less GPU work.
 settings-selector-sand-note-discrete = This load is small for the detected discrete GPU. The same grain size can be about 150 times slower on an integrated GPU.
@@ -157,16 +149,6 @@ settings-selector-wobble-desc = Cards bend in the scroll direction and spring ba
 settings-selector-wobble-strength-label = Wobble strength
 settings-selector-wobble-strength-desc = A value of 100 is the default. A value of 200 doubles the bend and colour separation.
 settings-selector-corners-card = Corners
-settings-selector-round-corners-label = Round corners
-settings-selector-round-corners-desc = Apply a corner radius to slice edges.
-settings-selector-corner-tl-label = Top-left
-settings-selector-corner-tl-desc = Top-left corner radius. 0 = square.
-settings-selector-corner-tr-label = Top-right
-settings-selector-corner-tr-desc = Top-right corner radius. 0 = square.
-settings-selector-corner-br-label = Bottom-right
-settings-selector-corner-br-desc = Bottom-right corner radius. 0 = square.
-settings-selector-corner-bl-label = Bottom-left
-settings-selector-corner-bl-desc = Bottom-left corner radius. 0 = square.
 settings-selector-card-flip-card = Card flip
 settings-selector-card-flip-card-desc = Choose how a wallpaper card changes from its thumbnail to the details on its back.
 settings-selector-flip-effect-label = Effect
@@ -193,11 +175,17 @@ settings-selector-video-preview-desc = Animate the video itself on hover/selecti
 settings-selector-preview-delay-label = Preview delay
 settings-selector-preview-delay-desc = Wait this long on hover/selection before the preview starts (ms).
 settings-selector-tag-cloud-position-card = Search panel position
-settings-selector-tag-cloud-position-card-desc = Move the search panel horizontally or vertically in pixels. Positive horizontal offsets move it right; positive vertical offsets move it down.
+settings-selector-tag-cloud-position-card-desc = Place the search panel on screen. Screen position overrides pixel offsets while enabled.
+settings-selector-tag-position-enabled-label = Use screen position
+settings-selector-tag-position-enabled-desc = Keep the search panel at these screen coordinates when its size or picker style changes. Turn off to use pixel offsets.
+settings-selector-tag-position-x-label = Left edge
+settings-selector-tag-position-x-desc = Set the search panel's left edge as a percentage of screen width.
+settings-selector-tag-position-y-label = Top edge
+settings-selector-tag-position-y-desc = Set the search panel's top edge as a percentage of screen height.
 settings-selector-tag-offset-x-label = Search panel horizontal offset
-settings-selector-tag-offset-x-desc = Move the search panel left or right relative to this picker.
+settings-selector-tag-offset-x-desc = Used when screen position is off. Move the panel left or right relative to this picker.
 settings-selector-tag-offset-y-label = Search panel vertical offset
-settings-selector-tag-offset-y-desc = Move the search panel up or down relative to this picker.
+settings-selector-tag-offset-y-desc = Used when screen position is off. Move the panel up or down relative to this picker.
 settings-selector-mode-slices = Slices
 settings-selector-mode-hex = Geometric
 settings-selector-mode-wall = Wall
@@ -216,8 +204,6 @@ settings-selector-swap-style-weave = Weave
 settings-selector-swap-style-bloom = Bloom
 settings-selector-swap-style-flock = Murmuration
 settings-selector-swap-style-ring = Ring
-settings-selector-preset-rename-hint = Select a style to rename
-settings-selector-preset-save-current = Save current
 
 settings-selector-mode-hand = Card hand
 settings-selector-hand-card = Card hand
@@ -273,7 +259,6 @@ settings-selector-hand-fan-roll-label = Fan roll
 settings-selector-hand-fan-roll-desc = Tilt added per card, like cards splayed in a hand. 0 keeps them upright.
 settings-selector-hand-arch-label = Arch
 settings-selector-hand-arch-desc = How far outer cards drop below the centre card.
-settings-selector-hand-corner-radius-label = Corner radius
 settings-selector-hand-skew-label = Skew
 settings-selector-hand-skew-desc = Shear the card outline into a parallelogram, in pixels of horizontal offset.
 settings-selector-hand-backdrop-blur-label = Backdrop blur
@@ -286,6 +271,8 @@ settings-selector-start-position-desc = Open at the beginning, at the last wallp
 settings-selector-start-position-beginning = Beginning
 settings-selector-start-position-applied = Last applied wallpaper
 settings-selector-start-position-browsing = Last browsing position
+settings-selector-loop-around-label = Loop at the ends
+settings-selector-loop-around-desc = Moving past the first or last wallpaper jumps to the other end. Held keys, paging and fast scrolling stop at the end first, so press or scroll again to loop. Online sources loop once every page has loaded. In the Wall layout and in online sources the mouse wheel only scrolls the view.
 
 settings-selector-mode-depth = Depth
 settings-selector-depth-card = Depth cards
@@ -311,8 +298,6 @@ settings-selector-depth-count-desc = Maximum number of cards around the current 
 settings-selector-depth-falloff-label = Depth falloff
 settings-selector-depth-falloff-desc = Scale reduction per card away from the centre, from 0 to 1. Zero keeps their sizes equal.
 
-settings-selector-depth-corners-label = Corner radius
-settings-selector-depth-corners-desc = Round the card corners. Zero keeps square corners.
 
 settings-selector-depth-skew-label = Card skew
 settings-selector-depth-skew-desc = Slant the card edges. Zero keeps them upright.
@@ -332,8 +317,6 @@ settings-selector-collection-count-desc = Maximum number of cards in the stack.
 settings-selector-collection-tilt-label = Stack tilt
 settings-selector-collection-tilt-desc = Tilt the stack away from you. Zero shows the cards face-on.
 
-settings-selector-collection-corners-label = Corner radius
-settings-selector-collection-corners-desc = Round the card corners. Zero keeps square corners.
 
 settings-selector-collection-speed-label = Motion speed
 settings-selector-collection-speed-desc = Speed of navigation and opening or closing a card. Higher values move faster.

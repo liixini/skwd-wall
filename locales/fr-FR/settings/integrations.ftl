@@ -1,3 +1,8 @@
+settings-integrations-caelestia-card = Caelestia
+settings-integrations-caelestia-card-desc = Laissez Skwd afficher les fonds choisis dans les deux applications.
+settings-integrations-caelestia-sync-label = Synchroniser les fonds Caelestia
+settings-integrations-caelestia-sync-desc = Skwd affiche les fonds choisis dans les deux applications. Les choix de Caelestia s’appliquent aux écrans déverrouillés.
+
 settings-integrations-plasma-card = KDE Plasma
 settings-integrations-lock-mode-label = Fond d’écran de verrouillage
 settings-integrations-lock-mode-desc = Non géré laisse Plasma tranquille. Statique utilise toujours l’image ci-dessous. Suivre reprend le dernier fond d’écran appliqué.
@@ -33,7 +38,7 @@ settings-integrations-follow-desc = Suit Skwd tant qu’il contrôle les couleur
 
 settings-section-lockscreens = Écrans de verrouillage
 settings-lockscreens-source-label = Source de l’image
-settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-source-help = Suivre le dernier appliqué utilise l’image du fond d’écran actuel. Image fixe utilise le fichier ci-dessous. Les vidéos et les scènes utilisent une image fixe quand il y en a une.
 settings-lockscreens-image-label = Image fixe
 settings-lockscreens-image-desc = Saisissez le chemin complet d’une image existante, par exemple ~/Pictures/lockscreen.jpg. Skwd la copie pour les écrans de verrouillage activés. Un fichier vidéo ne peut pas être utilisé ici.
 settings-lockscreens-hyprlock-card = Hyprlock

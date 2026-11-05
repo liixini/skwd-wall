@@ -41,10 +41,10 @@ pub(crate) struct ThemeState {
 }
 
 impl ThemeState {
-    pub(crate) fn new(palette: Palette, motion: MotionProfile) -> Self {
+    pub(crate) fn new(palette: &Palette, motion: MotionProfile) -> Self {
         Self {
-            palette,
-            base_palette: palette,
+            palette: *palette,
+            base_palette: *palette,
             preview_target: None,
             hover_since: None,
             cache: HashMap::new(),
@@ -54,8 +54,8 @@ impl ThemeState {
             swatch: Vec::new(),
             swatch_target: None,
             swatch_cache: HashMap::new(),
-            fade_from: palette,
-            fade_to: palette,
+            fade_from: *palette,
+            fade_to: *palette,
             fade_t: motion.tween(1.0, MotionTier::Standard),
             bar_open: false,
             backends: None,

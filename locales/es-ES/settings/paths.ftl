@@ -1,6 +1,5 @@
 settings-paths-excluded-card = Carpetas excluidas
 settings-paths-excluded-card-desc = Omite estas carpetas y sus subcarpetas en la biblioteca de imágenes y vídeos. Los metadatos guardados se conservan.
-settings-paths-path-placeholder = Ruta de la carpeta
 settings-paths-source-card = Carpetas de fondos
 settings-paths-source-card-desc = Busca imágenes y vídeos en estas carpetas y sus subcarpetas. Los cambios actualizan la biblioteca automáticamente.
 settings-paths-folder-choose-action = Elegir carpeta
@@ -25,4 +24,3 @@ settings-paths-removed-excluded = Carpeta excluida quitada: { $path }
 settings-paths-watch-polling = Sondeo
 settings-paths-watch-error = No se puede leer
 settings-paths-watch-error-note = Comprueba que esté montada y sea legible. El sondeo sigue reintentando.
-settings-paths-excluded-footer = Las carpetas excluidas nunca se analizan, así que ningún perfil puede mostrarlas. Para conservar una carpeta pero ocultarla en público, usa Biblioteca › Perfiles.

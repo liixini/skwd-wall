@@ -1,3 +1,8 @@
+settings-integrations-caelestia-card = Caelestia
+settings-integrations-caelestia-card-desc = Her iki uygulamada seçilen duvar kâğıtlarını Skwd ile gösterin.
+settings-integrations-caelestia-sync-label = Caelestia duvar kâğıtlarını eşitle
+settings-integrations-caelestia-sync-desc = Skwd, iki uygulamadan birinde seçilen duvar kâğıtlarını gösterir. Caelestia seçimleri kilidi açık ekranlara uygulanır.
+
 settings-integrations-plasma-card = KDE Plasma
 settings-integrations-lock-mode-label = Kilit ekranı duvar kâğıdı
 settings-integrations-lock-mode-desc = Yönetilmeyen, Plasma ayarlarını değiştirmez. Sabit görüntü her zaman aşağıdaki görüntüyü kullanır. Son uygulananı izle, en son uygulanan duvar kâğıdını izler.
@@ -33,7 +38,7 @@ settings-integrations-follow-desc = Renkleri yönetirken Skwd'yi izleyin. Kapal�
 
 settings-section-lockscreens = Kilit ekranları
 settings-lockscreens-source-label = Görüntü kaynağı
-settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-source-help = Son uygulananı izle, geçerli duvar kâğıdı görüntüsünü kullanır. Sabit görüntü, aşağıdaki dosyayı kullanır. Videolar ve sahneler, varsa sabit bir görüntü kullanır.
 settings-lockscreens-image-label = Sabit görüntü
 settings-lockscreens-image-desc = Mevcut bir görüntünün tam yolunu girin; örneğin ~/Pictures/lockscreen.jpg. Skwd bunu etkin kilit ekranlarına kopyalar. Burada video dosyası kullanılamaz.
 settings-lockscreens-hyprlock-card = Hyprlock

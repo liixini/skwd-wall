@@ -69,7 +69,7 @@ pub(super) fn cycle_type(app: &mut App, backwards: bool) -> Task<Message> {
     if app.menu_capturing() {
         return Task::none();
     }
-    let shown = crate::app::view::bar_show(app).types;
+    let shown = crate::app::view::bar_show(app, &app.config).types;
     if let Some(kind) =
         crate::frontend::ui::cycle_key(&shown, &app.library_session.filters.kind, backwards)
     {
@@ -82,7 +82,7 @@ pub(super) fn cycle_sort(app: &mut App, backwards: bool) -> Task<Message> {
     if app.menu_capturing() {
         return Task::none();
     }
-    let shown = crate::app::view::bar_show(app).sorts;
+    let shown = crate::app::view::bar_show(app, &app.config).sorts;
     match crate::frontend::ui::cycle_key(&shown, &app.library_session.filters.sort, backwards) {
         Some(sort) => super::update_inner(app, Message::SetSort(sort.to_string())),
         None => Task::none(),

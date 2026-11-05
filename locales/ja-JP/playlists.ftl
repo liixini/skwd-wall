@@ -72,8 +72,8 @@ playlists-choose = Choose a playlist
 playlists-browse-all = All wallpapers
 playlists-edit = Edit playlists
 playlists-picker-search = Search by name or ID
-playlists-picker-no-match = No playlists match this search.
-playlists-picker-hint = Choose which wallpapers to browse. Playback stays as it is.
+playlists-picker-no-match = この検索に一致するプレイリストはありません。
+playlists-picker-hint = 閲覧する壁紙を選んでください。再生はそのままです。
 playlists-filter-help = Filter reference
 playlists-help-combine = フィルターは空白で区切ります。フォルダールール以外はすべてのフィルターに一致する必要があります。フォルダールールは列挙したどれかのフォルダーにあれば一致します。空白を含むパスは引用符で囲んでください。
 playlists-help-source = all / favourites
@@ -95,7 +95,7 @@ playlists-help-height = height:>=1080
     Compare the wallpaper height in pixels.
 playlists-help-resolution = res:>=1920x1080
     Both dimensions must satisfy the comparison.
-playlists-help-comparison = Comparisons: >=, <=, >, <, =
+playlists-help-comparison = 比較: >=, <=, >, <, =
     With no operator, numbers mean at least. Numeric = allows a difference below 0.5, including ratios. Use lowercase filter keywords.
-playlists-help-example = Example: favourites type:video ratio:landscape color:blue
+playlists-help-example = 例: favourites type:video ratio:landscape color:blue
     Blue, wide videos from your favourites.

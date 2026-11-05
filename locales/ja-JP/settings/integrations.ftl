@@ -1,3 +1,8 @@
+settings-integrations-caelestia-card = Caelestia
+settings-integrations-caelestia-card-desc = どちらのアプリで選んだ壁紙も Skwd で表示します。
+settings-integrations-caelestia-sync-label = Caelestia の壁紙を同期
+settings-integrations-caelestia-sync-desc = どちらのアプリで選んだ壁紙も Skwd で表示します。Caelestia での選択はロック解除中の画面に適用されます。
+
 settings-integrations-plasma-card = KDE Plasma
 settings-integrations-lock-mode-label = ロック画面の壁紙
 settings-integrations-lock-mode-desc = 「管理しない」は Plasma に手を加えません。「静止画」は常に下の画像を使います。「最後に適用した壁紙に追従」は最近適用した壁紙に合わせます。
@@ -33,7 +38,7 @@ settings-integrations-follow-desc = Skwd が配色を制御している間はそ
 
 settings-section-lockscreens = ロック画面
 settings-lockscreens-source-label = 画像ソース
-settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-source-help = 「最後に適用したものに従う」は現在の壁紙の画像を使います。「静止画像」は下のファイルを使います。動画とシーンは、静止画像があればそれを使います。
 settings-lockscreens-image-label = 固定画像
 settings-lockscreens-image-desc = 既存画像の完全なパスを入力します。例: ~/Pictures/lockscreen.jpg。有効なロック画面用に Skwd が画像をコピーします。ここでは動画ファイルを使えません。
 settings-lockscreens-hyprlock-card = Hyprlock

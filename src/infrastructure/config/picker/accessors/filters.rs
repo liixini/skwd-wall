@@ -1,10 +1,70 @@
 use serde_json::Value;
+use skwd_config::schema::Setting;
 
 use crate::domain::library::filter::ResolutionPreset;
 
 use super::super::Config;
 
+const PERCENT: f32 = 100.0;
+
 impl Config {
+    pub fn filter_bar_position(&self) -> Option<(f32, f32)> {
+        use skwd_config::schema::setting::filter_bar as bar;
+
+        self.plate_position(&bar::POSITION_ENABLED, &bar::POSITION_X, &bar::POSITION_Y)
+    }
+
+    pub fn arrange_position(&self) -> Option<(f32, f32)> {
+        use skwd_config::schema::setting::filter_bar as bar;
+
+        self.plate_position(
+            &bar::ARRANGE_POSITION_ENABLED,
+            &bar::ARRANGE_POSITION_X,
+            &bar::ARRANGE_POSITION_Y,
+        )
+    }
+
+    pub fn swatch_position(&self) -> Option<(f32, f32)> {
+        use skwd_config::schema::setting::filter_bar as bar;
+
+        self.plate_position(
+            &bar::SWATCH_POSITION_ENABLED,
+            &bar::SWATCH_POSITION_X,
+            &bar::SWATCH_POSITION_Y,
+        )
+    }
+
+    pub(super) fn plate_position(
+        &self,
+        enabled: &Setting<bool>,
+        x: &Setting<f64>,
+        y: &Setting<f64>,
+    ) -> Option<(f32, f32)> {
+        enabled
+            .read(self.root())
+            .then(|| (x.read(self.root()) as f32 / PERCENT, y.read(self.root()) as f32 / PERCENT))
+    }
+
+    pub fn filter_bar_hidden_buttons(&self) -> Vec<String> {
+        skwd_config::schema::setting::filter_bar::HIDDEN_BUTTONS
+            .read(self.root())
+            .split(',')
+            .map(str::trim)
+            .filter(|key| !key.is_empty())
+            .map(str::to_owned)
+            .collect()
+    }
+
+    pub fn filter_bar_order(&self) -> Vec<String> {
+        skwd_config::schema::setting::filter_bar::BUTTON_ORDER
+            .read(self.root())
+            .split(',')
+            .map(str::trim)
+            .filter(|key| !key.is_empty())
+            .map(str::to_owned)
+            .collect()
+    }
+
     pub fn filter_bar_offset(&self) -> (f32, f32) {
         (
             skwd_config::schema::setting::filter_bar::OFFSET_X.read(self.root()) as f32,

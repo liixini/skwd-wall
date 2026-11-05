@@ -3,7 +3,7 @@ use iced::{Point, Rectangle};
 use super::super::misc::text_width;
 use super::action::BarAction;
 use super::canvas::FilterBar;
-use super::catalog::{MENU_MAX_ROWS, MENU_ROW_H};
+use super::catalog::{MENU_CHROME_H, MENU_ROW_H};
 use super::model::{BarItem, BarModel, BarVisualStyle};
 use super::view::item_visual_bounds;
 
@@ -105,7 +105,7 @@ impl FilterBar<'_> {
 
     pub(super) fn menu_max_scroll(&self) -> f32 {
         let count = self.menu_len();
-        let visible = count.min(MENU_MAX_ROWS);
+        let visible = count.min(self.model.menu_visible_rows);
         (count.saturating_sub(visible)) as f32 * self.menu_row_h()
     }
 
@@ -113,8 +113,8 @@ impl FilterBar<'_> {
         let kind = self.active_menu()?;
         let anchor = self.menu_anchor()?;
         let row_height = self.menu_row_h();
-        let visible = self.menu_len().min(MENU_MAX_ROWS) as f32;
-        let height = 6.0 + visible * row_height + 8.0;
+        let visible = self.menu_len().min(self.model.menu_visible_rows) as f32;
+        let height = MENU_CHROME_H + visible * row_height;
         let width = match kind {
             MenuKind::Folders => self
                 .folder_options

@@ -1,13 +1,15 @@
 use serde_json::Value;
+use skwd_palette::studio::{Shape, StudioPalette};
 
 use super::common::{
-    DecodeResult, array, envelope, required_array, required_string, required_typed, strings,
+    DecodeResult, array, envelope, required_array, required_string, required_typed, root, strings,
 };
 use crate::contracts::daemon::{
     ActivitiesResult, Activity, ActivityApplyEvent, ActivityApplyResult, ActivityCompletion,
     AudioOutputsResult, OutputStatus, OutputsResult, ThemeAuditionPreview, ThemeBackendsResult,
     ThemePreviewResult, ThemePreviewsResult,
 };
+use crate::domain::studio::{Snapshot, Variant};
 
 pub fn decode_activities(value: &Value) -> DecodeResult<ActivitiesResult> {
     const FIELD: &str = "result";
@@ -62,14 +64,10 @@ pub fn decode_activity_event(value: &Value) -> DecodeResult<Option<ActivityApply
             EXPECTED,
         )
     })?;
-    let completion = if payload.queued == Some(true) {
-        None
-    } else if payload.cancelled == Some(true) || payload.superseded == Some(true) {
-        Some(ActivityCompletion::Cancelled)
-    } else if ok {
-        Some(ActivityCompletion::Applied { visible })
+    let completion = if ok {
+        ActivityCompletion::Applied { visible }
     } else {
-        Some(ActivityCompletion::Failed(payload.detail.unwrap_or_default()))
+        ActivityCompletion::Failed(payload.detail.unwrap_or_default())
     };
     Ok(Some(ActivityApplyEvent {
         token,
@@ -158,6 +156,7 @@ fn decode_audition_preview(value: &Value) -> Option<ThemeAuditionPreview> {
 fn map_output(output: wall_proto::OutputStatus) -> OutputStatus {
     OutputStatus {
         name: output.name,
+        monitor: output.monitor,
         target: output.target,
         connected: output.connected,
         width: output.width,
@@ -212,4 +211,36 @@ pub fn decode_running_processes(
     let object = super::common::envelope("playback.processes", value)?;
     Ok(super::common::array("playback.processes", object, "processes")?
         .map_or_else(Vec::new, super::common::strings))
+}
+
+pub fn decode_studio(value: &Value) -> DecodeResult<Snapshot> {
+    let result: wall_proto::StudioResult =
+        root(wall_proto::rpc::THEME_STUDIO, value, "colour studio result")?;
+    let variants = |list: Vec<wall_proto::StudioMethod>| -> Vec<Variant> {
+        list.into_iter()
+            .filter_map(|method| {
+                let shape = if !method.mask.is_empty() {
+                    Shape::Mask(method.mask)
+                } else if !method.sectors.is_empty() {
+                    Shape::Sectors(method.sectors)
+                } else {
+                    Shape::Plain
+                };
+                Some(Variant {
+                    dark: StudioPalette::from_wire(&method.dark)?,
+                    light: StudioPalette::from_wire(&method.light)?,
+                    key: method.key,
+                    shape,
+                })
+            })
+            .collect()
+    };
+    Ok(Snapshot {
+        image: result.image,
+        seed: result.seed,
+        wheel: result.wheel,
+        methods: variants(result.methods),
+        materials: variants(result.materials),
+        dark: result.dark,
+    })
 }

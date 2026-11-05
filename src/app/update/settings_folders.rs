@@ -29,6 +29,7 @@ pub(super) fn add_folder(app: &mut App, kind: FolderKind) -> Task<Message> {
         return Task::none();
     }
     let draft = app.panels.settings.folder_drafts.remove(kind.key()).unwrap_or_default();
+    app.panels.settings.inputs.remove(&crate::frontend::settings::draft_key(kind));
     let path = draft.trim();
     if !path.is_empty() {
         append_folder(app, kind, path);
@@ -208,6 +209,16 @@ fn normalized_folder(path: &str) -> Option<String> {
 }
 
 pub(super) fn edit_folder(app: &mut App, key: &str, raw: &str) -> bool {
+    if let Some(kind) = crate::frontend::settings::folder_draft(key) {
+        app.panels.settings.folder_drafts.insert(kind.key(), raw.to_owned());
+        app.invalidate_settings();
+        return true;
+    }
+    if key == crate::frontend::settings::FILTER_KEY {
+        raw.clone_into(&mut app.panels.settings.profile_filter);
+        app.invalidate_settings();
+        return true;
+    }
     for kind in [FolderKind::Source, FolderKind::Excluded] {
         let Some(index) = key
             .strip_prefix(kind.key())

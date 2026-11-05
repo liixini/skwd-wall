@@ -1,6 +1,5 @@
 settings-paths-excluded-card = Undantagna mappar
 settings-paths-excluded-card-desc = Hoppa över dessa mappar och deras undermappar i bild- och videobiblioteket. Sparad metadata finns kvar.
-settings-paths-path-placeholder = Mappsökväg
 settings-paths-source-card = Bakgrundsmappar
 settings-paths-source-card-desc = Sök efter bilder och videor i dessa mappar och deras undermappar. Ändringar uppdaterar biblioteket automatiskt.
 settings-paths-folder-choose-action = Välj mapp
@@ -25,4 +24,3 @@ settings-paths-removed-excluded = Tog bort den uteslutna mappen { $path }
 settings-paths-watch-polling = Avsöker
 settings-paths-watch-error = Kan inte läsas
 settings-paths-watch-error-note = Kontrollera att den är monterad och läsbar. Avsökningen fortsätter att försöka.
-settings-paths-excluded-footer = Uteslutna mappar skannas aldrig, så ingen profil kan visa dem. För att behålla en mapp men dölja den offentligt, använd Bibliotek › Profiler.

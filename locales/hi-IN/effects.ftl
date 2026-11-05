@@ -89,4 +89,3 @@ effects-activity-inactive-desc = निष्क्रिय गतिविध�
 effects-activity-unavailable = चुनी गई गतिविधि उपलब्ध नहीं है। कोई मौजूदा गतिविधि चुनें और फिर प्रयास करें।
 effects-activity-saved = { $activity } के लिए सहेजा गया।
 effects-activity-unassigned = कोई Skwd वॉलपेपर असाइन नहीं किया गया
-effects-activity-preparing = { $activity } के लिए वॉलपेपर तैयार किया जा रहा है।

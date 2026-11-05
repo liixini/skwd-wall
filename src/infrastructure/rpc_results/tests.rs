@@ -431,24 +431,56 @@ fn saved_effect_palettes_do_not_enter_builtin_auto_recolour_settings() {
 
 #[test]
 fn activity_response_contract() {
-    for queued in [false, true] {
-        let result =
-            decode_activity_apply(&json!({"activity": "work", "visible": false, "queued": queued}))
-                .unwrap();
-        assert_eq!(result.queued, queued);
-    }
-    assert!(decode_activity_apply(&json!({"activity": "work", "visible": false})).is_err());
+    let result = decode_activity_apply(&json!({"activity": "work", "visible": false})).unwrap();
+    assert_eq!(result.activity, "work");
+    assert!(!result.visible);
+    assert!(decode_activity_apply(&json!({"activity": "work"})).is_err());
     let valid = json!({"request_id": 1, "apply_token": "token", "activity": "work", "output": "DP-1", "visible": true, "ok": true});
     envelope_contract(valid.clone(), decode_activity_event);
     let event = decode_activity_event(&valid).unwrap().unwrap();
     assert_eq!(event.token, "token");
     assert!(matches!(
         event.completion,
-        Some(crate::contracts::daemon::ActivityCompletion::Applied { visible: true })
+        crate::contracts::daemon::ActivityCompletion::Applied { visible: true }
     ));
     for field in ["visible", "ok"] {
         let mut malformed = valid.clone();
         malformed.as_object_mut().unwrap().remove(field);
         assert!(decode_activity_event(&malformed).is_err());
     }
+}
+
+#[test]
+fn widget_desk_shape() {
+    let desk = decode_widget_desk(&json!({"scene": {
+        "widgets": [{
+            "face": {"kind": "clock", "style": "aperture-ring"},
+            "depth": "front",
+            "pin": {"anchor": [0.0, 0.5], "offset": [12.0, -4.0]},
+            "height": 0.3,
+            "output": "DP-1"
+        }],
+        "outlines": ["/cache/drawing/a.json"],
+        "palette": {"text": [1, 2, 3], "accent": [4, 5, 6], "shade": [7, 8, 9]},
+        "labels": {
+            "days": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+            "day_names": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+            "months": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+            "month_names": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]
+        }
+    }, "outputs": [{
+        "name": "DP-1",
+        "path": "/w/a.png",
+        "fill": "fit",
+        "background": {"color": [18, 52, 86], "blur": true}
+    }]}))
+    .expect("desk");
+    let scene = &desk.scene;
+    assert_eq!(scene.widgets[0].output.as_deref(), Some("DP-1"));
+    assert_eq!(scene.widgets[0].pin.offset, [12.0, -4.0]);
+    assert_eq!(scene.palette.accent, [4, 5, 6]);
+    assert!(scene.font.is_none());
+    assert_eq!(desk.outputs[0].fill, "fit");
+    assert!(desk.outputs[0].background.blur);
+    assert!(decode_widget_desk(&json!({"scene": {"widgets": "none"}})).is_err());
 }

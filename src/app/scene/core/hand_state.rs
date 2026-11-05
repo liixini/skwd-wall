@@ -70,6 +70,7 @@ impl SceneCore {
     }
 
     pub fn hand_pointer(&mut self, x: f32, y: f32, hit: Option<usize>) {
+        let (x, y) = self.frame_pointer(x, y);
         let (vw, vh) = self.viewport;
         let hp = self.xp.hand;
         if let Some((last_x, last_y)) = self.hand.drag {
@@ -82,7 +83,7 @@ impl SceneCore {
             self.hand.rig_x.v = -dy * DRAG_GAIN_X * 30.0;
             self.motion.needs_frame = true;
         } else {
-            let (tx, ty) = hand::tilt_target(x, y, vw, vh, hp.tilt);
+            let (tx, ty) = hand::tilt_target(x.clamp(0.0, vw), y.clamp(0.0, vh), vw, vh, hp.tilt);
             self.hand.rig_x.retarget(tx);
             self.hand.rig_y.retarget(ty);
         }
@@ -105,7 +106,7 @@ impl SceneCore {
     }
 
     pub fn hand_drag_start(&mut self, x: f32, y: f32) {
-        self.hand.drag = Some((x, y));
+        self.hand.drag = Some(self.frame_pointer(x, y));
     }
 
     pub fn hand_drag_end(&mut self) {
@@ -520,9 +521,7 @@ impl SceneCore {
             self.hand.flip_p = 0.0;
             return;
         }
-        let total = (self.card.flip_duration_ms * self.motion.scale * self.xp.hand.speed_scale())
-            .max(35.0)
-            / 1000.0;
+        let total = self.card.flip_duration_ms / 1000.0;
         let opening = self.card.flip.target > 0.5;
         if opening {
             self.hand.flip_p = (self.hand.flip_p + dt / total).min(1.0);
@@ -533,7 +532,6 @@ impl SceneCore {
             self.card.flip.snap(self.card.flip.target);
         } else {
             self.card.flip.x = self.hand.flip_p;
-            self.card.flip.v = 0.0;
         }
     }
 

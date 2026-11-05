@@ -4,7 +4,10 @@ use crate::i18n::tr;
 
 pub(super) fn tab_launch(builder: &mut Builder<'_>) {
     let cfg = builder.cfg;
-    builder.card(tr("settings-launch-launch-card"), tr("settings-launch-launch-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-launch-launch-card"),
+        tr("settings-launch-launch-card-desc"),
+    );
     let anim = cfg.launch_animation();
     builder.dropdown_cur(
         tr("settings-launch-animation-label"),

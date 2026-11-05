@@ -1,8 +1,8 @@
 #![cfg(test)]
 
 use super::{
-    BarAction, BarModel, BarShow, ThemeBar, build_bar_with_tasks, mirror_model, next_orient,
-    next_resolution, orient_label, resolution_label,
+    BarAction, BarModel, BarShow, ThemeBar, build_bar_with_tasks, edit_id, mirror_model,
+    next_orient, next_resolution, orient_label, resolution_label,
 };
 use crate::domain::library::filter::{Filters, ResolutionPreset};
 
@@ -394,6 +394,28 @@ fn bar_with(show: &BarShow) -> super::BarModel {
 }
 
 #[test]
+fn edit_titles_explain_buttons() {
+    let model = bar(0, 0);
+    let title = |id: &str| {
+        model.items.iter().find(|item| item.edit_id().as_deref() == Some(id)).unwrap().edit_title()
+    };
+    assert_eq!(title(edit_id::TYPE_STATIC), crate::i18n::tr("settings-filter-type-images"));
+    assert_eq!(title(edit_id::ORIENT), crate::i18n::tr("settings-filter-show-shape-label"));
+    assert_eq!(title(edit_id::AUDIO_PANEL), crate::i18n::tr("audio-mixer-heading"));
+    assert_eq!(
+        title(edit_id::COLOR_CLEAR),
+        crate::frontend::ui::color_bucket_name(crate::frontend::ui::strip_bucket(
+            edit_id::COLOR_CLEAR_INDEX
+        ))
+    );
+    assert!(model.items.iter().filter(|item| item.hideable()).all(|item| {
+        let title = item.edit_title();
+        !title.is_empty()
+            && !title.chars().any(|character| ('\u{e000}'..='\u{f8ff}').contains(&character))
+    }));
+}
+
+#[test]
 fn vertical_bar_columns() {
     let mut model = bar(0, 0);
     super::verticalize_bar(&mut model, 140.0, 1.0);
@@ -409,7 +431,9 @@ fn type_chip_gating() {
         model
             .items
             .iter()
-            .filter(|item| matches!(&item.action, Some(BarAction::SetType(kind)) if kind == key))
+            .filter(
+                |item| matches!(&item.action, Some(BarAction::SetType { next, .. }) if next == key),
+            )
             .count()
     };
     assert_eq!(count(&all, "video"), 1);
@@ -958,12 +982,15 @@ fn control_colour_pairs() {
         surface_variant: Color::from_rgb8(10, 11, 12),
         surface_container: Color::from_rgb8(13, 14, 15),
         outline: Color::from_rgb8(16, 17, 18),
+        hover: Color::from_rgb8(19, 20, 21),
+        hover_text: Color::from_rgb8(22, 23, 24),
         ..crate::frontend::theme::Palette::default()
     };
 
-    assert_eq!(super::view::control_text(&palette, true), palette.primary_text);
-    assert_eq!(super::view::control_text(&palette, false), palette.surface_text);
+    assert_eq!(super::view::control_text(&palette, true, false), palette.primary_text);
+    assert_eq!(super::view::control_text(&palette, false, false), palette.surface_text);
     assert_eq!(super::view::control_background(&palette, true, false), palette.primary);
+    assert_eq!(super::view::control_text(&palette, false, true), palette.hover_text);
     let resting = super::view::control_background(&palette, false, false);
     let hovered = super::view::control_background(&palette, false, true);
     let border = super::view::control_border(&palette, false, false);
@@ -973,7 +1000,7 @@ fn control_colour_pairs() {
     );
     assert_eq!(
         (hovered.r, hovered.g, hovered.b),
-        (palette.surface_variant.r, palette.surface_variant.g, palette.surface_variant.b,)
+        (palette.hover.r, palette.hover.g, palette.hover.b,)
     );
     assert_eq!(
         (border.r, border.g, border.b),
@@ -1166,9 +1193,98 @@ fn two_slats() -> BarModel {
         width: 90.0,
         height: 24.0,
         menu_up: false,
+        menu_visible_rows: 0,
         swatch_at: Some((20.0, 30.0)),
         rtl: false,
     }
+}
+
+#[test]
+fn orders_individual_buttons() {
+    let mut show = BarShow::all();
+    show.order =
+        ["stash", "sort:date", "color:clear", "type:we", "settings"].map(String::from).to_vec();
+    let model = bar_with(&show);
+    let ids: Vec<_> = model.items.iter().filter_map(super::BarItem::edit_id).collect();
+    assert_eq!(&ids[..5], show.order);
+    assert_eq!(ids.iter().filter(|id| *id == "type:we").count(), 1);
+}
+
+#[test]
+fn hides_individual_buttons() {
+    let mut show = BarShow::all();
+    show.hidden_buttons = ["type:all", "sort:date", "color:3", "audio-panel", "settings", "stash"]
+        .map(String::from)
+        .to_vec();
+    let model = bar_with(&show);
+    let ids: Vec<_> = model.items.iter().filter_map(super::BarItem::edit_id).collect();
+    for hidden in ["type:all", "sort:date", "color:3", "audio-panel"] {
+        assert!(!ids.iter().any(|id| id == hidden));
+    }
+    for kept in ["type:static", "color:2", "color:4", "audio", "settings", "stash"] {
+        assert!(ids.iter().any(|id| id == kept));
+    }
+    assert!(model.items.iter().all(|item| item.x + item.w <= model.width + 0.01));
+}
+
+#[test]
+fn type_id_survives_selection() {
+    let filters = Filters { kind: String::from("video"), ..Filters::default() };
+    let model = build_bar(
+        &filters,
+        &[],
+        false,
+        0,
+        0,
+        1.0,
+        false,
+        false,
+        false,
+        false,
+        false,
+        None,
+        "",
+        &BarShow::all(),
+        0.0,
+        false,
+        false,
+        None,
+    );
+    let selected = model
+        .items
+        .iter()
+        .find(|item| matches!(item.action, Some(BarAction::SetType { key: "video", .. })))
+        .unwrap();
+    assert_eq!(selected.edit_id().as_deref(), Some("type:video"));
+}
+
+#[test]
+fn tasks_follow_ordered_buttons() {
+    let mut show = BarShow::all();
+    show.order = vec![String::from("stash"), String::from("settings")];
+    let task = crate::contracts::daemon::TaskStatus::running("scan", "scan", "Scanning");
+    let model = build_bar_with_tasks(
+        &Filters::default(),
+        &[],
+        false,
+        0,
+        0,
+        1.0,
+        false,
+        false,
+        false,
+        &show,
+        180.0,
+        false,
+        false,
+        None,
+        &[&task],
+    );
+    let ids: Vec<_> = model.items.iter().filter_map(super::BarItem::edit_id).collect();
+    assert_eq!(&ids[..2], show.order);
+    assert!(model.items.last().unwrap().notice.is_some());
+    assert!(model.height > 24.0);
+    assert!(model.items.iter().all(|item| item.x + item.w <= model.width + 0.01));
 }
 
 fn ltr_model(mut model: BarModel) -> BarModel {

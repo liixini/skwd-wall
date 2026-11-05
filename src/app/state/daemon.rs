@@ -10,6 +10,7 @@ use super::TaskUiState;
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Pending {
     PlaybackProcesses,
+    WidgetScene,
     CurrentTheme {
         load: bool,
     },
@@ -21,6 +22,10 @@ pub(crate) enum Pending {
         target: wall_proto::LockScreenTarget,
         enabled: bool,
         sddm_theme: Option<String>,
+    },
+    DrawingCardAction {
+        key: String,
+        enabled: bool,
     },
     EffectThemes,
     Diag,
@@ -46,6 +51,11 @@ pub(crate) enum Pending {
     BrowserPreview {
         source: Source,
         id: String,
+        url: String,
+    },
+    BrowserDetails {
+        source: Source,
+        id: String,
     },
     EffectsPreview {
         source: String,
@@ -55,6 +65,7 @@ pub(crate) enum Pending {
         apply: bool,
     },
     Outputs,
+    ArrangeOutputs,
     Activities,
     ActivityOutputs {
         activity: String,
@@ -82,6 +93,8 @@ pub(crate) enum Pending {
         generation: u64,
     },
     WeatherAction,
+    DrawingStatus,
+    DrawingAction,
     WeatherPlaylists,
     SceneProperties {
         we_id: String,
@@ -95,11 +108,17 @@ pub(crate) enum Pending {
         key: String,
         unsubscribe: bool,
     },
+    Studio {
+        key: String,
+        area: Option<skwd_palette::studio::Area>,
+        schemes: bool,
+    },
 }
 
 pub(crate) struct DaemonState {
     pub(crate) app_themes: Option<crate::contracts::daemon::AppThemesResult>,
     pub(crate) weather: Option<crate::contracts::daemon::WeatherStatus>,
+    pub(crate) drawing: Option<wall_proto::drawing::Status>,
     pub(crate) weather_playlists: Vec<crate::contracts::playlists::Playlist>,
     pub(crate) playback: crate::contracts::daemon::PlaybackStatus,
     pub(crate) client: DaemonClient,
@@ -143,6 +162,7 @@ impl DaemonState {
         Self {
             app_themes: None,
             weather: None,
+            drawing: None,
             weather_playlists: Vec::new(),
             playback: crate::contracts::daemon::PlaybackStatus::default(),
             client,

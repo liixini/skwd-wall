@@ -4,10 +4,6 @@ settings-selector-display-mode-desc = اختر طريقة ترتيب بطاقا�
 settings-selector-filter-motion-label = حركة التصفية
 settings-selector-filter-motion-desc = سرعة دوران الشريط عند تغيّر نتائج التصفية. الأوزان الثلاثة المشتركة موجودة في إعدادات الحركة.
 settings-selector-presets-card = الإعدادات المسبقة
-settings-selector-presets-card-desc = احفظ إعدادات التخطيط الحالية أو طبّق مجموعة محفوظة. يحتفظ كل وضع عرض بإعداداته المسبقة الخاصة.
-settings-selector-preset-name-label = الاسم
-settings-selector-preset-name-desc = أعد تسمية الإعداد المسبق المحدد. «حفظ الحالي» ينشئ إعدادًا مسبقًا جديدًا باسم تلقائي.
-settings-selector-preset-name-placeholder = اسم النمط
 settings-selector-preset-generated-name = النمط { $number }
 settings-selector-saved-styles-label = الأنماط المحفوظة
 settings-selector-live-preview-card = معاينة الألوان
@@ -68,10 +64,6 @@ settings-selector-grid-gap-x-label = التباعد الأفقي
 settings-selector-grid-gap-x-desc = المسافة المرئية من حافة إلى حافة بين الأعمدة.
 settings-selector-grid-gap-y-label = التباعد الرأسي
 settings-selector-grid-gap-y-desc = المسافة المرئية من حافة إلى حافة بين الصفوف.
-settings-selector-grid-round-label = زوايا مستديرة
-settings-selector-grid-round-desc = عند الإيقاف تُستخدم زوايا مستقيمة لكل بطاقة في Wall.
-settings-selector-grid-corner-radius-label = نصف قطر الزاوية
-settings-selector-grid-corner-radius-desc = درجة الاستدارة المستخدمة عند تفعيل الزوايا المستديرة.
 settings-selector-performance-card = الأداء
 settings-selector-performance-card-desc = كل حبّة رمل هي شكل هندسي مستقل. الحبّات الأكبر تعني أشكالًا أقل وعملًا أقل بكثير على GPU.
 settings-selector-sand-note-discrete = هذا الحمل صغير على GPU المنفصل المكتشف. حجم الحبّة نفسه قد يكون أبطأ بنحو 150 مرة على GPU مدمج.
@@ -157,16 +149,6 @@ settings-selector-wobble-desc = تنحني البطاقات في اتجاه ال
 settings-selector-wobble-strength-label = قوة التمايل
 settings-selector-wobble-strength-desc = القيمة 100 هي الافتراضية. القيمة 200 تضاعف الانحناء وفصل الألوان.
 settings-selector-corners-card = الزوايا
-settings-selector-round-corners-label = زوايا مستديرة
-settings-selector-round-corners-desc = يطبّق نصف قطر زاوية على حواف الشرائح.
-settings-selector-corner-tl-label = أعلى اليسار
-settings-selector-corner-tl-desc = نصف قطر الزاوية العلوية اليسرى. 0 = مربعة.
-settings-selector-corner-tr-label = أعلى اليمين
-settings-selector-corner-tr-desc = نصف قطر الزاوية العلوية اليمنى. 0 = مربعة.
-settings-selector-corner-br-label = أسفل اليمين
-settings-selector-corner-br-desc = نصف قطر الزاوية السفلية اليمنى. 0 = مربعة.
-settings-selector-corner-bl-label = أسفل اليسار
-settings-selector-corner-bl-desc = نصف قطر الزاوية السفلية اليسرى. 0 = مربعة.
 settings-selector-card-flip-card = قلب البطاقة
 settings-selector-card-flip-card-desc = اختر كيف تنتقل بطاقة الخلفية من مصغّرتها إلى التفاصيل على ظهرها.
 settings-selector-flip-effect-label = التأثير
@@ -194,14 +176,20 @@ settings-selector-preview-delay-label = تأخير المعاينة
 settings-selector-preview-delay-desc = ينتظر هذه المدة عند التحويم/التحديد قبل بدء المعاينة (ms).
 settings-selector-tag-cloud-position-card = موضع لوحة البحث
 settings-selector-tag-cloud-position-card-desc = حرّك لوحة البحث أفقيًا أو رأسيًا بالبكسل. الإزاحات الأفقية الموجبة تحرّكها يمينًا؛ والرأسية الموجبة تحرّكها لأسفل.
+settings-selector-tag-position-enabled-label = استخدام موضع الشاشة
+settings-selector-tag-position-enabled-desc = يُبقي لوحة البحث عند إحداثيات الشاشة هذه عندما يتغير حجمها أو نمط المنتقي. أوقفه لاستخدام الإزاحات بالبكسل.
+settings-selector-tag-position-x-label = الحافة اليسرى
+settings-selector-tag-position-x-desc = حدّد الحافة اليسرى للوحة البحث كنسبة مئوية من عرض الشاشة.
+settings-selector-tag-position-y-label = الحافة العلوية
+settings-selector-tag-position-y-desc = حدّد الحافة العلوية للوحة البحث كنسبة مئوية من ارتفاع الشاشة.
 settings-selector-tag-offset-x-label = الإزاحة الأفقية للوحة البحث
 settings-selector-tag-offset-x-desc = يحرّك لوحة البحث يسارًا أو يمينًا نسبةً إلى هذا المنتقي.
 settings-selector-tag-offset-y-label = الإزاحة الرأسية للوحة البحث
 settings-selector-tag-offset-y-desc = يحرّك لوحة البحث لأعلى أو لأسفل نسبةً إلى هذا المنتقي.
-settings-selector-mode-slices = Slices
-settings-selector-mode-hex = Geometric
-settings-selector-mode-wall = Wall
-settings-selector-mode-sandy = Sandy
+settings-selector-mode-slices = الشرائح
+settings-selector-mode-hex = هندسي
+settings-selector-mode-wall = الجدار
+settings-selector-mode-sandy = رملي
 settings-selector-gpu-tier-discrete = منفصل
 settings-selector-gpu-tier-integrated = مدمج
 settings-selector-gpu-tier-other = آخر
@@ -216,8 +204,6 @@ settings-selector-swap-style-weave = نسيج
 settings-selector-swap-style-bloom = تفتّح
 settings-selector-swap-style-flock = سرب
 settings-selector-swap-style-ring = حلقة
-settings-selector-preset-rename-hint = حدد نمطًا لإعادة تسميته
-settings-selector-preset-save-current = حفظ الحالي
 
 settings-selector-mode-hand = يد أوراق
 settings-selector-hand-card = يد أوراق
@@ -273,7 +259,6 @@ settings-selector-hand-fan-roll-label = دوران المروحة
 settings-selector-hand-fan-roll-desc = ميل يُضاف لكل بطاقة، كأوراق مفرودة في اليد. 0 يبقيها منتصبة.
 settings-selector-hand-arch-label = التقوّس
 settings-selector-hand-arch-desc = مدى انخفاض البطاقات الخارجية عن البطاقة الوسطى.
-settings-selector-hand-corner-radius-label = نصف قطر الزاوية
 settings-selector-hand-skew-label = الميل
 settings-selector-hand-skew-desc = يحرف حدود البطاقة إلى متوازي أضلاع، ببكسلات الإزاحة الأفقية.
 settings-selector-hand-backdrop-blur-label = تمويه الخلفية
@@ -286,60 +271,58 @@ settings-selector-start-position-desc = يفتح عند البداية، أو ع
 settings-selector-start-position-beginning = البداية
 settings-selector-start-position-applied = آخر خلفية مطبّقة
 settings-selector-start-position-browsing = آخر موضع تصفح
+settings-selector-loop-around-label = الالتفاف عند الطرفين
+settings-selector-loop-around-desc = التحرك بعد أول خلفية أو آخر خلفية ينقل التحديد إلى الطرف الآخر. المفاتيح المضغوط عليها باستمرار والتنقل بالصفحات والتمرير السريع تتوقف عند الطرف أولًا، لذا اضغط أو مرّر مرة أخرى للالتفاف. المصادر عبر الإنترنت تلتف بعد تحميل كل الصفحات. في تخطيط Wall وفي المصادر عبر الإنترنت، عجلة الفأرة تمرّر العرض فقط.
 
-settings-selector-mode-depth = Depth
-settings-selector-depth-card = Depth cards
-settings-selector-depth-desc = Cards shrink toward the edges. As you scroll, artwork shifts inside each card according to its position in the row.
+settings-selector-mode-depth = العمق
+settings-selector-depth-card = بطاقات العمق
+settings-selector-depth-desc = تصغر البطاقات باتجاه الحواف. أثناء التمرير تنزاح الصورة داخل كل بطاقة بحسب موضعها في الصف.
 
-settings-selector-parallax-label = Image parallax
-settings-selector-parallax-desc = Shift artwork inside each card as it moves across the view. The image keeps moving through the visible edges.
+settings-selector-parallax-label = تأثير المنظور للصورة
+settings-selector-parallax-desc = أزِح الصورة داخل كل بطاقة أثناء تحركها عبر العرض. تواصل الصورة الحركة عبر الحواف المرئية.
 settings-selector-mode-collection = المجموعة
 settings-selector-collection-desc = تصفح رزمة مائلة بعجلة الفأرة أو مفاتيح الأسهم. انقر على بطاقة لتكبيرها؛ انقر مجددًا أو اضغط Escape للعودة. اضغط Enter للتطبيق. انقر بزر الفأرة الأيمن للتفاصيل.
 
-settings-selector-depth-height-label = Card height
-settings-selector-depth-height-desc = Height of the centre card. Large cards shrink to fit the screen.
+settings-selector-depth-height-label = ارتفاع البطاقة
+settings-selector-depth-height-desc = ارتفاع البطاقة المركزية. تصغر البطاقات الكبيرة لتناسب الشاشة.
 
-settings-selector-depth-width-label = Card width
-settings-selector-depth-width-desc = Width of the centre card in pixels.
+settings-selector-depth-width-label = عرض البطاقة
+settings-selector-depth-width-desc = عرض البطاقة المركزية بالبكسل.
 
-settings-selector-depth-spacing-label = Card spacing
-settings-selector-depth-spacing-desc = Distance between card centres in pixels before depth falloff.
+settings-selector-depth-spacing-label = تباعد البطاقات
+settings-selector-depth-spacing-desc = المسافة بين مراكز البطاقات بالبكسل قبل تدرّج العمق.
 
-settings-selector-depth-count-label = Visible cards
-settings-selector-depth-count-desc = Maximum number of cards around the current selection.
+settings-selector-depth-count-label = البطاقات المرئية
+settings-selector-depth-count-desc = أقصى عدد من البطاقات حول التحديد الحالي.
 
-settings-selector-depth-falloff-label = Depth falloff
-settings-selector-depth-falloff-desc = Scale reduction per card away from the centre, from 0 to 1. Zero keeps their sizes equal.
+settings-selector-depth-falloff-label = تدرّج العمق
+settings-selector-depth-falloff-desc = مقدار تصغير الحجم لكل بطاقة أبعد عن المركز، من 0 إلى 1. الصفر يُبقي الأحجام متساوية.
 
-settings-selector-depth-corners-label = Corner radius
-settings-selector-depth-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-depth-skew-label = Card skew
-settings-selector-depth-skew-desc = Slant the card edges. Zero keeps them upright.
+settings-selector-depth-skew-label = إمالة البطاقة
+settings-selector-depth-skew-desc = إمالة حواف البطاقات. الصفر يُبقيها عمودية.
 
-settings-selector-depth-speed-label = Navigation duration
-settings-selector-depth-speed-desc = Time for a navigation movement in milliseconds. Lower values move faster.
+settings-selector-depth-speed-label = مدة التنقل
+settings-selector-depth-speed-desc = مدة حركة التنقل بالميلي ثانية. القيم الأقل أسرع.
 
-settings-selector-collection-size-label = Card size
-settings-selector-collection-size-desc = Card width as a percentage of screen height.
+settings-selector-collection-size-label = حجم البطاقة
+settings-selector-collection-size-desc = عرض البطاقة كنسبة مئوية من ارتفاع الشاشة.
 
-settings-selector-collection-spacing-label = Stack spacing
-settings-selector-collection-spacing-desc = Vertical distance between stacked cards as a percentage of card size.
+settings-selector-collection-spacing-label = تباعد الكومة
+settings-selector-collection-spacing-desc = المسافة الرأسية بين البطاقات المتراصة كنسبة مئوية من حجم البطاقة.
 
-settings-selector-collection-count-label = Visible cards
-settings-selector-collection-count-desc = Maximum number of cards in the stack.
+settings-selector-collection-count-label = البطاقات المرئية
+settings-selector-collection-count-desc = أقصى عدد من البطاقات في الكومة.
 
-settings-selector-collection-tilt-label = Stack tilt
-settings-selector-collection-tilt-desc = Tilt the stack away from you. Zero shows the cards face-on.
+settings-selector-collection-tilt-label = ميل الكومة
+settings-selector-collection-tilt-desc = أمِل الكومة بعيدًا عنك. الصفر يعرض البطاقات من الأمام.
 
-settings-selector-collection-corners-label = Corner radius
-settings-selector-collection-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-collection-speed-label = Motion speed
-settings-selector-collection-speed-desc = Speed of navigation and opening or closing a card. Higher values move faster.
+settings-selector-collection-speed-label = سرعة الحركة
+settings-selector-collection-speed-desc = سرعة التنقل وسرعة فتح البطاقة أو إغلاقها. القيم الأعلى أسرع.
 
-settings-selector-depth-frame-label = Selection frame
-settings-selector-depth-frame-desc = Draw a highlighted border around the selected card.
+settings-selector-depth-frame-label = إطار التحديد
+settings-selector-depth-frame-desc = ارسم حدًا مميزًا حول البطاقة المحددة.
 
-settings-selector-shadows-label = Card shadows
-settings-selector-shadows-desc = Draw a shadow behind each card.
+settings-selector-shadows-label = ظلال البطاقات
+settings-selector-shadows-desc = ارسم ظلًا خلف كل بطاقة.

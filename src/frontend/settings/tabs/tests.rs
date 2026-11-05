@@ -1,11 +1,59 @@
 #![cfg(test)]
 
+use super::builder::plasma_lock_rows;
 use super::*;
 use crate::contracts::settings::FolderKind;
+use crate::frontend::settings::SectionId;
+use crate::frontend::settings::tables::{TABS, canonical_category};
 use crate::frontend::settings::test_source::FakeSettingsSource;
 
 fn cfg() -> FakeSettingsSource {
     FakeSettingsSource::default()
+}
+
+#[test]
+fn category_routes() {
+    assert_eq!(
+        TABS,
+        [
+            "library",
+            "sources",
+            "picker",
+            "displays",
+            "playback",
+            "transitions",
+            "theme",
+            "automation",
+            "integrations",
+            "app",
+        ]
+    );
+    for (old, current) in [
+        ("search", "picker"),
+        ("filter", "picker"),
+        ("position", "picker"),
+        ("motion", "picker"),
+        ("performance", "app"),
+        ("language", "app"),
+    ] {
+        assert_eq!(canonical_category(old.to_string()), current);
+    }
+}
+
+#[test]
+fn app_exposes_configuration_transfer() {
+    let cards = build_tab("app", &cfg(), &[], &[], "", &[]);
+    let rows = &cards
+        .iter()
+        .find(|(card, _)| card.title == "Configuration transfer")
+        .expect("configuration transfer section")
+        .1;
+    assert!(rows.iter().any(|row| {
+        matches!(row.control, Control::ActionBtn { id: ActionId::ExportConfiguration, .. })
+    }));
+    assert!(rows.iter().any(|row| {
+        matches!(row.control, Control::ActionBtn { id: ActionId::ImportConfiguration, .. })
+    }));
 }
 
 fn weather_rows(cards: &[(Card, Vec<Row>)]) -> Vec<Row> {
@@ -99,7 +147,7 @@ fn outdoors_missing_location() {
         Control::ActionBtn { id: ActionId::FollowOutdoors(true), .. }
     )));
     assert!(
-        rows.iter().any(|row| row.title == "Weather location" && row.desc.contains("Add one city"))
+        rows.iter().any(|row| row.title == "Weather location" && row.desc.contains("Add a city"))
     );
 }
 
@@ -668,15 +716,36 @@ fn noctalia_mode_overrides_in_integrations() {
 }
 
 #[test]
+fn caelestia_sync_stays_independent() {
+    for authority in ["skwd", "caelestia"] {
+        for enabled in [false, true] {
+            let source = cfg()
+                .with_text(keys::theme::AUTHORITY, authority)
+                .with_text(keys::theme::POLICY, "off")
+                .with_flag(keys::caelestia::WALLPAPER_SYNC, enabled);
+            let cards = build_tab("integrations", &source, &[], &[], "", &[]);
+            let controls: Vec<_> = cards
+                .iter()
+                .flat_map(|(_, rows)| rows)
+                .filter_map(|row| match &row.control {
+                    Control::Toggle { path, value } if path == keys::caelestia::WALLPAPER_SYNC => {
+                        Some(*value)
+                    }
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(controls, [enabled]);
+        }
+    }
+}
+
+#[test]
 fn picker_controls_bindings() {
-    let cards = build_tab("picker", &cfg(), &[], &[], "", &[]);
+    let cards = build_tab("app", &cfg(), &[], &[], "", &[]);
     let titles: Vec<_> = cards.iter().map(|(card, _)| card.title).collect();
-    assert_eq!(&titles[4..], ["Controls"]);
-    let controls = &cards
-        .iter()
-        .find(|(card, _)| card.title == "Controls")
-        .expect("picker controls section")
-        .1;
+    assert_eq!(titles.last(), Some(&"Controls"));
+    let controls =
+        &cards.iter().find(|(card, _)| card.title == "Controls").expect("app controls section").1;
     let segments: Vec<_> = controls
         .iter()
         .filter(|row| matches!(row.control, Control::Segment))
@@ -704,16 +773,17 @@ fn picker_controls_bindings() {
         .collect();
     assert_eq!(bindings.len(), crate::contracts::picker::KEY_BINDINGS.len());
     assert_eq!(bindings[0], (skwd_config::keys::keybind::SELECT, "click"));
-    assert!(bindings.contains(&(skwd_config::keys::keybind::THEME_PANEL, "c")));
+    assert!(bindings.contains(&(skwd_config::keys::keybind::THEME_PANEL, "shift+c")));
+    assert!(bindings.contains(&(skwd_config::keys::keybind::COLOUR_STUDIO, "c")));
 }
 
 #[test]
 fn shortcut_conflicts_get_their_own_segment() {
     let cfg = cfg().with_bindings(crate::domain::input::InputMap::from_bindings([
-        (crate::domain::input::InputAction::Playlists, String::from("c")),
-        (crate::domain::input::InputAction::ThemePanel, String::from("c")),
+        (crate::domain::input::InputAction::Playlists, String::from("x")),
+        (crate::domain::input::InputAction::ThemePanel, String::from("x")),
     ]));
-    let cards = build_tab("picker", &cfg, &[], &[], "", &[]);
+    let cards = build_tab("app", &cfg, &[], &[], "", &[]);
     let rows = &cards.iter().find(|(card, _)| card.title == "Controls").unwrap().1;
     let conflicts = rows
         .iter()
@@ -830,21 +900,13 @@ fn lockscreens_under_integrations() {
     let names: Vec<_> = lockscreens.iter().map(|row| row.title.as_str()).collect();
     assert_eq!(
         names,
-        [
-            "KDE Plasma",
-            "Hyprlock",
-            "Swaylock",
-            "Dank Material Shell",
-            "Noctalia",
-            "SDDM",
-            "Advanced"
-        ]
+        ["Hyprlock", "Swaylock", "Dank Material Shell", "Noctalia", "SDDM", "Advanced"]
     );
     assert!(cards.iter().any(|(card, _)| card.title == "Noctalia"));
     assert!(cards.iter().any(|(card, _)| card.title == "Dank Material Shell"));
-    assert!(lockscreens[..6].iter().all(|row| matches!(row.control, Control::ActionBtn { .. })));
+    assert!(lockscreens[..5].iter().all(|row| matches!(row.control, Control::ActionBtn { .. })));
     assert!(
-        matches!(&lockscreens[6].control, Control::Details { id, .. } if id == keys::lock_screens::MODE)
+        matches!(&lockscreens[5].control, Control::Details { id, .. } if id == keys::lock_screens::MODE)
     );
 }
 
@@ -857,14 +919,14 @@ fn lockscreen_source_controls() {
         cards.into_iter().find(|(card, _)| card.title == "Lockscreens").unwrap().1
     };
     let off_rows = source(off);
-    let Control::Details { rows: off_advanced, .. } = &off_rows[6].control else { panic!() };
+    let Control::Details { rows: off_advanced, .. } = &off_rows[5].control else { panic!() };
     assert!(matches!(&off_advanced[0].control, Control::Dropdown { options, current, .. }
         if current == keys::lock_screens::FOLLOW
             && options.iter().map(|(value, _)| value.as_str()).collect::<Vec<_>>()
                 == [keys::lock_screens::FOLLOW, keys::lock_screens::STATIC]));
     assert!(!off_advanced.iter().any(|row| matches!(&row.control, Control::TextField { path, .. } if path == keys::lock_screens::IMAGE)));
     let static_rows = source(static_cards);
-    let Control::Details { rows: static_advanced, .. } = &static_rows[6].control else { panic!() };
+    let Control::Details { rows: static_advanced, .. } = &static_rows[5].control else { panic!() };
     assert!(static_advanced.iter().any(|row| matches!(&row.control, Control::TextField { path, .. } if path == keys::lock_screens::IMAGE)));
 }
 
@@ -879,7 +941,7 @@ fn lockscreen_actions_match_state() {
     for (source, expected) in [(legacy, false), (enabled, true)] {
         let cards = build_tab("integrations", &source, &[], &[], "", &[]);
         let rows = &cards.iter().find(|(card, _)| card.title == "Lockscreens").unwrap().1;
-        assert!(matches!(&rows[1].control,
+        assert!(matches!(&rows[0].control,
             Control::ActionBtn { id: ActionId::SetLockScreen(LockScreenTarget::Hyprlock, next), label }
                 if *next != expected && label == if expected { "Disable" } else { "Enable" }));
     }
@@ -898,10 +960,10 @@ fn sddm_theme_choices() {
         RuntimeStatus { sddm_themes: &themes, ..Default::default() },
     );
     let rows = &cards.iter().find(|(card, _)| card.title == "Lockscreens").unwrap().1;
-    assert!(matches!(&rows[6].control, Control::ActionChips { items }
+    assert!(matches!(&rows[5].control, Control::ActionChips { items }
         if matches!(&items[0].0, ActionId::ChooseSddmTheme(Some(theme)) if theme == "breeze")
             && matches!(&items[2].0, ActionId::ChooseSddmTheme(None))));
-    assert!(matches!(&rows[7].control, Control::Details { .. }));
+    assert!(matches!(&rows[6].control, Control::Details { .. }));
 }
 
 #[test]
@@ -913,15 +975,13 @@ fn plasma_lock_modes_preserved() {
     ];
     for (mode, conditional) in modes {
         let source = cfg().with_text(keys::plasma::LOCK_SCREEN_MODE, mode);
-        let cards = build_tab("integrations", &source, &[], &[], "", &[]);
-        let lockscreens = &cards.iter().find(|(card, _)| card.title == "Lockscreens").unwrap().1;
-        let Control::Details { rows, .. } = &lockscreens[6].control else { panic!() };
+        let rows = plasma_lock_rows(&source);
         assert!(
-            matches!(&rows[1].control, Control::Dropdown { path, current, .. } if path == keys::plasma::LOCK_SCREEN_MODE && current == mode)
+            matches!(&rows[0].control, Control::Dropdown { path, current, .. } if path == keys::plasma::LOCK_SCREEN_MODE && current == mode)
         );
         let paths: Vec<_> = rows
             .iter()
-            .skip(2)
+            .skip(1)
             .filter_map(|row| match &row.control {
                 Control::TextField { path, .. } | Control::Dropdown { path, .. } => {
                     Some(path.as_str())
@@ -1033,7 +1093,7 @@ fn niri_stationary_controls_use_current_wallpaper() {
 fn monitor_choices_detected() {
     let cfg = FakeSettingsSource::default().with_text("monitor", "DP-9");
     let cards = build_tab_with_runtime_status(
-        "picker",
+        "app",
         &cfg,
         &[],
         &[],
@@ -1054,7 +1114,7 @@ fn monitor_choices_detected() {
             }
             _ => None,
         })
-        .expect("picker settings expose monitor choices");
+        .expect("app monitor choices");
     assert_eq!(
         options,
         [
@@ -1100,10 +1160,15 @@ fn displays_placement_lock() {
         },
     );
     let rows = &cards[0].1;
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].title, "DP-1");
-    assert!(rows[0].desc.contains("2560 × 1440"));
-    let Control::StackBar { id, summary, preview, rows, .. } = &rows[0].control else {
+    assert_eq!(rows.len(), 2);
+    assert!(matches!(
+        &rows[0].control,
+        Control::Chips { path, current, .. }
+            if path == keys::display::FILL_MODE && current == "fill"
+    ));
+    assert_eq!(rows[1].title, "DP-1");
+    assert!(rows[1].desc.contains("2560 × 1440"));
+    let Control::StackBar { id, summary, preview, rows, .. } = &rows[1].control else {
         panic!("display uses the compact stack bar");
     };
     assert_eq!(id, "display:DP-1");
@@ -1119,6 +1184,30 @@ fn displays_placement_lock() {
         &rows[1].control,
         Control::Toggle { path, value: true } if path == "display.outputLocks.DP-1"
     ));
+}
+
+#[test]
+fn display_placement_shows_resolved_global_choice() {
+    let cfg = FakeSettingsSource::default().with_text(keys::display::FILL_MODE, "fit");
+    let statuses = [crate::contracts::daemon::OutputStatus {
+        name: String::from("DP-1"),
+        fill: String::new(),
+        ..Default::default()
+    }];
+    let cards = build_tab_with_runtime_status(
+        "displays",
+        &cfg,
+        &[],
+        &[],
+        "",
+        &[],
+        RuntimeStatus { statuses: &statuses, ..Default::default() },
+    );
+    let Control::StackBar { rows, .. } = &cards[0].1[1].control else { panic!() };
+    let Control::Chips { options, current, background, .. } = &rows[0].control else { panic!() };
+    assert!(current.is_empty());
+    assert_eq!(options[0], (String::new(), String::from("Use global · Fit")));
+    assert!(background.as_ref().is_some_and(|control| control.placement_visible));
 }
 
 #[test]
@@ -1149,7 +1238,7 @@ fn remembered_monitor_offline() {
             ..Default::default()
         },
     );
-    let row = &cards[0].1[0];
+    let row = &cards[0].1[1];
     assert_eq!(row.title, "DP-3");
     assert_eq!(row.desc, "Offline · 2560 × 1440");
     let Control::StackBar { id, summary, .. } = &row.control else {
@@ -1252,22 +1341,6 @@ fn library_watching_explains_recovery_and_unavailable_states() {
 }
 
 #[test]
-fn motion_weights_resets() {
-    let cards = build_tab("motion", &cfg(), &[], &[], "", &[]);
-    let rows = &cards
-        .iter()
-        .find(|(card, _)| card.title == "Shared speeds")
-        .expect("shared motion section")
-        .1;
-    assert!(matches!(
-        rows.as_slice(),
-        [Row { control: Control::MotionWeights { weights }, .. }]
-            if weights.iter().map(|(_, path, _)| path.as_str()).collect::<Vec<_>>()
-                == [keys::motion::FAST_MS, keys::motion::STANDARD_MS, keys::motion::SLOW_MS]
-    ));
-}
-
-#[test]
 fn selector_no_shader_modes() {
     let cards = build_tab("picker", &cfg(), &[], &[], "", &[]);
     for (_, rows) in &cards {
@@ -1291,18 +1364,17 @@ fn picker_layout_presets() {
         .find(|(card, _)| card.title == "Layout & presets")
         .expect("picker exposes its layout studio");
     assert!(rows.iter().any(|row| row.title == "Display mode"));
-    assert!(rows.iter().any(|row| matches!(row.control, Control::Presets { .. })));
-    assert!(rows.iter().any(|row| {
-        matches!(&row.control, Control::TextField { key, .. } if key == PRESET_NAME_KEY)
-    }));
 }
 
 #[test]
 fn picker_layout_predicate() {
     use crate::frontend::settings::is_picker_layout_section;
     let cards = build_tab("picker", &cfg(), &[], &[], "", &[]);
-    let live: Vec<usize> =
-        (0..cards.len()).filter(|&section| is_picker_layout_section("picker", section)).collect();
+    let live: Vec<usize> = (0..cards.len())
+        .filter(|&section| {
+            is_picker_layout_section(Some(SectionId::new("picker", cards[section].0.key)))
+        })
+        .collect();
     let studio = cards
         .iter()
         .position(|(card, _)| card.title == "Layout & presets")
@@ -1316,7 +1388,8 @@ fn library_page_predicate() {
     let cards = build_tab("library", &cfg(), &[], &[], "", &[]);
     let pages: Vec<(&str, PageSection)> = (0..cards.len())
         .filter_map(|section| {
-            page_section("library", section).map(|page| (cards[section].0.title, page))
+            page_section(SectionId::new("library", cards[section].0.key))
+                .map(|page| (cards[section].0.title, page))
         })
         .collect();
     assert_eq!(
@@ -1333,10 +1406,12 @@ fn library_page_predicate() {
 fn transition_preview_predicate() {
     use crate::frontend::settings::is_transition_preview_section;
     let sand = FakeSettingsSource::default().with_text(keys::transition::SHADER, "sand-helix");
-    let cards = build_tab("motion", &sand, &[], &[], "", &[]);
+    let cards = build_tab("transitions", &sand, &[], &[], "", &[]);
     let titles: Vec<&str> = cards.iter().map(|(card, _)| card.title).collect();
     let live: Vec<usize> = (0..cards.len())
-        .filter(|&section| is_transition_preview_section("motion", section))
+        .filter(|&section| {
+            is_transition_preview_section(Some(SectionId::new("transitions", cards[section].0.key)))
+        })
         .collect();
     let transitions = titles.iter().position(|title| *title == "Wallpaper transitions").unwrap();
     assert_eq!(live, [transitions], "the preview runs only where its stage is visible");
@@ -1348,10 +1423,8 @@ fn transition_preview_predicate() {
 fn wall_studio_mode_led() {
     let config = FakeSettingsSource::default().with_text(keys::selector::DISPLAY_MODE, "wall");
     let cards = build_tab("picker", &config, &[], &[], "", &[]);
-    let (_, rows) = cards
-        .iter()
-        .find(|(card, _)| card.title == "Layout & presets")
-        .expect("picker exposes its layout studio");
+    let (_, rows) =
+        cards.iter().find(|(card, _)| card.title == "Wall picker").expect("wall geometry section");
     let paths = rows
         .iter()
         .filter_map(|row| match &row.control {
@@ -1376,10 +1449,8 @@ fn wall_studio_mode_led() {
     ] {
         assert!(!paths.contains(&hidden), "engine internal leaked into Folio: {hidden}");
     }
-    let mode = rows
-        .iter()
-        .find(|row| row.title == "Composition · Wall mode")
-        .expect("Wall exposes authored modes");
+    let mode =
+        rows.iter().find(|row| row.title == "Wall mode").expect("Wall exposes authored modes");
     assert!(matches!(
         &mode.control,
         Control::Chips { options, .. }
@@ -1392,11 +1463,11 @@ fn wall_studio_mode_led() {
     let cylinder_cards = build_tab("picker", &cylinder, &[], &[], "", &[]);
     let cylinder_rows = &cylinder_cards
         .iter()
-        .find(|(card, _)| card.title == "Layout & presets")
-        .expect("picker exposes its layout studio")
+        .find(|(card, _)| card.title == "Wall picker")
+        .expect("wall geometry section")
         .1;
-    assert!(cylinder_rows.iter().any(|row| row.title == "Composition · Curvature"));
-    assert!(cylinder_rows.iter().any(|row| row.title == "Composition · Cylinder radius"));
+    assert!(cylinder_rows.iter().any(|row| row.title == "Curvature"));
+    assert!(cylinder_rows.iter().any(|row| row.title == "Cylinder radius"));
 }
 
 #[test]
@@ -1405,11 +1476,11 @@ fn hex_studio_shape_families() {
     let cards = build_tab("picker", &config, &[], &[], "", &[]);
     let (_, rows) = cards
         .iter()
-        .find(|(card, _)| card.title == "Layout & presets")
-        .expect("picker exposes its layout studio");
+        .find(|(card, _)| card.title == "Geometric picker")
+        .expect("geometric layout section");
     let layout = rows
         .iter()
-        .find(|row| row.title == "Composition · Geometric mode")
+        .find(|row| row.title == "Geometric mode")
         .expect("Geometric exposes authored layout choices");
     assert!(matches!(
         &layout.control,
@@ -1419,7 +1490,7 @@ fn hex_studio_shape_families() {
     ));
     let shape = rows
         .iter()
-        .find(|row| row.title == "Composition · Tile family")
+        .find(|row| row.title == "Tile family")
         .expect("Geometric exposes geometric card shapes");
     assert!(matches!(
         &shape.control,
@@ -1467,14 +1538,14 @@ fn slices_expose_live_edge_tilt() {
     let cards = build_tab("picker", &config, &[], &[], "", &[]);
     let (_, rows) = cards
         .iter()
-        .find(|(card, _)| card.title == "Layout & presets")
-        .expect("picker exposes its layout settings");
+        .find(|(card, _)| card.title == "Slices picker")
+        .expect("slice geometry section");
     assert!(rows.iter().any(|row| {
         matches!(
             &row.control,
             Control::Number { path, unit, .. }
                 if path == keys::selector::SLICE_EDGE_TILT && *unit == "px"
-        ) && row.title == "Slice size · Edge tilt"
+        ) && row.title == "Edge tilt"
     }));
 }
 
@@ -1483,7 +1554,11 @@ fn filter_search_top_level() {
     let picker = build_tab("picker", &cfg(), &[], &[], "", &[]);
     assert!(picker.iter().all(|(card, _)| card.title != "Filter bar"));
 
-    let filter = build_tab("filter", &cfg(), &[], &[], "", &[]);
+    let first_filter = picker
+        .iter()
+        .position(|(card, _)| card.title == "Appearance")
+        .expect("filter appearance section");
+    let filter = &picker[first_filter..first_filter + 5];
     assert!(filter.iter().all(|(card, rows)| {
         card.title != "Weather filter"
             && rows.iter().all(|row| {
@@ -1492,15 +1567,7 @@ fn filter_search_top_level() {
     }));
     assert_eq!(
         filter.iter().map(|(card, _)| card.title).collect::<Vec<_>>(),
-        [
-            "Appearance",
-            "Buttons",
-            "Resolution presets",
-            "Defaults",
-            "Visibility",
-            "Search",
-            "Semantic models"
-        ]
+        ["Appearance", "Buttons", "Resolution presets", "Defaults", "Visibility"]
     );
     assert!(filter.iter().flat_map(|(_, rows)| rows).any(|row| {
         matches!(
@@ -1516,47 +1583,38 @@ fn filter_search_top_level() {
 
 #[test]
 fn position_tab_groups_independent_surfaces() {
-    let cards = build_tab("position", &cfg(), &[], &[], "", &[]);
-    assert_eq!(
-        cards.iter().map(|(card, _)| card.title).collect::<Vec<_>>(),
-        [
-            "Slices picker",
-            "Geometric picker",
-            "Wall picker",
-            "Sandy picker",
-            "Card hand picker",
-            "Filter bar position",
+    let picker = build_tab("picker", &cfg(), &[], &[], "", &[]);
+    for (title, x, y) in [
+        ("Slices picker", keys::selector::SLICE_STAGE_X, keys::selector::SLICE_STAGE_Y),
+        ("Geometric picker", keys::selector::HEX_STAGE_X, keys::selector::HEX_STAGE_Y),
+        ("Wall picker", keys::selector::GRID_STAGE_X, keys::selector::GRID_STAGE_Y),
+        ("Sandy picker", keys::selector::SANDY_STAGE_X, keys::selector::SANDY_STAGE_Y),
+        ("Card hand picker", keys::selector::HAND_STAGE_X, keys::selector::HAND_STAGE_Y),
+        ("Filter bar position", keys::filter_bar::OFFSET_X, keys::filter_bar::OFFSET_Y),
+        (
             "Search panel position",
-        ]
-    );
-    assert!(cards.iter().all(|(card, _)| !card.subtitle.is_empty()));
-    let paths = cards
-        .iter()
-        .flat_map(|(_, rows)| rows)
-        .filter_map(|row| match &row.control {
-            Control::Number { path, .. } => Some(path.as_str()),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
-    assert_eq!(
-        paths,
-        [
-            keys::selector::SLICE_STAGE_X,
-            keys::selector::SLICE_STAGE_Y,
-            keys::selector::HEX_STAGE_X,
-            keys::selector::HEX_STAGE_Y,
-            keys::selector::GRID_STAGE_X,
-            keys::selector::GRID_STAGE_Y,
-            keys::selector::SANDY_STAGE_X,
-            keys::selector::SANDY_STAGE_Y,
-            keys::selector::HAND_STAGE_X,
-            keys::selector::HAND_STAGE_Y,
-            keys::filter_bar::OFFSET_X,
-            keys::filter_bar::OFFSET_Y,
             keys::selector::TAG_CLOUD_OFFSET_X,
             keys::selector::TAG_CLOUD_OFFSET_Y,
-        ]
-    );
+        ),
+    ] {
+        let (card, rows) = picker.iter().find(|(card, _)| card.title == title).expect(title);
+        assert!(!card.subtitle.is_empty(), "{title}");
+        let paths: Vec<_> = rows
+            .iter()
+            .filter_map(|row| match &row.control {
+                Control::Number { path, .. } => Some(path.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert!(paths.contains(&x) && paths.contains(&y), "{title}");
+    }
+    let (_, rows) = picker.iter().find(|(card, _)| card.title == "Search panel position").unwrap();
+    assert!(rows.iter().any(|row| matches!(&row.control, Control::Toggle { path, .. }
+        if path == keys::selector::TAG_CLOUD_POSITION_ENABLED)));
+    for path in [keys::selector::TAG_CLOUD_POSITION_X, keys::selector::TAG_CLOUD_POSITION_Y] {
+        assert!(rows.iter().any(|row| matches!(&row.control, Control::Number { path: key, .. }
+            if key == path)));
+    }
 }
 
 #[test]
@@ -1572,7 +1630,7 @@ fn resolution_preset_items() {
         .with_text(&format!("{root}.1.orientation"), "tall")
         .with_text(&format!("{root}.1.from"), "2560x1440")
         .with_text(&format!("{root}.1.to"), "3839x2159");
-    let cards = build_tab("filter", &config, &[], &[], "", &[]);
+    let cards = build_tab("picker", &config, &[], &[], "", &[]);
     let rows = &cards
         .iter()
         .find(|(card, _)| card.title == "Resolution presets")
@@ -1618,7 +1676,7 @@ fn resolution_preset_items() {
 
 #[test]
 fn selector_flip_controls() {
-    let cards = build_tab("motion", &cfg(), &[], &[], "", &[]);
+    let cards = build_tab("picker", &cfg(), &[], &[], "", &[]);
     let (_, rows) = cards
         .iter()
         .find(|(card, _)| card.title == "Picker motion")
@@ -1655,16 +1713,10 @@ fn selector_flip_controls() {
 #[test]
 fn transition_style_section() {
     let cfg = FakeSettingsSource::default().with_text(keys::transition::SHADER, "sand-helix");
-    let cards = build_tab("motion", &cfg, &[], &[], "", &[]);
+    let cards = build_tab("transitions", &cfg, &[], &[], "", &[]);
     assert_eq!(
         cards.iter().map(|(card, _)| card.title).collect::<Vec<_>>(),
-        [
-            "Shared speeds",
-            "Launch",
-            "Picker motion",
-            "Wallpaper transitions",
-            "Transition performance"
-        ]
+        ["Wallpaper transitions", "Drawing transitions", "Transition performance"]
     );
     let (_, rows) = cards
         .iter()
@@ -1679,7 +1731,7 @@ fn transition_style_section() {
 #[test]
 fn transition_perf_families() {
     let cfg = FakeSettingsSource::default().with_text(keys::transition::SHADER, "fadecolor");
-    let cards = build_tab("motion", &cfg, &[], &[], "", &[]);
+    let cards = build_tab("transitions", &cfg, &[], &[], "", &[]);
     let (_, rows) = cards
         .iter()
         .find(|(card, _)| card.title == "Transition performance")
@@ -1690,9 +1742,18 @@ fn transition_perf_families() {
 
 #[test]
 fn performance_power_controls() {
-    let cards = build_tab("performance", &cfg(), &[], &[], "", &[]);
-    assert_eq!(cards.first().map(|(card, _)| card.title), Some("Power"));
-    let rows: Vec<&Row> = cards.iter().flat_map(|(_, rows)| rows).collect();
+    let cards = build_tab("app", &cfg(), &[], &[], "", &[]);
+    assert!(cards.iter().any(|(card, _)| card.title == "Power"));
+    let mut rows: Vec<&Row> = cards.iter().flat_map(|(_, rows)| rows).collect();
+    let nested: Vec<&Row> = rows
+        .iter()
+        .filter_map(|row| match &row.control {
+            Control::Details { rows, .. } => Some(rows.as_slice()),
+            _ => None,
+        })
+        .flatten()
+        .collect();
+    rows.extend(nested);
     for path in [
         keys::performance::BATTERY_SAVER,
         keys::performance::GPU_PREFERENCE,
@@ -1722,31 +1783,6 @@ fn performance_power_controls() {
         )
     }));
     assert!(rows.iter().any(|row| row.title == "Wallpaper Engine scene renderer"));
-}
-
-#[test]
-fn power_status_battery_saver() {
-    let status = |cfg: &FakeSettingsSource| {
-        build_tab("performance", cfg, &[], &[], "", &[])
-            .into_iter()
-            .flat_map(|(_, rows)| rows)
-            .find(|row| row.title == "Current power source")
-            .map(|row| row.desc)
-            .expect("performance tab has a power status row")
-    };
-    let disabled = FakeSettingsSource::default()
-        .with_on_battery(true)
-        .with_flag(keys::performance::BATTERY_SAVER, false);
-    let enabled = FakeSettingsSource::default()
-        .with_on_battery(true)
-        .with_flag(keys::performance::BATTERY_SAVER, true);
-
-    assert_eq!(status(&disabled), "Battery (automatic limits are disabled)");
-    assert_eq!(status(&enabled), "Battery (automatic limits are active)");
-    assert_eq!(
-        status(&FakeSettingsSource::default()),
-        "External power, desktop, or unavailable (automatic limits are inactive)"
-    );
 }
 
 #[test]
@@ -1786,34 +1822,6 @@ fn folder_sentinel_labels() {
 #[test]
 fn static_renderer_choices() {
     assert_eq!(super::super::tables::ENGINES, [("skwd-paper", "Skwd-paper"), ("awww", "awww")]);
-}
-
-#[test]
-fn tinier_video_engine_is_visible_but_disabled() {
-    let cards = build_tab("playback", &cfg(), &[], &[], "", &[]);
-    let row = cards
-        .iter()
-        .flat_map(|(_, rows)| rows)
-        .find(|row| {
-            matches!(
-                &row.control,
-                Control::Chips { path, .. } if path == keys::paper::VIDEO_ENGINE
-            )
-        })
-        .expect("playback exposes the video engine choices");
-    let Control::Chips { options, disabled, .. } = &row.control else {
-        unreachable!();
-    };
-
-    assert_eq!(
-        options,
-        &[
-            (String::from("vulkan"), String::from("Vulkan")),
-            (String::from("tinier"), String::from("Tinier (work in progress)")),
-        ]
-    );
-    assert_eq!(disabled, &[String::from("tinier")]);
-    assert!(row.desc.contains("cannot be selected"));
 }
 
 #[test]
@@ -1876,14 +1884,13 @@ fn theme_options_available() {
 fn search_single_index() {
     let cfg =
         FakeSettingsSource::default().with_text(keys::tagging::DEFAULT_SEARCH_MODE, "describe");
-    assert!(
-        crate::frontend::settings::visible_tabs(&cfg)
-            .iter()
-            .any(|(key, label)| *key == "filter" && *label == "Filter & Search")
-    );
-    let cards = build_tab("filter", &cfg, &[], &[], "Tagging 3/10", &[]);
-    assert_eq!(cards.len(), 7);
-    let cards = &cards[5..];
+    assert_eq!(crate::frontend::settings::place_title("library"), "Library");
+    let cards = build_tab("picker", &cfg, &[], &[], "Tagging 3/10", &[]);
+    let at = cards
+        .iter()
+        .position(|(card, _)| card.key == "settings-section-search-tagging")
+        .expect("search card");
+    let cards = &cards[at..at + 2];
     assert_eq!(cards[0].0.title, "Search");
     assert_eq!(cards[1].0.title, "Semantic models");
 
@@ -1931,7 +1938,7 @@ fn model_shelf_packs() {
         .with_text("semantic.models.0.manifest", manifest)
         .with_text(keys::semantic::MANIFEST, manifest)
         .with_text(keys::semantic::INDEX_PROFILE, "multiview");
-    let cards = build_tab("filter", &cfg, &[], &[], "", &[]);
+    let cards = build_tab("picker", &cfg, &[], &[], "", &[]);
     let rows = &cards.iter().find(|(card, _)| card.title == "Semantic models").unwrap().1;
     assert!(rows.iter().any(|row| {
         matches!(row.control, Control::ActionBtn { id: ActionId::ImportSemanticModel, .. })
@@ -1964,7 +1971,7 @@ fn model_shelf_packs() {
 #[test]
 fn model_import_progress() {
     let cards =
-        build_tab("filter", &FakeSettingsSource::default(), &[], &[], "Validating pack", &[]);
+        build_tab("picker", &FakeSettingsSource::default(), &[], &[], "Validating pack", &[]);
     assert!(cards.iter().find(|(card, _)| card.title == "Semantic models").unwrap().1.iter().any(
         |row| {
             row.title == "Model status"
@@ -1976,9 +1983,9 @@ fn model_import_progress() {
 
 #[test]
 fn controls_no_ghosts() {
-    let cards = build_tab("picker", &cfg(), &[], &[], "", &[]);
+    let cards = build_tab("app", &cfg(), &[], &[], "", &[]);
     let (_, rows) =
-        cards.iter().find(|(card, _)| card.title == "Controls").expect("picker controls section");
+        cards.iter().find(|(card, _)| card.title == "Controls").expect("app controls section");
     let mut dump = Vec::new();
     for row in rows {
         let kind = match &row.control {
@@ -2025,7 +2032,7 @@ fn performance_lists_detected_devices_and_retains_unavailable_selection() {
     let cfg = FakeSettingsSource::default()
         .with_devices(devices.clone())
         .with_text(keys::performance::GPU_DEVICE, &devices[1].id);
-    let cards = build_tab("performance", &cfg, &[], &[], "", &[]);
+    let cards = build_tab("app", &cfg, &[], &[], "", &[]);
     let row = cards.iter().flat_map(|(_, rows)| rows).find(|row| matches!(&row.control, Control::Dropdown { path, .. } if path == keys::performance::GPU_DEVICE)).unwrap();
     let Control::Dropdown { options, current, .. } = &row.control else { unreachable!() };
     assert_eq!(current, &devices[1].id);
@@ -2039,7 +2046,7 @@ fn performance_lists_detected_devices_and_retains_unavailable_selection() {
     );
     let cfg =
         FakeSettingsSource::default().with_text(keys::performance::GPU_DEVICE, &devices[1].id);
-    let cards = build_tab("performance", &cfg, &[], &[], "", &[]);
+    let cards = build_tab("app", &cfg, &[], &[], "", &[]);
     assert!(cards.iter().flat_map(|(_, rows)| rows).any(|row| matches!(&row.control, Control::Dropdown { path, options, current, .. } if path == keys::performance::GPU_DEVICE && current == &devices[1].id && options.iter().any(|(id, label)| id == current && label.contains("unavailable")))));
 }
 
@@ -2054,11 +2061,8 @@ fn language_tab_lists_supported_languages_and_system_default() {
         ("tr", "tr-TR"),
     ] {
         let cfg = cfg().with_text(keys::general::LANGUAGE, saved);
-        assert!(
-            crate::frontend::settings::visible_tabs(&cfg).iter().any(|(id, _)| *id == "language")
-        );
-        let cards = build_tab("language", &cfg, &[], &[], "", &[]);
-        assert_eq!(cards.len(), 1);
+        let cards = build_tab("app", &cfg, &[], &[], "", &[]);
+        assert_eq!(cards[0].0.title, "Interface language");
         let Control::Dropdown { path, options, current, .. } = &cards[0].1[0].control else {
             panic!("language choice missing");
         };
@@ -2101,10 +2105,10 @@ fn automatic_pause_controls_have_one_playback_owner() {
         keys::playback::PROCESSES,
         keys::playback::FULLSCREEN,
         keys::playback::MAXIMIZED,
+        keys::playback::FOCUSED,
         keys::playback::FULLSCREEN_SCOPE,
         keys::playback::RESUME_DELAY,
         keys::playback::MUTE_ON_OTHER_AUDIO,
-        keys::paper::IDLE_PAUSE_SECONDS,
     ];
     let cards = build_tab("playback", &config, &[], &[], "", &[]);
     for path in paths {
@@ -2121,6 +2125,37 @@ fn automatic_pause_controls_have_one_playback_owner() {
             }),
             "missing {path}"
         );
+    }
+}
+
+#[test]
+fn focused_pause_reports_support_and_active_focus() {
+    let config = cfg().with_flag(keys::playback::FOCUSED, true);
+    for (supported, paused, expected) in [
+        (false, false, "Window state detection unavailable on this compositor"),
+        (true, false, "Window state detection available"),
+        (true, true, "Paused: focused window"),
+    ] {
+        let status = crate::contracts::daemon::PlaybackStatus {
+            focused_supported: supported,
+            focused_paused: paused,
+            automatic_paused: paused,
+            ..Default::default()
+        };
+        let rows = build_tab_with_runtime_status(
+            "playback",
+            &config,
+            &[],
+            &[],
+            "",
+            &[],
+            RuntimeStatus { playback: Some(&status), ..RuntimeStatus::default() },
+        )
+        .into_iter()
+        .find(|(card, _)| card.title == "Automatic pause")
+        .unwrap()
+        .1;
+        assert!(rows.iter().any(|row| row.title == expected));
     }
 }
 
@@ -2146,6 +2181,7 @@ fn hand_mode_exposes_every_hand_knob_in_the_picker_page() {
         .filter_map(|row| match &row.control {
             Control::Number { path, .. }
             | Control::Toggle { path, .. }
+            | Control::Dropdown { path, .. }
             | Control::Chips { path, .. } => Some(path.clone()),
             _ => None,
         })
@@ -2158,7 +2194,12 @@ fn hand_mode_exposes_every_hand_knob_in_the_picker_page() {
         keys::selector::HAND_FAN_ANGLE,
         keys::selector::HAND_FAN_ROLL,
         keys::selector::HAND_ARCH,
-        keys::selector::HAND_CORNER_RADIUS,
+        keys::selector::HAND_CORNER_STYLE,
+        keys::selector::HAND_CORNERS_SAME,
+        keys::selector::HAND_CORNER_TL,
+        keys::selector::HAND_CORNER_TR,
+        keys::selector::HAND_CORNER_BR,
+        keys::selector::HAND_CORNER_BL,
         keys::selector::HAND_SKEW,
         keys::selector::HAND_PERSPECTIVE,
         keys::selector::HAND_TILT,
@@ -2180,6 +2221,60 @@ fn hand_mode_exposes_every_hand_knob_in_the_picker_page() {
         keys::selector::HAND_REVEAL_FILL,
     ] {
         assert!(paths.iter().any(|path| path == key), "missing {key}");
+    }
+}
+
+#[test]
+fn hand_separates_geometry_motion() {
+    let cfg = cfg().with_text(keys::selector::DISPLAY_MODE, "hand");
+    let cards = build_tab("picker", &cfg, &[], &[], "", &[]);
+    let section_paths = |title| {
+        cards
+            .iter()
+            .find(|(card, _)| card.title == title)
+            .expect("hand section")
+            .1
+            .iter()
+            .filter_map(|row| match &row.control {
+                Control::Number { path, .. }
+                | Control::Toggle { path, .. }
+                | Control::Chips { path, .. } => Some(path.as_str()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    };
+    let geometry = section_paths("Card hand");
+    let motion = section_paths("Hand motion");
+    let ribbons = section_paths("Ribbons");
+    let effects = section_paths("Atmosphere");
+    assert!(geometry.contains(&keys::selector::HAND_STAGE_X));
+    assert!(geometry.contains(&keys::selector::HAND_CARD_WIDTH));
+    assert!(!geometry.contains(&keys::selector::HAND_MOVE));
+    assert!(motion.contains(&keys::selector::HAND_MOVE));
+    assert!(motion.contains(&keys::selector::HAND_SPEED));
+    assert!(ribbons.contains(&keys::selector::HAND_RIBBONS));
+    assert!(effects.contains(&keys::selector::HAND_GHOSTS));
+}
+
+#[test]
+fn app_owns_monitor_scale() {
+    let picker = build_tab("picker", &cfg(), &[], &[], "", &[]);
+    let app = build_tab("app", &cfg(), &[], &[], "", &[]);
+    let has_path = |cards: &Vec<(Card, Vec<Row>)>, target: &str| {
+        cards.iter().flat_map(|(_, rows)| rows).any(|row| match &row.control {
+            Control::Toggle { path, .. }
+            | Control::Number { path, .. }
+            | Control::Chips { path, .. } => path == target,
+            _ => false,
+        })
+    };
+    for path in [
+        keys::system::MONITOR,
+        keys::general::APPLY_ON_PICKER_MONITOR,
+        crate::contracts::settings::schema::setting::general::UI_SCALE.path(),
+    ] {
+        assert!(has_path(&app, path), "App owns {path}");
+        assert!(!has_path(&picker, path), "Picker still owns {path}");
     }
 }
 
@@ -2256,7 +2351,7 @@ fn default_and_manual_models_have_destructive_delete_actions() {
     let cfg = FakeSettingsSource::default()
         .with_array_len(keys::semantic::MODELS, 1)
         .with_text("semantic.models.0.manifest", "/manual/model.json");
-    let cards = build_tab("filter", &cfg, &[], &[], "", &[]);
+    let cards = build_tab("picker", &cfg, &[], &[], "", &[]);
     let rows = &cards.iter().find(|(card, _)| card.title == "Semantic models").unwrap().1;
     assert!(rows.iter().any(|row| matches!(
         row.control,
@@ -2280,7 +2375,7 @@ fn default_and_manual_models_have_destructive_delete_actions() {
 #[test]
 fn removed_default_model_is_not_presented_as_installed() {
     let cfg = FakeSettingsSource::default().with_flag("test.defaultModelAvailable", false);
-    let cards = build_tab("filter", &cfg, &[], &[], "", &[]);
+    let cards = build_tab("picker", &cfg, &[], &[], "", &[]);
     let rows = &cards.iter().find(|(card, _)| card.title == "Semantic models").unwrap().1;
     assert!(!rows.iter().any(|row| matches!(
         row.control,
@@ -2337,11 +2432,6 @@ fn collection_settings_include_own_controls_and_presets() {
     assert!(
         rows.iter().any(|row| matches!(&row.control, Control::Number { path, .. } if path == keys::selector::COLLECTION_SIZE))
     );
-    assert!(
-        rows.iter().any(
-            |row| matches!(&row.control, Control::Presets { mode, .. } if mode == "collection")
-        )
-    );
 }
 
 #[test]
@@ -2381,7 +2471,7 @@ fn current_wallpapers_exposes_live_controls_only_for_connected_media() {
                 ..Default::default()
             },
         );
-        let Control::StackBar { rows, .. } = &cards[0].1[0].control else {
+        let Control::StackBar { rows, .. } = &cards[0].1[1].control else {
             panic!("display controls")
         };
         assert_eq!(rows.len(), 2 + expected);
@@ -2485,6 +2575,7 @@ fn fold_marks_nested() {
         state: None,
         mixed: false,
         hidden_inside: 0,
+        excluded_inside: 0,
         children,
         collapsed: false,
     };

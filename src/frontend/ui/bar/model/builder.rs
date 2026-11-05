@@ -6,8 +6,9 @@ use super::super::super::rtl;
 use super::super::super::theme_bar::ThemeBar;
 use super::super::action::BarAction;
 use super::super::catalog::{
-    ICON_FAV, ICON_FOLDER, ICON_HIDDEN, ICON_RANDOM, SORTS, TYPES, next_orient, next_resolution,
-    orient_label, resolution_label, type_label_key,
+    ICON_FAV, ICON_FOLDER, ICON_HIDDEN, ICON_RANDOM, MENU_CHROME_H, MENU_MAX_ROWS, MENU_ROW_H,
+    SORTS, SWATCH_CELL_SIZE, TYPES, next_orient, next_resolution, orient_label, resolution_label,
+    type_label_key,
 };
 use super::layout::{menu_rows, menu_space, theme_rows, wrap_items};
 use super::types::{BarItem, BarModel, BarNotice, BarShow, dropdown_item};
@@ -128,6 +129,7 @@ pub fn build_bar_with_tasks(
     push_item(&mut items, &mut x, scale, "\u{f0493}", true, false, Some(BarAction::Settings));
     push_item(&mut items, &mut x, scale, EYE_CLOSED, true, false, Some(BarAction::Stash));
 
+    order_items(&mut items, &show.order, &show.hidden_buttons, &mut x);
     task_items(&mut items, &mut x, scale, tasks);
 
     let gap = 6.0 * scale;
@@ -162,8 +164,15 @@ pub fn build_bar_with_tasks(
 
     let menu_len = menu_rows(folder_menu_open, has_folders, folder_options.len(), theme);
     let height = rows_h + menu_space(&mut items, &mut swatch_at, menu_len, scale, menu_up);
-    let mut model =
-        BarModel { items, width, height: height.max(1.0), menu_up, swatch_at, rtl: false };
+    let mut model = BarModel {
+        items,
+        width,
+        height: height.max(1.0),
+        menu_up,
+        menu_visible_rows: menu_len.min(MENU_MAX_ROWS),
+        swatch_at,
+        rtl: false,
+    };
     mirror_model(&mut model, rtl(), width, scale);
     model
 }
@@ -183,7 +192,7 @@ pub(in crate::frontend::ui::bar) fn mirror_model(
         item.skew = -item.skew;
     }
     if let Some((swatch_x, _)) = model.swatch_at.as_mut() {
-        *swatch_x = extent - *swatch_x - SWATCH_CELLS as f32 * 14.0 * scale;
+        *swatch_x = extent - *swatch_x - SWATCH_CELLS as f32 * SWATCH_CELL_SIZE * scale;
     }
 }
 
@@ -220,12 +229,25 @@ pub fn verticalize_bar(model: &mut BarModel, max_height: f32, scale: f32) {
             y = 0.0;
         }
         *swatch_x = x + (rail_w - 84.0 * scale) * 0.5;
-        *swatch_y = y + (item_h - 14.0 * scale) * 0.5;
+        *swatch_y = y + (item_h - SWATCH_CELL_SIZE * scale) * 0.5;
         y += item_h;
     }
     model.width = columns as f32 * rail_w + columns.saturating_sub(1) as f32 * gap;
-    model.height = if columns == 1 { y.max(item_h) } else { max_height };
-    model.menu_up = false;
+    let content_height = if columns == 1 { y.max(item_h) } else { max_height };
+    let menu_height = if model.menu_visible_rows == 0 {
+        0.0
+    } else {
+        MENU_CHROME_H + model.menu_visible_rows as f32 * MENU_ROW_H * scale
+    };
+    model.height = content_height + menu_height;
+    if model.menu_up {
+        for item in &mut model.items {
+            item.y += menu_height;
+        }
+        if let Some((_, y)) = &mut model.swatch_at {
+            *y += menu_height;
+        }
+    }
     mirror_model(model, model.rtl, model.width, scale);
 }
 
@@ -240,6 +262,7 @@ fn task_items(
             "semantic-tags" | "analysis" => tr("filter-bar-task-tags"),
             "semantic-index" => tr("filter-bar-task-index"),
             "scan" => tr("filter-bar-task-scan"),
+            crate::contracts::settings::drawing::TASK => tr("filter-bar-task-drawing"),
             id if id.starts_with("download:") => tr("filter-bar-task-download"),
             _ => task.label.as_str(),
         };
@@ -351,7 +374,7 @@ fn type_items(
         }
         let active = kind == key;
         let next = if active { String::new() } else { key.to_string() };
-        let action = Some(BarAction::SetType(next));
+        let action = Some(BarAction::SetType { key, next });
         push_item(items, x, scale, tr(type_label_key(key)), false, active, action);
     }
 }
@@ -437,4 +460,22 @@ fn audio_items(items: &mut Vec<BarItem>, x: &mut f32, scale: f32, muted: bool) {
     let icon = if muted { "\u{f075f}" } else { "\u{f057e}" };
     push_item(items, x, scale, icon, true, !muted, Some(BarAction::Audio));
     push_item(items, x, scale, "\u{f062e}", true, false, Some(BarAction::AudioPanel));
+}
+
+fn order_items(items: &mut Vec<BarItem>, order: &[String], hidden: &[String], x: &mut f32) {
+    let before = items.len();
+    items.retain(|item| !item.hideable() || !item.edit_id().is_some_and(|id| hidden.contains(&id)));
+    if order.is_empty() && items.len() == before {
+        return;
+    }
+    items.sort_by_key(|item| {
+        item.edit_id()
+            .and_then(|id| order.iter().position(|entry| entry == &id))
+            .unwrap_or(usize::MAX)
+    });
+    *x = 0.0;
+    for item in items {
+        item.x = *x;
+        *x += item.w - item.skew;
+    }
 }

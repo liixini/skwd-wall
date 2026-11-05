@@ -20,11 +20,17 @@ pub(crate) fn on_event(event: Event, status: event::Status, window: window::Id) 
     if let Event::Window(window::Event::Opened { size, .. }) = event {
         return Some(Message::WindowOpened { id: window, width: size.width, height: size.height });
     }
+    if let Event::Window(window::Event::Unfocused) = event {
+        return Some(Message::WindowUnfocused);
+    }
     if let Event::Keyboard(keyboard::Event::ModifiersChanged(m)) = event {
         return Some(Message::SetMods(mods(m)));
     }
     if let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) = event {
         return Some(Message::PointerUp);
+    }
+    if let Event::Keyboard(keyboard::Event::KeyReleased { key, .. }) = event {
+        return Some(Message::KeyReleased(key));
     }
     if status == event::Status::Captured
         && let Event::Keyboard(keyboard::Event::KeyPressed { key, modifiers, .. }) = &event
@@ -95,7 +101,7 @@ pub(crate) fn settings_key_message(
         keyboard::Key::Named(Named::ArrowUp) => SettingsKey::Up,
         keyboard::Key::Named(Named::ArrowDown) => SettingsKey::Down,
         keyboard::Key::Named(Named::Enter) => SettingsKey::Activate,
-        keyboard::Key::Character(character) if character == " " => SettingsKey::Activate,
+        keyboard::Key::Character(character) if character == " " => SettingsKey::Space,
         _ => return None,
     };
     Some(Message::Settings(SettingsMsg::Key(key)))
@@ -119,6 +125,8 @@ pub(crate) fn action_message(action: crate::domain::input::InputAction) -> Messa
         InputAction::Reveal => Message::KeyReveal,
         InputAction::Effects => Message::KeyEffects,
         InputAction::Studio => Message::KeyStudio,
+        InputAction::ColourStudio => Message::KeyColourStudio,
+        InputAction::Widgets => Message::OpenWidgets,
         InputAction::SceneProperties => Message::OpenSceneProps,
         InputAction::Settings => Message::ToggleSettings,
         InputAction::Help => Message::ToggleHelp,

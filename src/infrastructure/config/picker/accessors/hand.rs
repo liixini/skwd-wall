@@ -27,10 +27,6 @@ impl Config {
         (self.num_at(skwd_config::keys::selector::HAND_ARCH, 20.0) as f32).clamp(-200.0, 200.0)
     }
 
-    pub fn hand_corner_radius(&self) -> f32 {
-        (self.num_at(skwd_config::keys::selector::HAND_CORNER_RADIUS, 0.0) as f32).clamp(0.0, 200.0)
-    }
-
     pub fn hand_skew(&self) -> f32 {
         (self.num_at(skwd_config::keys::selector::HAND_SKEW, 0.0) as f32).clamp(-200.0, 200.0)
     }

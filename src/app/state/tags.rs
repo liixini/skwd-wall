@@ -41,7 +41,7 @@ pub(crate) struct SemanticSearchState {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum SearchMode {
+pub enum SearchMode {
     #[default]
     Tags,
     Describe,

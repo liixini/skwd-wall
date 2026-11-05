@@ -6,7 +6,6 @@ use crate::contracts::daemon::{ActivityApplyEvent, ActivityApplyResult, Activity
 
 const APPLY_FAILED: &str = "apply_failed";
 const ACTIVITY_SAVED: &str = "effects-activity-saved";
-const ACTIVITY_PREPARING: &str = "effects-activity-preparing";
 
 impl App {
     pub(in crate::app) fn call_activity_apply(
@@ -48,26 +47,12 @@ impl App {
     ) {
         let Some(request) = self.daemon.activity_requests.get(token) else { return };
         let Some(batch) = self.daemon.activity_applies.get(&request.batch) else { return };
-        if result.activity != batch.activity {
-            self.complete_activity_request(
-                token,
-                ActivityCompletion::Failed(
-                    crate::i18n::tr("effects-activity-unavailable").to_string(),
-                ),
-            );
-        } else if result.queued {
-            if request.batch == self.daemon.next_activity_apply && !batch.failed {
-                self.show_toast(
-                    crate::i18n::tr_args!(ACTIVITY_PREPARING, activity => batch.name.as_str()),
-                );
-                self.retick();
-            }
+        let completion = if result.activity == batch.activity {
+            ActivityCompletion::Applied { visible: result.visible }
         } else {
-            self.complete_activity_request(
-                token,
-                ActivityCompletion::Applied { visible: result.visible },
-            );
-        }
+            ActivityCompletion::Failed(crate::i18n::tr("effects-activity-unavailable").to_string())
+        };
+        self.complete_activity_request(token, completion);
     }
 
     pub(in crate::app) fn on_activity_apply_event(&mut self, event: ActivityApplyEvent) {
@@ -79,9 +64,7 @@ impl App {
         {
             return;
         }
-        if let Some(completion) = event.completion {
-            self.complete_activity_request(&event.token, completion);
-        }
+        self.complete_activity_request(&event.token, event.completion);
     }
 
     pub(in crate::app) fn complete_activity_request(
@@ -111,20 +94,12 @@ impl App {
                 }
                 apply.failed = true;
             }
-            ActivityCompletion::Cancelled => apply.failed = true,
         }
         apply.pending -= 1;
         if apply.pending > 0 {
             self.daemon.activity_applies.insert(batch, apply);
-        } else if latest {
-            if !apply.failed && !apply.visible {
-                self.show_toast(crate::i18n::tr_args!(ACTIVITY_SAVED, activity => apply.name));
-            } else if self.runtime_state.toast.as_ref().is_some_and(|toast| {
-                toast.0
-                    == crate::i18n::tr_args!(ACTIVITY_PREPARING, activity => apply.name.as_str())
-            }) {
-                self.runtime_state.toast = None;
-            }
+        } else if latest && !apply.failed && !apply.visible {
+            self.show_toast(crate::i18n::tr_args!(ACTIVITY_SAVED, activity => apply.name));
         }
         self.retick();
     }

@@ -279,7 +279,7 @@ fn random_wallpaper_key_applies_another_card() {
         )),
     );
     character(&mut app, "r", Modifiers::default());
-    press(&mut app, keyboard::Key::Named(Named::Enter), Modifiers::default());
+    let _ = update(&mut app, Message::KeyReleased(keyboard::Key::Character("r".into())));
     let _ = update(&mut app, Message::ToggleSettings);
     assert!(!app.panels.settings.open);
     drain_calls(&app);

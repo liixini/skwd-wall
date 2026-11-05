@@ -57,7 +57,7 @@ impl SceneCore {
                 slice_h: height * scale,
                 skew: (self.sp.skew * fit).clamp(-width * 0.3, width * 0.3) * scale,
                 edge_tilt: 0.0,
-                corners: self.sp.corners.map(|r| r * fit * scale),
+                corners: self.sp.corners.scaled(fit * scale),
                 wobble: false,
                 ..self.sp
             };

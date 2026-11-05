@@ -18,6 +18,7 @@ filter-bar-task-tags = Taggar
 filter-bar-task-index = Index
 filter-bar-task-scan = Skanning
 filter-bar-task-download = Nedladdning
+filter-bar-task-drawing = Teckningar
 filter-bar-state-running = Pågår
 filter-bar-state-paused = Pausad
 filter-bar-state-done = Klar

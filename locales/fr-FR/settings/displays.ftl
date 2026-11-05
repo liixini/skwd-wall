@@ -8,3 +8,6 @@ settings-displays-lock-label = Verrouiller
 settings-displays-lock-desc = Ne met à jour le fond d’écran de ce moniteur que via le multi-sélecteur.
 settings-displays-empty-label = Détection des écrans
 settings-displays-empty-desc = Les fonds d’écran actuels apparaîtront lorsque le service de fonds d’écran signalera ses écrans.
+settings-displays-default-placement-label = Emplacement par défaut
+settings-displays-default-placement-desc = Utilisé par chaque écran qui n’a pas son propre emplacement.
+settings-displays-use-global = Utiliser le réglage global · { $mode }

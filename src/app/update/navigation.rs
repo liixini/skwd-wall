@@ -1,5 +1,8 @@
+use std::time::{Duration, Instant};
+
 use iced::Task;
 
+use crate::frontend::nav::{grid_step, step};
 use crate::frontend::scene::layout::Mode;
 
 #[allow(clippy::wildcard_imports)]
@@ -7,6 +10,13 @@ use super::super::*;
 use super::browser::browser_apply_current;
 use super::effects::effects_nav;
 use super::update_inner;
+use crate::app::helpers::browser_wraps;
+
+const WHEEL_REST: Duration = Duration::from_millis(250);
+
+fn loops(app: &App) -> bool {
+    app.config.loop_around() && !app.input.held
+}
 
 fn hand_nav_closes_flip(app: &mut App) -> bool {
     if app.scene.mode == Mode::Hand && app.scene.flip_open() && !app.menu_capturing() {
@@ -21,64 +31,56 @@ pub(super) fn wheel(app: &mut App, amount: f32) -> Task<Message> {
         return Task::none();
     }
     app.scene.close_collection();
+    let now = Instant::now();
+    let rested = app.input.last_wheel.is_none_or(|at| now.duration_since(at) >= WHEEL_REST);
+    app.input.last_wheel = Some(now);
+    app.input.wheel_armed |= rested;
     match app.scene.mode {
         Mode::Slices | Mode::Depth | Mode::Sandy | Mode::Hand | Mode::Collection => {
-            app.scene.slice_scroll(amount, app.library_session.filtered.len());
+            let steps = app.scene.slice_steps(amount);
+            let wrap = steps != 0 && wheel_wraps(app);
+            app.scene.slice_move(steps, app.library_session.filtered.len(), wrap);
         }
         Mode::Grid => app.scene.grid_scroll(-amount),
-        Mode::Hex => hex_wheel(app, amount),
+        Mode::Hex => {
+            let wrap = wheel_wraps(app);
+            hex_wheel(app, amount, wrap);
+        }
     }
     app.retick();
     Task::none()
 }
 
-fn hex_wheel(app: &mut App, amount: f32) {
-    let count = app.library_session.filtered.len() as i64;
+fn wheel_wraps(app: &mut App) -> bool {
+    std::mem::take(&mut app.input.wheel_armed) && app.config.loop_around()
+}
+
+fn hex_wheel(app: &mut App, amount: f32, wrap: bool) {
+    let count = app.library_session.filtered.len();
     if count == 0 {
         return;
     }
-    let rows = app.scene.hp.rows.max(1) as i64;
-    let step = app.scene.hp.scroll_step as i64;
-    let total_cols = (count + rows - 1) / rows;
-    let col = app.scene.current as i64 / rows;
-    let new_col = (col - amount.signum() as i64 * step).clamp(0, total_cols - 1);
-    let idx = (new_col * rows + app.scene.hex_row as i64).min(count - 1).max(0);
-    app.scene.set_current(idx as usize, app.library_session.filtered.len());
+    let rows = app.scene.hp.rows.max(1);
+    let delta = -(amount.signum() as i32) * app.scene.hp.scroll_step as i32;
+    let col = app.scene.current / rows;
+    let col = step(col, delta, count.div_ceil(rows), wrap).unwrap_or(col);
+    app.scene.set_current((col * rows + app.scene.hex_row).min(count - 1), count);
 }
 
-pub(super) fn key_prev(app: &mut App) -> Task<Message> {
+pub(super) fn key_step(app: &mut App, delta: i32) -> Task<Message> {
     if app.source_browser.browser.is_some() {
-        return browser_key_nav(app, -1);
+        return browser_key_nav(app, delta, 0);
     }
-    if let Some(task) = effects_nav(app, -1, 0) {
+    if let Some(task) = effects_nav(app, delta, 0) {
         return task;
     }
     if !hand_nav_closes_flip(app) && (app.menu_capturing() || app.detail_open()) {
         return Task::none();
     }
     app.scene.kb_nav = true;
-    let cur = app.scene.current;
-    if cur > 0 {
-        app.scene.set_current(cur - 1, app.library_session.filtered.len());
-        app.retick();
-    }
-    Task::none()
-}
-
-pub(super) fn key_next(app: &mut App) -> Task<Message> {
-    if app.source_browser.browser.is_some() {
-        return browser_key_nav(app, 1);
-    }
-    if let Some(task) = effects_nav(app, 1, 0) {
-        return task;
-    }
-    if !hand_nav_closes_flip(app) && (app.menu_capturing() || app.detail_open()) {
-        return Task::none();
-    }
-    app.scene.kb_nav = true;
-    let cur = app.scene.current;
-    if cur + 1 < app.library_session.filtered.len() {
-        app.scene.set_current(cur + 1, app.library_session.filtered.len());
+    let count = app.library_session.filtered.len();
+    if let Some(next) = step(app.scene.current, delta, count, loops(app)) {
+        app.scene.set_current(next, count);
         app.retick();
     }
     Task::none()
@@ -94,33 +96,36 @@ fn page_step(scene: &crate::app::scene::SceneCore) -> usize {
 }
 
 pub(super) fn key_page(app: &mut App, backwards: bool) -> Task<Message> {
-    if app.source_browser.browser.is_some() {
-        let step = page_step(&app.source_browser.wall.scene) as i64;
-        return browser_seek(app, if backwards { -step } else { step });
+    let browsing = app.source_browser.browser.is_some();
+    let scene = if browsing { &app.source_browser.wall.scene } else { &app.scene };
+    let page = page_step(scene) as i32;
+    let delta = if backwards { -page } else { page };
+    if browsing {
+        return browser_seek(app, delta, browser_wraps(app));
     }
-    let step = page_step(&app.scene);
     let current = app.scene.current;
-    seek(app, if backwards { current.saturating_sub(step) } else { current + step })
+    let count = app.library_session.filtered.len();
+    seek(app, step(current, delta, count, loops(app)).unwrap_or(current))
 }
 
 pub(super) fn key_edge(app: &mut App, last: bool) -> Task<Message> {
     if let Some(browser) = app.source_browser.browser.as_ref() {
-        let count = browser.session.items.len() as i64;
-        return browser_seek(app, if last { count } else { -count });
+        let count = browser.session.items.len() as i32;
+        return browser_seek(app, if last { count } else { -count }, false);
     }
     seek(app, if last { usize::MAX } else { 0 })
 }
 
-fn browser_seek(app: &mut App, delta: i64) -> Task<Message> {
+fn browser_seek(app: &mut App, delta: i32, wrap: bool) -> Task<Message> {
     let Some(session) = app.source_browser.browser.as_ref().map(|browser| &browser.session) else {
         return Task::none();
     };
     if session.preview.is_some() || session.items.is_empty() {
         return Task::none();
     }
-    let last = session.items.len() as i64 - 1;
-    let current = app.source_browser.wall.scene.hover.unwrap_or(0) as i64;
-    browser_select(app, (current + delta).clamp(0, last) as usize)
+    let count = session.items.len();
+    let current = app.source_browser.wall.scene.hover.unwrap_or(0);
+    browser_select(app, step(current, delta, count, wrap).unwrap_or(current))
 }
 
 fn seek(app: &mut App, target: usize) -> Task<Message> {
@@ -262,76 +267,33 @@ fn effects_target(app: &mut App) -> Option<usize> {
     Some(app.scene.flipped().unwrap_or(app.scene.current))
 }
 
-pub(super) fn key_up(app: &mut App) -> Task<Message> {
+pub(super) fn key_row(app: &mut App, delta: i32) -> Task<Message> {
     if app.source_browser.browser.is_some() {
-        let cols = app.source_browser.wall.scene.gp.cols.max(1) as i64;
-        return browser_key_nav(app, -cols);
+        return browser_key_nav(app, 0, delta);
     }
-    if let Some(task) = effects_nav(app, 0, -1) {
+    if let Some(task) = effects_nav(app, 0, delta) {
         return task;
     }
     if app.menu_capturing() || app.detail_open() {
         return Task::none();
     }
-    if app.scene.mode == Mode::Collection {
-        return key_prev(app);
-    }
-    if app.scene.mode == Mode::Hex && app.scene.hex_row > 0 {
+    let wrap = loops(app);
+    let count = app.library_session.filtered.len();
+    let cur = app.scene.current;
+    let next = match app.scene.mode {
+        Mode::Collection => return key_step(app, delta),
+        Mode::Hex => {
+            let rows = app.scene.hp.rows.max(1);
+            let top = cur - cur % rows;
+            step(cur % rows, delta, rows.min(count.saturating_sub(top)), wrap).map(|row| top + row)
+        }
+        Mode::Grid => grid_step(cur, delta, app.scene.gp.cols, count, wrap),
+        _ => None,
+    };
+    if let Some(next) = next {
         app.scene.kb_nav = true;
-        let col = app.scene.current / app.scene.hp.rows.max(1);
-        let idx = col * app.scene.hp.rows + app.scene.hex_row - 1;
-        app.scene.set_current(
-            idx.min(app.library_session.filtered.len().saturating_sub(1)),
-            app.library_session.filtered.len(),
-        );
+        app.scene.set_current(next, count);
         app.retick();
-    }
-    if app.scene.mode == Mode::Grid {
-        let cols = app.scene.gp.cols.max(1);
-        let cur = app.scene.current;
-        if cur >= cols {
-            app.scene.kb_nav = true;
-            app.scene.set_current(cur - cols, app.library_session.filtered.len());
-            app.retick();
-        }
-    }
-    Task::none()
-}
-
-pub(super) fn key_down(app: &mut App) -> Task<Message> {
-    if app.source_browser.browser.is_some() {
-        let cols = app.source_browser.wall.scene.gp.cols.max(1) as i64;
-        return browser_key_nav(app, cols);
-    }
-    if let Some(task) = effects_nav(app, 0, 1) {
-        return task;
-    }
-    if app.menu_capturing() || app.detail_open() {
-        return Task::none();
-    }
-    if app.scene.mode == Mode::Collection {
-        return key_next(app);
-    }
-    if app.scene.mode == Mode::Hex {
-        let rows = app.scene.hp.rows.max(1);
-        if app.scene.hex_row + 1 < rows {
-            let col = app.scene.current / rows;
-            let idx = col * rows + app.scene.hex_row + 1;
-            if idx < app.library_session.filtered.len() {
-                app.scene.kb_nav = true;
-                app.scene.set_current(idx, app.library_session.filtered.len());
-                app.retick();
-            }
-        }
-    }
-    if app.scene.mode == Mode::Grid {
-        let cols = app.scene.gp.cols.max(1);
-        let idx = app.scene.current + cols;
-        if idx < app.library_session.filtered.len() {
-            app.scene.kb_nav = true;
-            app.scene.set_current(idx, app.library_session.filtered.len());
-            app.retick();
-        }
     }
     Task::none()
 }

@@ -8,3 +8,6 @@ settings-displays-lock-label = قفل
 settings-displays-lock-desc = تحديث خلفية هذه الشاشة عبر المنتقي المتعدد فقط.
 settings-displays-empty-label = جارٍ اكتشاف الشاشات
 settings-displays-empty-desc = ستظهر الخلفيات الحالية عندما تبلّغ خدمة الخلفيات عن شاشاتها.
+settings-displays-default-placement-label = الموضع الافتراضي
+settings-displays-default-placement-desc = تستخدمه كل شاشة ليس لها موضع خاص بها.
+settings-displays-use-global = استخدام الإعداد العام · { $mode }

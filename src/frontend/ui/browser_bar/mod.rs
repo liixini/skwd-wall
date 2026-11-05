@@ -1,6 +1,10 @@
 mod canvas;
 mod model;
 
+pub(crate) const SECTION_TEXT_SIZE: f32 = 8.5;
+pub(crate) const SECTION_TEXT_ALPHA: f32 = 0.42;
+pub(crate) const SECTION_RULE_ALPHA: f32 = 0.28;
+
 pub use canvas::BrowserBar;
 pub use model::{BrowserAct, browser_bar_compact_size};
 

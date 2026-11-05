@@ -1,5 +1,3 @@
-settings-tab-language = Språk
-settings-tab-note-language = Välj språk för väljaren och inställningarna.
 settings-language-card = Gränssnittsspråk
 settings-language-card-desc = Ändringar gäller direkt och sparas till nästa start.
 settings-language-choice-label = Språk

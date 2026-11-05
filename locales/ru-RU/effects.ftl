@@ -93,4 +93,3 @@ effects-activity-inactive-desc = Для неактивной активност�
 effects-activity-unavailable = Выбранная активность недоступна. Выберите существующую активность и повторите попытку.
 effects-activity-saved = Сохранено для { $activity }.
 effects-activity-unassigned = Обои Skwd не назначены
-effects-activity-preparing = Подготовка обоев для { $activity }.

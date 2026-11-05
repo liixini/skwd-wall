@@ -1,6 +1,5 @@
 settings-performance-power-card = لپ‌تاپ و برق
 settings-performance-power-card-desc = انتخابگر پس از آرام گرفتن، ترسیم را متوقف می‌کند. نمایش‌دهنده‌های کاغذدیواری پس از بسته شدن آن به کار ادامه می‌دهند، پس محدودیت باتری جداگانه دارند.
-settings-performance-power-source-label = منبع برق فعلی
 settings-performance-power-battery-limited = باتری (محدودیت‌های خودکار فعال‌اند)
 settings-performance-power-battery-unlimited = باتری (محدودیت‌های خودکار غیرفعال‌اند)
 settings-performance-power-external = برق خارجی، رایانهٔ رومیزی یا نامشخص (محدودیت‌های خودکار غیرفعال‌اند)
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = افزودن تصاویر بندانگش
 settings-performance-capture-we-desc = از صحنه‌های بومی در پس‌زمینه تصویر بگیرید. تصویرهای معتبر موجود را دوباره استفاده کنید و اگر صحنه‌ای ناموفق بود، پیش‌نمایش قبلی را نگه دارید. می‌توانید کار را متوقف کنید و بعداً ادامه دهید.
 settings-performance-capture-we-action = ساخت تصاویر بندانگشتی
 settings-performance-capture-we-stop = توقف
+settings-performance-effective-label = محدودیت‌های مؤثر
+settings-performance-effective = انتخابگر با { $fps } fps · ویدیو پس از { $seconds } ثانیه بی‌کاری متوقف می‌شود · { $reason }
+settings-performance-effective-no-idle = انتخابگر با { $fps } fps · توقف ویدیو هنگام بی‌کاری خاموش است · { $reason }
+settings-performance-effective-reason-battery = روی باتری
+settings-performance-effective-reason-disabled = صرفه‌جویی باتری خاموش است
+settings-performance-effective-reason-external = روی برق خارجی

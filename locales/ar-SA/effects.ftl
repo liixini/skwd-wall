@@ -97,4 +97,3 @@ effects-activity-inactive-desc = يمكن تغيير تعيينات الخلفي
 effects-activity-unavailable = النشاط المحدد غير متاح. اختر نشاطًا موجودًا وحاول مرة أخرى.
 effects-activity-saved = حُفظ للنشاط { $activity }.
 effects-activity-unassigned = لم يتم تعيين خلفية Skwd
-effects-activity-preparing = جارٍ تجهيز الخلفية لنشاط { $activity }.

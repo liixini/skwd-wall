@@ -18,6 +18,7 @@ filter-bar-task-tags = टैग
 filter-bar-task-index = इंडेक्स
 filter-bar-task-scan = स्कैन
 filter-bar-task-download = डाउनलोड
+filter-bar-task-drawing = चित्रांकन
 filter-bar-state-running = चल रहा है
 filter-bar-state-paused = रुका हुआ
 filter-bar-state-done = पूर्ण

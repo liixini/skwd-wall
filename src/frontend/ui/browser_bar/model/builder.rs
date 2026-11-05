@@ -20,12 +20,10 @@ pub(super) fn browser_bar_items(browser: &Browser, scale: f32) -> Vec<(BarItem, 
     );
     x += 12.0 * scale;
     match browser.source {
-        Source::Wallhaven => super::wallhaven::build_rows(browser, scale, x, &mut output),
-        Source::Steam => super::steam::build_rows(browser, scale, x, &mut output),
         Source::Unsplash => super::unsplash::build_rows(browser, scale, x, &mut output),
         Source::Pexels => super::pexels::build_rows(browser, scale, x, &mut output),
         Source::Youtube => super::youtube::build_row(browser, scale, x, &mut output),
-        Source::Bing => {}
+        Source::Wallhaven | Source::Steam | Source::Bing => {}
     }
     output
 }

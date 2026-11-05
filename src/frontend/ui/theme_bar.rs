@@ -1,9 +1,10 @@
-pub const THEME_BACKENDS: [(&str, &str); 14] = [
+pub const THEME_BACKENDS: [(&str, &str); 15] = [
     ("native", "theme-bar-skwd-colour"),
     ("static", "theme-bar-static"),
     ("skwd-iris", "theme-bar-skwd-iris"),
     ("skwd-pywal", "theme-bar-skwd-pywal"),
     ("skwd-wallust", "theme-bar-skwd-wallust"),
+    (crate::contracts::picker::STUDIO_ENGINE, "theme-bar-skwd-studio"),
     ("matugen", "theme-bar-matugen"),
     ("wallust", "theme-bar-wallust"),
     ("pywal", "theme-bar-pywal"),

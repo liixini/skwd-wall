@@ -1,9 +1,11 @@
+mod browser;
 mod decode;
 mod effect_source;
 mod live_stream;
 mod tall;
 mod transition;
 
+pub use browser::decode_browser_preview;
 pub use decode::{DecodeFailed, DecodePool, Job, is_webp};
 pub(crate) use effect_source::{decode_effect_source, spawn_effect_source_decode};
 pub use live_stream::LiveStreamer;

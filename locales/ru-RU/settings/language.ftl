@@ -1,5 +1,3 @@
-settings-tab-language = Язык
-settings-tab-note-language = Выберите язык окна выбора и настроек.
 settings-language-card = Язык интерфейса
 settings-language-card-desc = Изменения применяются сразу и сохраняются до следующего запуска.
 settings-language-choice-label = Язык

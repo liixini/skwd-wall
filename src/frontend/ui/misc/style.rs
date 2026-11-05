@@ -21,6 +21,16 @@ pub fn panel_style_a(pal: &Palette, bg_a: f32, border_a: f32) -> container::Styl
     }
 }
 
+const RAIL_FILL_ALPHA: f32 = 0.3;
+const RAIL_OUTLINE_ALPHA: f32 = 0.34;
+
+pub fn folio_rail_style(pal: &Palette) -> container::Style {
+    box_style(
+        with_alpha(pal.surface_variant, RAIL_FILL_ALPHA),
+        with_alpha(pal.outline, RAIL_OUTLINE_ALPHA),
+    )
+}
+
 pub fn box_style(fill: Color, border: Color) -> container::Style {
     container::Style {
         background: Some(fill.into()),
@@ -57,23 +67,25 @@ pub fn folio_button_style(
 ) -> button::Style {
     let hovered = matches!(status, button::Status::Hovered);
     let disabled = matches!(status, button::Status::Disabled);
-    let accent = if destructive { pal.tertiary } else { pal.primary };
+    let accent = if destructive { pal.error } else { pal.primary };
     button::Style {
         background: if disabled {
             None
         } else if active {
             Some(with_alpha(accent, 0.92).into())
         } else if hovered {
-            Some(with_alpha(pal.surface_variant, 0.62).into())
+            Some(with_alpha(pal.hover, 0.62).into())
         } else {
             Some(with_alpha(pal.surface_container, 0.92).into())
         },
         text_color: if disabled {
             with_alpha(pal.surface_text, 0.34)
         } else if active {
-            if destructive { pal.background } else { pal.primary_text }
+            if destructive { pal.error_text } else { pal.primary_text }
+        } else if hovered {
+            pal.hover_text
         } else if destructive {
-            pal.tertiary
+            pal.error
         } else {
             pal.surface_text
         },
@@ -104,11 +116,14 @@ pub fn folio_line_button_style(
         background: if active {
             Some(with_alpha(pal.primary, 0.18 * fade).into())
         } else if hovered {
-            Some(with_alpha(pal.surface_variant, 0.62 * fade).into())
+            Some(with_alpha(pal.hover, 0.62 * fade).into())
         } else {
             None
         },
-        text_color: with_alpha(pal.surface_text, fade),
+        text_color: with_alpha(
+            if hovered && !active { pal.hover_text } else { pal.surface_text },
+            fade,
+        ),
         border: Border {
             color: if focused { with_alpha(pal.primary, fade) } else { Color::TRANSPARENT },
             width: if focused { 2.0 } else { 0.0 },
@@ -126,11 +141,15 @@ pub fn folio_embedded_button_style(
 ) -> button::Style {
     button::Style {
         background: if hover_fill && matches!(status, button::Status::Hovered) {
-            Some(with_alpha(pal.surface_variant, 0.42).into())
+            Some(with_alpha(pal.hover, 0.42).into())
         } else {
             None
         },
-        text_color: foreground,
+        text_color: if hover_fill && matches!(status, button::Status::Hovered) {
+            pal.hover_text
+        } else {
+            foreground
+        },
         ..Default::default()
     }
 }

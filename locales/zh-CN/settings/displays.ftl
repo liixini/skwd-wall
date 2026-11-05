@@ -8,3 +8,6 @@ settings-displays-lock-label = 锁定
 settings-displays-lock-desc = 仅通过多屏选择器更新此显示器的壁纸。
 settings-displays-empty-label = 正在检测显示器
 settings-displays-empty-desc = 壁纸服务报告显示器后，当前壁纸将显示在这里。
+settings-displays-default-placement-label = 默认位置
+settings-displays-default-placement-desc = 没有单独设置位置的显示器都会使用它。
+settings-displays-use-global = 使用全局设置 · { $mode }

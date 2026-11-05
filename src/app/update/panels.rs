@@ -5,8 +5,22 @@ use serde_json::json;
 use super::super::*;
 
 pub(super) fn folder_menu_scroll(app: &mut App, dy: f32) -> Task<Message> {
-    let count = app.library_session.folder_options.len();
-    let vis = count.min(crate::frontend::ui::MENU_MAX_ROWS);
+    let (model, _) = crate::app::view::filter_bar_geometry(
+        app,
+        app.scene.viewport.0,
+        app.scene.viewport.1,
+        crate::app::view::BarExtent::Expanded,
+    );
+    let count = match app.chrome.bar.menu {
+        Some(crate::frontend::ui::MenuKind::Folders) => app.library_session.folder_options.len(),
+        Some(crate::frontend::ui::MenuKind::Backends) => crate::frontend::ui::backend_menu_options(
+            app.theme.backends.as_deref(),
+            &crate::app::update::theme::wallpaper_theme_backend(app),
+        )
+        .len(),
+        None => 0,
+    };
+    let vis = count.min(model.menu_visible_rows);
     let max =
         count.saturating_sub(vis) as f32 * crate::frontend::ui::MENU_ROW_H * app.config.ui_scale();
     app.chrome.bar.menu_scroll.retarget((app.chrome.bar.menu_scroll.target + dy).clamp(0.0, max));
@@ -40,6 +54,8 @@ pub(super) fn toggle_settings(app: &mut App) -> Task<Message> {
         app.close_settings();
     } else {
         app.panels.settings.open = true;
+        super::settings_layouts::seed(app);
+        app.panels.settings.layouts = crate::frontend::settings::LayoutsUi::default();
         app.panels.settings.input_edit = None;
         app.panels.settings.keybind_capture = None;
         app.panels.settings.process_picker_open = false;
@@ -50,12 +66,21 @@ pub(super) fn toggle_settings(app: &mut App) -> Task<Message> {
         app.panels.settings.search_open = false;
         app.panels.settings.search_query.clear();
         app.panels.settings.search_results.clear();
+        app.panels.settings.search_at = None;
         app.apply_motion_speeds();
         app.panels.settings.entrance.run(0.0, 1.0);
+        app.panels.settings.emblem_anim.snap(1.0);
+        if crate::frontend::settings::SETTINGS_MOTION.reduced(app.motion_profile()) {
+            app.panels.settings.entrance.snap(1.0);
+        }
+        app.panels.settings.previous = None;
+        app.panels.settings.pending = None;
+        app.panels.settings.close_sections();
         app.init_settings_inputs();
         app.call_tracked("wall.outputs", json!({}), Pending::Outputs);
         app.call_tracked("theme.backends", json!({}), Pending::ThemeBackends);
         app.call_tracked("theme.apps", json!({}), Pending::AppThemes);
+        app.request_drawing_status();
         app.chrome.pane_scrolls.remove("settings");
     }
     app.retick();

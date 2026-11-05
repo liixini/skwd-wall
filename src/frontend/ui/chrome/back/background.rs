@@ -2,11 +2,14 @@ use iced::widget::canvas::{Frame, Path, Stroke};
 use iced::{Point, Rectangle, Size};
 
 use crate::frontend::scene::BackPanel;
+use crate::frontend::scene::layout::CardCorners;
 use crate::frontend::theme::Palette;
 use crate::frontend::ui::with_alpha;
 
 use super::geometry::BackGeometry;
 use super::layout::BackLayout;
+
+const CUT_INSET: f32 = 2.0 - std::f32::consts::SQRT_2;
 
 fn rectangle(tuple: (f32, f32, f32, f32)) -> Rectangle {
     Rectangle::new(Point::new(tuple.0, tuple.1), Size::new(tuple.2, tuple.3))
@@ -33,9 +36,10 @@ fn embedded_section(
     panel: &BackPanel,
     layout: &BackLayout,
     section: Rectangle,
-    radii: [f32; 4],
+    sizes: [f32; 4],
 ) -> Path {
-    BackGeometry::new(panel, layout).rounded_rectangle(section, radii)
+    let corners = CardCorners { sizes, ..panel.corners };
+    BackGeometry::new(panel, layout).outline(section, corners)
 }
 
 #[cfg(test)]
@@ -65,11 +69,14 @@ pub(super) fn embedded_section_radii(
     let right = (card.x + card.width - section.x - section.width).max(0.0);
     let top_inset = (section.y - card.y).max(0.0);
     let bottom_inset = (card.y + card.height - section.y - section.height).max(0.0);
+    let pull = if panel.corners.cut { CUT_INSET } else { 1.0 };
+    let sizes = panel.corners.sizes;
+    let inner = |at: usize, inset: f32| (sizes[at] - inset * pull).max(0.0);
     [
-        if top { (panel.radii[0] - left.max(top_inset)).max(0.0) } else { 0.0 },
-        if top { (panel.radii[1] - right.max(top_inset)).max(0.0) } else { 0.0 },
-        if bottom { (panel.radii[2] - right.max(bottom_inset)).max(0.0) } else { 0.0 },
-        if bottom { (panel.radii[3] - left.max(bottom_inset)).max(0.0) } else { 0.0 },
+        if top { inner(0, left.max(top_inset)) } else { 0.0 },
+        if top { inner(1, right.max(top_inset)) } else { 0.0 },
+        if bottom { inner(2, right.max(bottom_inset)) } else { 0.0 },
+        if bottom { inner(3, left.max(bottom_inset)) } else { 0.0 },
     ]
 }
 

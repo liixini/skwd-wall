@@ -1,3 +1,4 @@
+mod clock;
 mod palette;
 mod saved;
 mod tests;
@@ -8,3 +9,5 @@ pub use saved::{
 };
 
 pub use saved::{decode_candidate_variant, encode_candidate};
+
+pub use clock::studio_time;

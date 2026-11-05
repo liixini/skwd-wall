@@ -9,9 +9,23 @@ use super::super::color::swatch_color;
 use super::super::misc::{FadeFrame, NERD_FONT, UI_FONT, glyph_width, mid_text};
 use super::super::{mirror_x_for, parallelogram, with_alpha};
 use super::canvas::FilterBar;
-use super::catalog::{DROP_ARROW, DROP_ARROW_UP, ICON_FOLDER, MENU_MAX_ROWS};
+use super::catalog::{DROP_ARROW, DROP_ARROW_UP, ICON_FOLDER, SWATCH_CELL_SIZE, SWATCH_RADIUS};
 use super::menu::{MenuKind, folder_depth, folder_label};
 use super::model::{BarItem, BarNotice, BarVisualStyle, SWATCH_CELLS};
+use super::reorder::EditBar;
+
+pub(crate) fn draw_edit_bar(frame: &mut canvas::Frame, bar: &EditBar, palette: &Palette) {
+    let frame = &mut FadeFrame::new(frame, 1.0);
+    let mut order: Vec<_> = (0..bar.items.len()).filter(|index| *index != bar.lifted).collect();
+    order.sort_by_key(|index| bar.items[*index].z);
+    for index in order {
+        draw_item(frame, &bar.items[index], false, palette, bar.style, bar.rtl);
+    }
+    if let Some((x, y)) = bar.swatch_at {
+        draw_swatch_strip_colors(frame, &bar.swatches, x, y, bar.scale, bar.style, bar.rtl);
+    }
+    draw_item(frame, &bar.items[bar.lifted], true, palette, bar.style, bar.rtl);
+}
 
 pub(super) fn draw_filter_bar(
     bar: &FilterBar<'_>,
@@ -183,11 +197,31 @@ fn lead_x(rtl: bool, x: f32, width: f32, inset: f32) -> f32 {
 }
 
 fn draw_swatch_strip(frame: &mut FadeFrame<'_>, bar: &FilterBar<'_>, x: f32, y: f32) {
-    let cell = 14.0 * bar.scale;
+    draw_swatch_strip_colors(
+        frame,
+        bar.theme_swatch,
+        x,
+        y,
+        bar.scale,
+        bar.visual_style,
+        bar.model.rtl,
+    );
+}
+
+fn draw_swatch_strip_colors(
+    frame: &mut FadeFrame<'_>,
+    colors: &[Color],
+    x: f32,
+    y: f32,
+    scale: f32,
+    style: BarVisualStyle,
+    rtl: bool,
+) {
+    let cell = SWATCH_CELL_SIZE * scale;
     let strip = SWATCH_CELLS as f32 * cell;
-    for (index, color) in bar.theme_swatch.iter().take(SWATCH_CELLS).enumerate() {
-        let cell_x = x + mirror_x_for(bar.model.rtl, index as f32 * cell, cell, strip);
-        let shape = style_path(cell_x, y, cell, cell, 3.0 * bar.scale, bar.visual_style);
+    for (index, color) in colors.iter().take(SWATCH_CELLS).enumerate() {
+        let cell_x = x + mirror_x_for(rtl, index as f32 * cell, cell, strip);
+        let shape = style_path(cell_x, y, cell, cell, SWATCH_RADIUS * scale, style);
         frame.fill(&shape, *color);
         frame.stroke(
             &shape,
@@ -214,14 +248,20 @@ pub(crate) fn control_background(palette: &Palette, active: bool, hovered: bool)
     if active {
         palette.primary
     } else if hovered {
-        with_alpha(palette.surface_variant, 0.82)
+        with_alpha(palette.hover, 0.82)
     } else {
         with_alpha(palette.surface_container, 0.92)
     }
 }
 
-pub(crate) fn control_text(palette: &Palette, active: bool) -> Color {
-    if active { palette.primary_text } else { palette.surface_text }
+pub(crate) fn control_text(palette: &Palette, active: bool, hovered: bool) -> Color {
+    if active {
+        palette.primary_text
+    } else if hovered {
+        palette.hover_text
+    } else {
+        palette.surface_text
+    }
 }
 
 pub(crate) fn control_border(palette: &Palette, active: bool, hovered: bool) -> Color {
@@ -359,7 +399,7 @@ fn draw_button_styled(
     rtl: bool,
 ) {
     item_background(frame, item, hovered, palette, style);
-    let text_color = control_text(palette, item.active);
+    let text_color = control_text(palette, item.active, hovered);
     if item.nerd && item.label.contains(' ') {
         draw_icon_label(frame, item, text_color, style, rtl);
         return;
@@ -416,17 +456,6 @@ fn draw_icon_label(
         UI_FONT,
         trail(rtl),
     ));
-}
-
-pub(crate) fn draw_swatch_with_style(
-    frame: &mut FadeFrame<'_>,
-    item: &BarItem,
-    index: usize,
-    hovered: bool,
-    palette: &Palette,
-    style: BarVisualStyle,
-) {
-    draw_swatch_styled(frame, item, index, hovered, palette, style);
 }
 
 fn draw_swatch_styled(
@@ -500,9 +529,7 @@ fn draw_menu(
             }
         }
     });
-    if !backends {
-        draw_scrollbar(frame, rectangle, bar, palette);
-    }
+    draw_scrollbar(frame, rectangle, bar, palette);
 }
 
 fn draw_backend_row(
@@ -623,7 +650,7 @@ fn draw_scrollbar(
         return;
     }
     let count = bar.menu_len() as f32;
-    let visible = bar.menu_len().min(MENU_MAX_ROWS) as f32;
+    let visible = bar.menu_len().min(bar.model.menu_visible_rows) as f32;
     let track_height = rectangle.height - 8.0;
     let thumb_height = (visible / count * track_height).max(12.0);
     let fraction = (bar.menu_scroll / max_scroll).clamp(0.0, 1.0);

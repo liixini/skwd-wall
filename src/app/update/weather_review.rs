@@ -152,7 +152,7 @@ pub(super) fn key(app: &mut App, key: crate::frontend::settings::SettingsKey) ->
                 (app.panels.settings.weather_review_focus + 1).min(total + TAB_COUNT - 1);
             app.retick();
         }
-        SettingsKey::Activate => {
+        SettingsKey::Activate | SettingsKey::Space => {
             let focused = app.panels.settings.weather_review_focus;
             match focused {
                 0 => app.panels.settings.weather_review_tab = WeatherReviewTab::Suggested,

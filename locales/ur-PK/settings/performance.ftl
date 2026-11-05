@@ -1,6 +1,5 @@
 settings-performance-power-card = لیپ ٹاپ اور پاور
 settings-performance-power-card-desc = پکر ٹھہر جانے پر رینڈرنگ روک دیتا ہے۔ وال پیپر رینڈررز اس کے بند ہونے کے بعد بھی چلتے رہتے ہیں، اس لیے ان کی بیٹری حدیں الگ ہیں۔
-settings-performance-power-source-label = موجودہ پاور ذریعہ
 settings-performance-power-battery-limited = بیٹری (خودکار حدیں فعال ہیں)
 settings-performance-power-battery-unlimited = بیٹری (خودکار حدیں غیر فعال ہیں)
 settings-performance-power-external = بیرونی پاور، ڈیسک ٹاپ یا دستیاب نہیں (خودکار حدیں غیر فعال ہیں)
@@ -71,3 +70,9 @@ settings-performance-capture-we-label = تمام WE وال پیپرز میں ک�
 settings-performance-capture-we-desc = نیٹو سین پس منظر میں کیپچر کریں۔ درست کیپچر دوبارہ استعمال کریں اور سین ناکام ہو تو موجودہ پیش منظر رکھیں۔ آپ روک کر بعد میں جاری رکھ سکتے ہیں۔
 settings-performance-capture-we-action = تھمب نیلز بنائیں
 settings-performance-capture-we-stop = روکیں
+settings-performance-effective-label = مؤثر حدود
+settings-performance-effective = پکر { $fps } fps · ویڈیو { $seconds } سیکنڈ کی غیر فعالیت کے بعد رک جاتی ہے · { $reason }
+settings-performance-effective-no-idle = پکر { $fps } fps · غیر فعال ویڈیو کا وقفہ بند ہے · { $reason }
+settings-performance-effective-reason-battery = بیٹری پر
+settings-performance-effective-reason-disabled = بیٹری سیور بند ہے
+settings-performance-effective-reason-external = بیرونی پاور پر

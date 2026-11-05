@@ -30,6 +30,8 @@ pub(crate) fn adopt_first_window(
     app.runtime_state.overlay = Some(id);
     app.runtime_state.picker_output = crate::shell::picker_output(id);
     app.scene.viewport = (width, height);
+    crate::app::update::arrange::placement::select(app, app.runtime_state.picker_output.clone());
+    app.apply_layout();
     if app.config.set_screen_width(width) {
         app.snap_layout();
     }
@@ -39,6 +41,20 @@ pub(crate) fn adopt_first_window(
     app.retick();
     log::info!("adopted initial surface {id:?} as the overlay");
     iced::Task::none()
+}
+
+pub(crate) fn sync_output(app: &mut App, output: Option<String>) {
+    let Some(output) = output else { return };
+    let current = app.runtime_state.picker_output.as_deref() == Some(output.as_str());
+    if app.panels.arrange.is_some() || (current && app.config.layout_output().is_some()) {
+        return;
+    }
+    app.runtime_state.picker_output = Some(output.clone());
+    crate::app::update::arrange::placement::select(app, Some(output));
+    let width = app.scene.viewport.0;
+    app.config.set_screen_width(width);
+    app.apply_layout();
+    app.snap_layout();
 }
 
 #[cfg(target_os = "linux")]
@@ -73,6 +89,7 @@ pub(crate) fn stash(app: &mut App) -> iced::Task<Message> {
         return iced::Task::none();
     }
     app.runtime_state.stashed = true;
+    crate::app::update::strand::dismiss(app);
     app.panels.transition_preview.stop();
     app.scene.release_while_hidden();
     log::info!("stashed the overlay");
@@ -85,6 +102,7 @@ pub(crate) fn unstash(app: &mut App) -> iced::Task<Message> {
         return iced::Task::none();
     }
     app.runtime_state.stashed = false;
+    app.input.down = None;
     app.conceal();
     app.runtime_state.last_tick = None;
     app.chrome.cache.clear();

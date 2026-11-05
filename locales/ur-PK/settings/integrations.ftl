@@ -1,3 +1,8 @@
+settings-integrations-caelestia-card = Caelestia
+settings-integrations-caelestia-card-desc = کسی بھی ایپ میں منتخب کردہ وال پیپر Skwd سے دکھائیں۔
+settings-integrations-caelestia-sync-label = Caelestia وال پیپر ہم آہنگ کریں
+settings-integrations-caelestia-sync-desc = Skwd کسی بھی ایپ میں منتخب کردہ وال پیپر دکھاتا ہے۔ Caelestia کے انتخاب غیر مقفل ڈسپلے پر لاگو ہوتے ہیں۔
+
 settings-integrations-plasma-card = KDE Plasma
 settings-integrations-lock-mode-label = لاک اسکرین وال پیپر
 settings-integrations-lock-mode-desc = غیر منظم Plasma کو چھیڑتا نہیں۔ ساکن ہمیشہ نیچے دی گئی تصویر استعمال کرتا ہے۔ پیروی سب سے آخر میں لاگو کیے گئے وال پیپر کے ساتھ چلتا ہے۔
@@ -33,7 +38,7 @@ settings-integrations-follow-desc = جب Skwd رنگ کنٹرول کرے تو ا
 
 settings-section-lockscreens = لاک اسکرینیں
 settings-lockscreens-source-label = تصویر کا ذریعہ
-settings-lockscreens-source-help = Follow last applied uses the current wallpaper image. Static image uses the file below. Videos and scenes use a still image when available.
+settings-lockscreens-source-help = "آخری لاگو کردہ کی پیروی" موجودہ وال پیپر کی تصویر استعمال کرتا ہے۔ "ساکن تصویر" نیچے دی گئی فائل استعمال کرتی ہے۔ ویڈیوز اور مناظر دستیاب ہونے پر ساکن تصویر استعمال کرتے ہیں۔
 settings-lockscreens-image-label = جامد تصویر
 settings-lockscreens-image-desc = موجودہ تصویر کا مکمل راستہ درج کریں، مثلاً ~/Pictures/lockscreen.jpg۔ Skwd اسے فعال لاک اسکرینوں کے لیے نقل کرتا ہے۔ یہاں ویڈیو فائل استعمال نہیں ہو سکتی۔
 settings-lockscreens-hyprlock-card = Hyprlock

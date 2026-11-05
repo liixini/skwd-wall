@@ -36,7 +36,7 @@ fn p() -> SandyParams {
         swap_loop: false,
         swap_style: 0.0,
         skew: 12.0,
-        corners: [0.0; 4],
+        corners: CardCorners::default(),
         edge_speed: 14.0,
         ring_size: 1.0,
         ring_spin: 1.0,

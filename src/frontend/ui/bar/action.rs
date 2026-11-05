@@ -1,6 +1,6 @@
 #[derive(Debug, Clone)]
 pub enum BarAction {
-    SetType(String),
+    SetType { key: &'static str, next: String },
     Sort(String),
     Orient(String),
     Resolution(String),

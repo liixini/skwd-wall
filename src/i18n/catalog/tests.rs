@@ -614,3 +614,29 @@ fn ui_fonts_cover_catalogs() {
         assert!(missing.is_empty(), "{} {missing:?}", language.tag);
     }
 }
+
+#[test]
+fn arrange_messages_exist() {
+    let sources = [
+        include_str!("../../frontend/arrange/labels.rs"),
+        include_str!("../../frontend/arrange/layout.rs"),
+        include_str!("../../app/update/arrange/core.rs"),
+        include_str!("../../app/update/arrange/displays/core.rs"),
+        include_str!("../../app/view/arrange.rs"),
+    ];
+    let mut args = fluent::FluentArgs::new();
+    for name in ["count", "value", "width", "height", "x", "y"] {
+        args.set(name, 4);
+    }
+    for name in ["output", "error", "family", "button", "row", "column", "state", "outputs"] {
+        args.set(name, "test");
+    }
+    for (locale, _) in locales() {
+        let catalog = Catalog::for_locale(locale);
+        for key in sources.iter().flat_map(|source| source.split('"')).filter(|token| {
+            token.starts_with("arrange-") && !token.chars().any(char::is_whitespace)
+        }) {
+            assert!(!catalog.format(key, Some(&args)).is_empty(), "{locale}: {key}");
+        }
+    }
+}

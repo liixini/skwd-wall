@@ -1,4 +1,4 @@
-use std::hash::Hasher;
+use std::hash::{Hash, Hasher};
 
 use crate::frontend::scene::{BackPanel, Chrome};
 use crate::frontend::theme::Palette;
@@ -33,9 +33,10 @@ pub fn chrome_signature(chrome: &[Chrome], back: Option<&BackPanel>, palette: &P
             for value in [panel.cx, panel.cy, panel.hw, panel.hh, panel.skew, panel.edge_tilt] {
                 hasher.write_u32(value.to_bits());
             }
-            for radius in panel.radii {
-                hasher.write_u32(radius.to_bits());
+            for size in panel.corners.sizes {
+                hasher.write_u32(size.to_bits());
             }
+            hasher.write_u8(u8::from(panel.corners.cut));
             hasher.write_i32((panel.progress * 256.0) as i32);
             hasher.write_u8(panel.coordinated_flip as u8);
             hasher.write_u8(panel.embedded as u8);
@@ -61,6 +62,7 @@ pub fn chrome_signature(chrome: &[Chrome], back: Option<&BackPanel>, palette: &P
             hasher.write_i32((panel.chip_pop * 256.0) as i32);
             hasher.write_i32(panel.pop_idx);
             hasher.write_u8(panel.static_img as u8);
+            panel.drawing.hash(&mut hasher);
             hasher.write_u8(panel.overview_available as u8);
             hasher.write_u8(panel.reset_thumbnail as u8);
             hasher.write_u8(panel.revealable as u8);

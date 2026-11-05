@@ -1,5 +1,8 @@
 use super::super::super::theme_bar::ThemeBar;
-use super::super::catalog::{MENU_MAX_ROWS, MENU_ROW_H};
+use super::super::catalog::{
+    MENU_CHROME_H, MENU_MAX_ROWS, MENU_ROW_H, SWATCH_CELL_SIZE, SWATCH_GAP,
+};
+use super::builder::SWATCH_CELLS;
 use super::theme::theme_items;
 use super::types::BarItem;
 
@@ -44,14 +47,14 @@ pub(super) fn theme_rows(
     let mut theme_items = theme_items(theme, scale, menu_up);
     let (mut row, mut widest, current_x) =
         wrap_items(&mut theme_items, max_width, bar_height, gap, *rows_height + gap);
-    let cells_width = 6.0 * 14.0 * scale + 10.0 * scale;
+    let cells_width = SWATCH_CELLS as f32 * SWATCH_CELL_SIZE * scale + SWATCH_GAP * scale;
     let last_y = *rows_height + gap + row as f32 * (bar_height + gap);
     let swatch = if max_width > 0.0 && current_x + cells_width > max_width {
         row += 1;
-        (0.0, last_y + bar_height + gap + (bar_height - 14.0 * scale) / 2.0)
+        (0.0, last_y + bar_height + gap + (bar_height - SWATCH_CELL_SIZE * scale) / 2.0)
     } else {
         widest = widest.max(current_x + cells_width);
-        (current_x + 10.0 * scale, last_y + (bar_height - 14.0 * scale) / 2.0)
+        (current_x + SWATCH_GAP * scale, last_y + (bar_height - SWATCH_CELL_SIZE * scale) / 2.0)
     };
     *rows_height += gap + (row as f32 + 1.0) * bar_height + row as f32 * gap;
     *width = width.max(widest.min(max_width.max(1.0))).max(1.0);
@@ -82,7 +85,7 @@ pub(super) fn menu_space(
         return 0.0;
     }
     let visible = length.min(MENU_MAX_ROWS) as f32;
-    let menu_height = 6.0 + visible * MENU_ROW_H * scale + 8.0;
+    let menu_height = MENU_CHROME_H + visible * MENU_ROW_H * scale;
     if menu_up {
         shift_rows(items, swatch_at, menu_height);
     }

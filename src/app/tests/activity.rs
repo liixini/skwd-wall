@@ -120,11 +120,7 @@ fn activity_selection_scopes_apply() {
         .iter()
         .find_map(|(id, pending)| matches!(pending, Pending::ActivityApply { .. }).then_some(id))
         .unwrap();
-    respond(
-        &mut app,
-        apply,
-        json!({"applied": "/wp/a.png", "activity": "rest", "visible": false, "queued": false}),
-    );
+    respond(&mut app, apply, json!({"applied": "/wp/a.png", "activity": "rest", "visible": false}));
     assert!(app.runtime_state.toast.as_ref().unwrap().0.contains("Rest"));
 }
 
@@ -274,21 +270,13 @@ fn activity_batch_waits() {
             .filter_map(|(id, kind)| matches!(kind, Pending::ActivityApply { .. }).then_some(*id))
             .collect();
         replies.sort_unstable();
-        respond(
-            &mut app,
-            replies[0],
-            json!({"activity": "rest", "visible": false, "queued": false}),
-        );
+        respond(&mut app, replies[0], json!({"activity": "rest", "visible": false}));
         assert!(app.runtime_state.toast.is_none());
         if fail {
             respond(&mut app, replies[1], json!({"activity": "rest"}));
             assert!(!app.runtime_state.toast.as_ref().unwrap().0.contains("Saved for"));
         } else {
-            respond(
-                &mut app,
-                replies[1],
-                json!({"activity": "rest", "visible": false, "queued": false}),
-            );
+            respond(&mut app, replies[1], json!({"activity": "rest", "visible": false}));
             assert!(app.runtime_state.toast.as_ref().unwrap().0.contains("Saved for Rest"));
         }
         assert!(app.daemon.activity_applies.is_empty());
@@ -319,52 +307,33 @@ fn apply_event(request: &(u64, String, String), activity: &str) -> Value {
         "activity": activity, "visible": true, "ok": true})
 }
 
-fn queue_replies(app: &mut App, requests: &[(u64, String, String)], activity: &str) {
-    for request in requests {
-        respond(app, request.0, json!({"activity": activity, "visible": false, "queued": true}));
+#[test]
+fn apply_events_complete_pair() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("a.mp4", "video", 1, 0)]);
+    let requests = apply_pair(&mut app, "work");
+    assert_eq!(requests.len(), 2);
+    let mut foreign = apply_event(&requests[0], "work");
+    foreign["apply_token"] = json!("other-client");
+    app.on_event(wall_proto::ev::APPLY_RESULT, &foreign);
+    assert_eq!(app.daemon.activity_requests.len(), 2);
+    for request in &requests {
+        app.on_event(wall_proto::ev::APPLY_RESULT, &apply_event(request, "work"));
     }
+    assert!(app.daemon.activity_requests.is_empty());
+    assert!(app.daemon.activity_applies.is_empty());
+    for request in &requests {
+        respond(&mut app, request.0, json!({"activity": "work", "visible": true}));
+    }
+    assert!(app.runtime_state.toast.is_none());
 }
 
 #[test]
-fn queued_current_pair() {
-    for early in [false, true] {
-        let mut app = test_app();
-        seed(&mut app, &[wall("a.mp4", "video", 1, 0)]);
-        let requests = apply_pair(&mut app, "work");
-        assert_eq!(requests.len(), 2);
-        let mut foreign = apply_event(&requests[0], "work");
-        foreign["apply_token"] = json!("other-client");
-        app.on_event(wall_proto::ev::APPLY_RESULT, &foreign);
-        assert_eq!(app.daemon.activity_requests.len(), 2);
-        if early {
-            app.on_event(wall_proto::ev::APPLY_RESULT, &apply_event(&requests[0], "work"));
-        }
-        queue_replies(&mut app, &requests, "work");
-        assert!(app.runtime_state.toast.as_ref().unwrap().0.contains("Preparing"));
-        app.on_event(
-            wall_proto::ev::APPLY_RESULT,
-            &json!({"request_id": requests[usize::from(early)].0, "ok": false}),
-        );
-        assert_eq!(app.runtime_state.toast.as_ref().unwrap().0, "Apply failed");
-        assert_eq!(app.daemon.activity_requests.len(), if early { 1 } else { 2 });
-        for request in &requests {
-            app.on_event(wall_proto::ev::APPLY_RESULT, &apply_event(request, "work"));
-        }
-        assert!(app.daemon.activity_requests.is_empty());
-        assert!(app.daemon.activity_applies.is_empty());
-        assert_eq!(app.runtime_state.toast.as_ref().unwrap().0, "Apply failed");
-        queue_replies(&mut app, &requests, "work");
-        assert_eq!(app.runtime_state.toast.as_ref().unwrap().0, "Apply failed");
-    }
-}
-
-#[test]
-fn queued_ordinary_failure_surfaces() {
+fn ordinary_failure_surfaces() {
     for matching in [false, true] {
         let mut app = test_app();
         seed(&mut app, &[wall("a.mp4", "video", 1, 0)]);
         let requests = apply_pair(&mut app, "work");
-        queue_replies(&mut app, &requests, "work");
         let id = if matching { requests[0].0 } else { requests[1].0 + 1 };
         app.on_event(
             wall_proto::ev::APPLY_RESULT,
@@ -377,73 +346,49 @@ fn queued_ordinary_failure_surfaces() {
 }
 
 #[test]
-fn queued_failure_deletion() {
-    for early in [false, true] {
-        let mut app = test_app();
-        seed(&mut app, &[wall("a.mp4", "video", 1, 0)]);
-        let requests = apply_pair(&mut app, "rest");
-        let mut failed = apply_event(&requests[1], "rest");
-        failed["ok"] = json!(false);
-        failed["visible"] = json!(false);
-        failed["detail"] = json!("Activity was removed");
-        if early {
-            app.on_event(wall_proto::ev::APPLY_RESULT, &failed);
-        }
-        queue_replies(&mut app, &requests, "rest");
-        app.on_event(wall_proto::ev::APPLY_RESULT, &apply_event(&requests[0], "rest"));
-        if !early {
-            assert!(app.runtime_state.toast.as_ref().unwrap().0.contains("Preparing"));
-            app.on_event(wall_proto::ev::APPLY_RESULT, &failed);
-        }
-        assert!(app.runtime_state.toast.as_ref().unwrap().0.contains("Activity was removed"));
-        assert!(!app.runtime_state.toast.as_ref().unwrap().0.contains("Saved"));
-        assert!(app.daemon.activity_applies.is_empty());
-        assert!(app.daemon.activity_requests.is_empty());
+fn failed_activity_wins() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("a.mp4", "video", 1, 0)]);
+    let requests = apply_pair(&mut app, "rest");
+    let mut failed = apply_event(&requests[1], "rest");
+    failed["ok"] = json!(false);
+    failed["visible"] = json!(false);
+    failed["detail"] = json!("Activity was removed");
+    app.on_event(wall_proto::ev::APPLY_RESULT, &failed);
+    app.on_event(wall_proto::ev::APPLY_RESULT, &apply_event(&requests[0], "rest"));
+    assert!(app.runtime_state.toast.as_ref().unwrap().0.contains("Activity was removed"));
+    assert!(app.daemon.activity_applies.is_empty());
+    assert!(app.daemon.activity_requests.is_empty());
+}
+
+#[test]
+fn event_scope_checked() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("a.mp4", "video", 1, 0)]);
+    let requests = apply_pair(&mut app, "rest");
+    for (field, wrong) in
+        [("request_id", json!(0)), ("activity", json!("work")), ("output", json!("DP-3"))]
+    {
+        let mut event = apply_event(&requests[0], "rest");
+        event[field] = wrong;
+        app.on_event(wall_proto::ev::APPLY_RESULT, &event);
+        assert_eq!(app.daemon.activity_requests.len(), 2);
     }
 }
 
 #[test]
-fn queued_scope_cancel() {
-    for outcome in ["cancelled", "superseded"] {
-        let mut app = test_app();
-        seed(&mut app, &[wall("a.mp4", "video", 1, 0)]);
-        let requests = apply_pair(&mut app, "rest");
-        queue_replies(&mut app, &requests, "rest");
-        for (field, wrong) in
-            [("request_id", json!(0)), ("activity", json!("work")), ("output", json!("DP-3"))]
-        {
-            let mut event = apply_event(&requests[0], "rest");
-            event[field] = wrong;
-            app.on_event(wall_proto::ev::APPLY_RESULT, &event);
-            assert_eq!(app.daemon.activity_requests.len(), 2);
-        }
-        let mut cancelled = apply_event(&requests[0], "rest");
-        cancelled["ok"] = json!(false);
-        cancelled[outcome] = json!(true);
-        app.on_event(wall_proto::ev::APPLY_RESULT, &cancelled);
-        app.on_event(wall_proto::ev::APPLY_RESULT, &apply_event(&requests[1], "rest"));
-        assert!(app.daemon.activity_applies.is_empty());
-        assert!(app.daemon.activity_requests.is_empty());
-        assert!(app.runtime_state.toast.is_none());
-    }
-}
-
-#[test]
-fn queued_batches_stay_latest() {
+fn old_batches_stay_quiet() {
     let mut app = test_app();
     seed(&mut app, &[wall("a.mp4", "video", 1, 0)]);
     let old = apply_pair(&mut app, "rest");
-    queue_replies(&mut app, &old, "rest");
-    let latest = apply_pair(&mut app, "work");
-    queue_replies(&mut app, &latest, "work");
-    let preparing = app.runtime_state.toast.as_ref().unwrap().0.clone();
+    apply_pair(&mut app, "work");
     for request in old {
         let mut failed = apply_event(&request, "rest");
         failed["ok"] = json!(false);
         failed["detail"] = json!("old failure");
         app.on_event(wall_proto::ev::APPLY_RESULT, &failed);
     }
-    assert_eq!(app.runtime_state.toast.as_ref().unwrap().0, preparing);
+    assert!(app.runtime_state.toast.is_none());
     app.handle_ipc(IpcMsg::Disconnected);
     assert!(app.daemon.activity_requests.is_empty());
     assert!(app.daemon.activity_applies.is_empty());
@@ -451,18 +396,14 @@ fn queued_batches_stay_latest() {
 }
 
 #[test]
-fn queued_inactive_saved() {
+fn inactive_saved_event() {
     let mut app = test_app();
     seed(&mut app, &[wall("a.mp4", "video", 1, 0)]);
     let requests = apply_pair(&mut app, "rest");
-    queue_replies(&mut app, &requests, "rest");
-    for (idx, request) in requests.iter().enumerate() {
+    for request in &requests {
         let mut saved = apply_event(request, "rest");
         saved["visible"] = json!(false);
         app.on_event(wall_proto::ev::APPLY_RESULT, &saved);
-        if idx == 0 {
-            assert!(app.runtime_state.toast.as_ref().unwrap().0.contains("Preparing"));
-        }
     }
     assert_eq!(app.runtime_state.toast.as_ref().unwrap().0, "Saved for Rest.");
     assert!(app.daemon.activity_requests.is_empty());

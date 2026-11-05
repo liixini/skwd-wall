@@ -5,6 +5,7 @@ theme-bar-custom = Özel
 theme-bar-skwd-iris = Skwd-Iris
 theme-bar-skwd-pywal = Skwd-Pywal
 theme-bar-skwd-wallust = Skwd-Wallust
+theme-bar-skwd-studio = Renk stüdyosu
 theme-bar-matugen = Matugen
 theme-bar-wallust = Wallust
 theme-bar-pywal = Pywal

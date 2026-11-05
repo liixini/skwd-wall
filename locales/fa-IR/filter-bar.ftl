@@ -18,6 +18,7 @@ filter-bar-task-tags = برچسب‌ها
 filter-bar-task-index = فهرست‌سازی
 filter-bar-task-scan = پویش
 filter-bar-task-download = بارگیری
+filter-bar-task-drawing = طراحی‌ها
 filter-bar-state-running = در حال اجرا
 filter-bar-state-paused = مکث‌شده
 filter-bar-state-done = انجام‌شده

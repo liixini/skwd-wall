@@ -1,18 +1,28 @@
 use std::time::Instant;
 
 use iced::widget::container;
-use iced::{Alignment, Element, Length, Padding};
+use iced::{Element, Length, Rectangle, Size};
 use serde_json::json;
 
+use crate::app::update::arrange::placement;
+use crate::frontend::arrange::Target;
 use crate::frontend::theme::Palette;
+use crate::infrastructure::config::Config;
 
 #[allow(clippy::wildcard_imports)]
 use super::*;
 
 const THEME_DEBOUNCE_MS: u128 = 50;
+const BACKEND_OFF: &str = "off";
+pub(crate) const SWATCH_CELL: f32 = 22.0;
+const SWATCH_LABEL: f32 = 10.0;
+const SWATCH_LABEL_LINE: f32 = 1.3;
+const SWATCH_GAP: f32 = 4.0;
+pub(crate) const SWATCH_STACK_GAP: f32 = crate::app::view::FLOAT_CLEAR;
+const SWATCH_LABEL_KEY: &str = "theme-bar-current";
 
 pub(super) fn tint_follows_wallpaper(backend: &str) -> bool {
-    !matches!(backend, "static" | "off")
+    !matches!(backend, "static" | BACKEND_OFF)
 }
 
 pub(super) fn dwell_gate(
@@ -67,7 +77,7 @@ impl App {
         };
         let (backend, pinned) =
             crate::app::update::theme::wallpaper_theme_state_for(self, &item.key);
-        if backend == "off" || (backend == "static" && !pinned) {
+        if backend == BACKEND_OFF || (backend == "static" && !pinned) {
             return self.reset_theme_preview(dt);
         }
         if self.theme.preview_target != Some(idx) {
@@ -78,7 +88,7 @@ impl App {
             self.theme.preview_target = Some(idx);
             if let Some(pal) = self.theme.cache.get(&idx).copied() {
                 self.set_swatch_for(idx);
-                self.start_fade(pal);
+                self.start_fade(&pal);
             } else {
                 self.request_preview_palette(idx);
             }
@@ -90,7 +100,8 @@ impl App {
     fn reset_theme_preview(&mut self, dt: f32) -> bool {
         if self.theme.preview_target.take().is_some() {
             self.theme.hover_since = None;
-            self.start_fade(self.theme.base_palette);
+            let palette = self.theme.base_palette;
+            self.start_fade(&palette);
             if self.theme.bar_open {
                 self.set_base_swatch();
             }
@@ -146,9 +157,9 @@ impl App {
         self.daemon.client.call("wall.shell_preview", serde_json::json!({ "path": image }));
     }
 
-    pub(super) fn start_fade(&mut self, to: Palette) {
+    pub(super) fn start_fade(&mut self, to: &Palette) {
         self.theme.fade_from = self.theme.palette;
-        self.theme.fade_to = to;
+        self.theme.fade_to = *to;
         self.theme.fade_t.run(0.0, 1.0);
     }
 
@@ -231,28 +242,72 @@ fn swatch_backend_label(backend: &str) -> &'static str {
     }
 }
 
-pub(crate) fn swatch_overlay(app: &App) -> Option<Element<'_, Message>> {
-    use iced::widget::{column, row, text};
-    if app.config.theme_backend() == "off" {
-        return None;
+fn swatch_caption(config: &Config) -> String {
+    crate::i18n::tr_args!(
+        SWATCH_LABEL_KEY,
+        backend => swatch_backend_label(&config.theme_backend())
+    )
+}
+
+pub(crate) fn swatch_available(config: &Config) -> bool {
+    config.theme_backend() != BACKEND_OFF
+}
+
+pub(crate) fn swatch_on(config: &Config) -> bool {
+    swatch_available(config) && config.flag_default_true(skwd_config::keys::filter_bar::SHOW_SWATCH)
+}
+
+pub(crate) const fn swatch_height(scale: f32) -> f32 {
+    (SWATCH_LABEL * SWATCH_LABEL_LINE + SWATCH_GAP + SWATCH_CELL) * scale
+}
+
+fn swatch_colours(app: &App) -> Vec<iced::Color> {
+    if !app.theme.swatch.is_empty() {
+        return app.theme.swatch.clone();
     }
-    let scale = app.config.ui_scale();
-    let sw = 22.0 * scale;
     let base = app.theme.base_palette;
-    let fallback = [
+    vec![
         base.primary,
         base.tertiary,
         base.surface_variant,
         base.surface_container,
         base.surface,
         base.outline,
-    ];
-    let colors =
-        if app.theme.swatch.is_empty() { fallback.as_slice() } else { app.theme.swatch.as_slice() };
-    let cells: Vec<Element<'_, Message>> = colors
-        .iter()
-        .map(|cell| {
-            let col = *cell;
+    ]
+}
+
+pub(crate) fn swatch_bounds(app: &App, config: &Config, viewport: (f32, f32)) -> Rectangle {
+    let scale = config.ui_scale();
+    let label = crate::frontend::ui::cached_line_width(
+        &swatch_caption(config),
+        SWATCH_LABEL * scale,
+        crate::frontend::ui::UI_FONT,
+    );
+    let strip = swatch_colours(app).len() as f32 * SWATCH_CELL * scale;
+    let size = Size::new(label.max(strip), swatch_height(scale));
+    let arrange = crate::app::view::arrange_bounds(app, config, viewport);
+    let stacked =
+        placement::present(config, Target::Arrange) && config.arrange_position().is_none();
+    let left = crate::app::view::float_left(app, config, viewport);
+    let rest = if stacked {
+        arrange.y - SWATCH_STACK_GAP
+    } else {
+        crate::app::view::rest_bottom(viewport.1)
+    };
+    let bottom = crate::app::view::clear_bottom(app, config, viewport, (left, rest), size);
+    placement::floated(config.swatch_position(), (left, bottom), size, viewport)
+}
+
+pub(crate) fn swatch_overlay(app: &App) -> Option<Element<'_, Message>> {
+    use iced::widget::{column, row, text};
+    if !swatch_on(&app.config) {
+        return None;
+    }
+    let scale = app.config.ui_scale();
+    let sw = SWATCH_CELL * scale;
+    let cells: Vec<Element<'_, Message>> = swatch_colours(app)
+        .into_iter()
+        .map(|col| {
             container(text(""))
                 .width(Length::Fixed(sw))
                 .height(Length::Fixed(sw))
@@ -266,24 +321,14 @@ pub(crate) fn swatch_overlay(app: &App) -> Option<Element<'_, Message>> {
         })
         .collect();
     let strip = row(cells).spacing(0);
-    let label = text(crate::i18n::tr_args!(
-        "theme-bar-current",
-        backend => swatch_backend_label(&app.config.theme_backend())
-    ))
-    .size(10.0 * scale)
-    .color(crate::frontend::ui::with_alpha(app.theme.palette.surface_text, 0.6));
-    let block = column(vec![label.into(), strip.into()]).spacing(4.0 * scale);
-    Some(
-        container(
-            iced::widget::mouse_area(block)
-                .on_press(Message::ToggleThemePanel)
-                .interaction(iced::mouse::Interaction::Pointer),
-        )
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .align_x(Alignment::Start)
-        .align_y(Alignment::End)
-        .padding(Padding { left: 20.0, bottom: 20.0, ..Padding::ZERO })
-        .into(),
-    )
+    let label = text(swatch_caption(&app.config))
+        .font(crate::frontend::ui::UI_FONT)
+        .size(SWATCH_LABEL * scale)
+        .line_height(iced::widget::text::LineHeight::Relative(SWATCH_LABEL_LINE))
+        .color(crate::frontend::ui::with_alpha(app.theme.palette.surface_text, 0.6));
+    let block = column(vec![label.into(), strip.into()]).spacing(SWATCH_GAP * scale);
+    let area = iced::widget::mouse_area(block)
+        .on_press(Message::ToggleThemePanel)
+        .interaction(iced::mouse::Interaction::Pointer);
+    Some(crate::app::view::pinned(app, Target::Swatch, area.into()))
 }

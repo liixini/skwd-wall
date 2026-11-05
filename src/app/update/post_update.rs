@@ -10,10 +10,12 @@ pub(super) fn finish(
     sync_settings_preview: bool,
     sync_filter_bar: bool,
 ) -> Task<Message> {
+    let task = Task::batch([task, super::settings::finish_settings_transition(app)]);
     if !app.panels.audio_volumes.is_empty()
         && app.panels.audio.is_none()
         && app.panels.effects.is_none()
-        && !(app.panels.settings.open && app.panels.settings.tab == "displays")
+        && !(app.panels.settings.open
+            && app.panels.settings.tab == crate::frontend::settings::place::WALLPAPERS)
     {
         app.panels.audio_volumes.clear();
         app.call_tracked("wall.outputs", serde_json::json!({}), Pending::Outputs);
@@ -25,9 +27,9 @@ pub(super) fn finish(
     let hard_overlay = app.picker_obscured();
     let (design_mode, scene_hidden) = scene_visibility(
         app.panels.settings.open,
-        &app.panels.settings.tab,
-        app.panels.settings.section,
+        app.panels.settings.open_section,
         hard_overlay,
+        app.panels.settings.layout_studio,
     );
     let demo_hidden =
         app.runtime_state.demo.as_ref().is_some_and(|session| session.picker_suppressed);
@@ -52,6 +54,7 @@ pub(super) fn finish(
         });
         app.scene.set_filter_bar_footprint(bar_footprint);
     }
+    app.sync_browser_media(std::time::Instant::now());
     app.schedule_frame();
     if sync_settings_preview { Task::batch([task, app.sync_settings_preview()]) } else { task }
 }

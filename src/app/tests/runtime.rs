@@ -234,19 +234,34 @@ fn apply_error_messages() {
 
 #[test]
 fn scene_visibility_tabs() {
-    let (dm, hidden) = scene_visibility(false, "picker", 1, false);
+    use crate::frontend::settings::SectionId;
+    let layout = Some(SectionId::new("picker", "settings-section-layout-presets"));
+    let (dm, hidden) = scene_visibility(false, layout, false, true);
     assert!(!dm && !hidden);
 
-    let (dm, hidden) = scene_visibility(true, "picker", 1, false);
+    let (dm, hidden) = scene_visibility(true, layout, false, true);
     assert!(dm && !hidden);
 
-    let (dm, hidden) = scene_visibility(true, "picker", 0, false);
+    let (dm, hidden) = scene_visibility(
+        true,
+        Some(SectionId::new("picker", "settings-section-general")),
+        false,
+        true,
+    );
     assert!(!dm && hidden);
 
-    let (dm, hidden) = scene_visibility(true, "playback", 1, false);
+    let (dm, hidden) = scene_visibility(
+        true,
+        Some(SectionId::new("playback", "settings-section-layout-presets")),
+        false,
+        true,
+    );
     assert!(!dm && hidden);
 
-    let (dm, hidden) = scene_visibility(true, "picker", 1, true);
+    let (dm, hidden) = scene_visibility(true, None, false, true);
+    assert!(!dm && hidden);
+
+    let (dm, hidden) = scene_visibility(true, layout, true, true);
     assert!(!dm && hidden);
 }
 
@@ -482,7 +497,7 @@ fn browser_search_generation_survives_closing_and_reopening() {
 }
 
 #[test]
-fn browser_preview_waits_for_prepared() {
+fn cached_preview_is_adopted() {
     let mut app = test_app();
     let mut browser = Browser::new(Source::Wallhaven);
     browser.session.items.push(browser_item("w1"));
@@ -490,10 +505,18 @@ fn browser_preview_waits_for_prepared() {
     app.source_browser.browser = Some(browser);
 
     app.on_result(
-        Pending::BrowserPreview { source: Source::Wallhaven, id: String::from("w1") },
+        Pending::BrowserPreview {
+            source: Source::Wallhaven,
+            id: String::from("w1"),
+            url: "https://x/w1".into(),
+        },
         &json!({"status": "ready", "path": "/cache/unprepared.png"}),
     );
-    assert!(app.source_browser.browser.as_ref().unwrap().session.items[0].preview_path.is_none());
+    assert_eq!(
+        app.source_browser.browser.as_ref().unwrap().session.items[0].preview_path.as_deref(),
+        Some("/cache/unprepared.png")
+    );
+    app.sync_browser_media(Instant::now());
 
     app.on_event(
         wall_proto::ev::PREVIEW_READY,
@@ -506,7 +529,7 @@ fn browser_preview_waits_for_prepared() {
 }
 
 #[test]
-fn stale_browser_preview_discarded() {
+fn stale_preview_stays_cached() {
     let mut app = test_app();
     let mut browser = Browser::new(Source::Wallhaven);
     browser.session.items.push(browser_item("current"));
@@ -522,7 +545,7 @@ fn stale_browser_preview_discarded() {
         &json!({"id": "stale", "path": preview.to_string_lossy()}),
     );
 
-    assert!(!preview.exists());
+    assert!(preview.exists());
     assert!(app.source_browser.browser.as_ref().unwrap().session.items[1].preview_path.is_none());
 }
 

@@ -1,3 +1,7 @@
+pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+}
+
 pub fn smoothstep(t: f32) -> f32 {
     let t = t.clamp(0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
@@ -148,10 +152,6 @@ impl Tween {
         Self { x, target: x, rate: 1000.0 / ms.max(1.0) }
     }
 
-    pub fn set_duration_ms(&mut self, ms: f32) {
-        self.rate = 1000.0 / ms.max(1.0);
-    }
-
     #[cfg(test)]
     pub fn duration_ms(&self) -> f32 {
         1000.0 / self.rate
@@ -256,5 +256,65 @@ impl Spring {
 
     pub fn set_zeta(&mut self, zeta: f32) {
         self.c = 2.0 * self.k.sqrt() * zeta.max(0.05);
+    }
+}
+
+const SOLVE_STEPS: usize = 8;
+const SOLVE_EPSILON: f32 = 1e-5;
+const SOLVE_HALVES: usize = 24;
+const CUBIC: f32 = 3.0;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Bezier(pub f32, pub f32, pub f32, pub f32);
+
+pub const EASE: Bezier = Bezier(0.2, 0.8, 0.2, 1.0);
+
+pub fn linear(age: f32, delay: f32, duration: f32) -> f32 {
+    ((age - delay) / duration).clamp(0.0, 1.0)
+}
+
+pub fn eased(age: f32, delay: f32, duration: f32) -> f32 {
+    EASE.at(linear(age, delay, duration))
+}
+
+impl Bezier {
+    fn axis(t: f32, first: f32, second: f32) -> f32 {
+        let rest = 1.0 - t;
+        CUBIC * rest * rest * t * first + CUBIC * rest * t * t * second + t * t * t
+    }
+
+    fn slope(t: f32, first: f32, second: f32) -> f32 {
+        let rest = 1.0 - t;
+        CUBIC * (rest * rest * first + 2.0 * rest * t * (second - first) + t * t * (1.0 - second))
+    }
+
+    pub fn at(self, x: f32) -> f32 {
+        let x = x.clamp(0.0, 1.0);
+        if x <= 0.0 || x >= 1.0 {
+            return x;
+        }
+        let Self(x1, y1, x2, y2) = self;
+        let mut t = x;
+        for _ in 0..SOLVE_STEPS {
+            let error = Self::axis(t, x1, x2) - x;
+            if error.abs() < SOLVE_EPSILON {
+                return Self::axis(t, y1, y2);
+            }
+            let slope = Self::slope(t, x1, x2);
+            if slope.abs() < SOLVE_EPSILON {
+                break;
+            }
+            t = (t - error / slope).clamp(0.0, 1.0);
+        }
+        let (mut low, mut high) = (0.0, 1.0);
+        for _ in 0..SOLVE_HALVES {
+            t = f32::midpoint(low, high);
+            if Self::axis(t, x1, x2) < x {
+                low = t;
+            } else {
+                high = t;
+            }
+        }
+        Self::axis(t, y1, y2)
     }
 }

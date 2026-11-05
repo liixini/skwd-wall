@@ -3,38 +3,96 @@ use crate::i18n::tr;
 
 use super::Builder;
 
+const PERCENT_UNIT: &str = "%";
+
+#[expect(clippy::too_many_lines, reason = "Position settings composition")]
 pub(super) fn tab_position(builder: &mut Builder<'_>) {
+    use crate::contracts::settings::schema::setting::selector as sel;
+
+    builder.card(
+        crate::i18n::text("settings-position-frame-card"),
+        tr("settings-position-frame-card-desc"),
+    );
+    builder.toggle_setting(
+        tr("settings-position-frame-enabled-label"),
+        tr("settings-position-frame-enabled-desc"),
+        sel::FRAME_ENABLED,
+    );
+    builder.num_setting(
+        tr("settings-position-frame-x-label"),
+        tr("settings-position-frame-x-desc"),
+        sel::FRAME_X,
+        PERCENT_UNIT,
+    );
+    builder.num_setting(
+        tr("settings-position-frame-y-label"),
+        tr("settings-position-frame-y-desc"),
+        sel::FRAME_Y,
+        PERCENT_UNIT,
+    );
+    builder.num_setting(
+        tr("settings-position-frame-width-label"),
+        tr("settings-position-frame-width-desc"),
+        sel::FRAME_WIDTH,
+        PERCENT_UNIT,
+    );
+    builder.num_setting(
+        tr("settings-position-frame-height-label"),
+        tr("settings-position-frame-height-desc"),
+        sel::FRAME_HEIGHT,
+        PERCENT_UNIT,
+    );
     picker_position(
         builder,
-        tr("settings-position-slices-card"),
+        crate::i18n::text("settings-position-slices-card"),
         keys::selector::SLICE_STAGE_X,
         keys::selector::SLICE_STAGE_Y,
     );
     picker_position(
         builder,
-        tr("settings-position-hex-card"),
+        crate::i18n::text("settings-position-hex-card"),
         keys::selector::HEX_STAGE_X,
         keys::selector::HEX_STAGE_Y,
     );
     picker_position(
         builder,
-        tr("settings-position-wall-card"),
+        crate::i18n::text("settings-position-wall-card"),
         keys::selector::GRID_STAGE_X,
         keys::selector::GRID_STAGE_Y,
     );
     picker_position(
         builder,
-        tr("settings-position-sandy-card"),
+        crate::i18n::text("settings-position-sandy-card"),
         keys::selector::SANDY_STAGE_X,
         keys::selector::SANDY_STAGE_Y,
     );
     picker_position(
         builder,
-        tr("settings-position-hand-card"),
+        crate::i18n::text("settings-position-hand-card"),
         keys::selector::HAND_STAGE_X,
         keys::selector::HAND_STAGE_Y,
     );
-    builder.card(tr("settings-filter-position-card"), tr("settings-filter-position-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-filter-position-card"),
+        tr("settings-filter-position-card-desc"),
+    );
+    builder.toggle_setting(
+        tr("settings-filter-position-enabled-label"),
+        tr("settings-filter-position-enabled-desc"),
+        crate::contracts::settings::schema::setting::filter_bar::POSITION_ENABLED,
+    );
+    builder.num_setting(
+        tr("settings-filter-position-x-label"),
+        tr("settings-filter-position-x-desc"),
+        crate::contracts::settings::schema::setting::filter_bar::POSITION_X,
+        PERCENT_UNIT,
+    );
+    builder.num_setting(
+        tr("settings-filter-position-y-label"),
+        tr("settings-filter-position-y-desc"),
+        crate::contracts::settings::schema::setting::filter_bar::POSITION_Y,
+        PERCENT_UNIT,
+    );
     builder.num_setting(
         tr("settings-filter-offset-x-label"),
         tr("settings-filter-offset-x-desc"),
@@ -48,8 +106,25 @@ pub(super) fn tab_position(builder: &mut Builder<'_>) {
         "px",
     );
     builder.card(
-        tr("settings-selector-tag-cloud-position-card"),
+        crate::i18n::text("settings-selector-tag-cloud-position-card"),
         tr("settings-selector-tag-cloud-position-card-desc"),
+    );
+    builder.toggle_setting(
+        tr("settings-selector-tag-position-enabled-label"),
+        tr("settings-selector-tag-position-enabled-desc"),
+        sel::TAG_CLOUD_POSITION_ENABLED,
+    );
+    builder.num_setting(
+        tr("settings-selector-tag-position-x-label"),
+        tr("settings-selector-tag-position-x-desc"),
+        sel::TAG_CLOUD_POSITION_X,
+        PERCENT_UNIT,
+    );
+    builder.num_setting(
+        tr("settings-selector-tag-position-y-label"),
+        tr("settings-selector-tag-position-y-desc"),
+        sel::TAG_CLOUD_POSITION_Y,
+        PERCENT_UNIT,
     );
     builder.num(
         tr("settings-selector-tag-offset-x-label"),
@@ -65,7 +140,7 @@ pub(super) fn tab_position(builder: &mut Builder<'_>) {
     );
 }
 
-fn picker_position(builder: &mut Builder<'_>, title: &'static str, x: &str, y: &str) {
+fn picker_position(builder: &mut Builder<'_>, title: crate::i18n::Text, x: &str, y: &str) {
     builder.card(title, tr("settings-position-picker-card-desc"));
     builder.num(
         tr("settings-position-horizontal-label"),

@@ -1,5 +1,8 @@
 use std::sync::Arc;
 
+pub const CHAMFER: u32 = 262_144;
+pub const INSTANCE_FLAGS: usize = 3;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct InstanceRaw {

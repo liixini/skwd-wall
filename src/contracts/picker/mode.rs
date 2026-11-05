@@ -1,3 +1,5 @@
+use skwd_config::corners::{self, CornerKeys};
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Mode {
     Slices,
@@ -46,6 +48,17 @@ impl Mode {
             Self::Sandy => "sandy",
             Self::Hand => "hand",
             Self::Collection => "collection",
+        }
+    }
+
+    pub const fn corners(self) -> Option<&'static CornerKeys> {
+        match self {
+            Self::Slices | Self::Sandy => Some(&corners::SLICES),
+            Self::Depth => Some(&corners::DEPTH),
+            Self::Grid => Some(&corners::GRID),
+            Self::Hand => Some(&corners::HAND),
+            Self::Collection => Some(&corners::COLLECTION),
+            Self::Hex => None,
         }
     }
 }

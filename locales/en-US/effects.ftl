@@ -89,4 +89,3 @@ effects-activity-inactive-desc = Only wallpaper assignments can be changed for a
 effects-activity-unavailable = The selected Activity is unavailable. Choose an existing Activity and try again.
 effects-activity-saved = Saved for { $activity }.
 effects-activity-unassigned = No Skwd wallpaper assigned
-effects-activity-preparing = Preparing wallpaper for { $activity }.

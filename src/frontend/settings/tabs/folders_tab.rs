@@ -13,12 +13,14 @@ pub fn flash_key(key: &str) -> String {
 pub(super) fn tab_paths(builder: &mut Builder<'_>) {
     for kind in [FolderKind::Source, FolderKind::Excluded] {
         let (card, desc) = match kind {
-            FolderKind::Source => {
-                (tr("settings-paths-source-card"), tr("settings-paths-source-card-desc"))
-            }
-            FolderKind::Excluded => {
-                (tr("settings-paths-excluded-card"), tr("settings-paths-excluded-card-desc"))
-            }
+            FolderKind::Source => (
+                crate::i18n::text("settings-paths-source-card"),
+                tr("settings-paths-source-card-desc"),
+            ),
+            FolderKind::Excluded => (
+                crate::i18n::text("settings-paths-excluded-card"),
+                tr("settings-paths-excluded-card-desc"),
+            ),
         };
         builder.card(card, desc);
     }
@@ -48,7 +50,7 @@ pub fn folder_ledger(
             FolderRow { index, key: format!("{}.{index}", kind.key()), path, tag, note }
         })
         .collect();
-    FolderLedger { kind, rows }
+    FolderLedger { rows }
 }
 
 type Tag = Option<(String, TagTone)>;

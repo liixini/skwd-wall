@@ -1,3 +1,8 @@
+settings-integrations-caelestia-card = Caelestia
+settings-integrations-caelestia-card-desc = Let Skwd render wallpapers selected in either app.
+settings-integrations-caelestia-sync-label = Sync Caelestia wallpapers
+settings-integrations-caelestia-sync-desc = Skwd renders wallpapers selected in either app. Caelestia selections apply to unlocked displays.
+
 settings-integrations-plasma-card = KDE Plasma
 settings-integrations-lock-mode-label = Lock-screen wallpaper
 settings-integrations-lock-mode-desc = Unmanaged leaves Plasma alone. Static always uses the image below. Follow tracks the most recently applied wallpaper.

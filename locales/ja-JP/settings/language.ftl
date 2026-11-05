@@ -1,5 +1,3 @@
-settings-tab-language = 言語
-settings-tab-note-language = ピッカーと設定で使う言語を選びます。
 settings-language-card = インターフェースの言語
 settings-language-card-desc = 変更はすぐに反映され、次回の起動時にも保持されます。
 settings-language-choice-label = 言語

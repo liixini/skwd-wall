@@ -1,0 +1,9 @@
+pub const SECONDARY: &[&str] = &["secondary"];
+pub const SECONDARY_TEXT: &[&str] = &["secondaryText", "on_secondary"];
+pub const TERTIARY_TEXT: &[&str] = &["tertiaryText", "on_tertiary"];
+pub const ERROR: &[&str] = &["error"];
+pub const ERROR_TEXT: &[&str] = &["errorText", "on_error"];
+pub const SURFACE_VARIANT_TEXT: &[&str] = &["surfaceVariantText", "on_surface_variant"];
+pub const SHADOW: &[&str] = &["shadow"];
+pub const HOVER: &[&str] = &["hover"];
+pub const HOVER_TEXT: &[&str] = &["hoverText", "on_hover"];

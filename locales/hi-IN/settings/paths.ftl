@@ -1,6 +1,5 @@
 settings-paths-excluded-card = बाहर रखे गए फ़ोल्डर
 settings-paths-excluded-card-desc = छवि और वीडियो लाइब्रेरी में इन फ़ोल्डरों और इनके सबफ़ोल्डरों को छोड़ें। सहेजा गया मेटाडेटा बना रहता है।
-settings-paths-path-placeholder = फ़ोल्डर पथ
 settings-paths-source-card = वॉलपेपर फ़ोल्डर
 settings-paths-source-card-desc = इन फ़ोल्डरों और उनके सबफ़ोल्डरों में तस्वीरें और वीडियो खोजें। बदलाव होने पर लाइब्रेरी अपने आप अपडेट होती है।
 settings-paths-folder-choose-action = फ़ोल्डर चुनें
@@ -24,4 +23,3 @@ settings-paths-removed-excluded = बहिष्कृत फ़ोल्डर
 settings-paths-watch-polling = पोलिंग
 settings-paths-watch-error = पढ़ा नहीं जा सकता
 settings-paths-watch-error-note = जाँचें कि यह माउंट है और पढ़ा जा सकता है। पोलिंग फिर से कोशिश करती रहती है।
-settings-paths-excluded-footer = बहिष्कृत फ़ोल्डर कभी स्कैन नहीं होते, इसलिए कोई प्रोफ़ाइल उन्हें नहीं दिखा सकती। फ़ोल्डर रखकर सार्वजनिक रूप से छिपाने के लिए लाइब्रेरी › प्रोफ़ाइल का उपयोग करें।

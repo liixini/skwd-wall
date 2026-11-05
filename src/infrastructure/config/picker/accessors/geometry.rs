@@ -2,7 +2,22 @@ use serde_json::Value;
 
 use super::super::Config;
 
+const PERCENT: f32 = 100.0;
+
 impl Config {
+    pub fn picker_frame(&self) -> Option<[f32; 4]> {
+        use skwd_config::schema::setting::selector as sel;
+
+        if !sel::FRAME_ENABLED.read(self.root()) {
+            return None;
+        }
+        let width = sel::FRAME_WIDTH.read(self.root()) as f32 / PERCENT;
+        let height = sel::FRAME_HEIGHT.read(self.root()) as f32 / PERCENT;
+        let x = (sel::FRAME_X.read(self.root()) as f32 / PERCENT).min(1.0 - width);
+        let y = (sel::FRAME_Y.read(self.root()) as f32 / PERCENT).min(1.0 - height);
+        Some([x, y, width, height])
+    }
+
     pub fn grid_layout(&self) -> String {
         let value = skwd_config::schema::setting::selector::GRID_LAYOUT.read(self.root());
         match value.as_str() {

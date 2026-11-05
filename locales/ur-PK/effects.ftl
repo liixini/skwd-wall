@@ -89,4 +89,3 @@ effects-activity-inactive-desc = غیر فعال سرگرمی کے لیے صرف
 effects-activity-unavailable = منتخب کردہ سرگرمی دستیاب نہیں ہے۔ موجودہ سرگرمی منتخب کرکے دوبارہ کوشش کریں۔
 effects-activity-saved = { $activity } کے لیے محفوظ کر دیا گیا۔
 effects-activity-unassigned = کوئی Skwd وال پیپر تفویض نہیں کیا گیا
-effects-activity-preparing = { $activity } کے لیے وال پیپر تیار کیا جا رہا ہے۔

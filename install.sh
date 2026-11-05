@@ -9,7 +9,6 @@ BINDIR="${SKWD_BINDIR:-$HOME/.local/bin}"
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
-LIBDIR="${SKWD_PAPER_LIBDIR:-$(dirname "$BINDIR")/lib/skwd-paper}"
 INSTALLER_CONTRACT=skwd-portable-suite-v1
 INSTALLER_MAX_VALIDITY=2678400
 INSTALLER_CLOCK_SKEW=300
@@ -407,7 +406,7 @@ fetch_component paper
 fetch_component lens
 
 [ -x "$temporary/wall/usr/bin/skwd-wall-v2" ] || die "unexpected Wall archive layout"
-for binary in skwd-walld skwd-wall-scan skwd-wall-effects skwd-helm; do
+for binary in skwd-walld skwd-wall-scan skwd-wall-effects skwd-wall-draw skwd-helm; do
     [ -x "$temporary/deck/usr/bin/$binary" ] || die "Deck archive is missing $binary"
 done
 [ -f "$temporary/deck/usr/lib/systemd/user/skwd-walld.service" ] \
@@ -415,8 +414,6 @@ done
 for binary in skwd-paper-v2 skwd-wall-still skwd-wall-vk; do
     [ -x "$temporary/paper/usr/bin/$binary" ] || die "Paper archive is missing $binary"
 done
-[ -x "$temporary/paper/usr/lib/skwd-paper/skwd-paper-tinier" ] \
-    || die "Paper archive is missing skwd-paper-tinier"
 [ -x "$temporary/lens/usr/bin/skwd-lens" ] || die "Lens archive is missing skwd-lens"
 
 for component in wall deck paper lens; do
@@ -437,6 +434,7 @@ for binary in \
     skwd-walld \
     skwd-wall-scan \
     skwd-wall-effects \
+    skwd-wall-draw \
     skwd-helm \
     skwd-paper-v2 \
     skwd-wall-still \
@@ -445,7 +443,7 @@ for binary in \
 do
     case "$binary" in
         skwd-wall-v2) source="$temporary/wall/usr/bin/$binary" ;;
-        skwd-walld|skwd-wall-scan|skwd-wall-effects|skwd-helm)
+        skwd-walld|skwd-wall-scan|skwd-wall-effects|skwd-wall-draw|skwd-helm)
             source="$temporary/deck/usr/bin/$binary"
             ;;
         skwd-paper-v2|skwd-wall-still|skwd-wall-vk)
@@ -455,8 +453,6 @@ do
     esac
     prepare_file "$source" "$BINDIR/$binary" 755
 done
-prepare_file "$temporary/paper/usr/lib/skwd-paper/skwd-paper-tinier" \
-    "$LIBDIR/skwd-paper-tinier" 755
 
 desktop="$temporary/wall/usr/share/applications/skwd-wall-v2.desktop"
 if [ -f "$desktop" ]; then

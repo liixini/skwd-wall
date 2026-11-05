@@ -1,5 +1,9 @@
 pub use crate::contracts::picker::Mode;
 
+use crate::contracts::rendering::{CHAMFER, INSTANCE_FLAGS, InstanceRaw};
+use crate::contracts::settings::DEFAULT_CORNER;
+use crate::contracts::settings::corners::{CornerStyle, Corners};
+
 #[derive(Debug, Clone, Copy)]
 pub struct ExtraParams {
     pub depth: DepthParams,
@@ -65,12 +69,19 @@ pub struct CollectionParams {
     pub spacing: f32,
     pub count: f32,
     pub tilt: f32,
-    pub corners: f32,
+    pub corners: CardCorners,
     pub speed: f32,
 }
 impl Default for CollectionParams {
     fn default() -> Self {
-        Self { size: 42.0, spacing: 17.0, count: 7.0, tilt: 52.0, corners: 2.0, speed: 100.0 }
+        Self {
+            size: 42.0,
+            spacing: 17.0,
+            count: 7.0,
+            tilt: 52.0,
+            corners: CardCorners::round(2.0),
+            speed: 100.0,
+        }
     }
 }
 impl CollectionParams {
@@ -79,7 +90,7 @@ impl CollectionParams {
         self.spacing = lerp(self.spacing, target.spacing, amt);
         self.count = lerp(self.count, target.count, amt);
         self.tilt = lerp(self.tilt, target.tilt, amt);
-        self.corners = lerp(self.corners, target.corners, amt);
+        self.corners.morph_toward(&target.corners, amt);
         self.speed = lerp(self.speed, target.speed, amt);
     }
     fn settled_to(&self, target: &Self) -> bool {
@@ -87,7 +98,7 @@ impl CollectionParams {
             && feq(self.spacing, target.spacing)
             && feq(self.count, target.count)
             && feq(self.tilt, target.tilt)
-            && feq(self.corners, target.corners)
+            && self.corners.settled_to(&target.corners)
             && feq(self.speed, target.speed)
     }
 }
@@ -465,9 +476,7 @@ impl HexParams {
     }
 }
 
-pub(crate) fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    a + (b - a) * t
-}
+pub(crate) use crate::frontend::animation::lerp;
 
 pub(crate) fn feq(a: f32, b: f32) -> bool {
     (a - b).abs() < 0.05
@@ -496,7 +505,7 @@ pub struct SliceParams {
     pub skew: f32,
     pub edge_tilt: f32,
     pub visible_count: usize,
-    pub corners: [f32; 4],
+    pub corners: CardCorners,
     pub wobble: bool,
     pub wobble_strength: f32,
 }
@@ -540,9 +549,7 @@ impl SliceParams {
         self.visible_count = target.visible_count;
         self.wobble = target.wobble;
         self.wobble_strength = lerp(self.wobble_strength, target.wobble_strength, amt);
-        for idx in 0..4 {
-            self.corners[idx] = lerp(self.corners[idx], target.corners[idx], amt);
-        }
+        self.corners.morph_toward(&target.corners, amt);
     }
 
     pub fn settled_to(&self, target: &SliceParams) -> bool {
@@ -559,7 +566,7 @@ impl SliceParams {
             && self.visible_count == target.visible_count
             && self.wobble == target.wobble
             && feq(self.wobble_strength, target.wobble_strength)
-            && self.corners.iter().zip(target.corners).all(|(a, b)| feq(*a, b))
+            && self.corners.settled_to(&target.corners)
     }
 }
 
@@ -571,7 +578,7 @@ pub struct GridParams {
     pub thumb_h: f32,
     pub gap_x: f32,
     pub gap_y: f32,
-    pub corner_radius: f32,
+    pub corners: CardCorners,
     pub border_width: f32,
     pub layout: GridLayout,
     pub stagger: f32,
@@ -585,6 +592,8 @@ pub struct GridParams {
     pub stage: StageParams,
 }
 
+const GRID_FIT_EPSILON: f32 = 0.01;
+
 impl Default for GridParams {
     fn default() -> Self {
         Self {
@@ -594,7 +603,7 @@ impl Default for GridParams {
             thumb_h: 169.0,
             gap_x: 16.0,
             gap_y: 16.0,
-            corner_radius: 12.0,
+            corners: CardCorners::round(DEFAULT_CORNER as f32),
             border_width: 1.0,
             layout: GridLayout::Uniform,
             stagger: 0.5,
@@ -622,7 +631,7 @@ impl GridParams {
         self.thumb_h = lerp(self.thumb_h, target.thumb_h, amt);
         self.gap_x = lerp(self.gap_x, target.gap_x, amt);
         self.gap_y = lerp(self.gap_y, target.gap_y, amt);
-        self.corner_radius = lerp(self.corner_radius, target.corner_radius, amt);
+        self.corners.morph_toward(&target.corners, amt);
         self.border_width = lerp(self.border_width, target.border_width, amt);
         self.layout = target.layout;
         self.stagger = lerp(self.stagger, target.stagger, amt);
@@ -643,7 +652,7 @@ impl GridParams {
             && feq(self.thumb_h, target.thumb_h)
             && feq(self.gap_x, target.gap_x)
             && feq(self.gap_y, target.gap_y)
-            && feq(self.corner_radius, target.corner_radius)
+            && self.corners.settled_to(&target.corners)
             && feq(self.border_width, target.border_width)
             && self.layout == target.layout
             && feq(self.stagger, target.stagger)
@@ -697,6 +706,15 @@ impl GridParams {
 
     pub fn span_h(&self, rows: usize) -> f32 {
         self.thumb_h * rows as f32 + self.gap_y * rows.saturating_sub(1) as f32
+    }
+
+    pub fn columns_in(&self, width: f32) -> usize {
+        ((width + self.gap_x + GRID_FIT_EPSILON) / self.cell_w().max(1.0)).floor().max(1.0) as usize
+    }
+
+    pub fn rows_in(&self, height: f32) -> usize {
+        ((height + self.gap_y + GRID_FIT_EPSILON) / self.cell_h().max(1.0)).floor().max(1.0)
+            as usize
     }
 }
 
@@ -791,6 +809,63 @@ pub fn sheared_contains(
     let u = (by * x + sx * y) / det;
     let v = (ty * x + bx * y) / det;
     u.abs() <= 1.0 && v.abs() <= 1.0
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct CardCorners {
+    pub sizes: [f32; 4],
+    pub cut: bool,
+}
+
+impl CardCorners {
+    pub fn read(corners: &Corners) -> Self {
+        Self {
+            sizes: corners.sizes().map(|size| size.max(0.0) as f32),
+            cut: corners.style == CornerStyle::Chamfered,
+        }
+    }
+
+    pub fn round(radius: f32) -> Self {
+        Self { sizes: [radius; 4], cut: false }
+    }
+
+    pub fn scaled(self, factor: f32) -> Self {
+        Self { sizes: self.sizes.map(|size| size * factor), ..self }
+    }
+
+    pub fn clamped(self, limit: f32) -> Self {
+        Self { sizes: self.sizes.map(|size| size.clamp(0.0, limit.max(0.0))), ..self }
+    }
+
+    pub fn sheared(self, w: f32, h: f32, skew: f32, edge_tilt: f32) -> Self {
+        Self { sizes: slice_clamped_corners(self.sizes, w, h, skew, edge_tilt), ..self }
+    }
+
+    pub fn square(&self) -> bool {
+        self.sizes.iter().all(|size| feq(*size, 0.0))
+    }
+
+    pub fn stamp(self, inst: &mut InstanceRaw) {
+        inst.radii = self.sizes;
+        if self.cut {
+            inst.misc[INSTANCE_FLAGS] |= CHAMFER;
+        } else {
+            inst.misc[INSTANCE_FLAGS] &= !CHAMFER;
+        }
+    }
+
+    pub fn morph_toward(&mut self, target: &Self, amt: f32) {
+        for (size, goal) in self.sizes.iter_mut().zip(target.sizes) {
+            *size = lerp(*size, goal, amt);
+        }
+        if !target.square() || self.square() {
+            self.cut = target.cut;
+        }
+    }
+
+    pub fn settled_to(&self, target: &Self) -> bool {
+        self.cut == target.cut && self.sizes.iter().zip(target.sizes).all(|(a, b)| feq(*a, b))
+    }
 }
 
 pub fn corner_clamp(corners: [f32; 4], flat_w: f32, slant_len: f32) -> [f32; 4] {

@@ -6,7 +6,7 @@ use glam::{Mat4, Vec3};
 use crate::frontend::scene::hand::{
     self, Axis, CROP_ZOOM, Camera, GHOST_LEVELS, PAD, Pose, Quad, Rot, Y,
 };
-use crate::frontend::scene::layout::{HexShape, Hit};
+use crate::frontend::scene::layout::{CardCorners, HexShape, Hit};
 use crate::frontend::scene::{Chrome, InstanceRaw};
 use crate::rendering::scene::atlas::AtlasMap;
 use crate::rendering::scene::{BACKDROP, BACKFACE, GHOST, MUTED, PROJECTED, RIBBON_COLUMNS};
@@ -18,12 +18,18 @@ pub(super) struct Stage {
     pub(super) k: f32,
     pub(super) hw: f32,
     pub(super) hh: f32,
-    pub(super) radius: f32,
+    pub(super) corners: CardCorners,
     pub(super) skew: f32,
     pub(super) cam: Camera,
     pub(super) rig: (f32, f32),
     pub(super) parallax: (f32, f32),
     pub(super) viewport: (f32, f32),
+}
+
+impl Stage {
+    fn fitted(&self, hw: f32, hh: f32) -> CardCorners {
+        self.corners.clamped(hw.min(hh) - 1.0)
+    }
 }
 
 struct Draw {
@@ -52,11 +58,11 @@ impl SceneCore {
         let rig = (self.hand.rig_x.x, self.hand.rig_y.x);
         let hw = hp.card_w * k * 0.5;
         let hh = hp.card_h * k * 0.5;
-        Stage {
+        let mut stage = Stage {
             k,
             hw,
             hh,
-            radius: (hp.radius * k).clamp(0.0, (hw.min(hh) - 1.0).max(0.0)),
+            corners: hp.corners.scaled(k),
             skew: hp.skew * k,
             cam: Camera {
                 d: hp.perspective * k,
@@ -69,7 +75,9 @@ impl SceneCore {
             rig,
             parallax: hand::parallax(rig.0, rig.1, k),
             viewport: (vw, vh),
-        }
+        };
+        stage.corners = stage.fitted(hw, hh);
+        stage
     }
 
     pub(super) fn rebuild_hand(
@@ -216,6 +224,31 @@ impl SceneCore {
         m
     }
 
+    fn hand_body(
+        &mut self,
+        ctx: &mut RebuildCtx<'_>,
+        wanted: &mut HashSet<usize>,
+        store: usize,
+        quad: &Quad,
+        extent: (f32, f32),
+        stage: &Stage,
+    ) -> InstanceRaw {
+        let (hw, hh) = extent;
+        let [cx, cy, _, _] = quad.bounds();
+        let mut inst = self.body_instance(
+            ctx,
+            wanted,
+            store,
+            [cx, cy, hw, hh],
+            stage.fitted(hw, hh),
+            stage.skew,
+            0.0,
+            true,
+        );
+        inst.shape[1] = stage.skew.abs() * 0.5;
+        inst
+    }
+
     fn hand_quad(
         &mut self,
         ctx: &mut RebuildCtx<'_>,
@@ -229,18 +262,7 @@ impl SceneCore {
         extent: (f32, f32),
     ) -> InstanceRaw {
         let (hw, hh) = extent;
-        let [cx, cy, _, _] = quad.bounds();
-        let mut inst = self.body_instance(
-            ctx,
-            wanted,
-            store,
-            [cx, cy, hw, hh],
-            [stage.radius.min((hw.min(hh) - 1.0).max(0.0)); 4],
-            stage.skew,
-            0.0,
-            true,
-        );
-        inst.shape[1] = stage.skew.abs() * 0.5;
+        let mut inst = self.hand_body(ctx, wanted, store, quad, extent, stage);
         if inst.misc[0] > 0 {
             let [x, y, w, h] = inst.crop;
             let nw = w / CROP_ZOOM;
@@ -273,7 +295,6 @@ impl SceneCore {
         let [cx, cy, _, _] = quad.bounds();
         let mut inst = InstanceRaw {
             rect: [cx, cy, stage.hw, stage.hh],
-            radii: [stage.radius; 4],
             fill,
             border: [1.0, 1.0, 1.0, 0.17 * seam],
             params: [stage.skew, 1.0, opacity, 0.0],
@@ -281,6 +302,7 @@ impl SceneCore {
             misc: [0, 0, 0, PROJECTED | if columns { RIBBON_COLUMNS } else { 0 }],
             ..Default::default()
         };
+        stage.corners.stamp(&mut inst);
         set_quad(&mut inst, quad, locals);
         inst
     }
@@ -505,9 +527,9 @@ impl SceneCore {
             return;
         }
         let (cx, cy, hw, hh) = ((x0 + x1) * 0.5, (y0 + y1) * 0.5, (x1 - x0) * 0.5, (y1 - y0) * 0.5);
-        self.card.pending_back = Some(
-            self.make_back_panel(ctx, cur_store, cx, cy, hw, hh, 0.0, 0.0, [0.0; 4], progress),
-        );
+        let corners = self.hand_stage().corners;
+        self.card.pending_back =
+            Some(self.make_back_panel(ctx, cur_store, cx, cy, hw, hh, 0.0, 0.0, corners, progress));
     }
 
     fn hand_slat(
@@ -656,17 +678,7 @@ impl SceneCore {
                 (inst, quad, slat.idx)
             }
             Face::Slice { store, column } | Face::Back { store, column } => {
-                let [cx, cy, _, _] = quad.bounds();
-                let mut inst = self.body_instance(
-                    ctx,
-                    wanted,
-                    store,
-                    [cx, cy, hw, hh],
-                    [stage.radius.min((hw.min(hh) - 1.0).max(0.0)); 4],
-                    stage.skew,
-                    0.0,
-                    true,
-                );
+                let mut inst = self.hand_body(ctx, wanted, store, &quad, (hw, hh), stage);
                 if column {
                     inst.misc[0] = 3;
                     inst.misc[1] = 0;
@@ -676,7 +688,6 @@ impl SceneCore {
                 } else if inst.misc[0] > 0 {
                     inst.crop = hand::slice_crop(slat.slot, slat.len, row_w, row_h, gap);
                 }
-                inst.shape[1] = stage.skew.abs() * 0.5;
                 inst.misc[3] |= PROJECTED;
                 if matches!(face, Face::Back { .. }) {
                     inst.misc[3] |= MUTED;
@@ -757,8 +768,18 @@ impl SceneCore {
         let panel_from = hand::FLIP_LAND_AT - 0.04;
         if p >= panel_from {
             let panel_p = 0.74 + 0.26 * ((p - panel_from) / (1.0 - panel_from)).clamp(0.0, 1.0);
-            self.card.pending_back =
-                Some(self.make_back_panel(ctx, store, cx, cy, hw, hh, 0.0, 0.0, [0.0; 4], panel_p));
+            self.card.pending_back = Some(self.make_back_panel(
+                ctx,
+                store,
+                cx,
+                cy,
+                hw,
+                hh,
+                0.0,
+                0.0,
+                stage.corners,
+                panel_p,
+            ));
         }
         Some(Hit {
             index: idx,
@@ -830,7 +851,7 @@ impl SceneCore {
             sinks.wanted,
             store,
             [vw * 0.5, vh * 0.5, vw * 0.5, vh * 0.5],
-            [0.0; 4],
+            CardCorners::default(),
             0.0,
             0.0,
             true,

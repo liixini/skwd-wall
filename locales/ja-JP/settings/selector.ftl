@@ -4,10 +4,6 @@ settings-selector-display-mode-desc = ピッカーで壁紙カードをどう並
 settings-selector-filter-motion-label = フィルターのモーション
 settings-selector-filter-motion-desc = フィルター結果が変わったときにスクロールする速さです。3 つの共通の重みはモーション設定にあります。
 settings-selector-presets-card = プリセット
-settings-selector-presets-card-desc = 現在のレイアウト設定を保存するか、保存したセットを適用します。表示モードごとに独自のプリセットがあります。
-settings-selector-preset-name-label = 名前
-settings-selector-preset-name-desc = 選択したプリセットの名前を変更します。「現在の設定を保存」は自動で名前を付けた新しいプリセットを作成します。
-settings-selector-preset-name-placeholder = スタイル名
 settings-selector-preset-generated-name = スタイル { $number }
 settings-selector-saved-styles-label = 保存済みのスタイル
 settings-selector-live-preview-card = カラープレビュー
@@ -68,10 +64,6 @@ settings-selector-grid-gap-x-label = 水平方向の間隔
 settings-selector-grid-gap-x-desc = 列と列の間に見える端から端までの間隔です。
 settings-selector-grid-gap-y-label = 垂直方向の間隔
 settings-selector-grid-gap-y-desc = 行と行の間に見える端から端までの間隔です。
-settings-selector-grid-round-label = 角を丸める
-settings-selector-grid-round-desc = オフにすると、すべてのウォールカードの角が直角になります。
-settings-selector-grid-corner-radius-label = 角の半径
-settings-selector-grid-corner-radius-desc = 角を丸めるときの丸みです。
 settings-selector-performance-card = パフォーマンス
 settings-selector-performance-card-desc = 砂粒は 1 つずつ独立したジオメトリです。粒が大きいほど図形が少なくなり、GPU の処理が大幅に減ります。
 settings-selector-sand-note-discrete = 検出された専用 GPU にとって、この負荷は小さいです。同じ粒のサイズでも内蔵 GPU では約 150 倍遅くなることがあります。
@@ -157,16 +149,6 @@ settings-selector-wobble-desc = カードがスクロール方向にしなり、
 settings-selector-wobble-strength-label = 揺れの強さ
 settings-selector-wobble-strength-desc = 100 がデフォルトです。200 にするとしなりと色の分離が 2 倍になります。
 settings-selector-corners-card = 角
-settings-selector-round-corners-label = 角を丸める
-settings-selector-round-corners-desc = スライスの端に角の半径を適用します。
-settings-selector-corner-tl-label = 左上
-settings-selector-corner-tl-desc = 左上の角の半径です。0 = 直角。
-settings-selector-corner-tr-label = 右上
-settings-selector-corner-tr-desc = 右上の角の半径です。0 = 直角。
-settings-selector-corner-br-label = 右下
-settings-selector-corner-br-desc = 右下の角の半径です。0 = 直角。
-settings-selector-corner-bl-label = 左下
-settings-selector-corner-bl-desc = 左下の角の半径です。0 = 直角。
 settings-selector-card-flip-card = カードの裏返し
 settings-selector-card-flip-card-desc = 壁紙カードがサムネイルから裏面の詳細に切り替わる方法を選びます。
 settings-selector-flip-effect-label = エフェクト
@@ -194,6 +176,12 @@ settings-selector-preview-delay-label = プレビューまでの遅延
 settings-selector-preview-delay-desc = ホバーまたは選択してからプレビューを開始するまでの待ち時間（ms）です。
 settings-selector-tag-cloud-position-card = 検索パネルの位置
 settings-selector-tag-cloud-position-card-desc = 検索パネルを水平方向または垂直方向にピクセル単位で移動します。水平方向は正の値で右、垂直方向は正の値で下に移動します。
+settings-selector-tag-position-enabled-label = 画面上の位置を使う
+settings-selector-tag-position-enabled-desc = 検索パネルのサイズやピッカーのスタイルが変わっても、パネルをこの画面座標に保ちます。ピクセル単位のオフセットを使うにはオフにします。
+settings-selector-tag-position-x-label = 左端
+settings-selector-tag-position-x-desc = 検索パネルの左端を、画面の幅に対する割合で指定します。
+settings-selector-tag-position-y-label = 上端
+settings-selector-tag-position-y-desc = 検索パネルの上端を、画面の高さに対する割合で指定します。
 settings-selector-tag-offset-x-label = 検索パネルの水平オフセット
 settings-selector-tag-offset-x-desc = このピッカーを基準に検索パネルを左右に移動します。
 settings-selector-tag-offset-y-label = 検索パネルの垂直オフセット
@@ -216,8 +204,6 @@ settings-selector-swap-style-weave = 織り
 settings-selector-swap-style-bloom = 開花
 settings-selector-swap-style-flock = 群舞
 settings-selector-swap-style-ring = リング
-settings-selector-preset-rename-hint = 名前を変更するスタイルを選択
-settings-selector-preset-save-current = 現在の設定を保存
 settings-selector-mode-hand = 手札
 settings-selector-hand-card = 手札
 settings-selector-hand-card-desc = 背の高いカードを、手に持ったトランプのように遠近感のある扇形に広げます。ポインターを動かすと手札が傾き、ステージをドラッグすると回転し、端を越えてスクロールすると次の手札が配られます。
@@ -272,7 +258,6 @@ settings-selector-hand-fan-roll-label = 扇の傾き
 settings-selector-hand-fan-roll-desc = 手に広げたカードのように、カードごとに加える傾きです。0 でまっすぐ立ちます。
 settings-selector-hand-arch-label = 弧
 settings-selector-hand-arch-desc = 外側のカードが中央のカードよりどれだけ下がるかです。
-settings-selector-hand-corner-radius-label = 角の半径
 settings-selector-hand-skew-label = 傾き
 settings-selector-hand-skew-desc = カードの輪郭を平行四辺形にせん断します。単位は水平方向のずれのピクセルです。
 settings-selector-hand-backdrop-blur-label = 背景のぼかし
@@ -285,60 +270,58 @@ settings-selector-start-position-desc = 先頭、最後に適用した壁紙、�
 settings-selector-start-position-beginning = 先頭
 settings-selector-start-position-applied = 最後に適用した壁紙
 settings-selector-start-position-browsing = 前回の閲覧位置
+settings-selector-loop-around-label = 端でループ
+settings-selector-loop-around-desc = 最初または最後の壁紙を越えて移動すると、反対側の端に移動します。押し続けたキー、ページ送り、速いスクロールはまず端で止まるので、もう一度押すかスクロールするとループします。オンラインソースはすべてのページを読み込んだ後にループします。ウォールレイアウトとオンラインソースでは、マウスホイールは表示をスクロールするだけです。
 
-settings-selector-mode-depth = Depth
-settings-selector-depth-card = Depth cards
-settings-selector-depth-desc = Cards shrink toward the edges. As you scroll, artwork shifts inside each card according to its position in the row.
+settings-selector-mode-depth = デプス
+settings-selector-depth-card = 奥行きカード
+settings-selector-depth-desc = カードは端に向かって小さくなります。スクロールすると、各カード内の画像が列での位置に応じてずれます。
 
-settings-selector-parallax-label = Image parallax
-settings-selector-parallax-desc = Shift artwork inside each card as it moves across the view. The image keeps moving through the visible edges.
+settings-selector-parallax-label = 画像のパララックス
+settings-selector-parallax-desc = カードがビュー内を動くとき、カード内の画像をずらします。画像は見えている端を越えて動き続けます。
 settings-selector-mode-collection = コレクション
 settings-selector-collection-desc = ホイールや矢印キーで傾いたカードの束を閲覧します。クリックで拡大し、再クリックまたは Escape で戻ります。Enter で適用し、右クリックで詳細を表示します。
 
-settings-selector-depth-height-label = Card height
-settings-selector-depth-height-desc = Height of the centre card. Large cards shrink to fit the screen.
+settings-selector-depth-height-label = カードの高さ
+settings-selector-depth-height-desc = 中央のカードの高さです。大きなカードは画面に収まるよう縮小されます。
 
-settings-selector-depth-width-label = Card width
-settings-selector-depth-width-desc = Width of the centre card in pixels.
+settings-selector-depth-width-label = カードの幅
+settings-selector-depth-width-desc = 中央のカードの幅をピクセルで指定します。
 
-settings-selector-depth-spacing-label = Card spacing
-settings-selector-depth-spacing-desc = Distance between card centres in pixels before depth falloff.
+settings-selector-depth-spacing-label = カードの間隔
+settings-selector-depth-spacing-desc = 奥行きによる縮小を適用する前の、カード中心間の距離をピクセルで指定します。
 
-settings-selector-depth-count-label = Visible cards
-settings-selector-depth-count-desc = Maximum number of cards around the current selection.
+settings-selector-depth-count-label = 表示するカード数
+settings-selector-depth-count-desc = 現在の選択の周囲に表示するカードの最大数です。
 
-settings-selector-depth-falloff-label = Depth falloff
-settings-selector-depth-falloff-desc = Scale reduction per card away from the centre, from 0 to 1. Zero keeps their sizes equal.
+settings-selector-depth-falloff-label = 奥行きによる縮小
+settings-selector-depth-falloff-desc = 中央から1枚離れるごとの縮小量を 0 から 1 で指定します。0 にするとサイズはすべて同じです。
 
-settings-selector-depth-corners-label = Corner radius
-settings-selector-depth-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-depth-skew-label = Card skew
-settings-selector-depth-skew-desc = Slant the card edges. Zero keeps them upright.
+settings-selector-depth-skew-label = カードの傾斜
+settings-selector-depth-skew-desc = カードの端を斜めにします。0 にすると垂直のままです。
 
-settings-selector-depth-speed-label = Navigation duration
-settings-selector-depth-speed-desc = Time for a navigation movement in milliseconds. Lower values move faster.
+settings-selector-depth-speed-label = ナビゲーションの所要時間
+settings-selector-depth-speed-desc = 1回のナビゲーション移動にかかる時間をミリ秒で指定します。値が小さいほど速く動きます。
 
-settings-selector-collection-size-label = Card size
-settings-selector-collection-size-desc = Card width as a percentage of screen height.
+settings-selector-collection-size-label = カードのサイズ
+settings-selector-collection-size-desc = カードの幅を、画面の高さに対する割合で指定します。
 
-settings-selector-collection-spacing-label = Stack spacing
-settings-selector-collection-spacing-desc = Vertical distance between stacked cards as a percentage of card size.
+settings-selector-collection-spacing-label = スタックの間隔
+settings-selector-collection-spacing-desc = 重ねたカード同士の縦の距離を、カードサイズに対する割合で指定します。
 
-settings-selector-collection-count-label = Visible cards
-settings-selector-collection-count-desc = Maximum number of cards in the stack.
+settings-selector-collection-count-label = 表示するカード数
+settings-selector-collection-count-desc = スタックに表示するカードの最大数です。
 
-settings-selector-collection-tilt-label = Stack tilt
-settings-selector-collection-tilt-desc = Tilt the stack away from you. Zero shows the cards face-on.
+settings-selector-collection-tilt-label = スタックの傾き
+settings-selector-collection-tilt-desc = スタックを手前から奥へ傾けます。0 にするとカードを正面から表示します。
 
-settings-selector-collection-corners-label = Corner radius
-settings-selector-collection-corners-desc = Round the card corners. Zero keeps square corners.
 
-settings-selector-collection-speed-label = Motion speed
-settings-selector-collection-speed-desc = Speed of navigation and opening or closing a card. Higher values move faster.
+settings-selector-collection-speed-label = 動きの速さ
+settings-selector-collection-speed-desc = ナビゲーションと、カードの開閉の速さです。値が大きいほど速く動きます。
 
-settings-selector-depth-frame-label = Selection frame
-settings-selector-depth-frame-desc = Draw a highlighted border around the selected card.
+settings-selector-depth-frame-label = 選択フレーム
+settings-selector-depth-frame-desc = 選択中のカードの周りに強調した枠線を描きます。
 
-settings-selector-shadows-label = Card shadows
-settings-selector-shadows-desc = Draw a shadow behind each card.
+settings-selector-shadows-label = カードの影
+settings-selector-shadows-desc = 各カードの後ろに影を描きます。

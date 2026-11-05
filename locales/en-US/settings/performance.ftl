@@ -1,9 +1,14 @@
 settings-performance-power-card = Laptop & power
 settings-performance-power-card-desc = The picker stops rendering when it settles. Wallpaper renderers keep running after it closes, so they have separate battery limits.
-settings-performance-power-source-label = Current power source
 settings-performance-power-battery-limited = Battery (automatic limits are active)
 settings-performance-power-battery-unlimited = Battery (automatic limits are disabled)
 settings-performance-power-external = External power, desktop, or unavailable (automatic limits are inactive)
+settings-performance-effective-label = Effective limits
+settings-performance-effective = { $fps } fps picker · Video pauses after { $seconds } s idle · { $reason }
+settings-performance-effective-no-idle = { $fps } fps picker · Video idle pause is off · { $reason }
+settings-performance-effective-reason-battery = On battery
+settings-performance-effective-reason-disabled = Battery saver is off
+settings-performance-effective-reason-external = On external power
 settings-performance-battery-saver-label = Automatic battery saver
 settings-performance-battery-saver-desc = Apply the FPS and video-idle limits below while the battery is discharging. Power changes are picked up automatically.
 settings-performance-gpu-label = Picker GPU

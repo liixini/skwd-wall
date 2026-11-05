@@ -9,7 +9,10 @@ mod playlists;
 mod presentation;
 mod status;
 
-pub use browser::{decode_browser_collections, decode_browser_download, decode_browser_search};
+pub use browser::{
+    decode_browser_collections, decode_browser_download, decode_browser_search,
+    decode_workshop_gallery,
+};
 #[allow(unused_imports)]
 pub use common::{DecodeError, DecodeResult};
 pub use diagnostics::{
@@ -23,12 +26,13 @@ pub use playlists::{
 };
 pub use presentation::{
     decode_activities, decode_activity_apply, decode_activity_event, decode_audio_outputs,
-    decode_current_theme, decode_outputs, decode_running_processes, decode_theme_backends,
-    decode_theme_preview, decode_theme_previews,
+    decode_current_theme, decode_outputs, decode_running_processes, decode_studio,
+    decode_theme_backends, decode_theme_preview, decode_theme_previews,
 };
 pub use status::{
-    decode_library_watch, decode_lockscreen_set, decode_scene_properties, decode_status,
-    decode_task_list, decode_task_status, decode_thumbnail_reset, decode_wall_remove,
+    decode_drawing_status, decode_library_watch, decode_lockscreen_set, decode_scene_properties,
+    decode_status, decode_task_list, decode_task_status, decode_thumbnail_reset,
+    decode_wall_remove, decode_widget_desk,
 };
 
 #[cfg(test)]

@@ -2,6 +2,7 @@ use iced::widget::{canvas, shader, stack};
 use iced::{Element, Length};
 
 use crate::app::scene::SceneProgram;
+use crate::frontend::strand::draw::stage_alpha;
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -12,6 +13,8 @@ use super::tags::{
     tag_mode_panel,
 };
 use super::transient::{help_layer, hud_layer, library_hint, toast_layer};
+
+const OVERLAY_VISIBILITY: f32 = 0.02;
 
 static VIEWS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
@@ -32,6 +35,19 @@ pub fn view_single(app: &App) -> Element<'_, Message> {
         return iced::widget::Space::new().into();
     }
     overlay_view(app)
+}
+
+pub(crate) fn entry_shown(app: &App, overlays_clear: bool, settled: bool) -> bool {
+    overlays_clear
+        && settled
+        && crate::app::update::arrange::placement::present(
+            &app.config,
+            crate::frontend::arrange::Target::Arrange,
+        )
+}
+
+pub(crate) fn scene_fade(app: &App) -> f32 {
+    app.panels.strand.as_ref().map_or(1.0, |strand| 1.0 - stage_alpha(strand))
 }
 
 fn overlay_view(app: &App) -> Element<'_, Message> {
@@ -88,15 +104,19 @@ fn overlay_view(app: &App) -> Element<'_, Message> {
         pool: app.scene.frame_pool().clone(),
         frame_clock: app.runtime_state.frame_clock.clone(),
         pointer_enabled: !app.detail_open() && !app.menu_capturing(),
+        fade: scene_fade(app),
     })
     .width(Length::Fill)
     .height(Length::Fill)
     .into();
+    if let Some(strand) = app.panels.strand.as_ref() {
+        return stack![scene, strand.view()].into();
+    }
     let fade = app.scene.open_fade();
     let folio_sheet_open = app.panels.settings.open || app.panels.theme_designer.is_some();
     let mut layers = stack![scene];
 
-    if fade > 0.02 {
+    if fade > OVERLAY_VISIBILITY {
         layers = layers.push(
             canvas(crate::frontend::ui::ChromeCanvas {
                 render: app.scene.render.clone(),
@@ -137,7 +157,11 @@ fn overlay_view(app: &App) -> Element<'_, Message> {
     if settled && let Some(el) = card_tag_drawer(app) {
         layers = layers.push(el);
     }
-    if fade * app.chrome.filter_bar_fade() > 0.02 && vh > 0.0 && !folio_sheet_open {
+    if fade * app.chrome.filter_bar_fade() > OVERLAY_VISIBILITY
+        && vh > 0.0
+        && !folio_sheet_open
+        && app.chrome.bar.reorder.is_none()
+    {
         layers = layers.push(filter_bar_layer(app, vw, vh));
     }
 
@@ -146,7 +170,8 @@ fn overlay_view(app: &App) -> Element<'_, Message> {
         && app.source_browser.browser.is_none()
         && app.panels.playlists.is_none()
         && app.panels.effects.is_none()
-        && app.panels.card_picker.is_none();
+        && app.panels.card_picker.is_none()
+        && app.panels.colour_studio.is_none();
     if settled
         && overlays_clear
         && let Some(swatch) = swatch_overlay(app)
@@ -163,7 +188,8 @@ fn overlay_view(app: &App) -> Element<'_, Message> {
     for panel in panel_layers(app) {
         layers = layers.push(panel);
     }
-    if tag_cloud_visible(app.tags.cloud_open, folio_sheet_open, vh) {
+    if tag_cloud_visible(app.tags.cloud_open || app.panels.arrange.is_some(), folio_sheet_open, vh)
+    {
         layers = layers.push(tag_cloud_layer(app, vh));
     }
     if let Some(help) = help_layer(app) {
@@ -179,6 +205,12 @@ fn overlay_view(app: &App) -> Element<'_, Message> {
         layers = layers.push(tag_mode_panel(app));
     }
 
+    if entry_shown(app, overlays_clear, settled) {
+        layers = layers.push(super::arrange::entry(app));
+    }
+    if app.panels.arrange.is_some() {
+        layers = layers.push(super::arrange::editor(app));
+    }
     layers.into()
 }
 

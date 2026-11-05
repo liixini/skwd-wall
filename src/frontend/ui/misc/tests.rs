@@ -134,6 +134,8 @@ fn style_ratchet() {
         ("frontend/settings/inputs.rs", [0, 0, 1]),
         ("frontend/settings/folio/folio.rs", [0, 2, 0]),
         ("frontend/settings/folio/control.rs", [0, 2, 0]),
+        ("frontend/settings/folio/appearance.rs", [1, 0, 0]),
+        ("frontend/settings/folio/diamond_toggle.rs", [0, 1, 0]),
     ]);
     let patterns = ["container::Style {", "button::Style {", "text_input::Style {"];
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
@@ -429,4 +431,39 @@ fn view_rows_come_from_the_direction_aware_kit() {
     visit(&root.join("src/frontend"), &mut offenders);
     visit(&root.join("src/app/view"), &mut offenders);
     assert!(offenders.is_empty(), "{offenders:#?}");
+}
+
+#[test]
+fn dedicated_control_colours() {
+    use iced::widget::button::Status;
+    let palette = crate::frontend::theme::Palette::from_spec(
+        &crate::infrastructure::theme::decode_palette(&serde_json::json!({
+            "error": "#123456", "errorText": "#234567", "hover": "#345678", "hoverText": "#456789",
+            "tertiary": "#567890", "background": "#678901", "surfaceVariant": "#789012", "surfaceText": "#890123"
+        })),
+    );
+    let active = super::folio_button_style(true, true, &palette, Status::Active);
+    let hover = super::folio_button_style(false, false, &palette, Status::Hovered);
+    assert_eq!(active.text_color, palette.error_text);
+    assert_eq!(active.background, Some(super::super::with_alpha(palette.error, 0.92).into()));
+    assert_eq!(hover.text_color, palette.hover_text);
+    assert_eq!(hover.background, Some(super::super::with_alpha(palette.hover, 0.62).into()));
+    let line = super::folio_line_button_style(false, false, &palette, 1.0, Status::Hovered);
+    assert_eq!(line.text_color, palette.hover_text);
+    assert_eq!(palette.destructive(), palette.error);
+}
+
+#[test]
+fn destructive_hover_pair() {
+    use iced::widget::button::Status;
+    let palette = crate::frontend::theme::Palette {
+        error: iced::Color::from_rgb8(20, 40, 60),
+        hover: iced::Color::from_rgb8(20, 40, 60),
+        hover_text: iced::Color::from_rgb8(240, 230, 220),
+        ..Default::default()
+    };
+    let hover = super::folio_button_style(false, true, &palette, Status::Hovered);
+    assert_eq!(hover.text_color, palette.hover_text);
+    let active = super::folio_button_style(true, true, &palette, Status::Hovered);
+    assert_eq!(active.text_color, palette.error_text);
 }

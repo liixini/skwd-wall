@@ -2,7 +2,7 @@
 
 use serde_json::json;
 
-use super::{bar_intent_message, filter_bar_footprint};
+use super::{bar_intent_message, filter_bar_footprint, filter_bar_geometry};
 use crate::app::tests::test_app;
 
 #[test]
@@ -136,6 +136,139 @@ fn footprint_tracks_controls_and_scale() {
 }
 
 #[test]
+fn bar_position_stays_fixed() {
+    use skwd_config::keys::{filter_bar, selector};
+
+    let mut app = test_app();
+    let viewport = (5000.0, 3000.0);
+    let original =
+        filter_bar_geometry(&app, viewport.0, viewport.1, crate::app::view::BarExtent::Expanded).1;
+    app.config.set_key(filter_bar::POSITION_X, json!(25.0));
+    app.config.set_key(filter_bar::POSITION_Y, json!(40.0));
+    assert_eq!(
+        filter_bar_geometry(&app, viewport.0, viewport.1, crate::app::view::BarExtent::Expanded).1,
+        original
+    );
+
+    app.config.set_key(filter_bar::POSITION_ENABLED, json!(true));
+    let anchored =
+        filter_bar_geometry(&app, viewport.0, viewport.1, crate::app::view::BarExtent::Expanded).1;
+    assert_eq!((anchored.x, anchored.y), (1250.0, 1200.0));
+    app.config.set_key(filter_bar::OFFSET_X, json!(100.0));
+    app.config.set_key(selector::GRID_COLUMNS, json!(4));
+    app.config.set_key(selector::GRID_ROWS, json!(4));
+    app.apply_layout();
+    let after =
+        filter_bar_geometry(&app, viewport.0, viewport.1, crate::app::view::BarExtent::Expanded).1;
+    assert_eq!((after.x, after.y), (anchored.x, anchored.y));
+}
+
+#[test]
+fn bar_position_fits_output() {
+    use skwd_config::keys::{filter_bar, general};
+
+    let mut app = test_app();
+    app.config.set_key(filter_bar::POSITION_ENABLED, json!(true));
+    app.config.set_key(filter_bar::POSITION_X, json!(60.0));
+    app.config.set_key(filter_bar::POSITION_Y, json!(90.0));
+    for scale in [1.0, 2.0] {
+        app.config.set_key(general::UI_SCALE, json!(scale));
+        let (_, bar) =
+            filter_bar_geometry(&app, 650.0, 400.0, crate::app::view::BarExtent::Expanded);
+        assert!(bar.x + bar.width <= 650.0);
+        assert!(bar.y + bar.height <= 400.0);
+        assert_eq!(app.config.filter_bar_position(), Some((0.6, 0.9)));
+    }
+}
+
+#[test]
+fn bar_menu_stays_put() {
+    for mode in
+        [crate::frontend::scene::layout::Mode::Grid, crate::frontend::scene::layout::Mode::Sandy]
+    {
+        for y in [0.0, 90.0] {
+            let mut app = positioned_bar(mode, y);
+            for scale in [1.0, 2.0] {
+                app.config.set_key(skwd_config::keys::general::UI_SCALE, json!(scale));
+                assert_bar_menu_position(&mut app, (650.0, 400.0), Some(y > 0.0));
+            }
+        }
+    }
+}
+
+fn positioned_bar(mode: crate::frontend::scene::layout::Mode, y: f32) -> crate::app::App {
+    use skwd_config::keys::filter_bar;
+
+    let mut app = test_app();
+    app.scene.set_mode(mode);
+    app.library_session.folder_options =
+        vec![String::from("nature"), String::from("nature/forest"), String::from("cities")];
+    app.config.set_key(filter_bar::POSITION_ENABLED, json!(true));
+    app.config.set_key(filter_bar::POSITION_X, json!(60.0));
+    app.config.set_key(filter_bar::POSITION_Y, json!(y));
+    app
+}
+
+fn assert_bar_menu_position(app: &mut crate::app::App, viewport: (f32, f32), up: Option<bool>) {
+    let (closed, bounds) =
+        filter_bar_geometry(app, viewport.0, viewport.1, crate::app::view::BarExtent::Expanded);
+    let first = closed.items.first().unwrap();
+    let (x, y) = (bounds.x + first.x, bounds.y + first.y);
+    app.chrome.bar.menu = Some(crate::frontend::ui::MenuKind::Folders);
+    let (open, bounds) =
+        filter_bar_geometry(app, viewport.0, viewport.1, crate::app::view::BarExtent::Expanded);
+    let first = open.items.first().unwrap();
+    assert!(open.height > closed.height);
+    if let Some(up) = up {
+        assert_eq!(open.menu_up, up);
+    }
+    assert!(bounds.x >= 0.0);
+    assert!(bounds.x + bounds.width <= viewport.0);
+    assert!(bounds.y >= 0.0);
+    assert!(bounds.y + bounds.height <= viewport.1);
+    assert!((bounds.x + first.x - x).abs() < 0.001);
+    assert!((bounds.y + first.y - y).abs() < 0.001);
+    app.chrome.bar.menu = None;
+}
+
+#[test]
+fn long_menu_fits_output() {
+    for mode in
+        [crate::frontend::scene::layout::Mode::Grid, crate::frontend::scene::layout::Mode::Sandy]
+    {
+        let mut app = positioned_bar(mode, 50.0);
+        app.config.set_key(skwd_config::keys::general::UI_SCALE, json!(2.0));
+        app.scene.viewport = (650.0, 400.0);
+        app.library_session.folder_options =
+            (0..20).map(|index| format!("folder-{index}")).collect();
+        assert_bar_menu_position(&mut app, (650.0, 400.0), None);
+        app.chrome.bar.menu = Some(crate::frontend::ui::MenuKind::Folders);
+        let (model, _) =
+            filter_bar_geometry(&app, 650.0, 400.0, crate::app::view::BarExtent::Expanded);
+        assert!(model.menu_visible_rows < crate::frontend::ui::MENU_MAX_ROWS);
+        let _ = crate::app::update(&mut app, crate::app::Message::FolderMenuScroll(10000.0));
+        let expected = (20 - model.menu_visible_rows) as f32
+            * crate::frontend::ui::MENU_ROW_H
+            * app.config.ui_scale();
+        assert_eq!(app.chrome.bar.menu_scroll.target, expected);
+    }
+}
+
+#[test]
+fn vertical_menu_fits_output() {
+    for y in [0.0, 90.0] {
+        let mut app = positioned_bar(crate::frontend::scene::layout::Mode::Grid, y);
+        app.chrome.filter_bar_vertical = true;
+        app.scene.viewport = (650.0, 400.0);
+        let viewport = app.scene.viewport;
+        for scale in [1.0, 2.0] {
+            app.config.set_key(skwd_config::keys::general::UI_SCALE, json!(scale));
+            assert_bar_menu_position(&mut app, viewport, Some(y > 0.0));
+        }
+    }
+}
+
+#[test]
 fn open_menus_keep_footprint() {
     let mut app = test_app();
     app.library_session.folder_options =
@@ -177,7 +310,7 @@ fn optional_filter_controls_persist_and_leave_no_bar_items() {
                 app.config.filter_show(path.strip_prefix("filterBar.show.").unwrap()),
                 visible
             );
-            let show = super::bar_show(&app);
+            let show = super::bar_show(&app, &app.config);
             for downloads_enabled in [false, true] {
                 for vertical in [false, true] {
                     let mut model = build_bar_with_tasks(

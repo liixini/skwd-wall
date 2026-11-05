@@ -565,3 +565,13 @@ fn sandy_target_dims_ceil() {
     let (w, h) = sandy_target_dimensions(1.0, 1.0, 1.0, 0.25);
     assert!(w >= 1 && h >= 1);
 }
+
+#[test]
+fn chamfer_flag_matches_shader() {
+    let flag = crate::contracts::rendering::CHAMFER;
+    assert!(ITEM_WGSL.contains(&format!("const CHAMFER: u32 = {flag}u;")));
+    let module = parsed_wgsl("item", ITEM_WGSL);
+    for name in ["sd_card", "sd_sheared_chamfered_box", "sd_sheared_rounded_box"] {
+        module_function(&module, name);
+    }
+}

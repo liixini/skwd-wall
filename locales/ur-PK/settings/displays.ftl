@@ -8,3 +8,6 @@ settings-displays-lock-label = لاک
 settings-displays-lock-desc = اس مانیٹر کا وال پیپر صرف ملٹی پکر کے ذریعے بدلیں۔
 settings-displays-empty-label = ڈسپلے تلاش کیے جا رہے ہیں
 settings-displays-empty-desc = وال پیپر سروس اپنے ڈسپلے رپورٹ کرے گی تو موجودہ وال پیپر یہاں نظر آئیں گے۔
+settings-displays-default-placement-label = ڈیفالٹ جگہ
+settings-displays-default-placement-desc = ہر اس ڈسپلے پر لاگو ہوتا ہے جس کی اپنی جگہ مقرر نہیں۔
+settings-displays-use-global = عمومی سیٹنگ استعمال کریں · { $mode }

@@ -1,7 +1,6 @@
 use iced::widget::canvas::{Frame, Path, Stroke};
 use iced::widget::{
-    button, canvas, column, container, image, mouse_area, scrollable, shader, stack, text,
-    text_input,
+    button, canvas, column, container, image, scrollable, shader, stack, text, text_input,
 };
 use iced::{
     Alignment, Background, Color, Element, Font, Length, Padding, Point, Rectangle, Size, mouse,
@@ -24,7 +23,28 @@ use super::model::{
     fmt_size, progress_label,
 };
 
-fn sheet_style(pal: &Palette, fade: f32) -> container::Style {
+const SHEET_RISE: f32 = 38.0;
+
+pub(super) fn sheet_frame<'a>(
+    panel: impl Into<Element<'a, Message>>,
+    ease: f32,
+    dismiss: Message,
+) -> Element<'a, Message> {
+    crate::frontend::ui::inert_backdrop(
+        container(
+            container(iced::widget::opaque(panel))
+                .padding(Padding { top: (1.0 - ease) * SHEET_RISE, ..Padding::ZERO }),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x(Length::Fill)
+        .center_y(Length::Fill)
+        .style(move |_| crate::frontend::ui::folio_scrim_style(ease)),
+        dismiss,
+    )
+}
+
+pub(super) fn sheet_style(pal: &Palette, fade: f32) -> container::Style {
     let mut style = crate::frontend::ui::box_style(
         with_alpha(pal.surface, 0.985 * fade),
         with_alpha(pal.outline, 0.58 * fade),
@@ -44,8 +64,8 @@ fn catalogue_hero<'a>(
     pal: &'a Palette,
     current_wallpaper_art: Option<&'a str>,
 ) -> Element<'a, Message> {
-    let artwork_path = current_wallpaper_art
-        .or_else(|| br.session.items.iter().find_map(preview_image_path).map(|(path, _)| path));
+    let artwork_path =
+        current_wallpaper_art.or_else(|| br.session.items.iter().find_map(thumb_image_path));
     let artwork: Element<'a, Message> = artwork_path.map_or_else(
         || container(text("")).into(),
         |path| {
@@ -195,7 +215,8 @@ fn source_tabs<'a>(
                 .then_some(Message::Update(BrowserMsg::SwitchSource(entry.source))),
         )
         .style(move |_theme, state| {
-            crate::frontend::ui::folio_button_style(selected, false, pal, state)
+            let shown = if selected { button::Status::Active } else { state };
+            crate::frontend::ui::folio_button_style(selected, false, pal, shown)
         });
         tabs = tabs.push(tab);
     }
@@ -254,12 +275,18 @@ pub(crate) fn browser_card_action_at(
     }
 }
 
+enum CardOverlayLayer {
+    Media,
+    Actions,
+}
+
 struct BrowserCardOverlay<'a> {
     browser: &'a Browser,
     render: std::sync::Arc<crate::frontend::scene::RenderSnapshot>,
     pal: &'a Palette,
     scale: f32,
     fade: f32,
+    layer: CardOverlayLayer,
 }
 
 impl canvas::Program<Message> for BrowserCardOverlay<'_> {
@@ -291,6 +318,10 @@ impl canvas::Program<Message> for BrowserCardOverlay<'_> {
             {
                 continue;
             }
+            if matches!(self.layer, CardOverlayLayer::Media) {
+                draw_hover_media(&mut frame, hit, item, self.browser, fade);
+                continue;
+            }
             if item.downloaded {
                 draw_downloaded_badge(&mut frame, hit, self.pal, self.scale, fade);
             }
@@ -307,6 +338,53 @@ impl canvas::Program<Message> for BrowserCardOverlay<'_> {
             }
         }
         vec![frame.into_geometry()]
+    }
+}
+
+fn draw_hover_media(
+    frame: &mut Frame,
+    hit: &crate::frontend::scene::layout::Hit,
+    item: &BrowserItem,
+    browser: &Browser,
+    fade: f32,
+) {
+    if browser.session.preview.is_some() {
+        return;
+    }
+    let hovered = browser.session.hover == Some(hit.index)
+        && browser.view.media.item_id == item.id
+        && browser.view.media.frames > 1;
+    let handle = if hovered {
+        browser.view.media.image.as_ref()
+    } else {
+        browser
+            .view
+            .animations
+            .get(&item.full_url)
+            .map(|animation| animation.frame(browser.view.clock))
+    };
+    if let Some(handle) = handle {
+        let bounds = Rectangle::new(
+            Point::new(hit.cx - hit.hw, hit.cy - hit.hh),
+            Size::new(hit.hw * 2.0, hit.hh * 2.0),
+        );
+        if let image::Handle::Rgba { width, height, .. } = handle {
+            let factor = (bounds.width / *width as f32).max(bounds.height / *height as f32);
+            let size = Size::new(*width as f32 * factor, *height as f32 * factor);
+            let image_bounds = Rectangle::new(
+                Point::new(
+                    bounds.x + (bounds.width - size.width) * 0.5,
+                    bounds.y + (bounds.height - size.height) * 0.5,
+                ),
+                size,
+            );
+            frame.with_clip(bounds, |frame| {
+                frame.draw_image(
+                    image_bounds,
+                    iced::advanced::image::Image::new(handle).opacity(fade),
+                );
+            });
+        }
     }
 }
 
@@ -388,27 +466,27 @@ fn draw_card_actions(
     ));
 }
 
-pub(super) fn preview_image_path(item: &BrowserItem) -> Option<(&str, bool)> {
-    item.preview_path.as_deref().filter(|path| !path.is_empty()).map(|path| (path, true)).or_else(
-        || {
-            (item.thumb_ready && !item.thumb_path.is_empty())
-                .then_some((item.thumb_path.as_str(), false))
-        },
-    )
+pub(super) fn thumb_image_path(item: &BrowserItem) -> Option<&str> {
+    (item.thumb_ready && !item.thumb_path.is_empty()).then_some(item.thumb_path.as_str())
 }
 
 fn preview_modal<'a>(
     item: &'a BrowserItem,
+    state: &'a super::model::BrowserViewState,
     source: Source,
     anim: f32,
     spin: f32,
     pal: &Palette,
     clip: Option<(&'a str, &'a str)>,
 ) -> Element<'a, Message> {
-    let preview = preview_image_path(item);
-    let full_quality = preview.is_some_and(|(_, ready)| ready);
-    let img: Element<'a, Message> = match preview {
-        Some((path, _)) => image(image::Handle::from_path(path))
+    let full_quality = state.media.item_id == item.id && state.media.image.is_some();
+    let handle =
+        state.media.image.clone().filter(|_| state.media.item_id == item.id).or_else(|| {
+            (item.thumb_ready && !item.thumb_path.is_empty())
+                .then(|| image::Handle::from_path(&item.thumb_path))
+        });
+    let img: Element<'a, Message> = match handle {
+        Some(handle) => image(handle)
             .width(Length::Fill)
             .height(Length::Fill)
             .content_fit(iced::ContentFit::Contain)
@@ -553,7 +631,18 @@ fn preview_modal<'a>(
 
     let body = stack![
         container(img).width(Length::Fill).height(Length::Fill).padding(40),
-        container(if full_quality {
+        container(if let Some(error) = state.media.error.as_deref() {
+            column![
+                text(error).color(pal.surface_text),
+                action_btn(
+                    tr("browser-retry"),
+                    Message::Update(BrowserMsg::RetryPreview),
+                    pal.primary,
+                    pal.primary_text
+                ),
+            ]
+            .into()
+        } else if full_quality {
             container(text("")).into()
         } else {
             strip_row(tr("browser-loading-preview").to_string(), false, Some(spin), pal)
@@ -709,50 +798,38 @@ pub fn view<'a>(
     })
     .width(Length::Fixed(filter_inner_w))
     .height(Length::Fixed(compact_bar_size.1));
-    let filters = scrollable(
-        column![
-            label(
-                tr("browser-search-label"),
-                8.5,
-                scale,
-                with_alpha(pal.surface_text, 0.42 * ease)
-            ),
-            container(search_box(br, scale, pal))
-                .width(Length::Fill)
-                .padding(Padding::from([6.0 * scale, 8.0 * scale]))
-                .style(move |_| {
-                    crate::frontend::ui::box_style(
-                        with_alpha(pal.background, 0.44),
-                        with_alpha(pal.outline, 0.34),
-                    )
-                }),
-            folio_horizontal_rule(with_alpha(pal.outline, 0.34)),
-            label(tr("browser-filter-index"), 9.0, scale, with_alpha(pal.primary, 0.9 * ease)),
-            label(
-                tr("browser-filter-title"),
-                19.0,
-                scale,
-                with_alpha(pal.surface_text, 0.96 * ease)
-            ),
-            label(
-                tr(if show_apply_button {
-                    "browser-filter-apply-desc"
-                } else {
-                    "browser-filter-desc"
-                }),
-                crate::frontend::ui::TYPE_SMALL,
-                scale,
-                with_alpha(pal.surface_text, 0.48 * ease)
-            ),
-            bar,
-        ]
-        .spacing(10.0 * scale)
-        .padding(Padding { right: 10.0 * scale, ..Padding::ZERO }),
-    )
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .direction(crate::frontend::ui::thin_vbar())
-    .style(crate::frontend::ui::scroll_style(with_alpha(pal.outline, 0.72)));
+    let mut filter_column = column![
+        label(tr("browser-search-label"), 8.5, scale, with_alpha(pal.surface_text, 0.42 * ease)),
+        container(search_box(br, scale, pal))
+            .width(Length::Fill)
+            .padding(Padding::from([6.0 * scale, 8.0 * scale]))
+            .style(move |_| {
+                crate::frontend::ui::box_style(
+                    with_alpha(pal.background, 0.44),
+                    with_alpha(pal.outline, 0.34),
+                )
+            }),
+        folio_horizontal_rule(with_alpha(pal.outline, 0.34)),
+        label(tr("browser-filter-index"), 9.0, scale, with_alpha(pal.primary, 0.9 * ease)),
+        label(tr("browser-filter-title"), 19.0, scale, with_alpha(pal.surface_text, 0.96 * ease)),
+        label(
+            tr(if show_apply_button { "browser-filter-apply-desc" } else { "browser-filter-desc" }),
+            crate::frontend::ui::TYPE_SMALL,
+            scale,
+            with_alpha(pal.surface_text, 0.48 * ease)
+        ),
+    ]
+    .spacing(10.0 * scale)
+    .padding(Padding { right: 10.0 * scale, ..Padding::ZERO });
+    filter_column = match super::filter_rail::filter_rail(br, filter_inner_w, scale, ease, pal) {
+        Some(rail) => filter_column.push(rail),
+        None => filter_column.push(bar),
+    };
+    let filters = scrollable(filter_column)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .direction(crate::frontend::ui::thin_vbar())
+        .style(crate::frontend::ui::scroll_style(with_alpha(pal.outline, 0.72)));
     let mut parameters = column![filters].spacing(10.0 * scale);
     if show_apply_button && br.source.searchable() {
         parameters = parameters.push(action_btn(
@@ -771,12 +848,7 @@ pub fn view<'a>(
             bottom: 15.0 * scale,
             left: 14.0 * scale,
         })
-        .style(move |_| {
-            crate::frontend::ui::box_style(
-                with_alpha(pal.surface_variant, 0.3),
-                with_alpha(pal.outline, 0.34),
-            )
-        });
+        .style(move |_| crate::frontend::ui::folio_rail_style(pal));
 
     let wall_shader: Element<'a, Message> = shader(crate::app::scene::BrowserSceneProgram {
         render: wall_render.clone(),
@@ -798,13 +870,31 @@ pub fn view<'a>(
     .width(Length::Fill)
     .height(Length::Fill)
     .into();
-    let card_overlay: Element<'a, Message> =
-        canvas(BrowserCardOverlay { browser: br, render: wall_render, pal, scale, fade: ease })
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into();
+    let media_overlay: Element<'a, Message> = canvas(BrowserCardOverlay {
+        browser: br,
+        render: wall_render.clone(),
+        pal,
+        scale,
+        fade: ease,
+        layer: CardOverlayLayer::Media,
+    })
+    .width(Length::Fill)
+    .height(Length::Fill)
+    .into();
+    let card_overlay: Element<'a, Message> = canvas(BrowserCardOverlay {
+        browser: br,
+        render: wall_render,
+        pal,
+        scale,
+        fade: ease,
+        layer: CardOverlayLayer::Actions,
+    })
+    .width(Length::Fill)
+    .height(Length::Fill)
+    .into();
     let wall = stack![
         wall_shader,
+        media_overlay,
         wall_chrome,
         card_overlay,
         canvas(crate::frontend::ui::BrowserWallInputLayer).width(Length::Fill).height(Length::Fill),
@@ -875,9 +965,9 @@ pub fn view<'a>(
     });
     let furniture = column![header, tabs, reading].spacing(0.0).height(Length::Fill);
     let atmosphere: Element<'a, Message> =
-        br.session.items.iter().find_map(preview_image_path).map_or_else(
+        br.session.items.iter().find_map(thumb_image_path).map_or_else(
             || container(text("")).into(),
-            |(path, _)| {
+            |path| {
                 image(image::Handle::from_path(path))
                     .width(Length::Fill)
                     .height(Length::Fill)
@@ -893,32 +983,38 @@ pub fn view<'a>(
         .width(Length::Fixed(panel_w))
         .height(Length::Fixed(panel_h));
 
-    let rise = (1.0 - ease) * 38.0;
-    let panel = mouse_area(
+    let main = sheet_frame(
         container(stage)
             .width(Length::Fixed(panel_w))
             .height(Length::Fixed(panel_h))
             .clip(true)
             .style(move |_| sheet_style(pal, ease)),
-    )
-    .on_press(Message::Capture);
-    let main = crate::frontend::ui::inert_backdrop(
-        container(container(panel).padding(Padding { top: rise, ..Padding::ZERO }))
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .center_x(Length::Fill)
-            .center_y(Length::Fill)
-            .style(move |_| crate::frontend::ui::folio_scrim_style(ease)),
+        ease,
         Message::Close,
     );
 
     let clip = (br.source == Source::Youtube)
         .then_some((br.request.catalog.clip_start.as_str(), br.request.catalog.clip_len.as_str()));
-    let overlay: Element<'a, Message> =
-        match br.session.preview.and_then(|idx| br.session.items.get(idx)) {
-            Some(item) => preview_modal(item, br.source, preview_anim, spin, pal, clip),
-            None => container(text("")).into(),
-        };
+    let overlay: Element<'a, Message> = match br
+        .session
+        .preview
+        .and_then(|idx| br.session.items.get(idx).map(|item| (idx, item)))
+    {
+        Some((index, item)) if br.source == Source::Steam => super::workshop::view(
+            item,
+            &super::workshop::Placement {
+                size: Size::new(panel_w, panel_h),
+                index,
+                count: br.session.items.len(),
+            },
+            &br.view,
+            scale,
+            preview_anim,
+            pal,
+        ),
+        Some((_, item)) => preview_modal(item, &br.view, br.source, preview_anim, spin, pal, clip),
+        None => container(text("")).into(),
+    };
     stack![main, overlay].into()
 }
 

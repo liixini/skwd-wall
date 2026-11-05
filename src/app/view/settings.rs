@@ -23,18 +23,30 @@ pub(super) fn settings_layer(app: &App) -> Element<'_, Message> {
         entrance: app.panels.settings.entrance.x,
         palette: &app.theme.palette,
     };
-    if settings::is_picker_layout_section(&app.panels.settings.tab, app.panels.settings.section) {
+    if app.panels.settings.layout_studio
+        && settings::is_picker_layout_section(app.panels.settings.open_section)
+    {
         return settings::picker_layout_workbench(&source, focus, chrome);
     }
+    let state = &app.panels.settings;
+    let calm = settings::CalmCtx {
+        open: state.open_section,
+        section: state.section,
+        busy: state.busy.x,
+        pop: state.pop,
+        edit: state.edit,
+        instant: settings::SETTINGS_MOTION.reduced(app.motion_profile()),
+        closing: state.closing_section,
+    };
     settings::settings_workbench(settings::WorkbenchInput {
+        layouts: state.layouts,
         source,
         focus,
         chrome,
+        calm,
         profiles: settings::ProfilesCtx {
             selected: app.panels.settings.profile,
             filter: &app.panels.settings.profile_filter,
-            enter: app.panels.settings.profile_enter.x,
-            marker: app.panels.settings.profile_marker.x,
         },
         folders: settings::FoldersCtx {
             drafts: &app.panels.settings.folder_drafts,
@@ -48,12 +60,16 @@ pub(super) fn settings_layer(app: &App) -> Element<'_, Message> {
         preview_path: app.selected_settings_preview_path(),
         transition_preview: app.panels.transition_preview.handle.clone(),
         tab_transition: app.panels.settings.tab_anim.x,
+        page_transition: app.panels.settings.section_anim.x,
+        emblem_transition: app.panels.settings.emblem_anim.x,
+        previous: app.panels.settings.previous.as_ref(),
         tab: &app.panels.settings.tab,
-        selected_section: app.panels.settings.section,
         search_open: app.panels.settings.search_open,
         search_query: &app.panels.settings.search_query,
         search_results: &app.panels.settings.search_results,
-        keybind_capture: keybind_capture_view(app),
+        search_total: app.panels.settings.search_total,
+        search_at: app.panels.settings.search_at,
+        keys: keys_ctx(&app.panels.settings),
         process_picker: process_picker_view(app),
         weather_review: weather_review_view(app),
     })
@@ -138,44 +154,15 @@ fn process_name(process: &str) -> String {
         .to_string()
 }
 
-fn keybind_capture_view(app: &App) -> Option<settings::KeybindCaptureView> {
-    let capture = app.panels.settings.keybind_capture.as_ref()?;
-    let conflict = capture
-        .triggers
-        .iter()
-        .find_map(|trigger| {
-            app.input
-                .bindings
-                .trigger_holders(capture.action, trigger)
-                .next()
-                .map(|other| (other, trigger.label()))
-        })
-        .and_then(|(other, trigger)| {
-            crate::contracts::picker::KEY_BINDINGS
-                .into_iter()
-                .find(|entry| entry.action == other)
-                .map(|entry| {
-                    crate::i18n::tr_args!(
-                        "settings-keybind-capture-conflict",
-                        binding => trigger,
-                        action => crate::i18n::tr(entry.title_key)
-                    )
-                })
-        });
-    let binding = if capture.triggers.is_empty() {
-        crate::i18n::tr("settings-keybind-unbound").to_string()
-    } else {
-        crate::domain::input::binding_label(&capture.triggers)
-    };
-    let action = crate::i18n::tr(capture.title_key);
-    Some(settings::KeybindCaptureView {
-        title: if capture.slot == 0 {
-            action.to_string()
-        } else {
-            crate::i18n::tr_args!("settings-keybind-capture-second-title", action => action)
-        },
-        binding,
-        edited: capture.edited,
-        conflict,
-    })
+fn keys_ctx(state: &crate::app::state::SettingsState) -> settings::KeysCtx<'_> {
+    settings::KeysCtx {
+        capture: state
+            .keybind_capture
+            .as_ref()
+            .map(|capture| (capture.path.as_str(), capture.slot)),
+        query: &state.keys_query,
+        moved: state.keys_moved.as_ref().map(|moved| (moved.key.as_str(), moved.from.as_slice())),
+        same: state.keys_same.as_deref(),
+        lit: state.keys_lit,
+    }
 }

@@ -68,7 +68,13 @@ impl MotionProfile {
     }
 
     pub fn retime_tween(self, tween: &mut Tween, tier: MotionTier) {
-        tween.set_duration_ms(self.duration_ms(tier));
+        self.retime_tween_override(tween, self.duration_ms(tier));
+    }
+
+    pub fn retime_tween_override(self, tween: &mut Tween, milliseconds: f32) {
+        let target = tween.target;
+        *tween = self.override_tween(tween.x, milliseconds);
+        tween.retarget(target);
     }
 
     pub fn approach_tau(self, tier: MotionTier) -> f32 {

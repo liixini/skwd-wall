@@ -1,6 +1,5 @@
 settings-paths-excluded-card = Dossiers exclus
 settings-paths-excluded-card-desc = Ignorer ces dossiers et leurs sous-dossiers dans la bibliothèque d’images et de vidéos. Les métadonnées enregistrées sont conservées.
-settings-paths-path-placeholder = Chemin du dossier
 settings-paths-source-card = Dossiers de fonds d’écran
 settings-paths-source-card-desc = Recherche les images et vidéos dans ces dossiers et leurs sous-dossiers. Les changements actualisent automatiquement la bibliothèque.
 settings-paths-folder-choose-action = Choisir un dossier
@@ -25,4 +24,3 @@ settings-paths-removed-excluded = Dossier exclu retiré : { $path }
 settings-paths-watch-polling = Interrogation
 settings-paths-watch-error = Illisible
 settings-paths-watch-error-note = Vérifiez qu’il est monté et lisible. L’interrogation continue de réessayer.
-settings-paths-excluded-footer = Les dossiers exclus ne sont jamais analysés, aucun profil ne peut donc les afficher. Pour garder un dossier mais le masquer en public, utilisez Bibliothèque › Profils.

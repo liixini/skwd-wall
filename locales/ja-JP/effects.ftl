@@ -81,4 +81,3 @@ effects-activity-inactive-desc = 非アクティブなアクティビティで�
 effects-activity-unavailable = 選択したアクティビティは利用できません。既存のアクティビティを選んで再試行してください。
 effects-activity-saved = { $activity } に保存しました。
 effects-activity-unassigned = Skwd の壁紙が割り当てられていません
-effects-activity-preparing = { $activity } の壁紙を準備しています。

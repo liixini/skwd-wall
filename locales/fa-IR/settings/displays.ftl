@@ -8,3 +8,6 @@ settings-displays-lock-label = قفل
 settings-displays-lock-desc = کاغذدیواری این نمایشگر فقط از راه انتخابگر چندگانه به‌روزرسانی شود.
 settings-displays-empty-label = در حال شناسایی نمایشگرها
 settings-displays-empty-desc = وقتی سرویس کاغذدیواری نمایشگرها را گزارش کند، کاغذدیواری‌های فعلی اینجا ظاهر می‌شوند.
+settings-displays-default-placement-label = جایگاه پیش‌فرض
+settings-displays-default-placement-desc = هر نمایشگری که جایگاه مخصوص خودش را ندارد از این جایگاه استفاده می‌کند.
+settings-displays-use-global = استفاده از تنظیم سراسری · { $mode }

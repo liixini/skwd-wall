@@ -5,6 +5,4 @@ mod geometry;
 mod hand;
 mod layout;
 mod motion;
-mod preset_grid;
-mod presets;
 mod sandy;

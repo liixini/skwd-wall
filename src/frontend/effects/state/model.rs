@@ -195,8 +195,8 @@ impl Effects {
         self.panel.mode = mode;
     }
 
-    pub fn set_chrome(&mut self, palette: crate::frontend::theme::Palette) {
-        self.panel.chrome = palette;
+    pub fn set_chrome(&mut self, palette: &crate::frontend::theme::Palette) {
+        self.panel.chrome = *palette;
     }
 
     pub fn set_motion_profile(&mut self, motion: crate::frontend::animation::MotionProfile) {

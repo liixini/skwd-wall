@@ -11,6 +11,9 @@ use super::super::*;
 use super::tags::tag_select_click;
 
 pub(super) fn mouse_moved(app: &mut App, x: f32, y: f32) -> Task<Message> {
+    if app.panels.arrange.is_some() && !super::arrange::preview::active(app) {
+        return Task::none();
+    }
     if app.detail_open() || app.menu_capturing() {
         return Task::none();
     }
@@ -72,6 +75,9 @@ pub(super) fn click(
     button: crate::domain::input::MouseButton,
 ) -> Task<Message> {
     use crate::domain::input::MouseButton;
+    if super::arrange::preview::active(app) {
+        return super::arrange::preview::click(app, x, y, button);
+    }
     if app.menu_capturing() && !app.tags.editing {
         return if button == MouseButton::Left {
             super::lifecycle::exit(app)
@@ -284,6 +290,8 @@ fn back_panel_click(app: &mut App, fi: usize, x: f32, y: f32) -> Task<Message> {
     } else if lay.actions.effects.is_some_and(within) {
         open_effects(app, fi, crate::frontend::effects::EffectsMode::Studio);
         app.retick();
+    } else if lay.actions.drawing.is_some_and(within) {
+        return card_drawing_click(app, &key, bp.drawing);
     } else if lay.actions.reset_thumbnail.is_some_and(within) {
         return super::update_inner(app, Message::ResetThumbnail(si));
     } else if lay.actions.reveal.is_some_and(within) {
@@ -303,6 +311,47 @@ fn back_panel_click(app: &mut App, fi: usize, x: f32, y: f32) -> Task<Message> {
     } else if !matches!(app.scene.mode, Mode::Slices | Mode::Depth) {
         return close_flip_or_apply(app, fi, &bp, x, y);
     }
+    Task::none()
+}
+
+fn card_drawing_click(
+    app: &mut App,
+    key: &str,
+    state: Option<crate::frontend::scene::DrawingCardState>,
+) -> Task<Message> {
+    use crate::frontend::scene::DrawingCardState;
+
+    let Some(state) = state.filter(|state| state.enabled()) else { return Task::none() };
+    if app.flipped_drawing_key() != Some(key)
+        || app.daemon.pending.values().any(|pending| {
+            matches!(pending, Pending::DrawingCardAction { key: active, .. } if active == key)
+        })
+    {
+        return Task::none();
+    }
+    let enabled = state == DrawingCardState::Draw;
+    let blocked = app.daemon.drawing.as_ref().filter(|status| {
+        status.key == key
+            && !status.prepared
+            && status.pack != wall_proto::drawing::PackState::Available
+    });
+    if let Some(status) = blocked.filter(|_| enabled) {
+        app.show_toast(crate::i18n::tr(if status.pack_missing() {
+            crate::frontend::settings::DRAWING_PACK_INSTALL
+        } else {
+            "card-back-drawing-setup-needed"
+        }));
+        return super::settings::open_drawing_setup(app);
+    }
+    app.call_tracked(
+        wall_proto::rpc::DRAWING_SET_ENABLED,
+        json!(wall_proto::drawing::SetEnabledRequest { key: key.to_string(), enabled }),
+        Pending::DrawingCardAction { key: key.to_string(), enabled },
+    );
+    if enabled {
+        app.scene.set_card_drawing(key, DrawingCardState::Preparing);
+    }
+    app.retick();
     Task::none()
 }
 

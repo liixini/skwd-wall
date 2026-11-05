@@ -14,6 +14,7 @@ pub enum BrowserMsg {
     SearchSubmit,
     SetSort(String),
     SteamFilter(String, String),
+    SteamTag(String, bool),
     CatalogFilter(String, String),
     SetTopRange(String),
     SetAtleast(String),
@@ -33,6 +34,13 @@ pub enum BrowserMsg {
     OpenPreview(usize),
     ClosePreview,
     CopyWorkshopId(String),
+    SelectPreview(usize),
+    RetryPreview,
+    RetryDetails,
+    OpenWorkshop,
+    OpenCreator,
+    OpenVideo(usize),
+    ToggleDescription,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +73,11 @@ pub struct BrowserItem {
     pub attribution: String,
     pub attribution_url: String,
     pub track_url: String,
+    pub workshop: Option<crate::contracts::browser::WorkshopDetails>,
+    pub preview_paths: std::collections::HashMap<String, String>,
+    pub preview_handles: std::collections::HashMap<String, iced::widget::image::Handle>,
+    pub preview_error: Option<String>,
+    pub details_ready: bool,
 }
 
 impl BrowserItem {
@@ -115,11 +128,22 @@ pub(super) const PURITY_SFW: Color = Color { r: 0.3, g: 0.8, b: 0.3, a: 0.2 };
 pub(super) const ON_MEDIA: Color = Color { r: 1.0, g: 1.0, b: 1.0, a: 0.85 };
 
 pub const SORT_KEYS: [&str; 7] =
-    ["toplist", "hot", "date_added", "relevance", "views", "favorites", "random"];
+    [TOPLIST_SORT, "hot", "date_added", "relevance", "views", "favorites", "random"];
 
-pub const STEAM_SORTS: [&str; 5] = ["3", "0", "1", "21", "9"];
+pub const TOPLIST_SORT: &str = "toplist";
+
+pub const STEAM_SORTS: [&str; 5] = [TREND_SORT, "0", "1", "21", "9"];
+
+pub const TREND_SORT: &str = "3";
 
 pub const STEAM_TREND_DAYS: [&str; 3] = ["1", "3", "7"];
+
+pub const STEAM_DAYS_FILTER: &str = "days";
+pub const STEAM_TYPE_FILTER: &str = "type";
+pub const STEAM_RESOLUTION_FILTER: &str = "res";
+pub const STEAM_NSFW_FILTER: &str = "nsfw";
+pub const STEAM_SFW_VALUE: &str = "0";
+pub const STEAM_NSFW_VALUE: &str = "1";
 
 pub const STEAM_TYPES: [&str; 3] = ["", "Scene", "Video"];
 
@@ -359,8 +383,60 @@ pub struct PexelsRequestState {
 pub struct SteamRequestState {
     pub kind: String,
     pub resolution: String,
-    pub category: String,
+    pub tags: Vec<String>,
+    pub excluded_tags: Vec<String>,
     pub trend_days: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TagMark {
+    Off,
+    Include,
+    Exclude,
+}
+
+impl SteamRequestState {
+    pub fn tag_mark(&self, tag: &str) -> TagMark {
+        if tag.is_empty() {
+            return if self.tags.is_empty() && self.excluded_tags.is_empty() {
+                TagMark::Include
+            } else {
+                TagMark::Off
+            };
+        }
+        if self.tags.iter().any(|known| known == tag) {
+            TagMark::Include
+        } else if self.excluded_tags.iter().any(|known| known == tag) {
+            TagMark::Exclude
+        } else {
+            TagMark::Off
+        }
+    }
+
+    pub fn exclude_tag(&mut self, tag: &str) {
+        if self.tag_mark(tag) == TagMark::Exclude {
+            self.excluded_tags.retain(|known| known != tag);
+            return;
+        }
+        self.tags.retain(|known| known != tag);
+        self.excluded_tags.push(tag.to_owned());
+    }
+
+    pub fn cycle_tag(&mut self, tag: &str) {
+        if tag.is_empty() {
+            self.tags.clear();
+            self.excluded_tags.clear();
+            return;
+        }
+        match self.tag_mark(tag) {
+            TagMark::Off => self.tags.push(tag.to_owned()),
+            TagMark::Include => {
+                self.tags.retain(|known| known != tag);
+                self.excluded_tags.push(tag.to_owned());
+            }
+            TagMark::Exclude => self.excluded_tags.retain(|known| known != tag),
+        }
+    }
 }
 
 pub struct BrowserSessionState {
@@ -379,6 +455,14 @@ pub struct BrowserSessionState {
 }
 
 pub struct BrowserViewState {
+    pub media: BrowserMediaView,
+    pub animations: std::collections::HashMap<String, PreviewAnimation>,
+    pub clock: std::time::Duration,
+    pub motion: crate::frontend::animation::MotionProfile,
+    pub asset: usize,
+    pub description_expanded: bool,
+    pub details_loading: bool,
+    pub details_error: Option<String>,
     pub thumb_fades: std::collections::HashMap<String, crate::frontend::animation::Spring>,
     pub hover_fades: std::collections::HashMap<usize, crate::frontend::animation::Spring>,
     pub bar_items: std::cell::RefCell<
@@ -387,6 +471,64 @@ pub struct BrowserViewState {
             std::rc::Rc<Vec<(crate::frontend::ui::BarItem, crate::frontend::ui::BrowserAct)>>,
         )>,
     >,
+}
+
+#[derive(Debug, Clone)]
+pub struct PreviewAnimation {
+    handles: Vec<iced::widget::image::Handle>,
+    delays: Vec<std::time::Duration>,
+    duration: std::time::Duration,
+    bytes: usize,
+}
+
+impl PreviewAnimation {
+    pub fn new(frames: crate::contracts::browser::PreviewFrames) -> Option<Self> {
+        if !frames.animated() {
+            return None;
+        }
+        Some(Self {
+            delays: frames.frames.iter().map(|frame| frame.delay).collect(),
+            bytes: frames.frames.iter().map(|frame| frame.rgba.len()).sum(),
+            duration: frames.duration,
+            handles: frame_handles(frames.frames),
+        })
+    }
+
+    pub fn frame(&self, clock: std::time::Duration) -> &iced::widget::image::Handle {
+        let index =
+            crate::contracts::browser::preview_frame_index(&self.delays, self.duration, clock);
+        &self.handles[index]
+    }
+
+    pub fn bytes(&self) -> usize {
+        self.bytes
+    }
+}
+
+pub fn frame_handles(
+    frames: Vec<crate::contracts::browser::PreviewFrame>,
+) -> Vec<iced::widget::image::Handle> {
+    frames
+        .into_iter()
+        .map(|frame| {
+            iced::widget::image::Handle::from_rgba(
+                frame.width,
+                frame.height,
+                iced::advanced::graphics::core::Bytes::from_owner(frame.rgba),
+            )
+        })
+        .collect()
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BrowserMediaView {
+    pub image: Option<iced::widget::image::Handle>,
+    pub item_id: String,
+    pub url: String,
+    pub frame: usize,
+    pub frames: usize,
+    pub loading: bool,
+    pub error: Option<String>,
 }
 
 impl Browser {
@@ -421,7 +563,8 @@ impl Browser {
                 steam: SteamRequestState {
                     kind: String::new(),
                     resolution: String::new(),
-                    category: String::new(),
+                    tags: Vec::new(),
+                    excluded_tags: Vec::new(),
                     trend_days: "7".into(),
                 },
                 catalog: CatalogRequestState {
@@ -456,6 +599,14 @@ impl Browser {
                 pending_apply: None,
             },
             view: BrowserViewState {
+                media: BrowserMediaView::default(),
+                animations: std::collections::HashMap::new(),
+                clock: std::time::Duration::ZERO,
+                motion: crate::frontend::animation::MotionProfile::default(),
+                asset: 0,
+                description_expanded: false,
+                details_loading: false,
+                details_error: None,
                 thumb_fades: std::collections::HashMap::new(),
                 hover_fades: std::collections::HashMap::new(),
                 bar_items: std::cell::RefCell::new(None),
@@ -510,7 +661,8 @@ impl Browser {
                 query_type: self.request.sorting.parse::<u32>().unwrap_or(3),
                 trend_days: self.request.steam.trend_days.parse::<u32>().unwrap_or(7).clamp(1, 7),
                 request_type: self.request.steam.kind.clone(),
-                category: self.request.steam.category.clone(),
+                tags: self.request.steam.tags.clone(),
+                excluded_tags: self.request.steam.excluded_tags.clone(),
                 resolution: self.request.steam.resolution.clone(),
                 allow_nsfw: self.request.nsfw,
                 page,
@@ -558,7 +710,12 @@ impl Browser {
     }
 
     pub fn preview_request(&self, item: &BrowserItem) -> PreviewRequest {
-        PreviewRequest { source: self.source, id: item.id.clone(), full_url: item.full_url.clone() }
+        PreviewRequest {
+            source: self.source,
+            id: item.id.clone(),
+            full_url: item.full_url.clone(),
+            refresh: false,
+        }
     }
 
     pub fn item_mut(&mut self, id: &str) -> Option<&mut BrowserItem> {
@@ -576,7 +733,7 @@ impl Browser {
         self.session
             .preview
             .and_then(|idx| self.session.items.get(idx))
-            .is_some_and(|it| it.preview_path.as_deref().unwrap_or("").is_empty())
+            .is_some_and(|it| self.view.media.loading && it.preview_error.is_none())
     }
 
     pub fn thumbs_pending(&self) -> bool {
@@ -629,6 +786,11 @@ impl From<BrowserSearchResult> for BrowserItem {
             attribution: result.attribution,
             attribution_url: result.attribution_url,
             track_url: result.track_url,
+            workshop: result.workshop,
+            preview_paths: std::collections::HashMap::new(),
+            preview_handles: std::collections::HashMap::new(),
+            preview_error: None,
+            details_ready: false,
         }
     }
 }

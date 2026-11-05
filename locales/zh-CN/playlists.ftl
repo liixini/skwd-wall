@@ -72,8 +72,8 @@ playlists-choose = Choose a playlist
 playlists-browse-all = All wallpapers
 playlists-edit = Edit playlists
 playlists-picker-search = Search by name or ID
-playlists-picker-no-match = No playlists match this search.
-playlists-picker-hint = Choose which wallpapers to browse. Playback stays as it is.
+playlists-picker-no-match = 没有与此搜索匹配的播放列表。
+playlists-picker-hint = 选择要浏览的壁纸。播放保持不变。
 playlists-filter-help = Filter reference
 playlists-help-combine = 用空格分隔过滤条件。除文件夹规则外，每个条件都必须匹配；文件夹规则中任意一个文件夹内的项目即可匹配。包含空格的路径请加引号。
 playlists-help-source = all / favourites
@@ -95,7 +95,7 @@ playlists-help-height = height:>=1080
     Compare the wallpaper height in pixels.
 playlists-help-resolution = res:>=1920x1080
     Both dimensions must satisfy the comparison.
-playlists-help-comparison = Comparisons: >=, <=, >, <, =
+playlists-help-comparison = 比较: >=, <=, >, <, =
     With no operator, numbers mean at least. Numeric = allows a difference below 0.5, including ratios. Use lowercase filter keywords.
-playlists-help-example = Example: favourites type:video ratio:landscape color:blue
+playlists-help-example = 示例: favourites type:video ratio:landscape color:blue
     Blue, wide videos from your favourites.

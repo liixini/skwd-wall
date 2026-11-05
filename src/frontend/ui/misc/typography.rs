@@ -79,13 +79,17 @@ pub fn mid_text(
     }
 }
 
+pub(crate) fn shapes_across(text: &str) -> bool {
+    has_rtl(text) || text.chars().any(|ch| matches!(ch, '\u{0900}'..='\u{0DFF}'))
+}
+
 pub(crate) fn has_rtl(text: &str) -> bool {
     text.chars().any(|ch| {
         matches!(ch, '\u{0590}'..='\u{08FF}' | '\u{FB1D}'..='\u{FDFF}' | '\u{FE70}'..='\u{FEFF}')
     })
 }
 
-fn anchor_rtl(
+pub(crate) fn anchor_rtl(
     content: &str,
     position: Point,
     align_x: TextAlignment,

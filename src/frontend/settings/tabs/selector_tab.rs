@@ -1,14 +1,91 @@
-use crate::contracts::settings::{EFFECT_NAMES, GraphicsTier, keys};
+use crate::contracts::settings::corners::{self, CornerKeys};
+use crate::contracts::settings::{
+    EFFECT_NAMES, GraphicsTier, SHOW_SORT_PREFIX, SHOW_TYPE_PREFIX, keys,
+};
 use crate::i18n::{settings_sand_meter_detail, tr, tr_args};
 
+use super::super::corners as corner;
 use super::super::tables::motion_speed_options;
 use super::builder::{folder_dropdown_options, type_chip_label};
-use super::{ActionId, Builder, Control, PRESET_NAME_KEY};
+use super::{ActionId, Builder, Control};
+
+const PIXELS: &str = "px";
+const PERCENT: &str = "%";
+const TIMES: &str = "x";
+
+fn corner_rows(builder: &mut Builder<'_>, keys: &CornerKeys) {
+    let words = corner::words(corner::style(builder.cfg, keys));
+    builder.dropdown(tr(corner::STYLE_TITLE), "", keys.style, &corner::options());
+    builder.toggle(tr(corner::SAME_TITLE), tr(words.hint), keys.same);
+    builder.num(tr(words.all), "", keys.all, PIXELS);
+    for (path, label) in keys.values.iter().zip(words.corners) {
+        builder.num(tr(label), "", path, PIXELS);
+    }
+}
 
 pub(super) fn tab_selector(builder: &mut Builder<'_>) {
+    let mode = builder.cfg.display_mode();
+    selector_cards(builder, &mode);
+}
+
+struct Gated {
+    label: &'static str,
+    desc: &'static str,
+    path: &'static str,
+    unit: &'static str,
+}
+
+const HEX_INTENSITY: Gated = Gated {
+    label: "settings-selector-hex-intensity-label",
+    desc: "settings-selector-hex-intensity-desc",
+    path: keys::selector::HEX_ARC_INTENSITY_X10,
+    unit: "",
+};
+const HEX_WAVES: Gated = Gated {
+    label: "settings-selector-hex-waves-label",
+    desc: "settings-selector-hex-waves-desc",
+    path: keys::selector::HEX_CURVE_FREQUENCY,
+    unit: TIMES,
+};
+const HEX_ORBIT: Gated = Gated {
+    label: "settings-selector-hex-orbit-radius-label",
+    desc: "settings-selector-hex-orbit-radius-desc",
+    path: keys::selector::HEX_ORBIT_RADIUS,
+    unit: PIXELS,
+};
+const WALL_STAGGER: Gated = Gated {
+    label: "settings-selector-grid-stagger-label",
+    desc: "settings-selector-grid-stagger-desc",
+    path: keys::selector::GRID_STAGGER,
+    unit: PERCENT,
+};
+const WALL_BEND: Gated = Gated {
+    label: "settings-selector-grid-bend-label",
+    desc: "settings-selector-grid-bend-desc",
+    path: keys::selector::GRID_CYLINDER_BEND,
+    unit: PERCENT,
+};
+const WALL_RADIUS: Gated = Gated {
+    label: "settings-selector-grid-cylinder-radius-label",
+    desc: "settings-selector-grid-cylinder-radius-desc",
+    path: keys::selector::GRID_CYLINDER_RADIUS,
+    unit: PIXELS,
+};
+
+fn gated(builder: &mut Builder<'_>, row: &Gated) {
+    builder.num(tr(row.label), tr(row.desc), row.path, row.unit);
+}
+
+pub(super) fn selector_gated(builder: &mut Builder<'_>) {
+    builder.card(crate::i18n::text("settings-selector-composition-card"), "");
+    for row in [&HEX_INTENSITY, &HEX_WAVES, &HEX_ORBIT, &WALL_STAGGER, &WALL_BEND, &WALL_RADIUS] {
+        gated(builder, row);
+    }
+}
+
+pub(super) fn selector_cards(builder: &mut Builder<'_>, mode: &str) {
     let cfg = builder.cfg;
-    let mode = cfg.display_mode();
-    builder.card(tr("settings-selector-layout-card"), "");
+    builder.card(crate::i18n::text("settings-selector-layout-card"), "");
     builder.dropdown(
         tr("settings-selector-start-position-label"),
         tr("settings-selector-start-position-desc"),
@@ -19,7 +96,12 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
             ("browsing", tr("settings-selector-start-position-browsing")),
         ],
     );
-    let display_mode = crate::contracts::picker::Mode::from_key(&mode).as_key();
+    builder.toggle(
+        tr("settings-selector-loop-around-label"),
+        tr("settings-selector-loop-around-desc"),
+        keys::selector::LOOP_AROUND,
+    );
+    let display_mode = crate::contracts::picker::Mode::from_key(mode).as_key();
     builder.row(
         tr("settings-selector-display-mode-label"),
         tr("settings-selector-display-mode-desc"),
@@ -47,28 +129,7 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
         &motion_speed_options(),
         filter_speed,
     );
-    {
-        builder
-            .card(tr("settings-selector-presets-card"), tr("settings-selector-presets-card-desc"));
-        let pmode = cfg.selector_mode();
-        let selected = cfg.selected_preset(&pmode);
-        builder.text_field(
-            tr("settings-selector-preset-name-label"),
-            tr("settings-selector-preset-name-desc"),
-            PRESET_NAME_KEY,
-            tr("settings-selector-preset-name-placeholder"),
-        );
-        let items: Vec<(String, bool)> = cfg
-            .selector_preset_names(&pmode)
-            .into_iter()
-            .map(|name| {
-                let active = selected.as_deref() == Some(name.as_str());
-                (name, active)
-            })
-            .collect();
-        builder.row("", "", Control::Presets { mode: pmode, items });
-    }
-    builder.card(tr("settings-selector-live-preview-card"), "");
+    builder.card(crate::i18n::text("settings-selector-live-preview-card"), "");
     builder.toggle(
         tr("settings-selector-live-preview-label"),
         tr("settings-selector-live-preview-desc"),
@@ -79,9 +140,12 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
         tr("settings-selector-type-badges-desc"),
         keys::selector::SHOW_TYPE_BADGES,
     );
-    match mode.as_str() {
+    match mode {
         "depth" => {
-            builder.card(tr("settings-selector-depth-card"), tr("settings-selector-depth-desc"));
+            builder.card(
+                crate::i18n::text("settings-selector-depth-card"),
+                tr("settings-selector-depth-desc"),
+            );
             builder.num(
                 tr("settings-selector-depth-height-label"),
                 tr("settings-selector-depth-height-desc"),
@@ -113,12 +177,6 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 "",
             );
             builder.num(
-                tr("settings-selector-depth-corners-label"),
-                tr("settings-selector-depth-corners-desc"),
-                keys::selector::DEPTH_CORNERS,
-                "px",
-            );
-            builder.num(
                 tr("settings-selector-depth-skew-label"),
                 tr("settings-selector-depth-skew-desc"),
                 keys::selector::DEPTH_SKEW,
@@ -140,10 +198,11 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 tr("settings-selector-shadows-desc"),
                 keys::selector::DEPTH_SHADOWS,
             );
+            corner_rows(builder, &corners::DEPTH);
         }
         "collection" => {
             builder.card(
-                tr("settings-selector-mode-collection"),
+                crate::i18n::text("settings-selector-mode-collection"),
                 tr("settings-selector-collection-desc"),
             );
             builder.num(
@@ -171,21 +230,16 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 "°",
             );
             builder.num(
-                tr("settings-selector-collection-corners-label"),
-                tr("settings-selector-collection-corners-desc"),
-                keys::selector::COLLECTION_CORNERS,
-                "px",
-            );
-            builder.num(
                 tr("settings-selector-collection-speed-label"),
                 tr("settings-selector-collection-speed-desc"),
                 keys::selector::COLLECTION_SPEED,
                 "%",
             );
+            corner_rows(builder, &corners::COLLECTION);
         }
         "hex" => {
             builder.card(
-                tr("settings-selector-composition-card"),
+                crate::i18n::text("settings-selector-composition-card"),
                 tr("settings-selector-composition-card-desc-hex"),
             );
             builder.toggle(
@@ -218,33 +272,20 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
             );
             let curve = cfg.text(keys::selector::HEX_CURVE);
             if curve != "flat" {
-                builder.num(
-                    tr("settings-selector-hex-intensity-label"),
-                    tr("settings-selector-hex-intensity-desc"),
-                    keys::selector::HEX_ARC_INTENSITY_X10,
-                    "",
-                );
+                gated(builder, &HEX_INTENSITY);
             }
             if curve == "wave" {
-                builder.num(
-                    tr("settings-selector-hex-waves-label"),
-                    tr("settings-selector-hex-waves-desc"),
-                    keys::selector::HEX_CURVE_FREQUENCY,
-                    "x",
-                );
+                gated(builder, &HEX_WAVES);
             }
             if curve == "cylinder" {
-                builder.num(
-                    tr("settings-selector-hex-orbit-radius-label"),
-                    tr("settings-selector-hex-orbit-radius-desc"),
-                    keys::selector::HEX_ORBIT_RADIUS,
-                    "px",
-                );
+                gated(builder, &HEX_ORBIT);
             }
             builder.num(tr("settings-selector-hex-rows-label"), "", keys::selector::HEX_ROWS, "");
             builder.num(tr("settings-selector-hex-cols-label"), "", keys::selector::HEX_COLS, "");
-            builder
-                .card(tr("settings-selector-cells-card"), tr("settings-selector-cells-card-desc"));
+            builder.card(
+                crate::i18n::text("settings-selector-cells-card"),
+                tr("settings-selector-cells-card-desc"),
+            );
             builder.num(
                 tr("settings-selector-hex-cell-size-label"),
                 "",
@@ -266,7 +307,7 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
         }
         "wall" | "grid" => {
             builder.card(
-                tr("settings-selector-composition-card"),
+                crate::i18n::text("settings-selector-composition-card"),
                 tr("settings-selector-composition-card-desc-wall"),
             );
             builder.chips(
@@ -291,29 +332,16 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
             builder.num(tr("settings-selector-grid-rows-label"), "", keys::selector::GRID_ROWS, "");
             let wall_mode = cfg.text(keys::selector::GRID_LAYOUT);
             if matches!(wall_mode.as_str(), "brick" | "editorial") {
-                builder.num(
-                    tr("settings-selector-grid-stagger-label"),
-                    tr("settings-selector-grid-stagger-desc"),
-                    keys::selector::GRID_STAGGER,
-                    "%",
-                );
+                gated(builder, &WALL_STAGGER);
             }
             if wall_mode == "cylinder" {
-                builder.num(
-                    tr("settings-selector-grid-bend-label"),
-                    tr("settings-selector-grid-bend-desc"),
-                    keys::selector::GRID_CYLINDER_BEND,
-                    "%",
-                );
-                builder.num(
-                    tr("settings-selector-grid-cylinder-radius-label"),
-                    tr("settings-selector-grid-cylinder-radius-desc"),
-                    keys::selector::GRID_CYLINDER_RADIUS,
-                    "px",
-                );
+                gated(builder, &WALL_BEND);
+                gated(builder, &WALL_RADIUS);
             }
-            builder
-                .card(tr("settings-selector-cards-card"), tr("settings-selector-cards-card-desc"));
+            builder.card(
+                crate::i18n::text("settings-selector-cards-card"),
+                tr("settings-selector-cards-card-desc"),
+            );
             builder.num(
                 tr("settings-selector-card-width-label"),
                 "",
@@ -338,20 +366,13 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 keys::selector::GRID_GAP_Y,
                 "px",
             );
-            builder.toggle(
-                tr("settings-selector-grid-round-label"),
-                tr("settings-selector-grid-round-desc"),
-                keys::selector::GRID_ROUND_CORNERS,
-            );
-            builder.num(
-                tr("settings-selector-grid-corner-radius-label"),
-                tr("settings-selector-grid-corner-radius-desc"),
-                keys::selector::GRID_CORNER_RADIUS,
-                "px",
-            );
+            corner_rows(builder, &corners::GRID);
         }
         "hand" => {
-            builder.card(tr("settings-selector-hand-card"), tr("settings-selector-hand-card-desc"));
+            builder.card(
+                crate::i18n::text("settings-selector-hand-card"),
+                tr("settings-selector-hand-card-desc"),
+            );
             builder.chips(
                 tr("settings-selector-hand-move-label"),
                 tr("settings-selector-hand-move-desc"),
@@ -413,17 +434,12 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 "px",
             );
             builder.num(
-                tr("settings-selector-hand-corner-radius-label"),
-                "",
-                keys::selector::HAND_CORNER_RADIUS,
-                "px",
-            );
-            builder.num(
                 tr("settings-selector-hand-skew-label"),
                 tr("settings-selector-hand-skew-desc"),
                 keys::selector::HAND_SKEW,
                 "px",
             );
+            corner_rows(builder, &corners::HAND);
             builder.num(
                 tr("settings-selector-hand-perspective-label"),
                 tr("settings-selector-hand-perspective-desc"),
@@ -443,7 +459,7 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 "%",
             );
             builder.card(
-                tr("settings-selector-ribbons-card"),
+                crate::i18n::text("settings-selector-ribbons-card"),
                 tr("settings-selector-ribbons-card-desc"),
             );
             builder.chips(
@@ -482,7 +498,7 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 ],
             );
             builder.card(
-                tr("settings-selector-hand-effects-card"),
+                crate::i18n::text("settings-selector-hand-effects-card"),
                 tr("settings-selector-hand-effects-card-desc"),
             );
             builder.toggle_default_true(
@@ -525,7 +541,7 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 _ => tr("settings-selector-sand-note-integrated"),
             };
             builder.card(
-                tr("settings-selector-performance-card"),
+                crate::i18n::text("settings-selector-performance-card"),
                 tr("settings-selector-performance-card-desc"),
             );
             let tier = match card.tier {
@@ -564,8 +580,10 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 keys::selector::SANDY_LOD,
                 "x",
             );
-            builder
-                .card(tr("settings-selector-sandy-card"), tr("settings-selector-sandy-card-desc"));
+            builder.card(
+                crate::i18n::text("settings-selector-sandy-card"),
+                tr("settings-selector-sandy-card-desc"),
+            );
             builder.num(
                 tr("settings-selector-sandy-center-label"),
                 "",
@@ -602,7 +620,10 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 keys::selector::SANDY_EDGE_SPEED,
                 "%",
             );
-            builder.card(tr("settings-selector-sand-card"), tr("settings-selector-sand-card-desc"));
+            builder.card(
+                crate::i18n::text("settings-selector-sand-card"),
+                tr("settings-selector-sand-card-desc"),
+            );
             builder.num(
                 tr("settings-selector-sandy-duration-label"),
                 tr("settings-selector-sandy-duration-desc"),
@@ -682,7 +703,10 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 tr("settings-selector-outgoing-live-desc"),
                 keys::selector::SANDY_OUTGOING_LIVE,
             );
-            builder.card(tr("settings-selector-ring-card"), tr("settings-selector-ring-card-desc"));
+            builder.card(
+                crate::i18n::text("settings-selector-ring-card"),
+                tr("settings-selector-ring-card-desc"),
+            );
             builder.num(
                 tr("settings-selector-ring-size-label"),
                 tr("settings-selector-ring-size-desc"),
@@ -721,12 +745,12 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
             );
         }
         _ => {
-            builder.card(tr("settings-selector-slice-size-card"), "");
+            builder.card(crate::i18n::text("settings-selector-slice-size-card"), "");
             builder.num(
                 tr("settings-selector-slice-height-label"),
                 "",
                 keys::selector::SLICE_HEIGHT,
-                "",
+                PIXELS,
             );
             builder.num(
                 tr("settings-selector-visible-count-label"),
@@ -738,13 +762,13 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 tr("settings-selector-expanded-width-label"),
                 "",
                 keys::selector::EXPANDED_WIDTH,
-                "",
+                PIXELS,
             );
             builder.num(
                 tr("settings-selector-slice-width-label"),
                 "",
                 keys::selector::SLICE_WIDTH,
-                "",
+                PIXELS,
             );
             builder.num(
                 tr("settings-selector-slice-gap-label"),
@@ -780,40 +804,14 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
                 keys::selector::SLICE_WOBBLE_STRENGTH,
                 "%",
             );
-            builder.card(tr("settings-selector-corners-card"), "");
-            builder.toggle(
-                tr("settings-selector-round-corners-label"),
-                tr("settings-selector-round-corners-desc"),
-                keys::selector::ROUND_CORNERS,
-            );
-            builder.num(
-                tr("settings-selector-corner-tl-label"),
-                tr("settings-selector-corner-tl-desc"),
-                keys::selector::CORNER_TL,
-                "px",
-            );
-            builder.num(
-                tr("settings-selector-corner-tr-label"),
-                tr("settings-selector-corner-tr-desc"),
-                keys::selector::CORNER_TR,
-                "px",
-            );
-            builder.num(
-                tr("settings-selector-corner-br-label"),
-                tr("settings-selector-corner-br-desc"),
-                keys::selector::CORNER_BR,
-                "px",
-            );
-            builder.num(
-                tr("settings-selector-corner-bl-label"),
-                tr("settings-selector-corner-bl-desc"),
-                keys::selector::CORNER_BL,
-                "px",
-            );
+            builder.card(crate::i18n::text("settings-selector-corners-card"), "");
+            corner_rows(builder, &corners::SLICES);
         }
     }
-    builder
-        .card(tr("settings-selector-card-flip-card"), tr("settings-selector-card-flip-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-selector-card-flip-card"),
+        tr("settings-selector-card-flip-card-desc"),
+    );
     let flip_opts: Vec<(String, String)> = EFFECT_NAMES
         .iter()
         .map(|name| ((*name).to_string(), tr(effect_label_key(name)).to_string()))
@@ -848,8 +846,10 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
         keys::selector::FLIP_DURATION_MS,
         "ms",
     );
-    builder
-        .card(tr("settings-selector-tag-cloud-card"), tr("settings-selector-tag-cloud-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-selector-tag-cloud-card"),
+        tr("settings-selector-tag-cloud-card-desc"),
+    );
     builder.num(
         tr("settings-selector-tag-cloud-width-label"),
         tr("settings-selector-tag-cloud-width-desc"),
@@ -873,7 +873,7 @@ pub(super) fn tab_selector(builder: &mut Builder<'_>) {
         tag_cloud_rows,
     );
     builder.card(
-        tr("settings-selector-video-preview-card"),
+        crate::i18n::text("settings-selector-video-preview-card"),
         tr("settings-selector-video-preview-card-desc"),
     );
     builder.toggle(
@@ -952,7 +952,24 @@ pub(super) fn heaviness(vertices: u32) -> &'static str {
 }
 
 pub(super) fn tab_filter(builder: &mut Builder<'_>, folders: &[String]) {
-    builder.card(tr("settings-filter-appearance-card"), tr("settings-filter-appearance-card-desc"));
+    builder.card(crate::i18n::text("arrange-title"), tr("arrange-settings-desc"));
+    builder.action("", tr("arrange-settings-desc"), ActionId::ArrangePicker, tr("arrange-entry"));
+    builder.text_field(
+        tr("arrange-order-values"),
+        tr("arrange-order-desc"),
+        keys::filter_bar::BUTTON_ORDER,
+        "",
+    );
+    builder.text_field(
+        tr("arrange-hidden-values"),
+        tr("arrange-hidden-desc"),
+        keys::filter_bar::HIDDEN_BUTTONS,
+        "",
+    );
+    builder.card(
+        crate::i18n::text("settings-filter-appearance-card"),
+        tr("settings-filter-appearance-card-desc"),
+    );
     let visual_style =
         match builder.cfg.text(crate::contracts::settings::keys::filter_bar::VISUAL_STYLE).as_str()
         {
@@ -982,24 +999,27 @@ pub(super) fn tab_filter(builder: &mut Builder<'_>, folders: &[String]) {
             ("vertical", tr("settings-filter-orientation-vertical")),
         ],
     );
-    builder.card(tr("settings-filter-type-chips-card"), tr("settings-filter-type-chips-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-filter-type-chips-card"),
+        tr("settings-filter-type-chips-card-desc"),
+    );
     for key in crate::frontend::ui::TYPES {
         let tkey = crate::frontend::ui::BarShow::type_key(key);
-        builder.toggle(type_chip_label(key), "", &format!("filterBar.show.type.{tkey}"));
+        builder.toggle(type_chip_label(key), "", &format!("{SHOW_TYPE_PREFIX}{tkey}"));
     }
     builder.card(
-        tr("settings-filter-sort-options-card"),
+        crate::i18n::text("settings-filter-sort-options-card"),
         tr("settings-filter-sort-options-card-desc"),
     );
     for (mode, _) in crate::frontend::ui::SORTS {
         builder.toggle(
             tr(crate::frontend::ui::sort_label_key(mode)),
             "",
-            &format!("filterBar.show.sort.{mode}"),
+            &format!("{SHOW_SORT_PREFIX}{mode}"),
         );
     }
     builder.card(
-        tr("settings-filter-other-controls-card"),
+        crate::i18n::text("settings-filter-other-controls-card"),
         tr("settings-filter-other-controls-card-desc"),
     );
     builder.toggle(
@@ -1052,8 +1072,18 @@ pub(super) fn tab_filter(builder: &mut Builder<'_>, folders: &[String]) {
         tr("settings-filter-show-resolution-desc"),
         keys::filter_bar::SHOW_RESOLUTION,
     );
+    builder.toggle(
+        tr("settings-filter-show-arrange-label"),
+        tr("settings-filter-show-arrange-desc"),
+        keys::filter_bar::SHOW_ARRANGE,
+    );
+    builder.toggle(
+        tr("settings-filter-show-swatch-label"),
+        tr("settings-filter-show-swatch-desc"),
+        keys::filter_bar::SHOW_SWATCH,
+    );
     builder.card(
-        tr("settings-filter-resolution-presets-card"),
+        crate::i18n::text("settings-filter-resolution-presets-card"),
         tr("settings-filter-resolution-presets-card-desc"),
     );
     builder.action_chips(
@@ -1166,7 +1196,7 @@ pub(super) fn tab_filter(builder: &mut Builder<'_>, folders: &[String]) {
         });
     }
     builder.card(
-        tr("settings-filter-default-folder-card"),
+        crate::i18n::text("settings-filter-default-folder-card"),
         tr("settings-filter-default-folder-card-desc"),
     );
     let folder_opts = folder_dropdown_options(folders);
@@ -1183,7 +1213,10 @@ pub(super) fn tab_filter(builder: &mut Builder<'_>, folders: &[String]) {
         tr("settings-filter-sticky-desc"),
         crate::contracts::settings::schema::setting::filter_bar::STICKY,
     );
-    builder.card(tr("settings-filter-visibility-card"), tr("settings-filter-visibility-card-desc"));
+    builder.card(
+        crate::i18n::text("settings-filter-visibility-card"),
+        tr("settings-filter-visibility-card-desc"),
+    );
     builder.toggle_setting(
         tr("settings-filter-always-visible-label"),
         tr("settings-filter-always-visible-desc"),

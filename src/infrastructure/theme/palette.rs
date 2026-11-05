@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use crate::contracts::picker::PaletteSpec;
+use crate::contracts::picker::{PaletteSpec, palette_keys};
 
 pub fn load_palette(cache_dir: &str) -> PaletteSpec {
     let path = format!("{cache_dir}/colors.json");
@@ -25,5 +25,14 @@ pub fn decode_palette(value: &Value) -> PaletteSpec {
         background: pick(&["background"]),
         outline: pick(&["outline"]),
         tertiary: pick(&["tertiary"]),
+        secondary: pick(palette_keys::SECONDARY),
+        secondary_text: pick(palette_keys::SECONDARY_TEXT),
+        tertiary_text: pick(palette_keys::TERTIARY_TEXT),
+        error: pick(palette_keys::ERROR),
+        error_text: pick(palette_keys::ERROR_TEXT),
+        surface_variant_text: pick(palette_keys::SURFACE_VARIANT_TEXT),
+        shadow: pick(palette_keys::SHADOW),
+        hover: pick(palette_keys::HOVER),
+        hover_text: pick(palette_keys::HOVER_TEXT),
     }
 }

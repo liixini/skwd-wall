@@ -96,8 +96,8 @@ playlists-choose = Choose a playlist
 playlists-browse-all = All wallpapers
 playlists-edit = Edit playlists
 playlists-picker-search = Search by name or ID
-playlists-picker-no-match = No playlists match this search.
-playlists-picker-hint = Choose which wallpapers to browse. Playback stays as it is.
+playlists-picker-no-match = لا توجد قوائم تشغيل تطابق هذا البحث.
+playlists-picker-hint = اختر الخلفيات التي تريد تصفحها. يبقى التشغيل كما هو.
 playlists-filter-help = Filter reference
 playlists-help-combine = افصل المرشحات بمسافات. يجب أن يتطابق كل مرشح باستثناء قواعد المجلدات: يُحتسب العنصر الموجود في أي من المجلدات المذكورة. ضع المسارات التي تحتوي على مسافات بين علامتي اقتباس.
 playlists-help-source = all / favourites
@@ -119,7 +119,7 @@ playlists-help-height = height:>=1080
     Compare the wallpaper height in pixels.
 playlists-help-resolution = res:>=1920x1080
     Both dimensions must satisfy the comparison.
-playlists-help-comparison = Comparisons: >=, <=, >, <, =
+playlists-help-comparison = المقارنات: >=, <=, >, <, =
     With no operator, numbers mean at least. Numeric = allows a difference below 0.5, including ratios. Use lowercase filter keywords.
-playlists-help-example = Example: favourites type:video ratio:landscape color:blue
+playlists-help-example = مثال: favourites type:video ratio:landscape color:blue
     Blue, wide videos from your favourites.
