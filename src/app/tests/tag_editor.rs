@@ -188,6 +188,45 @@ fn cloud_fit_widths() {
 }
 
 #[test]
+fn scaled_cloud_widths() {
+    use super::view::cloud_fit_width;
+    for (base, scale, expected) in [
+        (760.0_f32, 1.3, 987.99994),
+        (760.0, 1.5, 1140.0),
+        (760.0, 2.0, 1520.0),
+        (540.0, 2.0, 1080.0),
+    ] {
+        for content in [500.0, 1200.0, 3000.0] {
+            assert_eq!(cloud_fit_width(None, Some(content), base * scale, 1920.0), expected);
+        }
+    }
+}
+
+#[test]
+fn cloud_width_scale_range() {
+    use super::view::cloud_fit_width;
+    for scale in [0.5, 0.75, 1.0, 1.2, 1.21, 1.22, 1.3, 1.5, 2.0] {
+        for base in [360.0, 540.0, 760.0, 2200.0] {
+            let width = base * scale;
+            for content in [0.0, 500.0, 1200.0, 5000.0] {
+                let fitted = cloud_fit_width(None, Some(content), width, 5000.0);
+                assert!(fitted.is_finite() && (width..=4960.0).contains(&fitted));
+            }
+        }
+    }
+}
+
+#[test]
+fn scaled_cloud_fits_viewport() {
+    use super::view::cloud_fit_width;
+    let width = 760.0_f32 * 1.3;
+    for content in [None, Some(500.0), Some(1200.0)] {
+        assert_eq!(cloud_fit_width(None, content, width, 1000.0), 960.0);
+        assert_eq!(cloud_fit_width(Some(900.0), content, width, 1000.0), 900.0);
+    }
+}
+
+#[test]
 fn tag_search_height_tracks_rows() {
     use super::view::cloud_fit_height;
     assert_eq!(cloud_fit_height(false, false, 3, 8, 768.0, 1.0), 126.0);

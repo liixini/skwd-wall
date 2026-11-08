@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use super::{
     DecodeDone, DecodePool, Job, MAX_ENCODED_BYTES, NEAR_CONTAINER_BYTES, decode_path,
-    far_block_len, is_webp, near_container_bytes, preview_dimensions_safe, resize_area,
+    far_block_len, is_thumb, near_container_bytes, preview_dimensions_safe, resize_area,
     resize_thumbnail_area, validate_near_container,
 };
 use crate::contracts::preview::BufPool;
@@ -82,6 +82,18 @@ fn decode_far_block() {
     std::fs::write(&temp, vec![0u8; 100]).unwrap();
     assert!(decode_path(path, &far_job(), &read_pool(1)).is_err());
     let _ = std::fs::remove_file(&temp);
+}
+
+#[test]
+fn decode_jpeg_thumb() {
+    let temp = std::env::temp_dir().join(format!("skwd_thumb_{}.thumb.jpg", std::process::id()));
+    image::RgbImage::from_pixel(320, 180, image::Rgb([200, 40, 10])).save(&temp).unwrap();
+    let job = Job { compressed: false, ..far_job() };
+    let decoded = decode_path(temp.to_str().unwrap(), &job, &read_pool(1)).unwrap();
+    let _ = std::fs::remove_file(&temp);
+    assert!(!decoded.blocks);
+    assert_eq!(decoded.data.len(), 160 * 88 * 4);
+    assert!(decoded.data[0] > 150 && decoded.data[3] == u8::MAX);
 }
 
 #[test]
@@ -312,17 +324,18 @@ fn self_memory_kib() -> (u64, u64, u64) {
 }
 
 #[test]
-fn is_webp_suffix() {
-    assert!(is_webp("a.webp"));
-    assert!(is_webp("/path/to/THUMB.WEBP"));
-    assert!(is_webp("mixed.WeBp"));
-    assert!(!is_webp("a.jpg"));
-    assert!(is_webp(".webp"));
-    assert!(!is_webp("webp"));
-    assert!(!is_webp(""));
-    assert!(!is_webp("x.web"));
-    assert!(is_webp("naïve_café.webp"));
-    assert!(!is_webp("café.png"));
+fn thumb_suffix() {
+    assert!(is_thumb("a.webp"));
+    assert!(is_thumb("/path/to/THUMB.WEBP"));
+    assert!(is_thumb("mixed.WeBp"));
+    assert!(is_thumb("a.thumb.jpg"));
+    assert!(is_thumb("b.JPEG"));
+    assert!(is_thumb(".webp"));
+    assert!(!is_thumb("webp"));
+    assert!(!is_thumb(""));
+    assert!(!is_thumb("x.web"));
+    assert!(is_thumb("naïve_café.webp"));
+    assert!(!is_thumb("café.png"));
 }
 
 #[test]

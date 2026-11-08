@@ -29,19 +29,94 @@ fn version_mismatch_warns() {
 
 #[test]
 fn empty_library_hints() {
-    assert!(empty_library_hint(3, None, true, true).is_none());
-    let never = empty_library_hint(0, None, false, false).expect("connecting hint");
+    let hint = |total, dir, connected, ever_connected, load| {
+        empty_library_hint(total, dir, connected, ever_connected, load)
+    };
+    assert!(hint(3, None, true, true, &LibraryLoad::Ready).is_none());
+    let never = hint(0, None, false, false, &LibraryLoad::Loading).expect("connecting hint");
     assert!(never.contains("Connecting to skwd-walld"));
-    let lost = empty_library_hint(0, None, false, true).expect("disconnect hint");
+    let lost = hint(0, None, false, true, &LibraryLoad::Loading).expect("disconnect hint");
     assert!(lost.contains("Lost connection"));
+    let loading = hint(0, None, true, true, &LibraryLoad::Loading).expect("loading hint");
+    assert!(loading.contains("Loading wallpapers"));
+    let error = LibraryLoad::Failed("offline".into());
+    let failed = hint(0, None, true, true, &error).expect("failure hint");
+    assert!(failed.contains("Could not load wallpapers: offline"));
     let mut config = json!({"paths": {"wallpaper": "/legacy"}, "library": {"folders": []}});
     let destination = skwd_config::library_destination(&config, false);
-    let hint = empty_library_hint(0, destination.as_deref(), true, true).expect("folder hint");
-    assert!(hint.contains("Settings under Library") && !hint.contains("/legacy"));
+    let empty =
+        hint(0, destination.as_deref(), true, true, &LibraryLoad::Ready).expect("folder hint");
+    assert!(empty.contains("Settings under Library") && !empty.contains("/legacy"));
     config["library"]["folders"] = json!(["/custom"]);
     let destination = skwd_config::library_destination(&config, false);
-    let hint = empty_library_hint(0, destination.as_deref(), true, true).expect("directory hint");
-    assert!(hint.contains("/custom") && !hint.contains("/legacy"));
+    let empty =
+        hint(0, destination.as_deref(), true, true, &LibraryLoad::Ready).expect("directory hint");
+    assert!(empty.contains("/custom") && !empty.contains("/legacy"));
+}
+
+#[test]
+fn list_response_states() {
+    let mut app = test_app();
+    app.handle_ipc(IpcMsg::Connected { list_id: 42 });
+    assert_eq!(app.daemon.library_load, LibraryLoad::Loading);
+    let state: Value = crate::app::update::ui_state_json(&app).parse().unwrap();
+    assert_eq!(state["library"]["state"], "loading");
+    reject(&mut app, 42, "list unavailable");
+    assert_eq!(app.daemon.library_load, LibraryLoad::Failed("list unavailable".into()));
+    let state: Value = crate::app::update::ui_state_json(&app).parse().unwrap();
+    assert_eq!(state["library"]["state"], "failed");
+    assert_eq!(state["library"]["error"], "list unavailable");
+
+    app.request_library_list();
+    assert_eq!(app.daemon.library_load, LibraryLoad::Loading);
+    let id = *app.daemon.pending.iter().find(|(_, kind)| **kind == Pending::List).unwrap().0;
+    respond(&mut app, id, json!({"wallpapers": []}));
+    assert_eq!(app.daemon.library_load, LibraryLoad::Ready);
+    assert!(app.library_session.library.catalog().items.is_empty());
+    let state: Value = crate::app::update::ui_state_json(&app).parse().unwrap();
+    assert_eq!(state["library"]["state"], "ready");
+    assert_eq!(state["library"]["count"], 0);
+    assert!(state["library"]["error"].is_null());
+}
+
+#[test]
+fn list_failure_keeps_catalog() {
+    let mut app = test_app();
+    seed(&mut app, &[wall("kept.png", "static", 1, 0)]);
+    app.request_library_list();
+    let id = *app.daemon.pending.iter().find(|(_, kind)| **kind == Pending::List).unwrap().0;
+    reject(&mut app, id, "list unavailable");
+    assert_eq!(app.daemon.library_load, LibraryLoad::Failed("list unavailable".into()));
+    assert_eq!(app.library_session.library.catalog().items[0].name, "kept.png");
+    assert!(
+        app.runtime_state
+            .toast
+            .as_ref()
+            .unwrap()
+            .0
+            .contains("Could not load wallpapers: list unavailable")
+    );
+
+    app.handle_ipc(IpcMsg::Disconnected);
+    app.handle_ipc(IpcMsg::Connected { list_id: 43 });
+    assert_eq!(app.daemon.library_load, LibraryLoad::Loading);
+    assert_eq!(app.library_session.library.catalog().items[0].name, "kept.png");
+    respond(&mut app, id, json!({"wallpapers": []}));
+    assert_eq!(app.daemon.library_load, LibraryLoad::Loading);
+}
+
+#[test]
+fn malformed_list_reports_failure() {
+    let mut app = test_app();
+    app.handle_ipc(IpcMsg::Connected { list_id: 42 });
+    respond(&mut app, 42, json!({"wallpapers": false}));
+    assert!(matches!(&app.daemon.library_load, LibraryLoad::Failed(_)));
+    assert!(app.library_session.library.catalog().items.is_empty());
+
+    app.request_library_list();
+    let id = *app.daemon.pending.iter().find(|(_, kind)| **kind == Pending::List).unwrap().0;
+    app.handle_ipc(IpcMsg::Response { id, result: None, error: None });
+    assert!(matches!(&app.daemon.library_load, LibraryLoad::Failed(_)));
 }
 
 #[test]

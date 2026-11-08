@@ -179,7 +179,10 @@ fn config_area(app: &App, settings: &Map<String, Value>) -> Option<Area> {
 }
 
 fn focused(app: &App) -> usize {
-    app.scene.flipped().unwrap_or(app.scene.current)
+    app.scene
+        .flipped()
+        .or(app.scene.hover.filter(|_| !app.scene.kb_nav))
+        .unwrap_or(app.scene.current)
 }
 
 fn item_at(app: &App, index: usize) -> Option<Item> {

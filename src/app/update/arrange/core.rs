@@ -452,6 +452,8 @@ pub(in crate::app) fn visibility_key(id: &str) -> Option<String> {
         edit_id::TAGCLOUD => Some(filter_bar::SHOW_TAG_CLOUD),
         edit_id::DOWNLOAD => Some(filter_bar::SHOW_DOWNLOAD),
         edit_id::PLAYLISTS => Some(filter_bar::SHOW_PLAYLISTS),
+        edit_id::COLOUR_STUDIO => Some(filter_bar::SHOW_COLOUR_STUDIO),
+        edit_id::WIDGETS => Some(filter_bar::SHOW_WIDGETS),
         edit_id::ARRANGE => Some(filter_bar::SHOW_ARRANGE),
         edit_id::SWATCH => Some(filter_bar::SHOW_SWATCH),
         _ => None,

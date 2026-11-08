@@ -3,7 +3,7 @@ use crate::frontend::scene::{InstanceRaw, roll_in_cut};
 
 use super::layout_helpers::{
     CardSpec, EDITORIAL_CARDS, EDITORIAL_HERO_COLUMNS, EDITORIAL_HERO_MAX, EDITORIAL_HERO_MIN,
-    EDITORIAL_STAGGER_GAIN, color4,
+    EDITORIAL_STAGGER_GAIN, color4, vis_range, widen,
 };
 use super::model::{RebuildCtx, RebuildSinks, SceneCore};
 
@@ -25,18 +25,23 @@ impl SceneCore {
         }
         let placements = self.grid_placements(ctx, gp, total_w);
         let content_h = placements.iter().map(|place| place.2 + place.4).fold(0.0_f32, f32::max);
+        let tallest = placements.iter().map(|place| place.4).fold(0.0_f32, f32::max);
+        self.set_period(content_h + gp.gap_y, content_h + gp.gap_y, view_h + tallest, count);
         let max_scroll = (content_h - view_h).max(0.0);
+        self.grid_max_scroll = max_scroll;
+        let (lo, hi) = self.scroll_bounds(max_scroll).into_inner();
         if self.layout_camera_anchor {
             if let Some((_, _, y, _, height)) =
                 placements.iter().find(|place| place.0 == self.current)
             {
-                self.camera.snap((y + height * 0.5 - view_h * 0.5).clamp(0.0, max_scroll));
+                self.camera.snap((y + height * 0.5 - view_h * 0.5).clamp(lo, hi));
             }
             self.layout_camera_anchor = false;
         }
-        let target = self.camera.target.clamp(0.0, max_scroll);
-        self.camera.retarget(target);
+        let target = self.camera.target.clamp(lo, hi);
+        self.aim_camera(target, view_h);
         let cam = self.camera.x;
+        let around = cam + view_h * 0.5;
         let left = cx - total_w * 0.5;
         let top = cy - view_h * 0.5;
         let frame = if self.picker_frame.is_some() {
@@ -45,12 +50,12 @@ impl SceneCore {
             [left.max(0.0), top.max(0.0), (left + total_w).min(vw), (top + view_h).min(vh)]
         };
 
-        self.vis_lo = count - 1;
-        self.vis_hi = 0;
+        let mut seen = None;
         self.card.filter_cache.clear();
         for (idx, x, y, width, height) in placements {
+            let (mid, turns) = self.near(y + height * 0.5, around);
             let raw_x = left + x + width * 0.5;
-            let raw_y = top + y - cam + height * 0.5;
+            let raw_y = top + mid - cam;
             let (surface_x, surface_y, surface_scale) =
                 gp.cylinder_transform(raw_x, raw_y, (cx, cy));
             let (cell_x, cell_y, stage_scale) =
@@ -68,10 +73,10 @@ impl SceneCore {
             {
                 continue;
             }
-            self.vis_lo = self.vis_lo.min(idx);
-            self.vis_hi = self.vis_hi.max(idx);
+            seen = Some(widen(seen, idx as i64 + turns * count as i64));
             self.grid_cell(ctx, sinks, idx, cell_x, cell_y, draw_w, draw_h, entrance);
         }
+        (self.vis_lo, self.vis_hi) = vis_range(seen, self.current, count);
         self.push_flip_old(sinks.instances, sinks.wanted);
         Some(frame)
     }

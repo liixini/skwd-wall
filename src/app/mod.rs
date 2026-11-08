@@ -44,13 +44,13 @@ pub(crate) use startup::startup_filters;
 use startup::take_wake_receiver;
 pub(crate) use startup::{layout_params, wake_sender};
 pub(crate) use state::PaneScroll;
-pub(crate) use state::Pending;
 pub(crate) use state::ThemeAuditionPreview;
 pub(crate) use state::edit_history::EditHistory;
 use state::{
     AppRuntimeState, ChromeState, DaemonState, DemoSession, InputState, LibrarySession,
     PanelsState, PreviewResources, SourceBrowserState, TagState, ThemeState,
 };
+pub(crate) use state::{LibraryLoad, Pending};
 #[cfg(test)]
 pub(crate) use theme_bar::{SWATCH_CELL, SWATCH_STACK_GAP, swatch_height};
 pub(crate) use theme_bar::{swatch_available, swatch_bounds, swatch_on, swatch_overlay};

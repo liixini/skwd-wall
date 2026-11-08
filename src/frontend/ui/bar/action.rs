@@ -12,6 +12,8 @@ pub enum BarAction {
     Stash,
     Download,
     Playlists,
+    ColourStudio,
+    Widgets,
     Random,
     TagCloud,
     ThemePanel,

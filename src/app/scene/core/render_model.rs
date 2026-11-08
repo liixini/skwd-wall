@@ -7,7 +7,7 @@ use crate::frontend::scene::layout::{self, CardCorners, Hit, Mode};
 use crate::frontend::scene::{
     Chrome, InstanceRaw, RenderSnapshot, TransSnap, apply_entrance_motion,
 };
-use crate::infrastructure::preview::is_webp;
+use crate::infrastructure::preview::is_thumb;
 use crate::rendering::scene::atlas::AtlasMap;
 
 use super::super::widget::shimmer_eligible;
@@ -46,6 +46,7 @@ impl SceneCore {
             wanted: &mut wanted,
         };
 
+        self.period = None;
         let mut clip = match self.mode {
             Mode::Slices => {
                 self.rebuild_slices(&mut ctx, &mut sinks, entrance);
@@ -73,6 +74,7 @@ impl SceneCore {
                 None
             }
         };
+        self.camera_jump = false;
         self.rebuild_flip_overlay(&mut ctx, sinks.instances, sinks.wanted);
         let prefetch_n = ctx.filtered.len();
         self.prefetch_ring(&mut ctx, sinks.wanted, prefetch_n);
@@ -180,7 +182,7 @@ impl SceneCore {
                 && near_qualifies(is_cur, storm, rect[2] * 2.0, rect[3] * 2.0)
                 && !atlas.near.is_known(store_idx)
                 && !atlas.near_failed.contains(&store_idx)
-                && is_webp(&item.thumb)
+                && is_thumb(&item.thumb)
             {
                 enqueue_near(ctx.pool, atlas, item, store_idx, true, self.direct_thumbnails);
             }
@@ -188,7 +190,7 @@ impl SceneCore {
         atlas.far.pin(store_idx);
         if !atlas.far.is_known(store_idx)
             && !atlas.failed.contains(&store_idx)
-            && is_webp(&item.thumb)
+            && is_thumb(&item.thumb)
         {
             enqueue_far(ctx.pool, atlas, item, store_idx, true, self.direct_thumbnails);
         }
@@ -206,7 +208,7 @@ impl SceneCore {
         if shimmer_eligible(
             mode,
             self.mode,
-            is_webp(&item.thumb),
+            is_thumb(&item.thumb),
             atlas.failed.contains(&store_idx),
             atlas.near_failed.contains(&store_idx),
         ) {

@@ -1,10 +1,13 @@
 use std::collections::HashMap;
+use std::ops::RangeInclusive;
 
 use crate::frontend::animation::{MotionTier, Spring};
-use crate::frontend::nav::step;
+use crate::frontend::nav::{Ends, follow, land, lap, rebase, step};
 use crate::frontend::scene::layout::{GridLayout, Mode};
 
 use super::layout_helpers::slice_scroll_steps;
+
+const RING_DRIFT: f32 = 0.5;
 use super::model::SceneCore;
 
 impl SceneCore {
@@ -92,14 +95,76 @@ impl SceneCore {
         if self.mode == Mode::Grid && self.kb_nav {
             self.grid_follow(idx);
         }
-        if self.mode == Mode::Sandy && !self.sandy_select(idx) {
+        if self.mode == Mode::Sandy && !self.sandy_select(idx, count) {
             return;
         }
         if self.mode == Mode::Hand {
             self.hand_select(idx, count);
         }
+        self.camera_jump |= self.travel(self.current, idx, count).unsigned_abs()
+            > self.step_span() as u64
+            && (self.mode != Mode::Grid || self.kb_nav);
         self.current = idx;
         self.motion.needs_frame = true;
+    }
+
+    fn step_span(&self) -> usize {
+        match self.mode {
+            Mode::Grid => self.effective_grid_params().cols.max(1),
+            Mode::Hex => self.hp.rows.max(1),
+            _ => 1,
+        }
+    }
+
+    pub(super) fn aim_camera(&mut self, target: f32, reach: f32) {
+        let (target, _) = self.near(target, self.camera.target);
+        if self.camera_jump {
+            land(&mut self.camera, target, reach);
+        } else {
+            self.camera.retarget(target);
+        }
+        if let Some(period) = self.period {
+            rebase(&mut self.camera, period);
+        }
+    }
+
+    pub fn connected(&self) -> bool {
+        self.period.is_some()
+    }
+
+    pub(super) fn set_period(&mut self, period: f32, rest: f32, window: f32, count: usize) {
+        self.period = (self.loop_around && period > window).then_some(period);
+        let moved = self.ring.is_some_and(|(prev, was)| {
+            self.period.is_none() || count != was || (prev - rest).abs() > RING_DRIFT
+        });
+        self.layout_camera_anchor |= moved;
+        self.ring = self.period.map(|_| (rest, count));
+    }
+
+    pub(super) fn near(&self, pos: f32, around: f32) -> (f32, i64) {
+        self.period.map_or((pos, 0), |period| {
+            let turns = lap(pos, around, period);
+            (pos + turns * period, turns as i64)
+        })
+    }
+
+    pub(super) fn travel(&self, from: usize, to: usize, count: usize) -> i64 {
+        let delta = to as i64 - from as i64;
+        if !self.connected() {
+            return delta;
+        }
+        let half = count as i64 / 2;
+        (delta + half).rem_euclid(count as i64) - half
+    }
+
+    pub(super) fn slot_window(&self, center: f32, reach: f32, count: usize) -> (i64, i64) {
+        let lo = (center - reach).floor() as i64;
+        let hi = (center + reach).ceil() as i64;
+        if self.connected() { (lo, hi) } else { (lo.max(0), hi.min(count as i64 - 1)) }
+    }
+
+    pub(super) fn scroll_bounds(&self, max: f32) -> RangeInclusive<f32> {
+        if self.connected() { f32::MIN..=f32::MAX } else { 0.0..=max }
     }
 
     fn slice_select(&mut self, idx: usize) {
@@ -149,7 +214,9 @@ impl SceneCore {
             }
             _ => ((idx / gp.cols.max(1)) as f32 * cell_h, cell_h),
         };
-        crate::frontend::nav::follow(&mut self.camera, row_top, item_h, view_h, f32::MAX);
+        let (mid, _) = self.near(row_top + item_h * 0.5, self.camera.target + view_h * 0.5);
+        let bounds = self.scroll_bounds(f32::MAX);
+        follow(&mut self.camera, mid - item_h * 0.5, item_h, view_h, bounds);
     }
 
     pub(super) fn start_camera(&self) -> f32 {
@@ -254,6 +321,14 @@ impl SceneCore {
         self.motion.needs_frame = true;
     }
 
+    pub fn grid_scroll_end(&self, rows: f32) -> bool {
+        if rows > 0.0 {
+            self.camera.target >= self.grid_max_scroll
+        } else {
+            self.camera.target <= 0.0
+        }
+    }
+
     pub fn card_flip_effect(&self) -> u32 {
         self.card.flip_effect
     }
@@ -276,14 +351,14 @@ impl SceneCore {
             return;
         }
         let steps = self.slice_steps(amount);
-        self.slice_move(steps, count, false);
+        self.slice_move(steps, count, Ends::Stop);
     }
 
     pub fn slice_steps(&mut self, amount: f32) -> i64 {
         slice_scroll_steps(&mut self.scroll_accum, amount)
     }
 
-    pub fn slice_move(&mut self, steps: i64, count: usize, wrap: bool) {
+    pub fn slice_move(&mut self, steps: i64, count: usize, ends: Ends) {
         if count == 0 {
             return;
         }
@@ -292,7 +367,7 @@ impl SceneCore {
             return;
         }
         self.scroll_vel += steps.unsigned_abs() as f32;
-        let target = step(self.current, -(steps as i32), count, wrap).unwrap_or(self.current);
+        let target = step(self.current, -(steps as i32), count, ends).unwrap_or(self.current);
         self.set_current(target, count);
     }
 }

@@ -38,7 +38,10 @@ pub(super) fn library_hint(app: &App) -> Option<Element<'_, Message>> {
             item.kind != crate::domain::library::catalog::WallpaperKind::We
                 && std::path::Path::new(&item.path).starts_with(folder)
         });
-    let hint = if empty_source && app.daemon.connected {
+    let hint = if empty_source
+        && app.daemon.connected
+        && matches!(&app.daemon.library_load, LibraryLoad::Ready)
+    {
         crate::i18n::tr_args!(
             EMPTY_FOLDER_KEY,
             directory => folder.as_str()
@@ -49,6 +52,7 @@ pub(super) fn library_hint(app: &App) -> Option<Element<'_, Message>> {
             skwd_config::library_destination(app.config.root(), false).as_deref(),
             app.daemon.connected,
             app.daemon.ever_connected,
+            &app.daemon.library_load,
         )?
     };
     let color = crate::frontend::ui::with_alpha(app.theme.palette.surface_text, 0.75);

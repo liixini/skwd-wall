@@ -445,6 +445,7 @@ impl App {
         }
         {
             crate::zone!("scene_tick");
+            self.scene.loop_around = self.config.loop_around();
             self.scene.tick(
                 now,
                 RebuildCtx {

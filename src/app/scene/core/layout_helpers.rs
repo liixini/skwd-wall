@@ -35,9 +35,19 @@ pub(super) fn ramp_toward(current: f32, target: f32, step: f32) -> f32 {
     if target > current { (current + step).min(target) } else { (current - step).max(target) }
 }
 
-pub(super) fn vis_range(low: usize, high: usize, current: usize) -> (usize, usize) {
-    let low = if low == usize::MAX { current } else { low };
-    (low, high.max(low))
+pub(super) fn widen(seen: Option<(i64, i64)>, slot: i64) -> (i64, i64) {
+    seen.map_or((slot, slot), |(lo, hi)| (lo.min(slot), hi.max(slot)))
+}
+
+pub(super) fn vis_range(seen: Option<(i64, i64)>, current: usize, count: usize) -> (usize, usize) {
+    let Some((lo, hi)) = seen else {
+        return (current, current);
+    };
+    let len = count as i64;
+    if hi - lo + 1 >= len {
+        return (0, count.saturating_sub(1));
+    }
+    (lo.rem_euclid(len) as usize, hi.rem_euclid(len) as usize)
 }
 
 pub(super) fn center_layout(viewport_width: f32, raw_inset: f32, rtl: bool) -> (f32, f32) {

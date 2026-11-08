@@ -30,6 +30,9 @@ impl App {
     ) -> u64 {
         let id = self.daemon.client.call(method, params);
         if id > 0 {
+            if matches!(kind, Pending::List) {
+                self.daemon.library_load = LibraryLoad::Loading;
+            }
             self.daemon.pending.insert(id, kind);
         }
         id

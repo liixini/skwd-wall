@@ -31,6 +31,7 @@ impl App {
 
     pub(in crate::app) fn on_list(&mut self, catalog: crate::domain::library::catalog::Catalog) {
         self.library_session.library.replace(catalog);
+        self.daemon.library_load = LibraryLoad::Ready;
         self.migrate_hidden_folders();
         self.apply_library_profile();
         if (self.tags.editing || self.tags.card_drawer_open)

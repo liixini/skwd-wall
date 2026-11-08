@@ -17,6 +17,8 @@ const EDIT_FOLDER_KEY: &str = "settings-filter-show-folder-label";
 const EDIT_HIDDEN_KEY: &str = "settings-profiles-hidden-note-label";
 const EDIT_DOWNLOAD_KEY: &str = "settings-filter-show-download-label";
 const EDIT_PLAYLISTS_KEY: &str = "settings-filter-show-playlists-label";
+const EDIT_COLOUR_STUDIO_KEY: &str = "keybind-colour-studio";
+const EDIT_WIDGETS_KEY: &str = "keybind-widgets";
 const EDIT_RANDOM_KEY: &str = "settings-filter-show-random-label";
 const EDIT_SEARCH_KEY: &str = "settings-filter-show-tag-cloud-label";
 const EDIT_THEME_KEY: &str = "settings-filter-show-theme-label";
@@ -57,6 +59,8 @@ pub struct BarShow {
     pub tagcloud: bool,
     pub download: bool,
     pub playlists: bool,
+    pub colour_studio: bool,
+    pub widgets: bool,
     pub hidden: Option<bool>,
 }
 
@@ -78,6 +82,8 @@ impl BarShow {
             tagcloud: true,
             download: true,
             playlists: true,
+            colour_studio: true,
+            widgets: true,
             hidden: Some(false),
         }
     }
@@ -132,6 +138,8 @@ impl BarItem {
             Some(BarAction::ShowHidden) => EDIT_HIDDEN_KEY,
             Some(BarAction::Download) => EDIT_DOWNLOAD_KEY,
             Some(BarAction::Playlists) => EDIT_PLAYLISTS_KEY,
+            Some(BarAction::ColourStudio) => EDIT_COLOUR_STUDIO_KEY,
+            Some(BarAction::Widgets) => EDIT_WIDGETS_KEY,
             Some(BarAction::Random) => EDIT_RANDOM_KEY,
             Some(BarAction::TagCloud) => EDIT_SEARCH_KEY,
             Some(BarAction::ThemePanel) => EDIT_THEME_KEY,
@@ -167,6 +175,8 @@ impl BarItem {
             BarAction::Stash => edit_id::STASH,
             BarAction::Download => edit_id::DOWNLOAD,
             BarAction::Playlists => edit_id::PLAYLISTS,
+            BarAction::ColourStudio => edit_id::COLOUR_STUDIO,
+            BarAction::Widgets => edit_id::WIDGETS,
             BarAction::Random => edit_id::RANDOM,
             BarAction::TagCloud => edit_id::TAGCLOUD,
             BarAction::ThemePanel => edit_id::THEME,

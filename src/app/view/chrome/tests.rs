@@ -285,7 +285,7 @@ fn open_menus_keep_footprint() {
 }
 
 #[test]
-fn optional_filter_controls_persist_and_leave_no_bar_items() {
+fn optional_controls_persist() {
     use crate::app::{Message, update};
     use crate::frontend::settings::SettingsMsg;
     use crate::frontend::ui::{BarAction, build_bar_with_tasks, verticalize_bar};
@@ -297,8 +297,12 @@ fn optional_filter_controls_persist_and_leave_no_bar_items() {
         filter_bar::SHOW_ORIENT,
         filter_bar::SHOW_PLAYLISTS,
         filter_bar::SHOW_DOWNLOAD,
+        filter_bar::SHOW_COLOUR_STUDIO,
+        filter_bar::SHOW_WIDGETS,
     ] {
         let mut app = test_app();
+        app.config.set_key(filter_bar::SHOW_COLOUR_STUDIO, json!(true));
+        app.config.set_key(filter_bar::SHOW_WIDGETS, json!(true));
         let original_filters = app.library_session.filters.clone();
         for visible in [true, false, true] {
             let _ = update(&mut app, Message::Settings(SettingsMsg::Toggle(path.into(), visible)));
@@ -333,36 +337,19 @@ fn optional_filter_controls_persist_and_leave_no_bar_items() {
                     if vertical {
                         verticalize_bar(&mut model, 500.0, 1.0);
                     }
-                    for (key, present) in [
-                        (
-                            filter_bar::SHOW_TAG_CLOUD,
-                            model
-                                .items
-                                .iter()
-                                .any(|item| matches!(item.action, Some(BarAction::TagCloud))),
-                        ),
-                        (
-                            filter_bar::SHOW_ORIENT,
-                            model
-                                .items
-                                .iter()
-                                .any(|item| matches!(item.action, Some(BarAction::Orient(_)))),
-                        ),
-                        (
-                            filter_bar::SHOW_PLAYLISTS,
-                            model
-                                .items
-                                .iter()
-                                .any(|item| matches!(item.action, Some(BarAction::Playlists))),
-                        ),
-                        (
-                            filter_bar::SHOW_DOWNLOAD,
-                            model
-                                .items
-                                .iter()
-                                .any(|item| matches!(item.action, Some(BarAction::Download))),
-                        ),
+                    for (key, action) in [
+                        (filter_bar::SHOW_TAG_CLOUD, BarAction::TagCloud),
+                        (filter_bar::SHOW_ORIENT, BarAction::Orient(String::new())),
+                        (filter_bar::SHOW_PLAYLISTS, BarAction::Playlists),
+                        (filter_bar::SHOW_DOWNLOAD, BarAction::Download),
+                        (filter_bar::SHOW_COLOUR_STUDIO, BarAction::ColourStudio),
+                        (filter_bar::SHOW_WIDGETS, BarAction::Widgets),
                     ] {
+                        let present = model.items.iter().any(|item| {
+                            item.action.as_ref().is_some_and(|shown| {
+                                std::mem::discriminant(shown) == std::mem::discriminant(&action)
+                            })
+                        });
                         let expected = (key != path || visible)
                             && (key != filter_bar::SHOW_DOWNLOAD || downloads_enabled);
                         assert_eq!(
@@ -392,4 +379,27 @@ fn filter_bar_eye_stashes() {
     use crate::app::Message;
     use crate::frontend::ui::{BarAction, BarIntent};
     assert!(matches!(bar_intent_message(BarIntent::Activate(BarAction::Stash)), Message::Stash));
+}
+
+#[test]
+fn studio_buttons_open_panels() {
+    use crate::app::Message;
+    use crate::frontend::ui::{BarAction, BarIntent};
+
+    assert!(matches!(
+        bar_intent_message(BarIntent::Activate(BarAction::ColourStudio)),
+        Message::KeyColourStudio
+    ));
+    assert!(matches!(
+        bar_intent_message(BarIntent::Activate(BarAction::Widgets)),
+        Message::OpenWidgets
+    ));
+
+    let mut app = test_app();
+    assert!(!super::bar_show(&app, &app.config).colour_studio);
+    assert!(!super::bar_show(&app, &app.config).widgets);
+    app.config.set_key(skwd_config::keys::filter_bar::SHOW_COLOUR_STUDIO, json!(true));
+    app.config.set_key(skwd_config::keys::filter_bar::SHOW_WIDGETS, json!(true));
+    assert!(super::bar_show(&app, &app.config).colour_studio);
+    assert!(super::bar_show(&app, &app.config).widgets);
 }

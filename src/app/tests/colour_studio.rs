@@ -59,6 +59,94 @@ fn key_opens_and_requests() {
 }
 
 #[test]
+fn hover_opens_highlighted() {
+    for mode in [
+        Mode::Slices,
+        Mode::Hex,
+        Mode::Grid,
+        Mode::Sandy,
+        Mode::Hand,
+        Mode::Depth,
+        Mode::Collection,
+    ] {
+        let mut app = test_app();
+        seed(&mut app, &[static_wall("a.png", 1), static_wall("b.png", 2)]);
+        app.scene.mode = mode;
+        app.scene.hover = Some(1);
+        app.scene.kb_nav = false;
+        let key = app.library_session.library.catalog().items
+            [app.library_session.filtered[1] as usize]
+            .key
+            .clone();
+        let _ = update(&mut app, Message::KeyColourStudio);
+        assert_eq!(app.panels.colour_studio.as_ref().unwrap().wallpaper.key, key);
+        assert_eq!(app.scene.current, 0);
+    }
+}
+
+#[test]
+fn keyboard_ignores_stale_hover() {
+    let mut app = test_app();
+    seed(&mut app, &[static_wall("a.png", 1), static_wall("b.png", 2)]);
+    app.scene.hover = Some(1);
+    app.scene.kb_nav = true;
+    let key = app.library_session.library.catalog().items[app.library_session.filtered[0] as usize]
+        .key
+        .clone();
+    let _ = update(&mut app, Message::KeyColourStudio);
+    assert_eq!(app.panels.colour_studio.as_ref().unwrap().wallpaper.key, key);
+}
+
+#[test]
+fn pointer_opens_card() {
+    let mut app = test_app();
+    let walls: Vec<Value> = (0..8)
+        .map(|idx| {
+            let mut item = static_wall(&format!("w{idx}.png"), idx);
+            item["path"] = json!(format!("/wp/w{idx}.png"));
+            item
+        })
+        .collect();
+    seed(&mut app, &walls);
+    app.scene.mode = Mode::Hand;
+    app.scene.set_current(3, walls.len());
+    let mut now = Instant::now();
+    tick_frames(&mut app, &mut now, 40);
+    let hit = app.scene.render.hits[0];
+    let key = app.library_session.library.catalog().items
+        [app.library_session.filtered[hit.index] as usize]
+        .key
+        .clone();
+    let _ = update(&mut app, Message::MouseMoved(1.0, 1.0));
+    let _ = update(&mut app, Message::MouseMoved(hit.cx, hit.cy));
+    assert_eq!(app.scene.current, 3);
+    assert_eq!(app.scene.hover, Some(hit.index));
+    let _ = update(
+        &mut app,
+        Message::KeyPressed(keyboard::Key::Character("c".into()), keyboard::Modifiers::default()),
+    );
+    assert_eq!(app.panels.colour_studio.as_ref().unwrap().wallpaper.key, key);
+    let calls = drain_calls(&app);
+    assert!(calls.iter().any(|(method, params)| {
+        method == wall_proto::rpc::THEME_STUDIO
+            && params["image"] == format!("/wp/w{}.png", hit.index)
+    }));
+}
+
+#[test]
+fn flipped_beats_hover() {
+    let mut app = test_app();
+    seed(&mut app, &[static_wall("a.png", 1), static_wall("b.png", 2)]);
+    app.scene.hover = Some(1);
+    app.scene.set_flipped_for_test(Some(0));
+    let key = app.library_session.library.catalog().items[app.library_session.filtered[0] as usize]
+        .key
+        .clone();
+    let _ = update(&mut app, Message::KeyColourStudio);
+    assert_eq!(app.panels.colour_studio.as_ref().unwrap().wallpaper.key, key);
+}
+
+#[test]
 fn snapshot_fills_studio() {
     let mut app = opened(true);
     let id = studio_request(&app).expect("pending");

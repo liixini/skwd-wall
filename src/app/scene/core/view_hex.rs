@@ -3,7 +3,7 @@ use crate::frontend::scene::layout::{self, CardCorners, HexCurve, HexShape, Hit}
 use crate::frontend::scene::{InstanceRaw, roll_in_cut};
 
 use super::layout_helpers::{
-    CardSpec, THUMB_H, THUMB_W, TOP_BAR, apply_position_parallax, color4, vis_range,
+    CardSpec, THUMB_H, THUMB_W, TOP_BAR, apply_position_parallax, color4, vis_range, widen,
 };
 use super::model::{RebuildCtx, RebuildSinks, SceneCore};
 
@@ -31,25 +31,33 @@ impl SceneCore {
         let view_h = card_h - TOP_BAR - 15.0 - 20.0;
         let y_offset = ((view_h - hp.content_h()) / 2.0).max(0.0);
 
-        let sel_center = hp.column_x(sel_col);
+        let rest = total_cols as f32 * self.hp_target.step_x();
+        self.set_period(total_cols as f32 * hp.step_x(), rest, vw + 2.0 * hp.step_x(), count);
+        let (sel_center, _) = self.near(hp.column_x(sel_col), self.camera.target);
         let cx = self.center_x();
         let inset = self.center_inset_px();
         let fade_zone = ((self.avail_w() - hp.visible_band()) / 2.0).max(0.0);
         let min_cam = hp.r;
         let max_cam = hp.column_x(total_cols.saturating_sub(1));
         let new_target = self.hex_camera(sel_center, cx, inset, fade_zone, vw);
-        self.position_hex_camera(new_target.clamp(min_cam.min(max_cam), min_cam.max(max_cam)));
+        let new_target = if self.connected() {
+            new_target
+        } else {
+            new_target.clamp(min_cam.min(max_cam), min_cam.max(max_cam))
+        };
+        self.position_hex_camera(new_target, vw);
         let cam = self.camera.x;
+        let around = cam + vw * 0.5 - cx;
 
         let coarse_margin = vw + hp.item_half_w().hypot(hp.item_half_h()) * 2.0;
         let (lens_x, lens_y, _) = hp.stage.transform(cx, cy, (cx, cy), (vw, vh));
 
         self.card.filter_cache.clear();
         let mut deferred: Vec<(f32, Option<InstanceRaw>, InstanceRaw, Hit)> = Vec::new();
-        let mut lo = usize::MAX;
-        let mut hi = 0usize;
+        let mut seen = None;
         for col in 0..total_cols {
-            let raw_x = cx - cam + hp.column_x(col);
+            let (col_x, turns) = self.near(hp.column_x(col), around);
+            let raw_x = cx - cam + col_x;
             if raw_x < -coarse_margin || raw_x > vw + coarse_margin {
                 continue;
             }
@@ -88,8 +96,7 @@ impl SceneCore {
                 {
                     continue;
                 }
-                lo = lo.min(idx);
-                hi = hi.max(idx);
+                seen = Some(widen(seen, idx as i64 + turns * count as i64));
                 self.hex_card(
                     ctx,
                     sinks,
@@ -111,15 +118,15 @@ impl SceneCore {
             sinks.hits.push(hit);
         }
         self.push_flip_old(sinks.instances, sinks.wanted);
-        (self.vis_lo, self.vis_hi) = vis_range(lo, hi, self.current);
+        (self.vis_lo, self.vis_hi) = vis_range(seen, self.current, count);
     }
 
-    pub(super) fn position_hex_camera(&mut self, selected_center: f32) {
+    pub(super) fn position_hex_camera(&mut self, selected_center: f32, reach: f32) {
         if self.layout_camera_anchor || !self.hp.settled_to(&self.hp_target) {
             self.camera.snap(selected_center);
             self.layout_camera_anchor = false;
         } else {
-            self.camera.retarget(selected_center);
+            self.aim_camera(selected_center, reach);
         }
     }
 

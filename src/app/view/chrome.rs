@@ -25,6 +25,8 @@ pub(crate) fn bar_intent_message(intent: crate::frontend::ui::BarIntent) -> Mess
             BarAction::ShowHidden => Message::ToggleShowHidden,
             BarAction::Download => Message::OpenSourceBrowser,
             BarAction::Playlists => Message::Pl(crate::frontend::playlists::PlMsg::OpenPicker),
+            BarAction::ColourStudio => Message::KeyColourStudio,
+            BarAction::Widgets => Message::OpenWidgets,
             BarAction::Random => Message::ToggleRandomRotate,
             BarAction::TagCloud => Message::OpenTagCloud,
             BarAction::ThemePanel => Message::ToggleThemePanel,
@@ -94,6 +96,9 @@ pub(crate) fn bar_show(
         tagcloud: config.filter_show("tagcloud"),
         download: config.filter_show("download"),
         playlists: config.filter_show("playlists"),
+        colour_studio: config
+            .flag_default_config(skwd_config::keys::filter_bar::SHOW_COLOUR_STUDIO),
+        widgets: config.flag_default_config(skwd_config::keys::filter_bar::SHOW_WIDGETS),
         hidden: (app.library_session.library.catalog().has_hidden()
             || app.library_session.filters.reveal)
             .then_some(app.library_session.filters.reveal),

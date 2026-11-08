@@ -4,11 +4,14 @@ pub(crate) fn version_mismatch(gui: &str, daemon: &str) -> Option<String> {
     )
 }
 
+pub(crate) const LIBRARY_LOAD_FAILED: &str = "status-library-load-failed";
+
 pub(crate) fn empty_library_hint(
     total: usize,
     dir: Option<&str>,
     connected: bool,
     ever_connected: bool,
+    load: &super::LibraryLoad,
 ) -> Option<String> {
     if !ever_connected {
         return Some(crate::i18n::tr("status-daemon-connecting").to_string());
@@ -16,12 +19,19 @@ pub(crate) fn empty_library_hint(
     if !connected {
         return Some(crate::i18n::tr("status-daemon-lost").to_string());
     }
-    (total == 0).then(|| {
-        dir.map_or_else(
+    if total > 0 {
+        return None;
+    }
+    match load {
+        super::LibraryLoad::Loading => Some(crate::i18n::tr("status-library-loading").to_string()),
+        super::LibraryLoad::Failed(error) => {
+            Some(crate::i18n::tr_args!(LIBRARY_LOAD_FAILED, error => error))
+        }
+        super::LibraryLoad::Ready => Some(dir.map_or_else(
             || crate::i18n::tr("status-library-no-folder").to_string(),
             |directory| crate::i18n::tr_args!("status-library-empty", directory => directory),
-        )
-    })
+        )),
+    }
 }
 
 pub(crate) fn needs_list_refresh(have: usize, changed: usize, total: Option<usize>) -> bool {

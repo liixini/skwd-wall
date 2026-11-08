@@ -65,6 +65,15 @@ impl App {
     #[expect(clippy::too_many_lines, reason = "RPC error dispatch boundary")]
     pub(in crate::app) fn rpc_error(&mut self, kind: Pending, err: String) {
         match kind {
+            Pending::List => {
+                if self.daemon.connected && !self.library_session.library.catalog().items.is_empty()
+                {
+                    self.show_toast(crate::i18n::tr_args!(crate::app::policy::LIBRARY_LOAD_FAILED, error => &err));
+                }
+                self.daemon.library_load = LibraryLoad::Failed(err);
+                self.scene.touch();
+                self.retick();
+            }
             Pending::WidgetScene => crate::app::update::strand::failed(self, &err),
             Pending::Weather => self.weather_rpc_error(),
             Pending::WeatherCandidates { category, query, generation } => {

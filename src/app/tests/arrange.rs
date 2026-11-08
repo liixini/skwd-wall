@@ -291,6 +291,29 @@ fn bead_click_shows_button() {
 }
 
 #[test]
+fn studio_shelf_persists() {
+    use crate::infrastructure::config::Config;
+    use skwd_config::keys::filter_bar;
+
+    for (id, path) in
+        [("colour-studio", filter_bar::SHOW_COLOUR_STUDIO), ("widgets", filter_bar::SHOW_WIDGETS)]
+    {
+        let mut app = begin();
+        let tools = plate(&app, "family:3");
+        point(&mut app, Pointer::Move(tools));
+        settle(&mut app);
+        let bead = plate(&app, &format!("bead:{id}"));
+        click(&mut app, bead);
+        assert!(app.config.flag_default_config(path));
+        edit(&mut app, ArrangeMsg::Done);
+        let mut reopened = Config::from_data(json!({}));
+        reopened.config_path.clone_from(&app.config.config_path);
+        assert!(reopened.reload());
+        assert!(reopened.flag_default_config(path));
+    }
+}
+
+#[test]
 fn legacy_colours_restore_one() {
     let mut app = test_app();
     app.config.set_key(skwd_config::keys::filter_bar::SHOW_COLORS, json!(false));

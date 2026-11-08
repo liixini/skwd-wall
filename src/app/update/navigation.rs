@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use iced::Task;
 
-use crate::frontend::nav::{grid_step, step};
+use crate::frontend::nav::{Ends, grid_step, step};
 use crate::frontend::scene::layout::Mode;
 
 #[allow(clippy::wildcard_imports)]
@@ -14,8 +14,16 @@ use crate::app::helpers::browser_wraps;
 
 const WHEEL_REST: Duration = Duration::from_millis(250);
 
-fn loops(app: &App) -> bool {
-    app.config.loop_around() && !app.input.held
+fn ends(app: &App, armed: bool) -> Ends {
+    if app.config.loop_around() && app.scene.connected() { Ends::Loop } else { gated(app, armed) }
+}
+
+fn gated(app: &App, armed: bool) -> Ends {
+    Ends::wrap_if(armed && app.config.loop_around())
+}
+
+fn loops(app: &App) -> Ends {
+    ends(app, !app.input.held)
 }
 
 fn hand_nav_closes_flip(app: &mut App) -> bool {
@@ -31,31 +39,44 @@ pub(super) fn wheel(app: &mut App, amount: f32) -> Task<Message> {
         return Task::none();
     }
     app.scene.close_collection();
-    let now = Instant::now();
-    let rested = app.input.last_wheel.is_none_or(|at| now.duration_since(at) >= WHEEL_REST);
-    app.input.last_wheel = Some(now);
-    app.input.wheel_armed |= rested;
+    arm_wheel(app);
     match app.scene.mode {
         Mode::Slices | Mode::Depth | Mode::Sandy | Mode::Hand | Mode::Collection => {
             let steps = app.scene.slice_steps(amount);
-            let wrap = steps != 0 && wheel_wraps(app);
-            app.scene.slice_move(steps, app.library_session.filtered.len(), wrap);
+            let ends = if steps == 0 { Ends::Stop } else { wheel_ends(app) };
+            app.scene.slice_move(steps, app.library_session.filtered.len(), ends);
         }
         Mode::Grid => app.scene.grid_scroll(-amount),
         Mode::Hex => {
-            let wrap = wheel_wraps(app);
-            hex_wheel(app, amount, wrap);
+            let ends = wheel_ends(app);
+            hex_wheel(app, amount, ends);
         }
     }
     app.retick();
     Task::none()
 }
 
-fn wheel_wraps(app: &mut App) -> bool {
-    std::mem::take(&mut app.input.wheel_armed) && app.config.loop_around()
+pub(super) fn arm_wheel(app: &mut App) {
+    let now = Instant::now();
+    let rested = app.input.last_wheel.is_none_or(|at| now.duration_since(at) >= WHEEL_REST);
+    app.input.last_wheel = Some(now);
+    app.input.wheel_armed |= rested;
 }
 
-fn hex_wheel(app: &mut App, amount: f32, wrap: bool) {
+fn wheel_ends(app: &mut App) -> Ends {
+    let armed = take_wheel_arm(app);
+    ends(app, armed)
+}
+
+pub(super) fn take_wheel_arm(app: &mut App) -> bool {
+    std::mem::take(&mut app.input.wheel_armed)
+}
+
+pub(super) fn wheel_edge(amount: f32) -> usize {
+    if amount > 0.0 { usize::MAX } else { 0 }
+}
+
+fn hex_wheel(app: &mut App, amount: f32, ends: Ends) {
     let count = app.library_session.filtered.len();
     if count == 0 {
         return;
@@ -63,7 +84,7 @@ fn hex_wheel(app: &mut App, amount: f32, wrap: bool) {
     let rows = app.scene.hp.rows.max(1);
     let delta = -(amount.signum() as i32) * app.scene.hp.scroll_step as i32;
     let col = app.scene.current / rows;
-    let col = step(col, delta, count.div_ceil(rows), wrap).unwrap_or(col);
+    let col = step(col, delta, count.div_ceil(rows), ends).unwrap_or(col);
     app.scene.set_current((col * rows + app.scene.hex_row).min(count - 1), count);
 }
 
@@ -125,7 +146,7 @@ fn browser_seek(app: &mut App, delta: i32, wrap: bool) -> Task<Message> {
     }
     let count = session.items.len();
     let current = app.source_browser.wall.scene.hover.unwrap_or(0);
-    browser_select(app, step(current, delta, count, wrap).unwrap_or(current))
+    browser_select(app, step(current, delta, count, Ends::wrap_if(wrap)).unwrap_or(current))
 }
 
 fn seek(app: &mut App, target: usize) -> Task<Message> {
@@ -277,7 +298,6 @@ pub(super) fn key_row(app: &mut App, delta: i32) -> Task<Message> {
     if app.menu_capturing() || app.detail_open() {
         return Task::none();
     }
-    let wrap = loops(app);
     let count = app.library_session.filtered.len();
     let cur = app.scene.current;
     let next = match app.scene.mode {
@@ -285,9 +305,10 @@ pub(super) fn key_row(app: &mut App, delta: i32) -> Task<Message> {
         Mode::Hex => {
             let rows = app.scene.hp.rows.max(1);
             let top = cur - cur % rows;
-            step(cur % rows, delta, rows.min(count.saturating_sub(top)), wrap).map(|row| top + row)
+            let ends = gated(app, !app.input.held);
+            step(cur % rows, delta, rows.min(count.saturating_sub(top)), ends).map(|row| top + row)
         }
-        Mode::Grid => grid_step(cur, delta, app.scene.gp.cols, count, wrap),
+        Mode::Grid => grid_step(cur, delta, app.scene.gp.cols, count, loops(app)),
         _ => None,
     };
     if let Some(next) = next {

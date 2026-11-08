@@ -1211,6 +1211,29 @@ fn orders_individual_buttons() {
 }
 
 #[test]
+fn studio_buttons_customize() {
+    let mut show = BarShow::all();
+    show.order = [edit_id::WIDGETS, edit_id::COLOUR_STUDIO].map(String::from).to_vec();
+    let model = bar_with(&show);
+    let ids: Vec<_> = model.items.iter().filter_map(super::BarItem::edit_id).collect();
+    assert_eq!(&ids[..2], show.order);
+    for (id, key) in
+        [(edit_id::COLOUR_STUDIO, "keybind-colour-studio"), (edit_id::WIDGETS, "keybind-widgets")]
+    {
+        let item = model.items.iter().find(|item| item.edit_id().as_deref() == Some(id)).unwrap();
+        assert!(item.hideable());
+        assert_eq!(item.edit_title(), crate::i18n::tr(key));
+    }
+
+    show.hidden_buttons = vec![edit_id::WIDGETS.to_owned()];
+    let hidden = bar_with(&show);
+    assert!(!hidden.items.iter().any(|item| item.edit_id().as_deref() == Some(edit_id::WIDGETS)));
+    assert!(
+        hidden.items.iter().any(|item| item.edit_id().as_deref() == Some(edit_id::COLOUR_STUDIO))
+    );
+}
+
+#[test]
 fn hides_individual_buttons() {
     let mut show = BarShow::all();
     show.hidden_buttons = ["type:all", "sort:date", "color:3", "audio-panel", "settings", "stash"]

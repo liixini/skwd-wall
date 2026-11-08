@@ -1062,6 +1062,8 @@ pub(super) fn tab_filter(builder: &mut Builder<'_>, folders: &[String]) {
         tr("settings-filter-show-playlists-desc"),
         keys::filter_bar::SHOW_PLAYLISTS,
     );
+    builder.toggle(tr("keybind-colour-studio"), "", keys::filter_bar::SHOW_COLOUR_STUDIO);
+    builder.toggle(tr("keybind-widgets"), "", keys::filter_bar::SHOW_WIDGETS);
     builder.toggle(
         tr("settings-filter-show-download-label"),
         tr("settings-filter-show-download-desc"),

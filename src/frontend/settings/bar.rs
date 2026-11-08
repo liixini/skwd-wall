@@ -69,7 +69,7 @@ const DELETE_HINT: &str = "settings-bar-delete-hint";
 const INDEX_NOTES: [&str; 2] =
     ["settings-tagging-describe-info-desc", "settings-tagging-model-index-desc"];
 
-const OTHER_BUTTONS: [&str; 10] = [
+const OTHER_BUTTONS: [&str; 12] = [
     bar::SHOW_FOLDER,
     bar::SHOW_FAVOURITES,
     bar::SHOW_RANDOM,
@@ -79,6 +79,8 @@ const OTHER_BUTTONS: [&str; 10] = [
     bar::SHOW_RESOLUTION,
     bar::SHOW_ORIENT,
     bar::SHOW_PLAYLISTS,
+    bar::SHOW_COLOUR_STUDIO,
+    bar::SHOW_WIDGETS,
     bar::SHOW_DOWNLOAD,
 ];
 const ORIENTATIONS: [(&str, &str); 2] = [

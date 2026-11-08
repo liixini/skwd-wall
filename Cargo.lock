@@ -2532,7 +2532,7 @@ dependencies = [
 
 [[package]]
 name = "paper-control"
-version = "1.0.0-beta.27"
+version = "1.0.0-beta.28"
 dependencies = [
  "gif",
  "libc",
@@ -2544,7 +2544,7 @@ dependencies = [
 
 [[package]]
 name = "paper-geom"
-version = "1.0.0-beta.27"
+version = "1.0.0-beta.28"
 dependencies = [
  "image",
  "serde",
@@ -2552,7 +2552,7 @@ dependencies = [
 
 [[package]]
 name = "paper-text"
-version = "1.0.0-beta.27"
+version = "1.0.0-beta.28"
 dependencies = [
  "freetype-sys",
  "read-fonts",
@@ -2561,7 +2561,7 @@ dependencies = [
 
 [[package]]
 name = "paper-widgets"
-version = "1.0.0-beta.27"
+version = "1.0.0-beta.28"
 dependencies = [
  "image",
  "paper-control",
@@ -3232,7 +3232,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-config"
-version = "1.0.0-beta.27"
+version = "1.0.0-beta.28"
 dependencies = [
  "dirs",
  "serde",
@@ -3242,7 +3242,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-lens-proto"
-version = "1.0.0-beta.27"
+version = "1.0.0-beta.28"
 dependencies = [
  "serde",
  "serde_json",
@@ -3250,7 +3250,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-log"
-version = "1.0.0-beta.27"
+version = "1.0.0-beta.28"
 dependencies = [
  "libc",
  "log",
@@ -3258,7 +3258,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-palette"
-version = "1.0.0-beta.27"
+version = "1.0.0-beta.28"
 dependencies = [
  "material-colors",
  "serde_json",
@@ -3266,7 +3266,7 @@ dependencies = [
 
 [[package]]
 name = "skwd-wall"
-version = "1.0.0-beta.27"
+version = "1.0.0-beta.28"
 dependencies = [
  "ash",
  "bit-set",
@@ -3985,7 +3985,7 @@ dependencies = [
 
 [[package]]
 name = "wall-proto"
-version = "1.0.0-beta.27"
+version = "1.0.0-beta.28"
 dependencies = [
  "libc",
  "paper-control",

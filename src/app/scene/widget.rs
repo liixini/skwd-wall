@@ -29,11 +29,11 @@ pub struct BrowserSceneProgram {
 pub fn shimmer_eligible(
     mode: u32,
     scene_mode: Mode,
-    webp: bool,
+    thumb: bool,
     failed: bool,
     near_failed: bool,
 ) -> bool {
-    mode == 0 && scene_mode == Mode::Grid && webp && !failed && !near_failed
+    mode == 0 && scene_mode == Mode::Grid && thumb && !failed && !near_failed
 }
 
 #[derive(Default)]

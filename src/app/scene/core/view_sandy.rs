@@ -8,7 +8,7 @@ use crate::frontend::scene::{
 };
 use crate::rendering::scene::{sandy_video_in, sandy_video_out};
 
-use super::layout_helpers::{CardSpec, TOP_BAR, sandy_card_border, vis_range};
+use super::layout_helpers::{CardSpec, TOP_BAR, sandy_card_border};
 use super::model::{RebuildCtx, RebuildSinks, SceneCore};
 
 impl SceneCore {
@@ -26,9 +26,18 @@ impl SceneCore {
         }
         self.current = self.current.min(count - 1);
         let params = self.xp.sandy;
-        if !self.sandy.cam_free {
-            self.camera.retarget(sandy::clamp_cam(self.current as f32, count));
+        let reach = self.avail_w() / params.stride();
+        self.set_period(count as f32, count as f32, reach + 1.0, count);
+        let target = if self.sandy.cam_free {
+            self.camera.target
+        } else {
+            sandy::clamp_cam(self.current as f32, count)
+        };
+        if self.layout_camera_anchor {
+            self.camera.snap(sandy::clamp_cam(self.current as f32, count));
+            self.layout_camera_anchor = false;
         }
+        self.aim_camera(target, reach);
         let cam = self.camera.x;
         let cx = self.center_x() + params.offset_x * vw * 0.5;
         let offset_y = params.offset_y * vh * 0.5;
@@ -60,17 +69,16 @@ impl SceneCore {
             });
         }
 
-        let places = sandy::place(count, cam, &params, cx, self.avail_w());
-        let mut lo = usize::MAX;
-        let mut hi = 0usize;
+        let places = sandy::place(count, cam, &params, cx, self.avail_w(), self.connected());
         self.card.filter_cache.clear();
         for pl in &places {
-            lo = lo.min(pl.i);
-            hi = hi.max(pl.i);
             self.sandy_card(ctx, sinks, pl, strip_cy, entrance);
         }
         self.push_flip_old(sinks.instances, sinks.wanted);
-        (self.vis_lo, self.vis_hi) = vis_range(lo, hi, self.current);
+        (self.vis_lo, self.vis_hi) = places
+            .first()
+            .zip(places.last())
+            .map_or((self.current, self.current), |(first, last)| (first.i, last.i));
 
         let cur_store = ctx.filtered[self.current] as usize;
         let ring_quiet = self.sandy.swirl.target < 0.5 && self.sandy.swirl.x < 0.001;

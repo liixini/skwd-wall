@@ -77,11 +77,11 @@ fn filter_sentence_states() {
     for (cfg, expected) in [
         (
             FakeSettingsSource::default(),
-            "Shows 14 of 14 buttons and 7 of 7 sorts, laid out horizontally. It stays pinned. Visual style: [0].",
+            "Shows 14 of 16 buttons and 7 of 7 sorts, laid out horizontally. It stays pinned. Visual style: [0].",
         ),
         (
             hidden,
-            "Shows 12 of 14 buttons and 5 of 7 sorts, laid out vertically. It hides until you need it. Visual style: [0].",
+            "Shows 12 of 16 buttons and 5 of 7 sorts, laid out vertically. It hides until you need it. Visual style: [0].",
         ),
     ] {
         let filter = section(&cfg, FILTER);
@@ -98,20 +98,20 @@ fn filter_body_rows() {
     let [offers, behaves] = &filter.groups[..] else { panic!("two columns") };
     let cells: Vec<_> = offers.rows.iter().map(|row| row.look.cell).collect();
     let mut expected = vec![Cell::Checks];
-    expected.extend([Cell::Joined; 14]);
+    expected.extend([Cell::Joined; 16]);
     expected.push(Cell::Checks);
     expected.extend([Cell::Joined; 7]);
     expected.extend([Cell::Value; 4]);
     assert_eq!(cells, expected);
     assert_eq!(offers.rows[0].title, "Buttons on the bar");
-    assert_eq!(offers.rows[15].title, "Sort options");
+    assert_eq!(offers.rows[17].title, "Sort options");
     assert_eq!(
-        paths(&offers.rows[23..]),
+        paths(&offers.rows[25..]),
         [bar::BUTTON_ORDER, bar::HIDDEN_BUTTONS, bar::SHOW_ARRANGE, bar::SHOW_SWATCH]
     );
-    assert_eq!(offers.rows[25].title, "Arrange button");
-    assert_eq!(offers.rows[26].title, "Colour strip");
-    assert_eq!(offers.rows[25].hint(), "Place it in Arrange");
+    assert_eq!(offers.rows[27].title, "Arrange button");
+    assert_eq!(offers.rows[28].title, "Colour strip");
+    assert_eq!(offers.rows[27].hint(), "Place it in Arrange");
     assert_eq!(behaves.rows[3].title, "Tag panel");
     assert_eq!(behaves.rows[3].control.path(), Some(keys::selector::TAG_CLOUD_WIDTH));
     assert_eq!(behaves.rows[4].look.cell, Cell::Beside);
@@ -126,9 +126,9 @@ fn checks_own_members() {
     let filter = section(&FakeSettingsSource::default(), FILTER);
     let lead = filter.header_rows();
     let members = filter.checks(lead).expect("buttons menu");
-    assert_eq!(members, (lead + 1..=lead + 14).collect::<Vec<_>>());
+    assert_eq!(members, (lead + 1..=lead + 16).collect::<Vec<_>>());
     assert!(members.iter().all(|at| filter.checked_by(*at) == Some(lead) && filter.follows(*at)));
-    assert_eq!(filter.checks(lead + 15).map(|rows| rows.len()), Some(7));
+    assert_eq!(filter.checks(lead + 17).map(|rows| rows.len()), Some(7));
     assert_eq!(filter.checked_by(lead), None);
     assert!(filter.checks(lead + 1).is_none());
 }
@@ -448,8 +448,8 @@ fn off_keeps_rows() {
         .with_flag(bar::SHOW_SWATCH, false);
     let filter = section(&cfg, FILTER);
     let [offers, behaves] = &filter.groups[..] else { panic!("two columns") };
-    assert_eq!(offers.rows[25].control.switched_on(), Some(false));
-    assert_eq!(offers.rows[26].control.switched_on(), Some(false));
+    assert_eq!(offers.rows[27].control.switched_on(), Some(false));
+    assert_eq!(offers.rows[28].control.switched_on(), Some(false));
     assert_eq!(actions(&behaves.rows), [ActionId::ArrangePicker]);
     assert_eq!(filter.say.text, section(&FakeSettingsSource::default(), FILTER).say.text);
 }

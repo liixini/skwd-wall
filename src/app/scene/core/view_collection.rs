@@ -5,7 +5,7 @@ use crate::frontend::scene::hand::{self, Camera, PAD, Quad};
 use crate::frontend::scene::layout::Mode;
 use crate::rendering::scene::PROJECTED;
 
-use super::layout_helpers::CardSpec;
+use super::layout_helpers::{CardSpec, vis_range};
 use super::model::{RebuildCtx, RebuildSinks, SceneCore};
 
 impl SceneCore {
@@ -54,29 +54,35 @@ impl SceneCore {
         }
         self.current = self.current.min(count - 1);
         self.camera.set_zeta(1.0);
+        let radius = (self.xp.collection.count.round() - 1.0) * 0.5;
+        self.set_period(count as f32, count as f32, 2.0 * (radius + 1.0), count);
         if self.layout_camera_anchor {
             self.camera.snap(self.current as f32);
             self.layout_camera_anchor = false;
         } else {
-            self.camera.retarget(self.current as f32);
+            self.aim_camera(self.current as f32, 2.0 * radius + 1.0);
         }
-        let radius = (self.xp.collection.count.round() - 1.0) * 0.5;
         let last = (count - 1) as f32;
-        let center = self.camera.x.clamp(radius.min(last * 0.5), (last - radius).max(last * 0.5));
-        self.vis_lo = ((center - radius - 1.0).floor().max(0.0) as usize).min(count - 1);
-        self.vis_hi = ((center + radius + 1.0).ceil() as usize).min(count - 1);
+        let center = if self.connected() {
+            self.camera.x
+        } else {
+            self.camera.x.clamp(radius.min(last * 0.5), (last - radius).max(last * 0.5))
+        };
+        let (low, high) = self.slot_window(center, radius + 1.0, count);
+        (self.vis_lo, self.vis_hi) = vis_range(Some((low, high)), self.current, count);
         let open = self.collection_open.x.clamp(0.0, 1.0);
-        let mut visible: Vec<usize> = (self.vis_lo..=self.vis_hi).collect();
-        visible.sort_by(|a, b| {
-            let depth = |idx: usize| {
-                idx as f32 - center
-                    + if Some(idx) == self.collection_card { open * 12.0 } else { 0.0 }
-            };
-            depth(*a).total_cmp(&depth(*b))
+        let lift = |slot: i64| {
+            let idx = slot.rem_euclid(count as i64) as usize;
+            if Some(idx) == self.collection_card { open * 12.0 } else { 0.0 }
+        };
+        let mut visible: Vec<i64> = (low..=high).collect();
+        visible.sort_by(|&a, &b| {
+            (a as f32 - center + lift(a)).total_cmp(&(b as f32 - center + lift(b)))
         });
         self.card.filter_cache.clear();
-        for idx in visible {
-            let distance = idx as f32 - center;
+        for slot in visible {
+            let idx = slot.rem_euclid(count as i64) as usize;
+            let distance = slot as f32 - center;
             let opacity = (radius + 1.0 - distance.abs()).clamp(0.0, 1.0) * entrance;
             if opacity <= 0.001 {
                 continue;

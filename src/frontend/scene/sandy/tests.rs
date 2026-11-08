@@ -51,7 +51,7 @@ fn p() -> SandyParams {
 
 #[test]
 fn carousel_spacing() {
-    let out = place(3000, 50.0, &p(), 1280.0, 2560.0);
+    let out = place(3000, 50.0, &p(), 1280.0, 2560.0, false);
     assert!(out.len() > 8);
     for pair in out.windows(2) {
         assert_eq!(pair[1].i, pair[0].i + 1);
@@ -67,7 +67,7 @@ fn carousel_gap_midline() {
     params.spacing = 0.0;
     assert_eq!(params.stride(), 84.0);
 
-    let out = place(8, 0.0, &params, 640.0, 1280.0);
+    let out = place(8, 0.0, &params, 640.0, 1280.0, false);
     for pair in out.windows(2) {
         assert!((pair[1].x - pair[0].x - 84.0).abs() < 0.01);
     }
@@ -75,7 +75,7 @@ fn carousel_gap_midline() {
 
 #[test]
 fn current_centred() {
-    let out = place(3000, 50.0, &p(), 1280.0, 2560.0);
+    let out = place(3000, 50.0, &p(), 1280.0, 2560.0, false);
     let cur = out.iter().find(|pl| pl.i == 50).expect("current visible");
     assert!((cur.x - 1280.0).abs() < 0.01);
     assert!((cur.s - 1.0).abs() < 0.01);
@@ -83,7 +83,7 @@ fn current_centred() {
 
 #[test]
 fn first_card_flush_left() {
-    let out = place(3000, 0.0, &p(), 1280.0, 2560.0);
+    let out = place(3000, 0.0, &p(), 1280.0, 2560.0, false);
     let first = out.iter().find(|pl| pl.i == 0).expect("card 0 visible at start");
     assert!(first.x < 2560.0 * 0.15);
     assert!(first.x >= 0.0);
@@ -92,7 +92,7 @@ fn first_card_flush_left() {
 
 #[test]
 fn last_card_flush_right() {
-    let out = place(3000, 2999.0, &p(), 1280.0, 2560.0);
+    let out = place(3000, 2999.0, &p(), 1280.0, 2560.0, false);
     let last = out.iter().find(|pl| pl.i == 2999).expect("last card visible at end");
     assert!(last.x > 2560.0 * 0.85);
     assert!((last.s - 1.0).abs() < 0.01);
@@ -100,7 +100,7 @@ fn last_card_flush_right() {
 
 #[test]
 fn short_list_centres() {
-    let out = place(4, 0.0, &p(), 1280.0, 2560.0);
+    let out = place(4, 0.0, &p(), 1280.0, 2560.0, false);
     let first = out.iter().find(|pl| pl.i == 0).expect("card 0 visible");
     let last = out.iter().find(|pl| pl.i == 3).expect("card 3 visible");
     assert!((((first.x + last.x) * 0.5) - 1280.0).abs() < 0.01);
@@ -112,15 +112,15 @@ fn short_list_centres() {
 
 #[test]
 fn short_list_grows_outward() {
-    let four = place(4, 0.0, &p(), 1280.0, 2560.0);
-    let five = place(5, 0.0, &p(), 1280.0, 2560.0);
+    let four = place(4, 0.0, &p(), 1280.0, 2560.0, false);
+    let five = place(5, 0.0, &p(), 1280.0, 2560.0, false);
     assert!((four[0].x - five[0].x - p().stride() * 0.5).abs() < 0.01);
     assert!((five[4].x - four[3].x - p().stride() * 0.5).abs() < 0.01);
 }
 
 #[test]
 fn edge_thumbs_taper() {
-    let out = place(3000, 50.0, &p(), 1280.0, 2560.0);
+    let out = place(3000, 50.0, &p(), 1280.0, 2560.0, false);
     let first = out.first().unwrap();
     let last = out.last().unwrap();
     assert!(first.s < 1.0 || last.s < 1.0);
@@ -129,21 +129,30 @@ fn edge_thumbs_taper() {
 
 #[test]
 fn camera_slides() {
-    let before = place(3000, 50.0, &p(), 1280.0, 2560.0);
-    let after = place(3000, 50.4, &p(), 1280.0, 2560.0);
+    let before = place(3000, 50.0, &p(), 1280.0, 2560.0, false);
+    let after = place(3000, 50.4, &p(), 1280.0, 2560.0, false);
     let x_before = before.iter().find(|pl| pl.i == 52).unwrap().x;
     let x_after = after.iter().find(|pl| pl.i == 52).unwrap().x;
     assert!((x_before - x_after - 0.4 * p().stride()).abs() < 0.01);
 }
 
 #[test]
+fn looped_strip_joins() {
+    let out = place(3000, 0.0, &p(), 1280.0, 2560.0, true);
+    let first = out.iter().find(|pl| pl.i == 0).expect("card 0 visible");
+    let last = out.iter().find(|pl| pl.i == 2999).expect("seam neighbour visible");
+    assert!((first.x - 1280.0).abs() < 0.01);
+    assert!((first.x - last.x - p().stride()).abs() < 0.01);
+}
+
+#[test]
 fn library_ends_safe() {
-    let out = place(5, 0.0, &p(), 1280.0, 2560.0);
+    let out = place(5, 0.0, &p(), 1280.0, 2560.0, false);
     assert!(out.iter().all(|pl| pl.i < 5));
     assert!(out.iter().any(|pl| pl.i == 0));
     assert_eq!(clamp_cam(-1.0, 5), 0.0);
     assert_eq!(clamp_cam(9.0, 5), 4.0);
-    assert!(place(0, 0.0, &p(), 1280.0, 2560.0).is_empty());
+    assert!(place(0, 0.0, &p(), 1280.0, 2560.0, false).is_empty());
 }
 
 #[test]

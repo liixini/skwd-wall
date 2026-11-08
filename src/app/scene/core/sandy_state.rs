@@ -151,7 +151,7 @@ impl SceneCore {
         }
     }
 
-    pub(super) fn sandy_select(&mut self, idx: usize) -> bool {
+    pub(super) fn sandy_select(&mut self, idx: usize, count: usize) -> bool {
         self.sandy.cam_free = false;
         self.sandy.pop.snap(0.0);
         self.sandy.pop.retarget(1.0);
@@ -170,7 +170,7 @@ impl SceneCore {
             self.motion.needs_frame = true;
             return false;
         }
-        let new_dir = if idx >= self.current { 1.0 } else { -1.0 };
+        let new_dir = if self.travel(self.current, idx, count) >= 0 { 1.0 } else { -1.0 };
         let flipped = new_dir != self.sandy.dir;
         let ring_active = self.sandy.swirl.target > 0.5 || self.sandy.swirl.x > 0.001;
         let blending =
@@ -241,10 +241,9 @@ impl SceneCore {
         self.sandy_swirl_tick(dt);
         self.hero_fade_tick(now, dt);
         if self.mode == Mode::Sandy && self.sandy.edge_pan != 0.0 && !ctx.filtered.is_empty() {
-            let target = clamp_cam(
-                self.camera.target + self.sandy.edge_pan * self.xp.sandy.edge_speed * dt,
-                ctx.filtered.len(),
-            );
+            let target = self.camera.target + self.sandy.edge_pan * self.xp.sandy.edge_speed * dt;
+            let target =
+                if self.connected() { target } else { clamp_cam(target, ctx.filtered.len()) };
             self.camera.retarget(target);
             self.motion.needs_frame = true;
         }

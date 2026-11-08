@@ -14,6 +14,8 @@ const MAX_SOURCE_EDGE: u32 = 4096;
 const MAX_SOURCE_PIXELS: u64 = 8 * 1024 * 1024;
 const MAX_ENCODED_BYTES: u64 = 32 * 1024 * 1024;
 const MAX_DECODE_BYTES: usize = 32 * 1024 * 1024;
+const WEBP_EXTENSION: &str = "webp";
+const THUMB_EXTENSIONS: [&str; 3] = [WEBP_EXTENSION, "jpg", "jpeg"];
 const NEAR_CONTAINER_BYTES: usize = near_container_bytes(PREVIEW_WIDTH, PREVIEW_HEIGHT);
 
 const fn near_container_bytes(mut width: u32, mut height: u32) -> usize {
@@ -434,6 +436,14 @@ fn decode_path(path: &str, job: &Job, read_pool: &Arc<BufPool>) -> Result<Decode
         return Ok(Decoded { data, blocks: true, recycle: None });
     }
 
+    let (sw, sh, rgba) =
+        if has_extension(path, WEBP_EXTENSION) { decode_webp(path)? } else { decode_image(path)? };
+    debug_assert_eq!(target_bytes, job.w as usize * job.h as usize * 4);
+    let rgba = resize_thumbnail_area(&rgba, sw, sh, job.w, job.h);
+    Ok(Decoded { data: rgba, blocks: false, recycle: None })
+}
+
+fn decode_webp(path: &str) -> Result<(u32, u32, Vec<u8>), String> {
     let file = std::fs::File::open(path).map_err(|err| err.to_string())?;
     let reader = std::io::BufReader::new(file);
     let mut decoder = image_webp::WebPDecoder::new(reader).map_err(|err| err.to_string())?;
@@ -464,9 +474,24 @@ fn decode_path(path: &str, job: &Job, read_pool: &Arc<BufPool>) -> Result<Decode
     } else {
         src
     };
-    debug_assert_eq!(target_bytes, job.w as usize * job.h as usize * 4);
-    let rgba = resize_thumbnail_area(&rgba, sw, sh, job.w, job.h);
-    Ok(Decoded { data: rgba, blocks: false, recycle: None })
+    Ok((sw, sh, rgba))
+}
+
+fn decode_image(path: &str) -> Result<(u32, u32, Vec<u8>), String> {
+    let mut reader = image::ImageReader::open(path)
+        .and_then(image::ImageReader::with_guessed_format)
+        .map_err(|err| err.to_string())?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(MAX_SOURCE_EDGE);
+    limits.max_image_height = Some(MAX_SOURCE_EDGE);
+    limits.max_alloc = Some(MAX_DECODE_BYTES as u64);
+    reader.limits(limits);
+    let decoded = reader.decode().map_err(|err| err.to_string())?;
+    let (sw, sh) = (decoded.width(), decoded.height());
+    if !preview_dimensions_safe(sw, sh) {
+        return Err(format!("unsafe source dimensions {sw}x{sh}"));
+    }
+    Ok((sw, sh, decoded.into_rgba8().into_raw()))
 }
 
 #[cfg(test)]
@@ -539,15 +564,12 @@ pub fn bc1_encode(rgba: &[u8], w: u32, h: u32) -> Vec<u8> {
     out
 }
 
-pub fn is_webp(path: &str) -> bool {
-    let bytes = path.as_bytes();
-    let len = bytes.len();
-    len >= 5
-        && bytes[len - 5] == b'.'
-        && bytes[len - 4].eq_ignore_ascii_case(&b'w')
-        && bytes[len - 3].eq_ignore_ascii_case(&b'e')
-        && bytes[len - 2].eq_ignore_ascii_case(&b'b')
-        && bytes[len - 1].eq_ignore_ascii_case(&b'p')
+pub fn is_thumb(path: &str) -> bool {
+    THUMB_EXTENSIONS.iter().any(|ext| has_extension(path, ext))
+}
+
+fn has_extension(path: &str, ext: &str) -> bool {
+    path.rsplit_once('.').is_some_and(|(_, found)| found.eq_ignore_ascii_case(ext))
 }
 
 mod tests;

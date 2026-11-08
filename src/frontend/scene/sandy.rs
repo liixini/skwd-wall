@@ -188,8 +188,9 @@ pub fn place(
     params: &SandyParams,
     center_x: f32,
     available_width: f32,
+    looped: bool,
 ) -> Vec<Place> {
-    strip_place(count, camera, params.stride(), center_x, available_width)
+    strip_place(count, camera, params.stride(), center_x, available_width, looped)
 }
 
 pub fn strip_scroll(
@@ -211,6 +212,7 @@ pub fn strip_place(
     stride: f32,
     center_x: f32,
     available_width: f32,
+    looped: bool,
 ) -> Vec<Place> {
     let mut places = Vec::new();
     if count == 0 {
@@ -222,19 +224,24 @@ pub fn strip_place(
     let right = center_x + available_width * 0.5;
     let usable = (available_width - 2.0 * margin).max(stride);
     let content_span = (count.saturating_sub(1) as f32) * stride;
-    let scroll = strip_scroll(camera, count, stride, margin, available_width);
+    let last = count as i64 - 1;
+    let (scroll, first, last) = if looped {
+        (camera * stride - usable * 0.5, i64::MIN, i64::MAX)
+    } else {
+        (strip_scroll(camera, count, stride, margin, available_width), 0, last)
+    };
     let origin =
         if content_span < usable { center_x - content_span * 0.5 } else { left + margin - scroll };
     let span = (((available_width + margin) / stride).ceil() as i64) + 1;
     let anchor = ((scroll / stride).round() as i64) + 1;
-    for index in (anchor - span).max(0)..=(anchor + span).min(count as i64 - 1) {
+    for index in (anchor - span).max(first)..=(anchor + span).min(last) {
         let x = origin + index as f32 * stride;
         let distance_to_edge = (x - left).min(right - x);
         let fade = (distance_to_edge / margin).clamp(0.0, 1.0);
         if fade < 0.05 {
             continue;
         }
-        places.push(Place { i: index as usize, x, s: fade });
+        places.push(Place { i: index.rem_euclid(count as i64) as usize, x, s: fade });
     }
     places
 }

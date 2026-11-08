@@ -4,11 +4,11 @@ use crate::frontend::scene::layout;
 use crate::frontend::scene::{
     InstanceRaw, card_flip_phases, card_flip_shader_payload, roll_in_cut,
 };
-use crate::infrastructure::preview::is_webp;
+use crate::infrastructure::preview::is_thumb;
 
 use super::atlas_helpers::{enqueue_far, enqueue_near};
 use super::layout_helpers::{
-    CardSpec, STORM_CUTOFF, TOP_BAR, apply_position_parallax, prefetch_reach,
+    CardSpec, STORM_CUTOFF, TOP_BAR, apply_position_parallax, prefetch_reach, vis_range, widen,
 };
 use super::model::{RebuildCtx, RebuildSinks, SceneCore};
 
@@ -52,31 +52,37 @@ impl SceneCore {
             tacc += target_layout_w + sp.spacing;
         }
 
+        let margin = sp.expanded_w;
+        self.set_period(acc, tacc, strip_w + 2.0 * margin, count);
         self.camera.set_zeta(if sp.wobble { 0.45 } else { 1.0 });
-        self.position_slice_camera(target_center);
+        self.position_slice_camera(target_center, strip_w);
         let cam = self.camera.x;
         let bend = layout::wobble_bend(self.camera.v, sp.expanded_w);
 
         let top = cy - card_h * 0.5 + TOP_BAR + 15.0;
         let item_cy = top + sp.slice_h * 0.5;
-        let margin = sp.expanded_w;
 
+        let mut seen = None;
         let mut visible: Vec<usize> = (0..count)
             .filter(|&idx| {
                 let half_w = self.width_of(idx) * 0.5;
-                let x0 = centers[idx] - half_w - (cam - half_view);
-                let x1 = centers[idx] + half_w - (cam - half_view);
-                x1 >= -margin && x0 <= strip_w + margin
+                let (center, turns) = self.near(centers[idx], cam);
+                let x0 = center - half_w - (cam - half_view);
+                let x1 = center + half_w - (cam - half_view);
+                let shown = x1 >= -margin && x0 <= strip_w + margin;
+                if shown {
+                    seen = Some(widen(seen, idx as i64 + turns * count as i64));
+                }
+                shown
             })
             .collect();
-        self.vis_lo = visible.iter().copied().min().unwrap_or(self.current);
-        self.vis_hi = visible.iter().copied().max().unwrap_or(self.current);
-        self.slice_order(&mut visible);
+        (self.vis_lo, self.vis_hi) = vis_range(seen, self.current, count);
+        self.slice_order(&mut visible, count);
 
         self.card.filter_cache.clear();
         for &idx in &visible {
             let w = self.width_of(idx);
-            let item_cx = cx - cam + centers[idx];
+            let item_cx = cx - cam + self.near(centers[idx], cam).0;
             let opacity = layout::slice_opacity(
                 item_cx,
                 cx,
@@ -104,23 +110,23 @@ impl SceneCore {
         self.push_flip_old(sinks.instances, sinks.wanted);
     }
 
-    pub(super) fn position_slice_camera(&mut self, cur_center: f32) {
+    pub(super) fn position_slice_camera(&mut self, cur_center: f32, reach: f32) {
         if self.layout_camera_anchor || !self.sp.settled_to(&self.sp_target) {
             self.camera.snap(cur_center);
             self.layout_camera_anchor = false;
         } else {
-            self.camera.retarget(cur_center);
+            self.aim_camera(cur_center, reach);
         }
     }
 
-    fn slice_order(&self, visible: &mut [usize]) {
+    fn slice_order(&self, visible: &mut [usize], count: usize) {
         visible.sort_by_key(|&idx| {
             if idx == self.current {
                 i64::MAX
             } else if Some(idx) == self.hover {
                 i64::MAX - 1
             } else {
-                -(idx as i64 - self.current as i64).abs()
+                -self.travel(self.current, idx, count).abs()
             }
         });
     }
@@ -270,33 +276,35 @@ impl SceneCore {
             return;
         }
         let Some(atlas) = ctx.atlas.as_mut() else { return };
-        let span = self.vis_hi.saturating_sub(self.vis_lo) + 1;
+        let (lo, hi) = (self.vis_lo, self.vis_hi);
+        let looped = self.connected();
+        let span = if lo <= hi { hi - lo + 1 } else { hi + count - lo + 1 };
         let (far_look, near_look) = if crate::contracts::preview::compressed_thumbnails() {
             prefetch_reach(span, atlas.near_capacity() as usize)
         } else {
             (prefetch_reach(span, 0).0, 0)
         };
+        let far_look = if looped { far_look.min(count.saturating_sub(span) / 2) } else { far_look };
         for step in 1..=far_look {
-            for idx in [
-                self.vis_lo.checked_sub(step),
-                Some(self.vis_hi + step).filter(|&cand| cand < count),
-            ]
-            .into_iter()
-            .flatten()
-            {
+            let ring = if looped {
+                [Some((lo + count - step) % count), Some((hi + step) % count)]
+            } else {
+                [lo.checked_sub(step), Some(hi + step).filter(|&cand| cand < count)]
+            };
+            for idx in ring.into_iter().flatten() {
                 let store_idx = ctx.filtered[idx] as usize;
                 let item = &ctx.catalog.items[store_idx];
                 wanted.insert(store_idx);
                 if step <= near_look
                     && !atlas.near.is_known(store_idx)
                     && !atlas.near_failed.contains(&store_idx)
-                    && is_webp(&item.thumb)
+                    && is_thumb(&item.thumb)
                 {
                     enqueue_near(ctx.pool, atlas, item, store_idx, false, self.direct_thumbnails);
                 }
                 if !atlas.far.is_known(store_idx)
                     && !atlas.failed.contains(&store_idx)
-                    && is_webp(&item.thumb)
+                    && is_thumb(&item.thumb)
                 {
                     enqueue_far(ctx.pool, atlas, item, store_idx, false, self.direct_thumbnails);
                 }

@@ -16,7 +16,9 @@ mod theme;
 mod transition_preview;
 
 pub(crate) use chrome::{ChromeState, PaneScroll};
-pub(crate) use daemon::{ActivityApplyBatch, ActivityApplyRequest, DaemonState, Pending};
+pub(crate) use daemon::{
+    ActivityApplyBatch, ActivityApplyRequest, DaemonState, LibraryLoad, Pending,
+};
 pub(crate) use demo::DemoSession;
 pub(crate) use input::InputState;
 pub(crate) use library::LibrarySession;

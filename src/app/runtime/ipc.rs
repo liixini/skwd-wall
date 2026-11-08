@@ -28,6 +28,7 @@ impl App {
     fn ipc_connected(&mut self, list_id: u64) {
         self.daemon.connected = true;
         self.daemon.ever_connected = true;
+        self.daemon.library_load = LibraryLoad::Loading;
         if list_id > 0 {
             self.daemon.pending.insert(list_id, Pending::List);
         }
@@ -62,6 +63,7 @@ impl App {
         self.daemon.steam_refresh_needed = false;
         self.scene.touch();
         self.library_session.list_dirty = true;
+        self.daemon.library_load = LibraryLoad::Loading;
         let dropped: Vec<Pending> = self.daemon.pending.drain().map(|(_, kind)| kind).collect();
         for kind in dropped {
             self.rpc_error(kind, crate::i18n::tr("status-daemon-lost").to_string());
@@ -115,7 +117,8 @@ impl App {
         let Some(result) = result else {
             if matches!(
                 kind,
-                Pending::Status
+                Pending::List
+                    | Pending::Status
                     | Pending::WeatherAction
                     | Pending::LockScreenSet { .. }
                     | Pending::ArrangeOutputs

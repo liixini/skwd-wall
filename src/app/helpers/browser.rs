@@ -1,6 +1,6 @@
 use iced::Task;
 
-use crate::frontend::nav::{grid_step, step};
+use crate::frontend::nav::{Ends, grid_step, step};
 use crate::frontend::scene::layout::GridParams;
 use crate::infrastructure::config::Config;
 
@@ -35,7 +35,7 @@ pub(crate) fn browser_wraps(app: &App) -> bool {
 }
 
 pub(crate) fn browser_key_nav(app: &mut App, dx: i32, dy: i32) -> Task<Message> {
-    let wrap = browser_wraps(app);
+    let ends = Ends::wrap_if(browser_wraps(app));
     let Some(browser) = app.source_browser.browser.as_ref() else {
         return Task::none();
     };
@@ -44,7 +44,7 @@ pub(crate) fn browser_key_nav(app: &mut App, dx: i32, dy: i32) -> Task<Message> 
         if dy != 0 {
             return Task::none();
         }
-        let Some(next) = step(current, dx, count, wrap) else {
+        let Some(next) = step(current, dx, count, ends) else {
             return Task::none();
         };
         return update(
@@ -54,8 +54,8 @@ pub(crate) fn browser_key_nav(app: &mut App, dx: i32, dy: i32) -> Task<Message> 
     }
     let cols = app.source_browser.wall.scene.gp.cols;
     let next = match app.source_browser.wall.scene.hover {
-        Some(current) if dy != 0 => grid_step(current, dy, cols, count, wrap),
-        Some(current) => step(current, dx, count, wrap),
+        Some(current) if dy != 0 => grid_step(current, dy, cols, count, ends),
+        Some(current) => step(current, dx, count, ends),
         None => (count > 0).then_some(0),
     };
     next.map_or_else(Task::none, |next| browser_select(app, next))

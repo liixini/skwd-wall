@@ -6,9 +6,9 @@ use super::super::super::rtl;
 use super::super::super::theme_bar::ThemeBar;
 use super::super::action::BarAction;
 use super::super::catalog::{
-    ICON_FAV, ICON_FOLDER, ICON_HIDDEN, ICON_RANDOM, MENU_CHROME_H, MENU_MAX_ROWS, MENU_ROW_H,
-    SORTS, SWATCH_CELL_SIZE, TYPES, next_orient, next_resolution, orient_label, resolution_label,
-    type_label_key,
+    ICON_COLOUR_STUDIO, ICON_FAV, ICON_FOLDER, ICON_HIDDEN, ICON_RANDOM, ICON_WIDGETS,
+    MENU_CHROME_H, MENU_MAX_ROWS, MENU_ROW_H, SORTS, SWATCH_CELL_SIZE, TYPES, next_orient,
+    next_resolution, orient_label, resolution_label, type_label_key,
 };
 use super::layout::{menu_rows, menu_space, theme_rows, wrap_items};
 use super::types::{BarItem, BarModel, BarNotice, BarShow, dropdown_item};
@@ -124,6 +124,22 @@ pub fn build_bar_with_tasks(
 
     if show.playlists {
         push_item(&mut items, &mut x, scale, "\u{f0cb8}", true, false, Some(BarAction::Playlists));
+    }
+
+    if show.colour_studio {
+        push_item(
+            &mut items,
+            &mut x,
+            scale,
+            ICON_COLOUR_STUDIO,
+            true,
+            false,
+            Some(BarAction::ColourStudio),
+        );
+    }
+
+    if show.widgets {
+        push_item(&mut items, &mut x, scale, ICON_WIDGETS, true, false, Some(BarAction::Widgets));
     }
 
     push_item(&mut items, &mut x, scale, "\u{f0493}", true, false, Some(BarAction::Settings));

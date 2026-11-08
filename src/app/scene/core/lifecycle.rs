@@ -515,6 +515,9 @@ impl SceneCore {
         self.card.hex_scales.clear();
         self.hover = None;
         self.camera.snap(0.0);
+        self.camera_jump = false;
+        self.period = None;
+        self.ring = None;
         self.layout_camera_anchor =
             matches!(mode, Mode::Slices | Mode::Depth | Mode::Hex | Mode::Collection);
         self.card.filter_cache.clear();

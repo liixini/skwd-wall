@@ -115,6 +115,13 @@ pub(crate) enum Pending {
     },
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum LibraryLoad {
+    Loading,
+    Ready,
+    Failed(String),
+}
+
 pub(crate) struct DaemonState {
     pub(crate) app_themes: Option<crate::contracts::daemon::AppThemesResult>,
     pub(crate) weather: Option<crate::contracts::daemon::WeatherStatus>,
@@ -125,6 +132,7 @@ pub(crate) struct DaemonState {
     pub(crate) pending: HashMap<u64, Pending>,
     pub(crate) connected: bool,
     pub(crate) ever_connected: bool,
+    pub(crate) library_load: LibraryLoad,
     pub(crate) diagnostic: String,
     pub(crate) effect_definitions: Vec<crate::domain::effects::EffectDefinition>,
     pub(crate) last_wallpaper: Option<Value>,
@@ -169,6 +177,7 @@ impl DaemonState {
             pending: HashMap::new(),
             connected: false,
             ever_connected: false,
+            library_load: LibraryLoad::Loading,
             diagnostic: String::from("walld: connecting..."),
             effect_definitions: Vec::new(),
             last_wallpaper: None,

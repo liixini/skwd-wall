@@ -3,6 +3,7 @@ use iced::Task;
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 
+use crate::app::helpers::browser_wraps;
 use crate::contracts::browser::{ApplyKind, ApplyTarget};
 use crate::frontend::browser::{
     BrowserMsg, STEAM_DAYS_FILTER, STEAM_NSFW_FILTER, STEAM_NSFW_VALUE, STEAM_RESOLUTION_FILTER,
@@ -336,6 +337,21 @@ pub(super) fn browser_wall_click(app: &mut App, x: f32, y: f32) -> Task<Message>
 pub(super) fn browser_wall_wheel(app: &mut App, amount: f32) -> Task<Message> {
     if amount == 0.0 {
         return Task::none();
+    }
+    super::navigation::arm_wheel(app);
+    let armed = super::navigation::take_wheel_arm(app);
+    let last = app
+        .source_browser
+        .browser
+        .as_ref()
+        .filter(|browser| browser.session.preview.is_none())
+        .and_then(|browser| browser.session.items.len().checked_sub(1));
+    if let Some(last) = last
+        && armed
+        && browser_wraps(app)
+        && app.source_browser.wall.scene.grid_scroll_end(-amount)
+    {
+        return browser_select(app, super::navigation::wheel_edge(amount).min(last));
     }
     app.source_browser.wall.scene.grid_scroll(-amount);
     app.retick();

@@ -14,8 +14,12 @@ const SETTLE: usize = 150;
 const OUT: &str = "SKWD_REACH_OUT";
 const COMMANDS: [&str; 4] = ["preview", "displays", "cancel", "done"];
 const LARGE: f32 = 1.5;
-const HIGHER: [(f32, f32); 4] =
-    [(1920.0, 1080.0), (1920.0, 1200.0), (2560.0, 1440.0), (3840.0, 2160.0)];
+const HIGHER: [((f32, f32), bool); 4] = [
+    ((1920.0, 1080.0), false),
+    ((1920.0, 1200.0), false),
+    ((2560.0, 1440.0), true),
+    ((3840.0, 2160.0), true),
+];
 
 const TOGETHER: [&[&str]; 4] =
     [&["bead", "gem"], &["label"], &["slot", "choice"], &["toast", "undo"]];
@@ -404,11 +408,29 @@ fn floats_clear_panel() {
 }
 
 #[test]
-fn higher_keeps_row() {
-    for viewport in HIGHER {
-        let app = open_at(viewport, 1.0);
+fn higher_routes_fit() {
+    for (viewport, inline) in HIGHER {
+        let mut app = open_at(viewport, 1.0);
         let editor = &app.panels.arrange.as_ref().unwrap().editor;
         let laid = editor.spool.laid.as_ref().unwrap();
+        assert!(laid.plan.fits, "{viewport:?}");
+        if !inline {
+            let mut faults = Vec::new();
+            audit(&app, "higher", "docked", &mut faults);
+            let tools = spot_of(&app, "family:3").unwrap();
+            edit(&mut app, ArrangeMsg::Pointer(Pointer::Move(tools)));
+            settle(&mut app);
+            assert!(
+                app.panels.arrange.as_ref().unwrap().editor.spool.laid.as_ref().unwrap().plan.fits
+            );
+            let plates = app.panels.arrange.as_ref().unwrap().editor.plates();
+            for id in ["bead:colour-studio", "bead:widgets"] {
+                assert!(plates.iter().any(|(name, _)| name == id));
+            }
+            audit(&app, "higher", "tools", &mut faults);
+            assert!(faults.is_empty(), "{}", faults.join("\n"));
+            continue;
+        }
         assert!(editor.spool.docked().is_empty(), "{viewport:?}");
         assert!(laid.spans.is_empty(), "{viewport:?}");
         assert_eq!(editor.spool.lane.target(), thread_y(viewport.1));

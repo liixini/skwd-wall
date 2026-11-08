@@ -17,6 +17,22 @@ const SETTINGS_FIELD: &str = "settings";
 const DRAWING_FIELD: &str = "drawing";
 const WEATHER_REVIEW_FIELD: &str = "weather_review";
 const BROWSER_ASSET_ACTION: &str = "asset";
+const LIBRARY_FIELD: &str = "library";
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+enum LibraryUiStatus {
+    Loading,
+    Ready,
+    Failed,
+}
+
+#[derive(serde::Serialize)]
+struct LibraryUiState<'a> {
+    state: LibraryUiStatus,
+    error: Option<&'a str>,
+    count: usize,
+}
 
 #[derive(serde::Serialize)]
 struct BrowserPreviewUiState<'a> {
@@ -165,6 +181,7 @@ const SETTINGS_OPEN_FIELD: &str = "open_section";
 const SETTINGS_OPEN_KEY_FIELD: &str = "open_section_key";
 const SETTINGS_KEYS_FIELD: &str = "section_keys";
 const SETTINGS_TRANSITION_FIELD: &str = "transitioning";
+const VISIBLE_WRAPPED_FIELD: &str = "wrapped";
 const SETTINGS_STUDIO_FIELD: &str = "layout_studio";
 
 pub(crate) fn ui_state_json(app: &App) -> String {
@@ -313,6 +330,18 @@ pub(crate) fn ui_state_json(app: &App) -> String {
         (LAYOUT_OUTPUT_FIELD): app.config.layout_output(),
         "mode": mode,
         "count": app.library_session.filtered.len(),
+        (LIBRARY_FIELD): LibraryUiState {
+            state: match &app.daemon.library_load {
+                LibraryLoad::Loading => LibraryUiStatus::Loading,
+                LibraryLoad::Ready => LibraryUiStatus::Ready,
+                LibraryLoad::Failed(_) => LibraryUiStatus::Failed,
+            },
+            error: match &app.daemon.library_load {
+                LibraryLoad::Failed(error) => Some(error.as_str()),
+                _ => None,
+            },
+            count: app.library_session.library.catalog().items.len(),
+        },
         "current": app.scene.current,
         "selection": selection,
         "camera": { "x": app.scene.camera_pos(), "target": app.scene.camera_target() },
@@ -332,7 +361,7 @@ pub(crate) fn ui_state_json(app: &App) -> String {
                 "y": app.scene.wall_composition_center().1,
             },
         },
-        "visible": { "lo": vis_lo, "hi": vis_hi },
+        "visible": { "lo": vis_lo, "hi": vis_hi, (VISIBLE_WRAPPED_FIELD): vis_lo > vis_hi },
         "geometry": {
             "wall_layout": app.scene.gp.layout.as_key(),
             "hex_curve": app.scene.hp.curve.as_key(),
