@@ -63,7 +63,10 @@ impl Arrange {
     }
 
     fn detent(&mut self, up: bool) -> Vec<Effect> {
-        if self.selection.id != Some(Target::Picker) || self.board.grid.is_some() {
+        if self.selection.id != Some(Target::Picker)
+            || !self.board.resizable
+            || self.board.grid.is_some()
+        {
             self.shake = Some(self.now);
             self.hold(TIMING.shake);
             return Vec::new();

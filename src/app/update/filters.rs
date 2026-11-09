@@ -111,8 +111,6 @@ pub(super) fn toggle_filter_bar(app: &mut App) -> Task<Message> {
     if app.menu_capturing() {
         return Task::none();
     }
-    app.chrome.filter_bar_visible = !app.chrome.filter_bar_visible;
-    app.chrome.bar.menu = None;
-    app.chrome.bar.cache.clear();
+    app.chrome.set_filter_bar(!app.chrome.filter_bar_shown());
     Task::none()
 }

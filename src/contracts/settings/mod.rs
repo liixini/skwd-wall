@@ -15,7 +15,9 @@ pub use layouts::{
 pub use memory::saved_memory_mib;
 pub use overview::{Overview, OverviewMemo, Scan, SettingChange, Undo};
 pub use skwd_config::schema;
-pub use skwd_config::{EVERYTHING_PROFILE, FolderState as ProfileState, parse_rgb};
+pub use skwd_config::{
+    EVERYTHING_PROFILE, FilterBarVisibility, FolderState as ProfileState, parse_rgb,
+};
 pub use skwd_config::{corners, keys};
 
 pub const SHOW_TYPE_PREFIX: &str = "filterBar.show.type.";

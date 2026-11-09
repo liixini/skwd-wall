@@ -116,31 +116,11 @@ pub(super) fn open_tag_cloud(app: &mut App) -> Task<Message> {
     if app.menu_capturing() {
         return Task::none();
     }
-    app.tags.cloud_open = !app.tags.cloud_open;
-    app.tags.matching_tags_open = false;
-    app.tags.tag_search.clear();
-    app.tags.cloud_scroll.snap(0.0);
-    app.chrome.bar.cache.clear();
-    if !app.tags.cloud_open {
-        app.tags.semantic.search.clear();
-        app.clear_semantic_search();
+    if app.tags.cloud_open {
+        app.close_overlay(crate::app::overlay::Overlay::TagCloud);
         return Task::none();
     }
-    app.tags.cloud_entrance.run(0.0, 1.0);
-    app.tags.search_mode = if app.config.flag_default_true(skwd_config::keys::semantic::ENABLED) {
-        SearchMode::from_config(
-            &app.config.str_path(skwd_config::keys::tagging::DEFAULT_SEARCH_MODE),
-        )
-    } else {
-        SearchMode::Tags
-    };
-    if app.tags.search_mode == SearchMode::Tags {
-        app.tags.tag_search = sync_library_search(
-            &app.library_session.filters.tags,
-            &app.library_session.filters.numeric,
-        );
-    }
-    app.tags.semantic.search.clear();
+    app.reveal_tag_cloud();
     iced::widget::operation::focus(tag_query_id())
 }
 

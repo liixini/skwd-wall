@@ -3,9 +3,10 @@ settings-bar-filter-desc = A faixa de botões de tipo, ordenação e filtro acim
 settings-bar-filter-say = Mostra { $val }{ $buttons }{ $end } e { $val }{ $sorts }{ $end }, na disposição { $orientation ->
         [vertical] vertical
        *[horizontal] horizontal
-    }. { $pinned ->
-        [yes] Ela fica sempre fixa.
-       *[no] Ela se oculta até você precisar.
+    }. { $visibility ->
+        [hover] Ela aparece enquanto o ponteiro está sobre ela.
+        [hidden] Ela fica oculta até você pressionar o atalho dela.
+       *[always] Ela fica sempre fixa.
     } Estilo visual: { $style }.
 settings-bar-button-count = { $shown } de { $all } { $all ->
         [one] botão
@@ -18,7 +19,7 @@ settings-bar-sort-count = { $shown } de { $all } { $all ->
 settings-bar-offers = O que oferece
 settings-bar-behaves = Como se comporta
 settings-bar-buttons = Botões da barra
-settings-bar-pinned-hint = Fixa em vez de se ocultar sozinha
+settings-bar-search-pinned-hint = Abre com o seletor
 settings-bar-placed = Onde a barra fica é ajustado em Layout.
 settings-bar-sizes = Faixas de tamanho
 settings-bar-sizes-desc = Faixas de resolução usadas pelo botão Tamanho.

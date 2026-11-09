@@ -241,12 +241,37 @@ impl App {
                 self.tags.semantic.search.clear();
                 self.tags.tag_search.clear();
                 self.clear_semantic_search();
+                self.chrome.bar.cache.clear();
                 self.retick();
             }
             Overlay::Settings => {
                 self.close_settings();
             }
         }
+    }
+
+    pub(super) fn reveal_tag_cloud(&mut self) {
+        self.tags.cloud_open = true;
+        self.tags.matching_tags_open = false;
+        self.tags.tag_search.clear();
+        self.tags.cloud_scroll.snap(0.0);
+        self.chrome.bar.cache.clear();
+        self.tags.cloud_entrance.run(0.0, 1.0);
+        self.tags.search_mode =
+            if self.config.flag_default_true(skwd_config::keys::semantic::ENABLED) {
+                super::SearchMode::from_config(
+                    &self.config.str_path(skwd_config::keys::tagging::DEFAULT_SEARCH_MODE),
+                )
+            } else {
+                super::SearchMode::Tags
+            };
+        if self.tags.search_mode == super::SearchMode::Tags {
+            self.tags.tag_search = super::sync_library_search(
+                &self.library_session.filters.tags,
+                &self.library_session.filters.numeric,
+            );
+        }
+        self.tags.semantic.search.clear();
     }
 
     pub(super) fn topmost_overlay(&self) -> Option<Overlay> {

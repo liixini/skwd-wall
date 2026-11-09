@@ -391,7 +391,7 @@ pub(super) fn filter_bar_layer(app: &App, vw: f32, vh: f32) -> Element<'_, Messa
         menu_scroll: app.chrome.bar.menu_scroll.x.clamp(0.0, menu_max_scroll),
         theme_swatch: &app.theme.swatch,
         pal: &app.theme.palette,
-        cache: &app.chrome.bar.cache,
+        cache: app.chrome.bar.cache.canvas(),
         scale,
         fade: app.scene.open_fade()
             * app.chrome.filter_bar_fade()

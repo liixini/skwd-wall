@@ -3,9 +3,10 @@ settings-bar-filter-desc = ردیف دکمه‌های نوع، مرتب‌ساز
 settings-bar-filter-say = { $val }{ $buttons }{ $end } و { $val }{ $sorts }{ $end } را { $orientation ->
         [vertical] عمودی
        *[horizontal] افقی
-    } نشان می‌دهد. { $pinned ->
-        [yes] همیشه سنجاق می‌ماند.
-       *[no] تا وقتی لازمش نداشته باشید پنهان می‌ماند.
+    } نشان می‌دهد. { $visibility ->
+        [hover] تا وقتی نشانگر روی آن است نمایان می‌ماند.
+        [hidden] تا وقتی میان‌برش را نزنید پنهان می‌ماند.
+       *[always] همیشه سنجاق می‌ماند.
     } سبک ظاهری: { $style }.
 settings-bar-button-count = { $shown } از { $all } { $all ->
         [one] دکمه
@@ -18,7 +19,7 @@ settings-bar-sort-count = { $shown } از { $all } { $all ->
 settings-bar-offers = چه چیزی دارد
 settings-bar-behaves = چگونه رفتار می‌کند
 settings-bar-buttons = دکمه‌های نوار
-settings-bar-pinned-hint = سنجاق‌شده به‌جای پنهان شدن خودکار
+settings-bar-search-pinned-hint = همراه انتخابگر باز می‌شود
 settings-bar-placed = جای نوار در چیدمان تنظیم می‌شود.
 settings-bar-sizes = بازه‌های اندازه
 settings-bar-sizes-desc = بازه‌های وضوحی که دکمهٔ «اندازه» با آن‌ها فیلتر می‌کند.

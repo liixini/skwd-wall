@@ -70,7 +70,6 @@ impl Config {
         reduced_motion: bool_setting(skwd_config::schema::setting::motion::REDUCED);
         close_on_selection: bool_setting(skwd_config::schema::setting::general::CLOSE_ON_SELECTION);
         display_mode: text_setting(skwd_config::schema::setting::selector::DISPLAY_MODE);
-        filter_bar_always_visible: bool_setting(skwd_config::schema::setting::general::FILTER_BAR_ALWAYS_VISIBLE);
         filter_bar_sticky: bool_setting(skwd_config::schema::setting::filter_bar::STICKY);
         hover_selects: bool_setting(skwd_config::schema::setting::general::HOVER_SELECTS);
         hex_arc: on_unless_off(skwd_config::keys::selector::HEX_ARC);
@@ -85,9 +84,14 @@ impl Config {
         main_monitor: str(skwd_config::keys::system::MONITOR, "");
         sandy_swap_loop: off_unless_on(skwd_config::keys::selector::SANDY_SWAP_LOOP);
         sandy_video_out_live: on_unless_off(skwd_config::keys::selector::SANDY_OUTGOING_LIVE);
+        search_always_visible: bool_setting(skwd_config::schema::setting::general::SEARCH_ALWAYS_VISIBLE);
         slice_parallax: off_unless_on(skwd_config::keys::selector::SLICE_PARALLAX);
         hex_parallax: off_unless_on(skwd_config::keys::selector::HEX_PARALLAX);
         slice_wobble: off_unless_on(skwd_config::keys::selector::SLICE_WOBBLE);
+    }
+
+    pub fn filter_bar_visibility(&self) -> skwd_config::FilterBarVisibility {
+        skwd_config::filter_bar_visibility(self.root())
     }
 
     pub fn default_folder(&self) -> String {
@@ -379,6 +383,9 @@ impl Config {
         }
         if path == skwd_config::keys::we_render::ENGINE {
             return String::from("native");
+        }
+        if path == skwd_config::keys::general::FILTER_BAR_VISIBILITY {
+            return self.filter_bar_visibility().key().to_string();
         }
         if let Some(style) = skwd_config::corners::style(self.root(), path) {
             return style.to_string();

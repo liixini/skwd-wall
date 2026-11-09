@@ -61,6 +61,7 @@ impl App {
 
     pub(super) fn update_theme_preview(&mut self, now: Instant, dt: f32) -> bool {
         let off = self.theme.suspended
+            || !self.theme.armed
             || !self.config.flag_default_true(skwd_config::keys::selector::LIVE_PREVIEW)
             || self.source_browser.browser.is_some()
             || self.panels.playlists.is_some()

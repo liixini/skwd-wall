@@ -239,6 +239,78 @@ impl App {
         self.chrome.sync_filter_bar(vertical);
     }
 
+    pub(in crate::app) fn apply_bar_default(&mut self) {
+        let mode = self.config.filter_bar_visibility();
+        self.chrome.filter_bar_mode = mode;
+        self.chrome.filter_bar_visible =
+            self.chrome.filter_bar_forced || mode == skwd_config::FilterBarVisibility::Always;
+        self.chrome.clear_filter_hover();
+        self.chrome.bar.cache.clear();
+        self.retick();
+    }
+
+    pub(in crate::app) fn follow_bar_mode(&mut self) {
+        if self.panels.arrange.is_none()
+            && self.chrome.filter_bar_mode != self.config.filter_bar_visibility()
+        {
+            self.apply_bar_default();
+        }
+    }
+
+    pub(in crate::app) fn place_hover_zone(&mut self) {
+        let context =
+            crate::app::view::layout::LayoutContext::projected(&self.config, self.scene.viewport);
+        let rect = crate::app::view::bar_bounds(self, &context);
+        self.chrome.filter_bar_hover_zone = crate::app::update::arrange::placement::resolve(
+            self,
+            crate::frontend::arrange::Target::Bar,
+            rect,
+        );
+        self.chrome.bar.cache.zone_placed();
+    }
+
+    pub(in crate::app) fn filter_hover_allowed(&self) -> bool {
+        self.chrome.filter_bar_mode == skwd_config::FilterBarVisibility::Hover
+            && self.panels.arrange.is_none()
+            && self.runtime_state.demo.is_none()
+            && !self.menu_capturing()
+            && !self.detail_open()
+    }
+
+    pub(in crate::app) fn hover_filter_bar(&mut self, x: f32, y: f32) {
+        if self.chrome.bar.menu.is_some() || !self.filter_hover_allowed() {
+            return;
+        }
+        if self.chrome.bar.cache.zone_stale() {
+            self.place_hover_zone();
+        }
+        let inside = self.chrome.filter_bar_hover_zone.contains(iced::Point::new(x, y));
+        if self.chrome.track_filter_hover(inside) {
+            self.retick();
+        }
+    }
+
+    pub(in crate::app) fn leave_filter_bar(&mut self) {
+        if self.chrome.clear_filter_hover() {
+            self.retick();
+        }
+    }
+
+    pub(in crate::app) fn apply_search_default(&mut self) {
+        if self.config.search_always_visible() && !self.tags.cloud_open {
+            self.reveal_tag_cloud();
+            self.retick();
+        }
+    }
+
+    pub(in crate::app) fn follow_search_setting(&mut self) {
+        if self.config.search_always_visible() {
+            self.apply_search_default();
+        } else if self.tags.cloud_open {
+            self.close_overlay(crate::app::overlay::Overlay::TagCloud);
+        }
+    }
+
     pub(in crate::app) fn motion_profile(&self) -> crate::frontend::animation::MotionProfile {
         crate::frontend::animation::MotionProfile::new(
             self.config.motion_fast_ms(),
@@ -386,6 +458,7 @@ impl App {
             self.scene.set_effect(id as u32);
         }
         self.apply_motion_speeds();
+        self.follow_bar_mode();
         self.scene.touch();
         self.chrome.bar.cache.clear();
         self.retick();
@@ -432,6 +505,7 @@ impl App {
             self.config.str_path(skwd_config::keys::semantic::MANIFEST),
             self.config.str_path(skwd_config::keys::semantic::INDEX_PROFILE),
         );
+        let search_default = self.config.search_always_visible();
         if !self.config.reload() {
             return false;
         }
@@ -461,6 +535,9 @@ impl App {
         self.sync_picker_preview();
         self.apply_layout();
         self.sync_semantic_enabled();
+        if search_default != self.config.search_always_visible() {
+            self.follow_search_setting();
+        }
         if semantic_before != semantic_after {
             self.clear_semantic_search();
             self.request_semantic_search();

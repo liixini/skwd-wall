@@ -70,6 +70,7 @@ fn board() -> Board {
         ],
         style: Style { layout: "Slices", spacing: Some(1), corners: Some(CornerStep::Step(1)) },
         grid: None,
+        resizable: true,
         steps: 0,
         displays: false,
         copy: None,
@@ -181,6 +182,20 @@ fn gem_resize_holds_anchor() {
     assert_eq!([rect.x, rect.y], [PICKER.x, PICKER.y]);
     assert!(rect.w < PICKER.w && rect.h < PICKER.h);
     assert!(matches!(effects.last(), Some(Effect::Commit(Target::Picker, _, Step::Size))));
+}
+
+#[test]
+fn fixed_picker_keeps_size() {
+    let mut start = board();
+    start.resizable = false;
+    let mut arrange = Arrange::new(OUTPUT, start, tones());
+    settle(&mut arrange);
+    click(&mut arrange, PICKER.centre());
+    settle(&mut arrange);
+    let frame = arrange.selection.frame_rect().expect("frame");
+    assert_ne!(arrange.hit([frame.right(), frame.bottom()]), Some(Hit::Gem(2)));
+    assert!(arrange.command(Command::Detent(true)).is_empty());
+    assert!(arrange.shake.is_some());
 }
 
 #[test]

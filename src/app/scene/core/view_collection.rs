@@ -1,4 +1,5 @@
 use glam::Mat4;
+use iced::Rectangle;
 
 use crate::contracts::rendering::{CHAMFER, INSTANCE_FLAGS};
 use crate::frontend::scene::hand::{self, Camera, PAD, Quad};
@@ -7,6 +8,8 @@ use crate::rendering::scene::PROJECTED;
 
 use super::layout_helpers::{CardSpec, vis_range};
 use super::model::{RebuildCtx, RebuildSinks, SceneCore};
+
+const FALLBACK_ASPECT: f32 = 16.0 / 9.0;
 
 impl SceneCore {
     pub fn collection_open_for(&self, idx: usize) -> bool {
@@ -45,12 +48,12 @@ impl SceneCore {
         ctx: &mut RebuildCtx<'_>,
         sinks: &mut RebuildSinks<'_>,
         entrance: f32,
-    ) {
+    ) -> Option<Rectangle> {
         let count = ctx.filtered.len();
         if count == 0 {
             self.vis_lo = 0;
             self.vis_hi = 0;
-            return;
+            return None;
         }
         self.current = self.current.min(count - 1);
         self.camera.set_zeta(1.0);
@@ -92,7 +95,7 @@ impl SceneCore {
             let aspect = if item.width > 0 && item.height > 0 {
                 (item.width as f32 / item.height as f32).clamp(0.5, 2.4)
             } else {
-                16.0 / 9.0
+                FALLBACK_ASPECT
             };
             let selected = Some(idx) == self.collection_card;
             let (quad, hw, hh) = collection_quad(
@@ -159,6 +162,21 @@ impl SceneCore {
             sinks.instances.push(body);
             sinks.hits.push(hit);
         }
+        let [front, back] = [-radius, radius].map(|distance| {
+            let (quad, _, _) = collection_quad(
+                self.viewport.1,
+                self.avail_w(),
+                self.center_x(),
+                distance,
+                0.0,
+                false,
+                FALLBACK_ASPECT,
+                self.xp.collection,
+            );
+            let [cx, cy, hw, hh] = quad.bounds();
+            Rectangle { x: cx - hw, y: cy - hh, width: 2.0 * hw, height: 2.0 * hh }
+        });
+        Some(front.union(&back))
     }
 }
 

@@ -3,9 +3,10 @@ settings-bar-filter-desc = The strip of type, sort and filter buttons above the 
 settings-bar-filter-say = Shows { $val }{ $buttons }{ $end } and { $val }{ $sorts }{ $end }, laid out { $orientation ->
         [vertical] vertically
        *[horizontal] horizontally
-    }. { $pinned ->
-        [yes] It stays pinned.
-       *[no] It hides until you need it.
+    }. { $visibility ->
+        [hover] It shows while the pointer is over it.
+        [hidden] It stays hidden until you press its keybind.
+       *[always] It stays pinned.
     } Visual style: { $style }.
 settings-bar-button-count = { $shown } of { $all } { $all ->
         [one] button
@@ -18,7 +19,7 @@ settings-bar-sort-count = { $shown } of { $all } { $all ->
 settings-bar-offers = What it offers
 settings-bar-behaves = How it behaves
 settings-bar-buttons = Buttons on the bar
-settings-bar-pinned-hint = Pinned instead of auto-hiding
+settings-bar-search-pinned-hint = Opens with the picker
 settings-bar-placed = Where the bar sits stays in Layout.
 settings-bar-sizes = Size bands
 settings-bar-sizes-desc = Resolution ranges the Size button filters by.

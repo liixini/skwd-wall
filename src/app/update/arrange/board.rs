@@ -198,6 +198,7 @@ pub(super) fn board(app: &App, known: Option<&[Shelf]>) -> Board {
         shelves: shelves(app, &shown, known),
         style,
         grid,
+        resizable: app.scene.frame_sizes_picker(),
         steps: session.map_or(0, |session| session.history.index()),
         displays: app.config.layout_output().is_some(),
         copy,

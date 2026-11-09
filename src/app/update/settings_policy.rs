@@ -188,10 +188,21 @@ fn sync_picker_runtime(app: &mut App, path: &str) {
     if path == skwd_config::keys::semantic::ENABLED {
         app.sync_semantic_enabled();
     }
+    if path == skwd_config::keys::general::FILTER_BAR_VISIBILITY {
+        app.apply_bar_default();
+    } else if path.starts_with(skwd_config::keys::filter_bar::PREFIX)
+        || path == skwd_config::keys::general::UI_SCALE
+    {
+        app.chrome.bar.cache.clear();
+    }
+    if path == skwd_config::keys::general::SEARCH_ALWAYS_VISIBLE {
+        app.follow_search_setting();
+    }
     if path == skwd_config::keys::general::LANGUAGE {
         let previous = crate::i18n::active_script();
         crate::i18n::set_language(&app.config.str_path(path));
         crate::shell::reload_ui_font(previous);
+        app.chrome.bar.cache.clear();
         app.panels.settings.search_results.clear();
         app.retick();
     }

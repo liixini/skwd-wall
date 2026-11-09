@@ -3,16 +3,17 @@ settings-bar-filter-desc = পিকারের ওপরে ধরন, সা�
 settings-bar-filter-say = { $val }{ $buttons }{ $end } ও { $val }{ $sorts }{ $end } দেখায়, { $orientation ->
         [vertical] খাড়াভাবে
        *[horizontal] আড়াআড়ি
-    } সাজানো। { $pinned ->
-        [yes] এটি সবসময় পিন করা থাকে।
-       *[no] দরকার না হওয়া পর্যন্ত এটি লুকানো থাকে।
+    } সাজানো। { $visibility ->
+        [hover] পয়েন্টার এর ওপর থাকা পর্যন্ত এটি দেখা যায়।
+        [hidden] এর কীবাইন্ড চাপা পর্যন্ত এটি লুকানো থাকে।
+       *[always] এটি সবসময় পিন করা থাকে।
     } দৃশ্য শৈলী: { $style }।
 settings-bar-button-count = { $all }টির মধ্যে { $shown }টি বোতাম
 settings-bar-sort-count = { $all }টির মধ্যে { $shown }টি সাজানো
 settings-bar-offers = এতে কী আছে
 settings-bar-behaves = এটি কেমন আচরণ করে
 settings-bar-buttons = বারের বোতাম
-settings-bar-pinned-hint = আপনা থেকে লুকানোর বদলে পিন করা
+settings-bar-search-pinned-hint = পিকারের সাথে খোলে
 settings-bar-placed = বারের অবস্থান লেআউটে ঠিক হয়।
 settings-bar-sizes = মাপের পরিসর
 settings-bar-sizes-desc = যে রেজোলিউশন পরিসর দিয়ে মাপ বোতাম ফিল্টার করে।

@@ -27,6 +27,7 @@ fn theme_preview_debounce() {
         wall("b.png", "static", 2, 0),
     ];
     seed(&mut app, &walls);
+    app.theme.armed = true;
     let t0 = Instant::now();
     assert!(app.update_theme_preview(t0, 0.016));
     assert!(app.theme.preview_target.is_none());
@@ -423,6 +424,7 @@ fn theme_bar_keeps_live_preview() {
     app.scene.set_visible(true);
     let _ = update(&mut app, Message::ToggleThemePanel);
     assert!(app.theme.bar_open);
+    app.theme.armed = true;
     let t0 = Instant::now();
     for i in 0..=40u64 {
         frame(&mut app, t0 + Duration::from_millis(i * 16), 800.0, 600.0);
@@ -1163,6 +1165,7 @@ fn pinned_hover_uses_its_backend_when_global_theme_is_off() {
         }]),
     );
     let before = app.config.root().clone();
+    app.theme.armed = true;
     let now = Instant::now();
     app.update_theme_preview(now, 0.016);
     app.update_theme_preview(now + Duration::from_millis(60), 0.016);
@@ -1384,4 +1387,67 @@ fn assigned_palette_delete() {
         assert!(app.runtime_state.toast.is_some());
         assert!(drain_calls(&app).is_empty());
     }
+}
+
+fn shell_previews(app: &App) -> usize {
+    drain_calls(app).iter().filter(|(method, _)| method == "wall.shell_preview").count()
+}
+
+fn launched() -> (App, Instant) {
+    let mut app = test_app();
+    let id = iced::window::Id::unique();
+    let _ = update(&mut app, Message::WindowOpened { id, width: 1280.0, height: 720.0 });
+    let walls: Vec<Value> = (0..20).map(|i| wall(&format!("w{i}"), "static", i * 9, i)).collect();
+    seed(&mut app, &walls);
+    let mut now = Instant::now();
+    tick_frames(&mut app, &mut now, 30);
+    (app, now)
+}
+
+#[test]
+fn launch_skips_preview() {
+    let (app, _) = launched();
+    assert!(app.theme.preview_target.is_none());
+    assert_eq!(shell_previews(&app), 0);
+}
+
+#[test]
+fn key_arms_preview() {
+    let (mut app, mut now) = launched();
+    let _ = update(&mut app, Message::KeyNext);
+    tick_frames(&mut app, &mut now, 10);
+    assert!(app.theme.preview_target.is_some());
+    assert!(shell_previews(&app) > 0);
+}
+
+#[test]
+fn hover_arms_preview() {
+    let (mut app, mut now) = launched();
+    let target = app
+        .scene
+        .render
+        .hits
+        .iter()
+        .find(|hit| hit.index != app.scene.current)
+        .copied()
+        .expect("another card");
+    let _ = update(&mut app, Message::MouseMoved(1.0, 1.0));
+    assert!(!app.theme.armed);
+    let _ = update(&mut app, Message::MouseMoved(target.cx, target.cy));
+    tick_frames(&mut app, &mut now, 10);
+    assert!(app.theme.preview_target.is_some());
+    assert!(shell_previews(&app) > 0);
+}
+
+#[test]
+fn reappear_disarms_preview() {
+    let (mut app, mut now) = launched();
+    let _ = update(&mut app, Message::KeyNext);
+    assert!(app.theme.armed);
+    app.runtime_state.stashed = true;
+    let _ = crate::app::warm::reappear(&mut app);
+    assert!(!app.theme.armed);
+    drain_calls(&app);
+    tick_frames(&mut app, &mut now, 30);
+    assert_eq!(shell_previews(&app), 0);
 }

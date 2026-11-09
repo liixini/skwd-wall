@@ -211,6 +211,7 @@ fn restored_selection_is_visible_in_each_picker_mode() {
         let mut app = App::with_config_using(app.config, |_| {
             crate::infrastructure::ipc::DaemonClient::recording()
         });
+        app.scene.begin_open_fade();
         let walls: Vec<_> = (0..100)
             .map(|index| keyed_wall(&format!("wall-{index}"), "static", index, 0))
             .collect();

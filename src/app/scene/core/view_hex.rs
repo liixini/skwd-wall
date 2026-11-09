@@ -1,3 +1,5 @@
+use iced::Rectangle;
+
 use crate::frontend::animation::{self as anim, MotionTier};
 use crate::frontend::scene::layout::{self, CardCorners, HexCurve, HexShape, Hit};
 use crate::frontend::scene::{InstanceRaw, roll_in_cut};
@@ -13,12 +15,12 @@ impl SceneCore {
         ctx: &mut RebuildCtx<'_>,
         sinks: &mut RebuildSinks<'_>,
         entrance: f32,
-    ) {
+    ) -> Option<Rectangle> {
         let (vw, vh) = self.viewport;
         let hp = self.hp;
         let count = ctx.filtered.len();
         if count == 0 {
-            return;
+            return None;
         }
         let rows = hp.rows.max(1);
         let total_cols = count.div_ceil(rows);
@@ -119,6 +121,13 @@ impl SceneCore {
         }
         self.push_flip_old(sinks.instances, sinks.wanted);
         (self.vis_lo, self.vis_hi) = vis_range(seen, self.current, count);
+        let band = hp.visible_band().min(self.avail_w());
+        Some(Rectangle {
+            x: cx - band * 0.5,
+            y: view_top + y_offset,
+            width: band,
+            height: hp.content_h(),
+        })
     }
 
     pub(super) fn position_hex_camera(&mut self, selected_center: f32, reach: f32) {

@@ -2,7 +2,9 @@
 #[path = "bar_tests.rs"]
 mod tests;
 
-use crate::contracts::settings::{SHOW_SORT_PREFIX, SHOW_TYPE_PREFIX, SettingsSource, keys};
+use crate::contracts::settings::{
+    FilterBarVisibility, SHOW_SORT_PREFIX, SHOW_TYPE_PREFIX, SettingsSource, keys,
+};
 use crate::i18n::{text, tr, tr_args};
 
 use super::category::PICKER;
@@ -40,7 +42,7 @@ const FLOATS_HINT: &str = "settings-bar-floats-hint";
 const BEHAVES: &str = "settings-bar-behaves";
 const BUTTONS: &str = "settings-bar-buttons";
 const SORTS: &str = "settings-filter-sort-options-card";
-const PINNED_HINT: &str = "settings-bar-pinned-hint";
+const SEARCH_PINNED_HINT: &str = "settings-bar-search-pinned-hint";
 const PLACED: &str = "settings-bar-placed";
 const ARRANGE: &str = "arrange-title";
 const SIZES_SAY: &str = "settings-bar-sizes-say";
@@ -83,6 +85,11 @@ const OTHER_BUTTONS: [&str; 12] = [
     bar::SHOW_WIDGETS,
     bar::SHOW_DOWNLOAD,
 ];
+const VISIBILITIES: [(&str, &str); 3] = [
+    (FilterBarVisibility::Always.key(), "settings-filter-visibility-always"),
+    (FilterBarVisibility::Hover.key(), "settings-filter-visibility-hover"),
+    (FilterBarVisibility::Hidden.key(), "settings-filter-visibility-hidden"),
+];
 const ORIENTATIONS: [(&str, &str); 2] = [
     (ORIENTED.values[0], "settings-filter-orientation-horizontal"),
     (ORIENTED.values[1], "settings-filter-orientation-vertical"),
@@ -110,7 +117,7 @@ const STYLE_SLOT: Bind<'_> = Bind::new("style", bar::VISUAL_STYLE);
 const FOLDER_SLOT: Bind<'_> = Bind::new("folder", bar::DEFAULT_FOLDER);
 const MODEL_SLOT: Bind<'_> = Bind::new("model", semantic::MANIFEST);
 const ORIENTED: Choice = Choice { arg: "orientation", values: ["horizontal", "vertical"] };
-const PINNED: Choice = Choice { arg: "pinned", values: ["no", "yes"] };
+const VISIBILITY_ARG: &str = "visibility";
 const STICKY: Choice = Choice { arg: "sticky", values: ["no", "yes"] };
 const MODE: Choice = Choice { arg: "mode", values: ["tags", "describe"] };
 const VIEWED: Choice = Choice { arg: "views", values: ["full", "multiview"] };
@@ -158,7 +165,9 @@ fn filter(cfg: &dyn SettingsSource, pool: &mut Vec<Row>) -> Section {
         &[(bar::SHOW_ARRANGE, Some(FLOATS_HINT)), (bar::SHOW_SWATCH, Some(FLOATS_HINT))],
     ));
     let mut behaves = looked(rows(pool, &[(bar::ORIENTATION, None)]), Cell::Buttons(&ORIENTATIONS));
-    behaves.extend(rows(pool, &[(keys::general::FILTER_BAR_ALWAYS_VISIBLE, Some(PINNED_HINT))]));
+    let shown = take_control_paths(pool, &[keys::general::FILTER_BAR_VISIBILITY]);
+    behaves.extend(looked(shown, Cell::Buttons(&VISIBILITIES)));
+    behaves.extend(rows(pool, &[(keys::general::SEARCH_ALWAYS_VISIBLE, Some(SEARCH_PINNED_HINT))]));
     for mut arrange in action(pool, |id| *id == ActionId::ArrangePicker) {
         arrange.title = tr(ARRANGE).to_string();
         behaves.extend(noted(vec![arrange], None));
@@ -176,11 +185,12 @@ fn filter(cfg: &dyn SettingsSource, pool: &mut Vec<Row>) -> Section {
         ..Section::new(SectionId::new(PICKER, FILTER), tr(FILTER), tr("settings-bar-filter-desc"))
     };
     let vertical = cfg.text(bar::ORIENTATION) == ORIENTED.values[1];
+    let visibility = cfg.text(keys::general::FILTER_BAR_VISIBILITY);
     let args = [
         (BUTTONS_ARG, counts[0].as_str()),
         (SORTS_ARG, counts[1].as_str()),
         ORIENTED.pick(vertical),
-        PINNED.pick(cfg.flag(keys::general::FILTER_BAR_ALWAYS_VISIBLE)),
+        (VISIBILITY_ARG, visibility.as_str()),
     ];
     spoken(section, |section| bind(section, FILTER_SAY, &[STYLE_SLOT], &args))
 }

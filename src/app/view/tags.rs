@@ -400,7 +400,11 @@ pub(super) fn tag_cloud_layer(app: &App, vh: f32) -> Element<'_, Message> {
         filtered_count: app.library_session.visible_count,
         sort_az: app.tags.sort_az,
         matching_tags_open: app.tags.matching_tags_open,
-        entrance: if app.panels.arrange.is_some() { 1.0 } else { app.tags.cloud_entrance.x },
+        entrance: if app.panels.arrange.is_some() {
+            1.0
+        } else {
+            app.tags.cloud_entrance.x * app.scene.open_fade()
+        },
         scroll: app.tags.cloud_scroll.x,
         scroll_target: app.tags.cloud_scroll.target,
         width: rect.width,

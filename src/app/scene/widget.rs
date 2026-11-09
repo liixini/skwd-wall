@@ -113,6 +113,10 @@ impl shader::Program<Message> for SceneProgram {
                 pointer_motion_changed(&mut state.last_pointer, pos.x, pos.y)
                     .then(|| Action::publish(Message::MouseMoved(pos.x, pos.y)))
             }
+            Event::Mouse(mouse::Event::CursorLeft) => {
+                state.last_pointer = None;
+                Some(Action::publish(Message::MouseLeft))
+            }
             Event::Mouse(mouse::Event::ButtonPressed(btn)) => {
                 let button = crate::app::input::mouse_button(*btn)?;
                 let pos = cursor.position_in(bounds)?;

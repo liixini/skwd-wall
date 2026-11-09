@@ -192,7 +192,8 @@ pub(super) fn anchor(app: &mut App, target: Target, anchor: Anchor) {
         Anchor::Screen(cell) => (Reference::Screen, cell),
         Anchor::Picker(cell) => (Reference::Picker, cell),
     };
-    let rect = rect(app, target);
+    let stored = app.config.picker_frame().map(|frame| area_rect(frame, app.scene.viewport));
+    let rect = stored.filter(|_| target == Target::Picker).unwrap_or_else(|| rect(app, target));
     let alignment = ALIGNMENTS[cell[1]][cell[0]];
     let base = aligned(reference_rect(app, reference), rect, alignment);
     let position = Position {

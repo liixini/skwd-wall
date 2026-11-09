@@ -543,11 +543,11 @@ pub(super) fn run_ui_command(app: &mut App, cmd: &str) -> Task<Message> {
     let arg = cmd[verb.len()..].trim().to_string();
     match verb {
         WIDGETS_VERB => {
-            let shown = crate::app::warm::unstash(app);
+            let shown = crate::app::warm::reappear(app);
             Task::batch([shown, super::strand::open(app)])
         }
         "toggle" => crate::app::warm::toggle(app),
-        "show" => crate::app::warm::unstash(app),
+        "show" => crate::app::warm::reappear(app),
         "hide" => crate::app::warm::exit_picker(app),
         "stash" => crate::app::warm::toggle_stash(app),
         "demo" => match arg.as_str() {
@@ -706,12 +706,11 @@ pub(super) fn run_ui_command(app: &mut App, cmd: &str) -> Task<Message> {
         "reveal" => super::update_inner(app, Message::KeyReveal),
         "bar" => {
             match arg.as_str() {
-                "show" => app.chrome.filter_bar_visible = true,
-                "hide" => app.chrome.filter_bar_visible = false,
-                "toggle" => app.chrome.filter_bar_visible = !app.chrome.filter_bar_visible,
+                "show" => app.chrome.set_filter_bar(true),
+                "hide" => app.chrome.set_filter_bar(false),
+                "toggle" => app.chrome.set_filter_bar(!app.chrome.filter_bar_shown()),
                 other => log::warn!("ui command: unknown bar action '{other}'"),
             }
-            app.chrome.bar.cache.clear();
             app.retick();
             Task::none()
         }
@@ -742,9 +741,9 @@ pub(super) fn run_ui_command(app: &mut App, cmd: &str) -> Task<Message> {
             let resolution = if matches!(arg.as_str(), "any" | "") { String::new() } else { arg };
             super::update_inner(app, Message::SetResolution(resolution))
         }
-        "open" => Task::batch([crate::app::warm::unstash(app), ui_open(app, &arg)]),
+        "open" => Task::batch([crate::app::warm::reappear(app), ui_open(app, &arg)]),
         crate::infrastructure::runtime::PROFILE_COMMAND => {
-            let task = crate::app::warm::unstash(app);
+            let task = crate::app::warm::reappear(app);
             app.show_profile((!arg.is_empty()).then_some(arg));
             task
         }
@@ -2131,8 +2130,7 @@ fn demo_begin(app: &mut App) -> Task<Message> {
     app.tags.semantic.search.clear();
     app.library_session.filters = crate::domain::library::filter::Filters::default();
     app.refilter();
-    app.chrome.filter_bar_visible = true;
-    app.chrome.bar.cache.clear();
+    app.chrome.set_filter_bar(true);
     let count = app.library_session.filtered.len();
     app.scene.reset_to_index(app.demo_showcase_index(count), count);
     app.retick();
@@ -2185,8 +2183,7 @@ fn demo_end(app: &mut App) -> Task<Message> {
     app.theme.fade_to = session.palette;
     app.theme.fade_t =
         app.motion_profile().tween(1.0, crate::frontend::animation::MotionTier::Standard);
-    app.chrome.filter_bar_visible = session.filter_bar_visible;
-    app.chrome.bar.cache.clear();
+    app.chrome.set_filter_bar(session.filter_bar_visible);
     if !session.selection_key.is_empty() {
         let _ = select_key(app, &session.selection_key);
     }

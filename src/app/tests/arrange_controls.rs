@@ -245,3 +245,64 @@ fn conflict_review_detects_changes() {
         latest
     );
 }
+
+fn framed(mode: &str) -> App {
+    let mut app = test_app();
+    app.config.set_key(selector::DISPLAY_MODE, json!(mode));
+    for (key, value) in [
+        (selector::FRAME_X, 30.0),
+        (selector::FRAME_Y, 20.0),
+        (selector::FRAME_WIDTH, 40.0),
+        (selector::FRAME_HEIGHT, 50.0),
+    ] {
+        app.config.set_key(key, json!(value));
+    }
+    app.config.set_key(selector::FRAME_ENABLED, json!(true));
+    seed(
+        &mut app,
+        &(0..20).map(|idx| wall(&format!("w{idx}"), "static", idx, idx)).collect::<Vec<_>>(),
+    );
+    app.scene.viewport = VIEWPORT;
+    app.apply_layout();
+    tick_frames(&mut app, &mut Instant::now(), 4);
+    edit(&mut app, ArrangeMsg::Begin);
+    settle(&mut app);
+    app
+}
+
+#[test]
+fn board_resizes_grid_only() {
+    for (mode, resizable) in [("slices", false), ("sandy", false), ("wall", true)] {
+        let app = framed(mode);
+        assert_eq!(
+            app.panels.arrange.as_ref().unwrap().editor.board.resizable,
+            resizable,
+            "{mode}"
+        );
+    }
+}
+
+#[test]
+fn slices_drag_keeps_size() {
+    let mut app = framed("slices");
+    let size = [selector::FRAME_WIDTH, selector::FRAME_HEIGHT].map(|key| app.config.num_path(key));
+    let picker = rect(&app, Target::Picker);
+    assert!((picker.w - 0.4 * VIEWPORT.0).abs() > 1.0, "strip sized");
+    let from = picker.centre();
+    drag(&mut app, from, [from[0] - 100.0, from[1] + 40.0]);
+    let moved = rect(&app, Target::Picker).centre();
+    let kept = [selector::FRAME_WIDTH, selector::FRAME_HEIGHT].map(|key| app.config.num_path(key));
+    for (before, after) in size.into_iter().zip(kept) {
+        assert!((before - after).abs() < 0.01);
+    }
+    let frame = app.config.picker_frame().unwrap();
+    let centre =
+        [(frame[0] + frame[2] * 0.5) * VIEWPORT.0, (frame[1] + frame[3] * 0.5) * VIEWPORT.1];
+    assert!((centre[0] - moved[0]).abs() < 1.0 && (centre[1] - moved[1]).abs() < 1.0);
+    app.config.set_key(selector::DISPLAY_MODE, json!("wall"));
+    app.apply_layout();
+    tick_frames(&mut app, &mut Instant::now(), 2);
+    let grid = app.scene.configured_frame_bounds().unwrap();
+    assert!((grid.width - 0.4 * VIEWPORT.0).abs() < 1.0);
+    assert!((grid.height - 0.5 * VIEWPORT.1).abs() < 1.0);
+}

@@ -22,6 +22,8 @@ use super::{
     browser_wall_params, scene::SceneCore,
 };
 
+const BAR_ENV: &str = "SKWD_WALL_BAR";
+
 static WAKE_RX: OnceLock<Mutex<Option<UnboundedReceiver<Wake>>>> = OnceLock::new();
 static WAKE_TX: OnceLock<Mutex<Option<UnboundedSender<Wake>>>> = OnceLock::new();
 
@@ -88,8 +90,7 @@ impl App {
         let filters = startup_filters(&config);
         #[cfg(not(test))]
         crate::infrastructure::observability::timing::init(&config.cache_dir());
-        let filter_bar_visible =
-            std::env::var_os("SKWD_WALL_BAR").is_some() || config.filter_bar_always_visible();
+        let filter_bar_mode = config.filter_bar_visibility();
         let filter_bar_vertical =
             config.filter_bar_orientation() == "vertical" && scene.mode != Mode::Sandy;
         let search_mode = if config.flag_default_true(skwd_config::keys::semantic::ENABLED) {
@@ -110,7 +111,12 @@ impl App {
             theme: ThemeState::new(&palette, motion),
             library_session: LibrarySession::new(filters, wallpaper_dir, video_dir),
             scene,
-            chrome: ChromeState::new(filter_bar_visible, filter_bar_vertical, motion),
+            chrome: ChromeState::new(
+                filter_bar_mode,
+                std::env::var_os(BAR_ENV).is_some(),
+                filter_bar_vertical,
+                motion,
+            ),
             panels: PanelsState::default(),
             source_browser: SourceBrowserState::new(
                 motion,
@@ -127,6 +133,7 @@ impl App {
         };
         app.apply_motion_speeds();
         app.reload_bindings();
+        app.apply_search_default();
         if std::env::var_os("SKWD_WALL_SETTINGS").is_some() {
             app.panels.settings.open = true;
             app.init_settings_inputs();
@@ -194,6 +201,7 @@ fn init_scene(config: &Config, tx: UnboundedSender<Wake>) -> SceneCore {
     scene.set_open_fade_ms(config.open_fade_ms());
     scene.set_open_fade_from(config.open_fade_from());
     scene.set_launch_animation(&config.launch_animation());
+    scene.await_window();
     scene.set_wake(tx);
     scene.set_preview_config(
         config.video_preview_enabled(),

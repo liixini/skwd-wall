@@ -17,6 +17,7 @@ pub(super) fn mouse_moved(app: &mut App, x: f32, y: f32) -> Task<Message> {
     if app.detail_open() || app.menu_capturing() {
         return Task::none();
     }
+    app.hover_filter_bar(x, y);
     if app.scene.last_mouse.is_none() {
         app.scene.last_mouse = Some((x, y));
         return Task::none();

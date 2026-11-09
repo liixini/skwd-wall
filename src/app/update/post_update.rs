@@ -23,6 +23,9 @@ pub(super) fn finish(
     if detail_was_open != app.detail_open() {
         app.chrome.bar.cache.clear();
     }
+    if sync_filter_bar && app.chrome.bar.menu.is_none() && !app.filter_hover_allowed() {
+        app.chrome.clear_filter_hover();
+    }
     app.sync_filter_bar_chrome();
     let hard_overlay = app.picker_obscured();
     let (design_mode, scene_hidden) = scene_visibility(

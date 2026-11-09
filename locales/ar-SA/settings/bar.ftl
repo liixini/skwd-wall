@@ -3,9 +3,10 @@ settings-bar-filter-desc = صف أزرار النوع والترتيب والت�
 settings-bar-filter-say = يعرض { $val }{ $buttons }{ $end } و{ $val }{ $sorts }{ $end } مرتبة { $orientation ->
         [vertical] عموديًا
        *[horizontal] أفقيًا
-    }. { $pinned ->
-        [yes] يبقى مثبتًا.
-       *[no] يختفي حتى تحتاج إليه.
+    }. { $visibility ->
+        [hover] يظهر ما دام المؤشر فوقه.
+        [hidden] يبقى مخفيًا حتى تضغط اختصاره.
+       *[always] يبقى مثبتًا.
     } النمط المرئي: { $style }.
 settings-bar-button-count = { $shown } من أصل { $all } { $all ->
         [zero] زر
@@ -26,7 +27,7 @@ settings-bar-sort-count = { $shown } من أصل { $all } { $all ->
 settings-bar-offers = ما يقدّمه
 settings-bar-behaves = كيف يتصرف
 settings-bar-buttons = أزرار الشريط
-settings-bar-pinned-hint = مثبت بدل الإخفاء التلقائي
+settings-bar-search-pinned-hint = تُفتح مع المنتقي
 settings-bar-placed = يُضبط موضع الشريط في التخطيط.
 settings-bar-sizes = نطاقات الحجم
 settings-bar-sizes-desc = نطاقات الدقة التي يصفّي بها زر «الحجم».

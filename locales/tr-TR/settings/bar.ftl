@@ -3,9 +3,10 @@ settings-bar-filter-desc = Seçicinin üstündeki tür, sıralama ve filtre dü�
 settings-bar-filter-say = { $val }{ $buttons }{ $end } ve { $val }{ $sorts }{ $end } gösterir, { $orientation ->
         [vertical] dikey
        *[horizontal] yatay
-    } dizilir. { $pinned ->
-        [yes] Hep sabit kalır.
-       *[no] Gerekene kadar gizlenir.
+    } dizilir. { $visibility ->
+        [hover] İmleç üzerindeyken görünür.
+        [hidden] Kısayoluna basana kadar gizli kalır.
+       *[always] Hep sabit kalır.
     } Görsel stil: { $style }.
 settings-bar-button-count = { $shown }/{ $all } { $all ->
         [one] düğme
@@ -18,7 +19,7 @@ settings-bar-sort-count = { $shown }/{ $all } { $all ->
 settings-bar-offers = Neler sunar
 settings-bar-behaves = Nasıl davranır
 settings-bar-buttons = Çubuktaki düğmeler
-settings-bar-pinned-hint = Otomatik gizlenmek yerine sabit
+settings-bar-search-pinned-hint = Seçiciyle birlikte açılır
 settings-bar-placed = Çubuğun yeri Yerleşim bölümünde ayarlanır.
 settings-bar-sizes = Boyut aralıkları
 settings-bar-sizes-desc = Boyut düğmesinin filtrelediği çözünürlük aralıkları.

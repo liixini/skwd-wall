@@ -3,9 +3,10 @@ settings-bar-filter-desc = Raden med typ-, sorterings- och filterknappar ovanfö
 settings-bar-filter-say = Visar { $val }{ $buttons }{ $end } och { $val }{ $sorts }{ $end }, placerade { $orientation ->
         [vertical] lodrätt
        *[horizontal] vågrätt
-    }. { $pinned ->
-        [yes] Den är alltid fäst.
-       *[no] Den döljs tills du behöver den.
+    }. { $visibility ->
+        [hover] Den visas medan pekaren är över den.
+        [hidden] Den förblir dold tills du trycker på dess kortkommando.
+       *[always] Den är alltid fäst.
     } Visuell stil: { $style }.
 settings-bar-button-count = { $shown } av { $all } { $all ->
         [one] knapp
@@ -18,7 +19,7 @@ settings-bar-sort-count = { $shown } av { $all } { $all ->
 settings-bar-offers = Vad det erbjuder
 settings-bar-behaves = Hur det beter sig
 settings-bar-buttons = Knappar i fältet
-settings-bar-pinned-hint = Fäst i stället för att döljas automatiskt
+settings-bar-search-pinned-hint = Öppnas med väljaren
 settings-bar-placed = Var fältet sitter ställer du in under Layout.
 settings-bar-sizes = Storleksintervall
 settings-bar-sizes-desc = Upplösningsintervall som Storlek-knappen filtrerar på.

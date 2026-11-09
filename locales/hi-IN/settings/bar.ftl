@@ -3,16 +3,17 @@ settings-bar-filter-desc = पिकर के ऊपर प्रकार, क
 settings-bar-filter-say = { $val }{ $buttons }{ $end } और { $val }{ $sorts }{ $end } दिखाता है, { $orientation ->
         [vertical] लंबवत
        *[horizontal] क्षैतिज
-    } रूप में। { $pinned ->
-        [yes] यह हमेशा पिन रहता है।
-       *[no] ज़रूरत होने तक यह छिपा रहता है।
+    } रूप में। { $visibility ->
+        [hover] पॉइंटर इसके ऊपर रहने तक यह दिखता है।
+        [hidden] इसका कीबाइंड दबाने तक यह छिपा रहता है।
+       *[always] यह हमेशा पिन रहता है।
     } दृश्य शैली: { $style }।
 settings-bar-button-count = { $all } में से { $shown } बटन
 settings-bar-sort-count = { $all } में से { $shown } क्रम
 settings-bar-offers = इसमें क्या है
 settings-bar-behaves = यह कैसे दिखता है
 settings-bar-buttons = बार के बटन
-settings-bar-pinned-hint = अपने आप छिपने के बजाय पिन
+settings-bar-search-pinned-hint = पिकर के साथ खुलता है
 settings-bar-placed = बार की जगह लेआउट में तय होती है।
 settings-bar-sizes = आकार सीमाएँ
 settings-bar-sizes-desc = रिज़ॉल्यूशन सीमाएँ जिनसे आकार बटन फ़िल्टर करता है।

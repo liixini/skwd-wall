@@ -20,6 +20,7 @@ pub enum Message {
     WindowUnfocused,
     Viewport(f32, f32),
     MouseMoved(f32, f32),
+    MouseLeft,
     Click(f32, f32, crate::domain::input::MouseButton),
     Wheel(f32),
     KeyPrev,

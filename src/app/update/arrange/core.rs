@@ -1,4 +1,4 @@
-use iced::{Rectangle, Task};
+use iced::{Point, Rectangle, Size, Task};
 use serde_json::json;
 
 use super::{board, displays, effects, placement, preview};
@@ -83,8 +83,7 @@ fn begin(app: &mut App) {
     let bar_visible = app.chrome.filter_bar_visible;
     let _ = app.config.begin_transient();
     app.panels.settings.open = false;
-    app.chrome.filter_bar_visible = true;
-    app.chrome.bar.menu = None;
+    app.chrome.set_filter_bar(true);
     app.scene.close_flip();
     let (width, height) = app.scene.viewport;
     let editor = Arrange::new([width, height], board::board(app, None), board::tones(app));
@@ -255,8 +254,7 @@ fn close(app: &mut App) {
     app.sync_picker_preview();
     app.apply_layout();
     app.invalidate_settings();
-    app.chrome.filter_bar_visible = session.bar_visible;
-    app.chrome.bar.cache.clear();
+    app.chrome.set_filter_bar(session.bar_visible);
     app.panels.settings.open = false;
     app.retick();
 }
@@ -385,22 +383,38 @@ fn freeze_bar(app: &mut App) {
 pub(super) fn set_frame(app: &mut App, rect: Rectangle) {
     freeze_bar(app);
     freeze_search(app);
-    placement::update_offset(app, Target::Picker, rect);
+    let area = if app.scene.frame_sizes_picker() { rect } else { kept_size(app, rect) };
+    placement::update_offset(app, Target::Picker, area);
     let viewport = app.scene.viewport;
     if viewport.0 <= 0.0 || viewport.1 <= 0.0 {
         return;
     }
     if let Err(error) = app.config.set_keys(&[
-        (selector::FRAME_X, json!(rect.x / viewport.0 * arrange::PERCENT)),
-        (selector::FRAME_Y, json!(rect.y / viewport.1 * arrange::PERCENT)),
-        (selector::FRAME_WIDTH, json!(rect.width / viewport.0 * arrange::PERCENT)),
-        (selector::FRAME_HEIGHT, json!(rect.height / viewport.1 * arrange::PERCENT)),
+        (selector::FRAME_X, json!(area.x / viewport.0 * arrange::PERCENT)),
+        (selector::FRAME_Y, json!(area.y / viewport.1 * arrange::PERCENT)),
+        (selector::FRAME_WIDTH, json!(area.width / viewport.0 * arrange::PERCENT)),
+        (selector::FRAME_HEIGHT, json!(area.height / viewport.1 * arrange::PERCENT)),
         (selector::FRAME_ENABLED, json!(true)),
     ]) {
         app.show_toast(crate::i18n::tr_args!(SAVE_ERROR, error => error));
         return;
     }
     app.scene.set_picker_frame(placement::frame(app));
+}
+
+fn kept_size(app: &App, rect: Rectangle) -> Rectangle {
+    let (vw, vh) = app.scene.viewport;
+    let stored = app.config.picker_frame().map_or_else(
+        || Size::new(rect.width, rect.height),
+        |[_, _, width, height]| Size::new(width * vw, height * vh),
+    );
+    let centre = rect.center();
+    let width = stored.width.min(2.0 * centre.x.min(vw - centre.x));
+    let height = stored.height.min(2.0 * centre.y.min(vh - centre.y));
+    Rectangle::new(
+        Point::new(centre.x - width * 0.5, centre.y - height * 0.5),
+        Size::new(width, height),
+    )
 }
 
 fn freeze_search(app: &mut App) {

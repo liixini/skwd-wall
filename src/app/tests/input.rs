@@ -1,4 +1,5 @@
 use super::*;
+use skwd_config::FilterBarVisibility;
 
 const PICKER: crate::domain::input::ActiveScopes =
     crate::domain::input::ActiveScopes { fields: false, search: false, downloads: false };
@@ -309,6 +310,7 @@ fn hidden_picker_stops_preview() {
     let mut app = test_app();
     seed(&mut app, &[wall("a.png", "static", 1, 0), wall("b.png", "static", 2, 0)]);
     app.scene.hover = Some(1);
+    app.theme.armed = true;
     let t0 = Instant::now();
     frame(&mut app, t0, 1280.0, 720.0);
     frame(&mut app, t0 + Duration::from_millis(60), 1280.0, 720.0);
@@ -329,6 +331,7 @@ fn shell_hover_tick() {
     app.config.set_key("theme.backend", json!("noctalia"));
     app.config.set_key(skwd_config::keys::noctalia::HOVER_PREVIEW, json!(true));
     app.scene.hover = Some(1);
+    app.theme.armed = true;
     drain_calls(&app);
     let t0 = Instant::now();
     frame(&mut app, t0, 1280.0, 720.0);
@@ -1440,4 +1443,475 @@ fn hover_selection_can_be_turned_off() {
             assert_eq!(app.scene.current, target.index, "{mode}: hover selects by default");
         }
     }
+}
+
+fn setting(app: &mut App, key: &str, on: bool) {
+    let toggle = crate::frontend::settings::SettingsMsg::Toggle(key.to_owned(), on);
+    let _ = update(app, Message::Settings(toggle));
+}
+
+fn reshow(app: &mut App) {
+    app.runtime_state.overlay = Some(iced::window::Id::unique());
+    app.runtime_state.stashed = true;
+    let _ = crate::app::warm::reappear(app);
+}
+
+fn tagged_app() -> App {
+    let mut app = test_app();
+    let mut sunset = wall("a", "static", 10, 1);
+    sunset["tags"] = json!("sunset");
+    seed(&mut app, &[sunset, wall("b", "static", 20, 2)]);
+    app
+}
+
+#[test]
+fn bar_flag_on_reshow() {
+    let mut app = test_app();
+    let _ = update(&mut app, Message::ToggleFilterBar);
+    assert!(!app.chrome.filter_bar_visible);
+    reshow(&mut app);
+    assert!(app.chrome.filter_bar_visible);
+    let _ = update(&mut app, Message::ToggleFilterBar);
+    assert!(!app.chrome.filter_bar_visible);
+}
+
+#[test]
+fn dialog_return_bar() {
+    let mut app = test_app();
+    let _ = update(&mut app, Message::ToggleFilterBar);
+    app.runtime_state.overlay = Some(iced::window::Id::unique());
+    let _ = crate::app::warm::stash(&mut app);
+    let _ = crate::app::warm::unstash(&mut app);
+    assert!(!app.chrome.filter_bar_visible);
+}
+
+fn hover_app() -> App {
+    let mut app = test_app();
+    let _ = update(&mut app, Message::Viewport(1920.0, 1080.0));
+    bar_mode(&mut app, FilterBarVisibility::Hover);
+    leave_bar(&mut app);
+    app
+}
+
+fn setting_text(app: &mut App, path: &str, value: &str) {
+    let pick = crate::frontend::settings::SettingsMsg::Pick(path.to_owned(), value.to_owned());
+    let _ = update(app, Message::Settings(pick));
+}
+
+fn bar_mode(app: &mut App, mode: FilterBarVisibility) {
+    let path = skwd_config::keys::general::FILTER_BAR_VISIBILITY.to_owned();
+    let pick = crate::frontend::settings::SettingsMsg::Pick(path, mode.key().to_owned());
+    let _ = update(app, Message::Settings(pick));
+}
+
+fn bar_zone(app: &App) -> iced::Rectangle {
+    crate::app::update::arrange::placement::drawn(app, crate::frontend::arrange::Target::Bar)
+}
+
+fn point_at(app: &mut App, x: f32, y: f32) {
+    let _ = update(app, Message::MouseMoved(x, y));
+}
+
+fn hover_bar(app: &mut App) {
+    let center = bar_zone(app).center();
+    point_at(app, center.x, center.y);
+}
+
+fn leave_bar(app: &mut App) {
+    let zone = bar_zone(app);
+    let (vw, vh) = app.scene.viewport;
+    let below = (zone.y + zone.height + vh) * 0.5;
+    point_at(app, vw * 0.5, if zone.y > vh * 0.5 { zone.y * 0.5 } else { below });
+}
+
+#[test]
+fn bar_mode_live() {
+    let mut app = test_app();
+    for (mode, shown) in [
+        (FilterBarVisibility::Hover, false),
+        (FilterBarVisibility::Always, true),
+        (FilterBarVisibility::Hidden, false),
+        (FilterBarVisibility::Always, true),
+    ] {
+        bar_mode(&mut app, mode);
+        assert_eq!(app.chrome.filter_bar_shown(), shown, "{mode:?}");
+    }
+}
+
+#[test]
+fn hover_reveals_bar() {
+    let mut app = hover_app();
+    hover_bar(&mut app);
+    assert!(app.chrome.filter_bar_shown());
+    assert_eq!(app.chrome.filter_bar_reveal.target, 1.0);
+    leave_bar(&mut app);
+    assert!(!app.chrome.filter_bar_shown());
+    assert_eq!(app.chrome.filter_bar_reveal.target, 0.0);
+}
+
+#[test]
+fn hover_keeps_open_menu() {
+    let mut app = hover_app();
+    hover_bar(&mut app);
+    app.chrome.bar.menu = Some(crate::frontend::ui::MenuKind::Folders);
+    leave_bar(&mut app);
+    assert!(app.chrome.filter_bar_shown());
+    app.chrome.bar.menu = None;
+    leave_bar(&mut app);
+    assert!(!app.chrome.filter_bar_shown());
+}
+
+#[test]
+fn hidden_ignores_pointer() {
+    let mut app = hover_app();
+    bar_mode(&mut app, FilterBarVisibility::Hidden);
+    hover_bar(&mut app);
+    assert!(!app.chrome.filter_bar_shown());
+}
+
+#[test]
+fn keybind_toggles_modes() {
+    for mode in FilterBarVisibility::ALL {
+        let mut app = test_app();
+        bar_mode(&mut app, mode);
+        let before = app.chrome.filter_bar_shown();
+        let _ = update(&mut app, Message::ToggleFilterBar);
+        assert_eq!(app.chrome.filter_bar_shown(), !before, "{mode:?}");
+        let _ = update(&mut app, Message::ToggleFilterBar);
+        assert_eq!(app.chrome.filter_bar_shown(), before, "{mode:?}");
+    }
+}
+
+#[test]
+fn keybind_sticks_over_hover() {
+    let mut app = hover_app();
+    let _ = update(&mut app, Message::ToggleFilterBar);
+    leave_bar(&mut app);
+    assert!(app.chrome.filter_bar_shown());
+    hover_bar(&mut app);
+    let _ = update(&mut app, Message::ToggleFilterBar);
+    assert!(!app.chrome.filter_bar_shown());
+    let center = bar_zone(&app).center();
+    point_at(&mut app, center.x + 5.0, center.y);
+    assert!(!app.chrome.filter_bar_shown());
+    leave_bar(&mut app);
+    hover_bar(&mut app);
+    assert!(app.chrome.filter_bar_shown());
+}
+
+fn use_profile(app: &mut App, document: &serde_json::Value) {
+    use skwd_config::picker_layout::{LayoutProfile, Size};
+    let size = Size { width: 1920.0, height: 1080.0 };
+    app.config.set_layout_profile("DP-1", &LayoutProfile::capture(document, size)).unwrap();
+    app.config.select_layout_output(Some(String::from("DP-1")), size);
+    app.runtime_state.picker_output = Some(String::from("DP-1"));
+    app.daemon.output_statuses = vec![crate::contracts::daemon::OutputStatus {
+        name: String::from("DP-1"),
+        connected: true,
+        width: 1920,
+        height: 1080,
+        logical_width: 1920,
+        logical_height: 1080,
+        ..crate::contracts::daemon::OutputStatus::default()
+    }];
+}
+
+#[test]
+fn hover_follows_placement() {
+    use skwd_config::picker_layout::{Alignment, Component, Offset, Position, Reference};
+    let mut app = hover_app();
+    let home = bar_zone(&app);
+    use_profile(&mut app, &json!({}));
+    let corner = Position {
+        reference: Reference::Screen,
+        alignment: Alignment::BottomRight,
+        offset: Offset { x: 0.0, y: 0.0 },
+    };
+    app.config.set_position(Component::Bar, Some(corner)).unwrap();
+    bar_mode(&mut app, FilterBarVisibility::Hover);
+    let placed = bar_zone(&app);
+    assert!(!placed.contains(home.center()));
+    point_at(&mut app, home.center().x, home.center().y);
+    assert!(!app.chrome.filter_bar_shown());
+    point_at(&mut app, placed.center().x, placed.center().y);
+    assert!(app.chrome.filter_bar_shown());
+}
+
+#[test]
+fn profile_switch_applies_mode() {
+    let mut app = hover_app();
+    assert!(!app.chrome.filter_bar_shown());
+    use_profile(&mut app, &json!({"general": {"filterBarVisibility": "always"}}));
+    let _ = update(&mut app, Message::Viewport(1920.0, 1080.0));
+    assert!(app.chrome.filter_bar_shown());
+}
+
+#[test]
+fn hover_follows_orientation() {
+    let mut app = hover_app();
+    let across = bar_zone(&app);
+    let path = skwd_config::keys::filter_bar::ORIENTATION.to_owned();
+    let pick = crate::frontend::settings::SettingsMsg::Pick(path, String::from("vertical"));
+    let _ = update(&mut app, Message::Settings(pick));
+    for _ in 0..30 {
+        app.chrome.tick_filter_bar(0.05);
+    }
+    assert!(app.chrome.filter_bar_vertical);
+    let down = bar_zone(&app);
+    assert!(!across.contains(down.center()));
+    point_at(&mut app, down.center().x, down.center().y);
+    assert!(app.chrome.filter_bar_shown());
+}
+
+#[test]
+fn hover_follows_resize() {
+    let mut app = hover_app();
+    let wide = bar_zone(&app);
+    let _ = update(&mut app, Message::Viewport(1280.0, 720.0));
+    let small = bar_zone(&app);
+    assert!(!wide.contains(small.center()));
+    point_at(&mut app, small.center().x, small.center().y);
+    assert!(app.chrome.filter_bar_shown());
+}
+
+fn placed_zone(app: &mut App) -> iced::Rectangle {
+    app.place_hover_zone();
+    app.chrome.filter_bar_hover_zone
+}
+
+fn settle_bar(app: &mut App) {
+    for _ in 0..30 {
+        app.chrome.tick_filter_bar(0.05);
+    }
+}
+
+#[test]
+fn zone_horizontal() {
+    let mut app = hover_app();
+    assert_eq!(placed_zone(&mut app), bar_zone(&app));
+}
+
+#[test]
+fn zone_offset() {
+    use skwd_config::keys::filter_bar;
+    let mut app = hover_app();
+    setting_text(&mut app, filter_bar::OFFSET_X, "40");
+    assert_eq!(placed_zone(&mut app), bar_zone(&app));
+}
+
+#[test]
+fn zone_vertical() {
+    use skwd_config::keys::filter_bar;
+    let mut app = hover_app();
+    setting_text(&mut app, filter_bar::ORIENTATION, "vertical");
+    settle_bar(&mut app);
+    assert_eq!(placed_zone(&mut app), bar_zone(&app));
+}
+
+#[test]
+fn zone_arranged() {
+    use skwd_config::picker_layout::{Alignment, Component, Offset, Position, Reference};
+    let mut app = hover_app();
+    use_profile(&mut app, &json!({}));
+    let corner = Position {
+        reference: Reference::Screen,
+        alignment: Alignment::TopRight,
+        offset: Offset { x: -20.0, y: 30.0 },
+    };
+    app.config.set_position(Component::Bar, Some(corner)).unwrap();
+    bar_mode(&mut app, FilterBarVisibility::Hover);
+    settle_bar(&mut app);
+    assert_eq!(placed_zone(&mut app), bar_zone(&app));
+}
+
+#[test]
+fn hover_follows_folders() {
+    let mut app = hover_app();
+    let empty = placed_zone(&mut app);
+    seed(&mut app, &[wall("nature/a.png", "static", 1, 0), wall("zebra/b.png", "static", 2, 0)]);
+    let full = bar_zone(&app);
+    let end = iced::Point::new(full.x + full.width - 1.0, full.center().y);
+    assert!(!empty.contains(end));
+    point_at(&mut app, end.x, end.y);
+    assert!(app.chrome.filter_bar_shown());
+}
+
+fn profiled_app(global: bool, profile: bool) -> App {
+    crate::app::tests::app_from(json!({
+        "general": { "filterBarAlwaysVisible": global },
+        "pickerLayouts": { "version": 1, "outputs": { "DP-1": {
+            "viewport": { "width": 1920.0, "height": 1080.0 },
+            "values": { "general.filterBarAlwaysVisible": profile },
+            "positions": {}
+        }}}
+    }))
+}
+
+fn launch(mut app: App) -> Vec<f32> {
+    let id = iced::window::Id::unique();
+    let _ = update(&mut app, Message::WindowOpened { id, width: 1920.0, height: 1080.0 });
+    assert!(app.runtime_state.picker_output.is_none());
+    crate::app::warm::sync_output(&mut app, Some(String::from("DP-1")));
+    let mut reveals = Vec::new();
+    for _ in 0..10 {
+        reveals.push(app.chrome.filter_bar_fade());
+        app.chrome.tick_filter_bar(0.016);
+    }
+    reveals
+}
+
+#[test]
+fn late_output_starts_resolved() {
+    assert!(launch(profiled_app(true, false)).iter().all(|reveal| *reveal == 0.0));
+    assert!(launch(profiled_app(false, true)).iter().all(|reveal| *reveal == 1.0));
+}
+
+#[test]
+fn forced_bar_starts_shown() {
+    let mut app = profiled_app(true, false);
+    app.chrome.filter_bar_forced = true;
+    assert!(launch(app).iter().all(|reveal| *reveal == 1.0));
+}
+
+fn unopened(launch: &str) -> App {
+    let mut config = test_app().config;
+    config.set_key(skwd_config::keys::launch::ANIMATION, json!(launch));
+    App::with_config_using(config, |_| crate::infrastructure::ipc::DaemonClient::recording())
+}
+
+fn open_window(app: &mut App) {
+    let id = iced::window::Id::unique();
+    let _ = update(app, Message::WindowOpened { id, width: 1280.0, height: 720.0 });
+}
+
+#[test]
+fn entrance_waits_for_window() {
+    let mut app = unopened("fade");
+    let mut now = Instant::now();
+    for _ in 0..10 {
+        tick_frames(&mut app, &mut now, 1);
+        assert_eq!(app.scene.open_fade(), 0.0);
+    }
+    open_window(&mut app);
+    let mut last = app.scene.open_fade();
+    for _ in 0..60 {
+        tick_frames(&mut app, &mut now, 1);
+        assert!(app.scene.open_fade() >= last);
+        last = app.scene.open_fade();
+    }
+    assert!(last > 0.99);
+}
+
+#[test]
+fn reload_keeps_waiting() {
+    let mut app = unopened("fade");
+    app.config.set_key(skwd_config::keys::general::OPEN_FADE_FROM, json!(60));
+    app.apply_layout();
+    let mut now = Instant::now();
+    tick_frames(&mut app, &mut now, 5);
+    assert_eq!(app.scene.open_fade(), 0.0);
+}
+
+#[test]
+fn browser_wall_visible() {
+    let app = unopened("fade");
+    assert_eq!(app.source_browser.wall.scene.open_fade(), 1.0);
+}
+
+#[test]
+fn instant_launch_shows() {
+    let mut app = unopened("none");
+    open_window(&mut app);
+    assert_eq!(app.scene.open_fade(), 1.0);
+}
+
+#[test]
+fn reshow_snaps_bar() {
+    let mut app = hover_app();
+    let _ = update(&mut app, Message::ToggleFilterBar);
+    settle_bar(&mut app);
+    assert_eq!(app.chrome.filter_bar_fade(), 1.0);
+    reshow(&mut app);
+    assert_eq!(app.chrome.filter_bar_fade(), 0.0);
+}
+
+#[test]
+fn jitter_keeps_hide() {
+    let mut app = hover_app();
+    hover_bar(&mut app);
+    for _ in 0..3 {
+        let _ = update(&mut app, Message::ToggleFilterBar);
+    }
+    assert!(!app.chrome.filter_bar_shown());
+    let center = bar_zone(&app).center();
+    point_at(&mut app, center.x + 5.0, center.y);
+    assert!(!app.chrome.filter_bar_shown());
+}
+
+#[test]
+fn pointer_exit_hides_bar() {
+    let mut app = hover_app();
+    hover_bar(&mut app);
+    let _ = update(&mut app, Message::MouseLeft);
+    assert!(!app.chrome.filter_bar_shown());
+}
+
+#[test]
+fn settings_stop_hover() {
+    let mut app = hover_app();
+    hover_bar(&mut app);
+    let _ = update(&mut app, Message::ToggleSettings);
+    assert!(!app.chrome.filter_bar_shown());
+}
+
+#[test]
+fn bar_command_hides_hover() {
+    let mut app = hover_app();
+    hover_bar(&mut app);
+    let command = crate::infrastructure::runtime::Wake::Command(String::from("bar toggle"));
+    let _ = update(&mut app, Message::Daemon(command));
+    assert!(!app.chrome.filter_bar_shown());
+    let center = bar_zone(&app).center();
+    point_at(&mut app, center.x + 5.0, center.y);
+    assert!(!app.chrome.filter_bar_shown());
+}
+
+#[test]
+fn search_flag_live() {
+    let mut app = test_app();
+    setting(&mut app, skwd_config::keys::general::SEARCH_ALWAYS_VISIBLE, true);
+    assert!(app.tags.cloud_open);
+    setting(&mut app, skwd_config::keys::general::SEARCH_ALWAYS_VISIBLE, false);
+    assert!(!app.tags.cloud_open);
+}
+
+#[test]
+fn flags_follow_external_config() {
+    let mut app = test_app();
+    let flags =
+        json!({ "general": { "filterBarVisibility": "hover", "searchAlwaysVisible": true } });
+    std::fs::write(&app.config.config_path, flags.to_string()).unwrap();
+    assert!(app.adopt_external_config());
+    assert!(!app.chrome.filter_bar_visible);
+    assert!(app.tags.cloud_open);
+    let flags =
+        json!({ "general": { "filterBarVisibility": "always", "searchAlwaysVisible": false } });
+    std::fs::write(&app.config.config_path, flags.to_string()).unwrap();
+    assert!(app.adopt_external_config());
+    assert!(app.chrome.filter_bar_visible);
+    assert!(!app.tags.cloud_open);
+}
+
+#[test]
+fn search_flag_reshow_escape() {
+    let mut app = tagged_app();
+    setting(&mut app, skwd_config::keys::general::SEARCH_ALWAYS_VISIBLE, true);
+    let _ = update(&mut app, Message::Tag(TagMsg::CloudClick(String::from("sunset"), false)));
+    let _ = update(&mut app, Message::OpenTagCloud);
+    assert!(!app.tags.cloud_open);
+    reshow(&mut app);
+    assert!(app.tags.cloud_open);
+    let _ = update(&mut app, Message::Exit);
+    assert!(!app.tags.cloud_open);
+    assert_eq!(app.library_session.filters.tags, ["sunset"]);
 }

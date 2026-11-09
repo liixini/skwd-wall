@@ -534,3 +534,31 @@ fn place_switch_ends_capture() {
     let _ = update(&mut app, Message::SetSettingsTab(String::from("system")));
     assert!(app.panels.settings.keybind_capture.is_none());
 }
+
+fn bar_hint(app: &App) -> String {
+    let sections = app.place_source().place(crate::frontend::settings::place::BAR).sections;
+    sections
+        .iter()
+        .flat_map(|section| &section.groups)
+        .flat_map(|group| &group.rows)
+        .find(|row| row.control.path() == Some(skwd_config::keys::general::FILTER_BAR_VISIBILITY))
+        .map(|row| row.hint().replace(['\u{2068}', '\u{2069}'], ""))
+        .expect("visibility row")
+}
+
+#[test]
+fn rebind_updates_bar_hint() {
+    let mut app = settings_app();
+    app.config.set_key(skwd_config::keys::general::FILTER_BAR_VISIBILITY, json!("hidden"));
+    capture(
+        &mut app,
+        skwd_config::keys::keybind::FILTER_BAR,
+        0,
+        keyboard::Key::Character("j".into()),
+    );
+    assert!(bar_hint(&app).contains("Use the keybind J"), "{}", bar_hint(&app));
+    let path = skwd_config::keys::keybind::FILTER_BAR.to_owned();
+    let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCapture(path, 0)));
+    let _ = update(&mut app, Message::Settings(SettingsMsg::KeybindCaptureUnbind));
+    assert!(bar_hint(&app).contains("no keybind yet"), "{}", bar_hint(&app));
+}

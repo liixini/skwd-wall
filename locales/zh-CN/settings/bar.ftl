@@ -3,16 +3,17 @@ settings-bar-filter-desc = 选择器上方由类型、排序和筛选按钮组�
 settings-bar-filter-say = 显示{ $val }{ $buttons }{ $end }和{ $val }{ $sorts }{ $end }，{ $orientation ->
         [vertical] 纵向
        *[horizontal] 横向
-    }排列。{ $pinned ->
-        [yes] 它始终固定显示。
-       *[no] 需要时才会出现。
+    }排列。{ $visibility ->
+        [hover] 指针停在上面时显示。
+        [hidden] 按下它的快捷键前保持隐藏。
+       *[always] 它始终固定显示。
     }视觉样式：{ $style }。
 settings-bar-button-count = { $all } 个按钮中的 { $shown } 个
 settings-bar-sort-count = { $all } 种排序中的 { $shown } 种
 settings-bar-offers = 提供的内容
 settings-bar-behaves = 显示方式
 settings-bar-buttons = 栏中的按钮
-settings-bar-pinned-hint = 固定显示而不是自动隐藏
+settings-bar-search-pinned-hint = 随选择器打开
 settings-bar-placed = 筛选栏的位置在“布局”中设置。
 settings-bar-sizes = 尺寸范围
 settings-bar-sizes-desc = “尺寸”按钮用来筛选的分辨率范围。

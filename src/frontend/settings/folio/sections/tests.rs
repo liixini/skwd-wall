@@ -734,7 +734,7 @@ fn busy_bar() -> FakeSettingsSource {
         .with_text(keys::tagging::DEFAULT_SEARCH_MODE, "describe")
         .with_text(keys::filter_bar::ORIENTATION, "vertical")
         .with_flag(keys::filter_bar::SHOW_ORIENT, false)
-        .with_flag(keys::general::FILTER_BAR_ALWAYS_VISIBLE, false);
+        .with_text(keys::general::FILTER_BAR_VISIBILITY, "hidden");
     bands.iter().enumerate().fold(cfg, |cfg, (at, (label, from, to))| {
         cfg.with_text(&format!("{presets}.{at}.label"), label)
             .with_text(&format!("{presets}.{at}.from"), from)

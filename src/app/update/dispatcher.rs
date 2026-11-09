@@ -14,21 +14,14 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
     super::warm::sync_output(app, output);
     if (app.panels.strand.is_some()
         || app.panels.arrange.is_some() && !arrange::preview::active(app))
-        && matches!(
-            &message,
-            Message::Click(..)
-                | Message::Wheel(_)
-                | Message::KeyPrev
-                | Message::KeyNext
-                | Message::KeyUp
-                | Message::KeyDown
-                | Message::KeyPage { .. }
-                | Message::KeyEdge { .. }
-                | Message::ApplyCurrent
-                | Message::KeyFlip
-                | Message::KeyFavourite
-                | Message::CycleMode { .. }
-        )
+        && (steps_cards(&message)
+            || matches!(
+                &message,
+                Message::ApplyCurrent
+                    | Message::KeyFlip
+                    | Message::KeyFavourite
+                    | Message::CycleMode { .. }
+            ))
     {
         return Task::none();
     }
@@ -42,12 +35,23 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
     let sync_settings_preview = !frame
         && !matches!(
             &message,
-            Message::Viewport(..) | Message::MouseMoved(..) | Message::KeyReleased(_)
+            Message::Viewport(..)
+                | Message::MouseMoved(..)
+                | Message::MouseLeft
+                | Message::KeyReleased(_)
         );
-    let sync_filter_bar =
-        !frame && !matches!(&message, Message::MouseMoved(..) | Message::KeyReleased(_));
+    let sync_filter_bar = !frame
+        && !matches!(
+            &message,
+            Message::MouseMoved(..) | Message::MouseLeft | Message::KeyReleased(_)
+        );
     app.input.held = false;
+    let navigates = navigates(&message);
+    let target_before = app.scene.theme_target();
     let task = update_inner(app, message);
+    if navigates && app.scene.theme_target() != target_before {
+        app.theme.armed = true;
+    }
     let task = Task::batch([task, arrange::inventory::resume(app)]);
     let drawing_card_after = app.flipped_drawing_key().map(str::to_owned);
     if drawing_card_after.is_some() && (!flip_was_open || drawing_card_after != drawing_card_before)
@@ -77,6 +81,24 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         app.call_tracked("wall.outputs", serde_json::json!({}), Pending::Outputs);
     }
     post_update::finish(app, task, detail_was_open, sync_settings_preview, sync_filter_bar)
+}
+
+fn steps_cards(message: &Message) -> bool {
+    matches!(
+        message,
+        Message::Click(..)
+            | Message::Wheel(_)
+            | Message::KeyPrev
+            | Message::KeyNext
+            | Message::KeyUp
+            | Message::KeyDown
+            | Message::KeyPage { .. }
+            | Message::KeyEdge { .. }
+    )
+}
+
+fn navigates(message: &Message) -> bool {
+    steps_cards(message) || matches!(message, Message::MouseMoved(..) | Message::KeyPressed(..))
 }
 
 pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
@@ -141,6 +163,10 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
         }
         Message::Arrange(message) => arrange::update(app, message),
         Message::MouseMoved(x, y) => picker::mouse_moved(app, x, y),
+        Message::MouseLeft => {
+            app.leave_filter_bar();
+            Task::none()
+        }
         Message::Click(x, y, button) => picker::click(app, x, y, button),
         Message::Wheel(amount) => navigation::wheel(app, amount),
         Message::KeyPrev => navigation::key_step(app, -1),
@@ -210,7 +236,7 @@ pub(crate) fn update_inner(app: &mut App, message: Message) -> Task<Message> {
         Message::BarHover(hover, menu_hover) => {
             app.chrome.bar.hover = hover;
             app.chrome.bar.menu_hover = menu_hover;
-            app.chrome.bar.cache.clear();
+            app.chrome.bar.cache.repaint();
             Task::none()
         }
         Message::FolderMenuToggle => {

@@ -279,6 +279,8 @@ fn empty_cell_wave() {
 #[test]
 fn open_fade_cycle() {
     let mut scene = test_scene(Mode::Grid);
+    scene.begin_open_fade();
+    scene.start_pending_entrance();
     assert!(!scene.motion.entrance.settled());
     assert!(scene.open_fade() < 1.0);
     let mid = scene.motion.entrance.x;
@@ -1560,7 +1562,8 @@ fn framed_hits_match_cards() {
         let snap = rendered_scene_with_setup(mode, base_sp(), base_gp(), 20, None, 0.0, |scene| {
             scene.set_picker_frame(Some([0.1, 0.2, 0.6, 0.5]));
         });
-        assert_eq!(snap.clip, Some([120.0, 140.0, 840.0, 490.0]));
+        let clipped = mode == Mode::Grid;
+        assert_eq!(snap.clip, clipped.then_some([120.0, 140.0, 840.0, 490.0]), "{mode:?}");
         assert!(!snap.hits.is_empty(), "{mode:?}");
         for hit in &snap.hits {
             assert!(hit.contains(hit.cx, hit.cy), "{mode:?}");
@@ -1571,6 +1574,126 @@ fn framed_hits_match_cards() {
             top.index
         );
     }
+}
+
+const FRAME: [f32; 4] = [0.1, 0.2, 0.6, 0.5];
+const FRAME_CENTRE: (f32, f32) = (480.0, 315.0);
+
+fn sizes(snap: &RenderSnapshot) -> Vec<(usize, f32, f32)> {
+    let mut sizes: Vec<_> = snap.hits.iter().map(|hit| (hit.index, hit.hw, hit.hh)).collect();
+    sizes.sort_by_key(|size| size.0);
+    sizes
+}
+
+#[test]
+fn frame_keeps_card_sizes() {
+    for mode in [Mode::Slices, Mode::Depth, Mode::Hex, Mode::Collection] {
+        let render = |frame| {
+            rendered_scene_with_setup(mode, base_sp(), base_gp(), 20, None, 0.0, |scene| {
+                scene.set_picker_frame(frame);
+            })
+        };
+        let free = render(None);
+        let framed = render(Some(FRAME));
+        assert_eq!(framed.clip, None, "{mode:?}");
+        assert_eq!(sizes(&framed), sizes(&free), "{mode:?}");
+    }
+}
+
+#[test]
+fn fullscreen_modes_ignore_frame() {
+    for mode in [Mode::Sandy, Mode::Hand] {
+        let render = |frame| {
+            rendered_scene_with_setup(mode, base_sp(), base_gp(), 20, None, 0.0, |scene| {
+                scene.set_picker_frame(frame);
+            })
+        };
+        let free = render(None);
+        let framed = render(Some(FRAME));
+        assert_eq!(framed.clip, None, "{mode:?}");
+        let place = |snap: &RenderSnapshot| {
+            snap.hits
+                .iter()
+                .map(|hit| (hit.index, hit.cx, hit.cy, hit.hw, hit.hh))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(place(&framed), place(&free), "{mode:?}");
+    }
+}
+
+#[test]
+fn offcentre_frame_on_screen() {
+    for frame in [[0.0, 0.0, 0.1, 0.1], [0.9, 0.85, 0.1, 0.15]] {
+        let mut scene = hand_scene();
+        scene.viewport = (1200.0, 700.0);
+        scene.set_mode(Mode::Slices);
+        scene.set_picker_frame(Some(frame));
+        let mut fixture = hand_fixture(20);
+        scene.reset_to_index(5, 20);
+        hand_frames(&mut scene, &mut fixture, &mut Instant::now(), 2);
+        let found = scene.configured_frame_bounds().unwrap();
+        assert!(found.x >= 0.0 && found.y >= 0.0, "{frame:?} {found:?}");
+        assert!(found.x + found.width <= 1200.0, "{frame:?} {found:?}");
+        assert!(found.y + found.height <= 700.0, "{frame:?} {found:?}");
+        let hero = scene.render.hits.iter().find(|hit| hit.index == 5).unwrap();
+        assert!((hero.cx - found.center_x()).abs() < 0.01, "{frame:?}");
+        assert!((hero.cy - found.center_y()).abs() < 0.01, "{frame:?}");
+    }
+}
+
+#[test]
+fn framed_strip_holds_still() {
+    for at in [0, 7, 19] {
+        let snap =
+            rendered_scene_with_setup(Mode::Slices, base_sp(), base_gp(), 20, None, 0.0, |scene| {
+                scene.set_picker_frame(Some(FRAME));
+                scene.reset_to_index(at, 20);
+            });
+        let hero = snap.hits.iter().find(|hit| hit.index == at).unwrap();
+        assert!((hero.cx - FRAME_CENTRE.0).abs() < 0.01, "{at}: {}", hero.cx);
+        assert!((hero.cy - FRAME_CENTRE.1).abs() < 0.01, "{at}: {}", hero.cy);
+        assert_eq!(hero.hh, base_sp().slice_h * 0.5);
+    }
+}
+
+#[test]
+fn framed_box_is_strip() {
+    let mut scene = hand_scene();
+    scene.viewport = (1200.0, 700.0);
+    scene.set_mode(Mode::Slices);
+    scene.set_picker_frame(Some(FRAME));
+    let mut fixture = hand_fixture(20);
+    let mut now = Instant::now();
+    let mut boxes = Vec::new();
+    for at in [0, 9] {
+        scene.reset_to_index(at, 20);
+        hand_frames(&mut scene, &mut fixture, &mut now, 2);
+        boxes.push(scene.configured_frame_bounds().unwrap());
+    }
+    let sp = scene.sp;
+    let strip = sp.layout_width(sp.expanded_w) + (sp.visible_count - 1) as f32 * sp.slice_stride();
+    for found in boxes {
+        assert!((found.width - strip).abs() < 0.01, "{found:?}");
+        assert_eq!(found.height, sp.slice_h);
+        assert!((found.center_x() - FRAME_CENTRE.0).abs() < 0.01);
+        assert!((found.center_y() - FRAME_CENTRE.1).abs() < 0.01);
+    }
+}
+
+#[test]
+fn framed_seam_drawn() {
+    let mut scene = hand_scene();
+    scene.viewport = (1200.0, 700.0);
+    scene.set_mode(Mode::Slices);
+    scene.loop_around = true;
+    scene.set_picker_frame(Some(FRAME));
+    let mut fixture = hand_fixture(40);
+    scene.reset_to_index(0, 40);
+    hand_frames(&mut scene, &mut fixture, &mut Instant::now(), 1);
+    let hits = drawn(&scene);
+    assert!(hits.contains(&39) && hits.contains(&1), "{hits:?}");
+    let tail = scene.render.hits.iter().find(|hit| hit.index == 39).unwrap();
+    assert!(tail.cx < FRAME_CENTRE.0);
 }
 
 #[test]
@@ -1752,14 +1875,11 @@ fn framed_grid_navigation() {
 
 #[test]
 fn framed_pointer_modes() {
-    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 1000.0, height: 600.0 };
     let mut hand = test_scene(Mode::Hand);
     hand.viewport = (1000.0, 600.0);
     hand.set_picker_frame(Some([0.2, 0.2, 0.6, 0.6]));
-    hand.natural_frame = Some(bounds);
-    let place = hand.picker_placement().unwrap();
-    let (x, y) = place.point(750.0, 150.0);
-    hand.hand_pointer(x, y, None);
+    hand.natural_frame = Some(hand.screen_frame());
+    hand.hand_pointer(750.0, 150.0, None);
     let (tx, ty) = crate::frontend::scene::hand::tilt_target(
         750.0,
         150.0,
@@ -1769,24 +1889,19 @@ fn framed_pointer_modes() {
     );
     assert!((hand.hand.rig_x.target - tx).abs() < 0.01);
     assert!((hand.hand.rig_y.target - ty).abs() < 0.01);
-    let (start_x, start_y) = place.point(500.0, 300.0);
-    let (end_x, end_y) = place.point(600.0, 300.0);
-    hand.hand_drag_start(start_x, start_y);
-    hand.hand_pointer(end_x, end_y, None);
-    let (drag_x, drag_y) = hand.hand.drag.unwrap();
-    assert!((drag_x - 600.0).abs() < 0.01 && (drag_y - 300.0).abs() < 0.01);
+    hand.hand_drag_start(500.0, 300.0);
+    hand.hand_pointer(600.0, 300.0, None);
+    assert_eq!(hand.hand.drag, Some((600.0, 300.0)));
 
     let mut sandy = test_scene(Mode::Sandy);
     sandy.viewport = (1000.0, 600.0);
     sandy.set_picker_frame(Some([0.2, 0.2, 0.6, 0.6]));
-    sandy.natural_frame = Some(bounds);
+    sandy.natural_frame = Some(sandy.screen_frame());
     let y = crate::frontend::scene::sandy::strip_bottom(600.0) - 10.0;
-    let (edge_x, edge_y) = sandy.picker_placement().unwrap().point(10.0, y);
-    sandy.sandy_pointer(edge_x, edge_y, None, 20);
+    sandy.sandy_pointer(10.0, y, None, 20);
     assert!(sandy.sandy.edge_pan < 0.0);
-    sandy.sandy_pointer(100.0, edge_y, None, 20);
+    sandy.sandy_pointer(500.0, y, None, 20);
     assert_eq!(sandy.sandy.edge_pan, 0.0);
-    assert!(!sandy.sandy.cam_free);
 }
 
 #[test]
@@ -4290,4 +4405,11 @@ fn rebuild_clears_camera_jump() {
     let mut now = Instant::now();
     hand_frames(&mut scene, &mut fixture, &mut now, 1);
     assert!(!scene.camera_jump);
+}
+
+#[test]
+fn new_scene_is_visible() {
+    let scene = test_scene(Mode::Grid);
+    assert!(scene.motion.entrance.settled());
+    assert_eq!(scene.open_fade(), 1.0);
 }

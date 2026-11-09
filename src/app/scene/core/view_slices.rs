@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use iced::Rectangle;
+
 use crate::frontend::scene::layout;
 use crate::frontend::scene::{
     InstanceRaw, card_flip_phases, card_flip_shader_payload, roll_in_cut,
@@ -18,7 +20,7 @@ impl SceneCore {
         ctx: &mut RebuildCtx<'_>,
         sinks: &mut RebuildSinks<'_>,
         entrance: f32,
-    ) {
+    ) -> Option<Rectangle> {
         let (vw, vh) = self.viewport;
         let sp = self.sp;
         let count = ctx.filtered.len();
@@ -32,7 +34,7 @@ impl SceneCore {
         let card_h = sp.slice_h + TOP_BAR + 60.0;
 
         if count == 0 {
-            return;
+            return None;
         }
         self.current = self.current.min(count - 1);
 
@@ -108,6 +110,12 @@ impl SceneCore {
             );
         }
         self.push_flip_old(sinks.instances, sinks.wanted);
+        Some(Rectangle {
+            x: cx - half_view,
+            y: item_cy - sp.slice_h * 0.5,
+            width: strip_w,
+            height: sp.slice_h,
+        })
     }
 
     pub(super) fn position_slice_camera(&mut self, cur_center: f32, reach: f32) {

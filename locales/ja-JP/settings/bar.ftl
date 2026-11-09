@@ -3,16 +3,17 @@ settings-bar-filter-desc = ピッカー上部の種類・並び替え・フィ�
 settings-bar-filter-say = { $val }{ $buttons }{ $end }と{ $val }{ $sorts }{ $end }を{ $orientation ->
         [vertical] 縦
        *[horizontal] 横
-    }に並べて表示します。{ $pinned ->
-        [yes] 常に固定表示されます。
-       *[no] 必要なときだけ表示されます。
+    }に並べて表示します。{ $visibility ->
+        [hover] ポインターが乗っている間だけ表示されます。
+        [hidden] キーを押すまで隠れたままです。
+       *[always] 常に固定表示されます。
     }表示スタイル：{ $style }。
 settings-bar-button-count = { $all } 個中 { $shown } 個のボタン
 settings-bar-sort-count = { $all } 件中 { $shown } 件の並び替え
 settings-bar-offers = 表示するもの
 settings-bar-behaves = 表示のしかた
 settings-bar-buttons = バーのボタン
-settings-bar-pinned-hint = 自動で隠さず固定表示
+settings-bar-search-pinned-hint = ピッカーと一緒に開く
 settings-bar-placed = バーの位置は「レイアウト」で設定します。
 settings-bar-sizes = サイズ帯
 settings-bar-sizes-desc = 「サイズ」ボタンで絞り込む解像度の範囲。

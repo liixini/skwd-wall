@@ -112,6 +112,7 @@ impl App {
             self.library_session.filters.folder = Filters::default().folder;
         }
         self.library_session.folder_options = options;
+        self.chrome.bar.cache.clear();
     }
 }
 

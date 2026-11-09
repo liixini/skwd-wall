@@ -3,9 +3,10 @@ settings-bar-filter-desc = Полоса кнопок типа, сортиров�
 settings-bar-filter-say = Показывает { $val }{ $buttons }{ $end } и { $val }{ $sorts }{ $end }, { $orientation ->
         [vertical] по вертикали
        *[horizontal] по горизонтали
-    }. { $pinned ->
-        [yes] Панель всегда закреплена.
-       *[no] Панель скрывается, пока не понадобится.
+    }. { $visibility ->
+        [hover] Панель видна, пока на ней указатель.
+        [hidden] Панель скрыта, пока не нажато её сочетание.
+       *[always] Панель всегда закреплена.
     } Визуальный стиль: { $style }.
 settings-bar-button-count = { $shown } из { $all } { $all ->
         [one] кнопки
@@ -18,7 +19,7 @@ settings-bar-sort-count = { $shown } из { $all } { $all ->
 settings-bar-offers = Что на ней
 settings-bar-behaves = Как она ведёт себя
 settings-bar-buttons = Кнопки на панели
-settings-bar-pinned-hint = Закреплена вместо автоскрытия
+settings-bar-search-pinned-hint = Открывается вместе с выбором
 settings-bar-placed = Положение панели настраивается в разделе «Раскладка».
 settings-bar-sizes = Диапазоны размера
 settings-bar-sizes-desc = Диапазоны разрешения для кнопки «Размер».

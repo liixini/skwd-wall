@@ -35,6 +35,7 @@ pub(crate) fn adopt_first_window(
     if app.config.set_screen_width(width) {
         app.snap_layout();
     }
+    app.chrome.snap_filter_bar();
     app.theme.suspended = false;
     note_show_requested();
     app.scene.begin_open_fade();
@@ -55,6 +56,7 @@ pub(crate) fn sync_output(app: &mut App, output: Option<String>) {
     app.config.set_screen_width(width);
     app.apply_layout();
     app.snap_layout();
+    app.chrome.snap_filter_bar();
 }
 
 #[cfg(target_os = "linux")]
@@ -71,7 +73,7 @@ pub(crate) fn exit_picker(app: &mut App) -> ! {
 
 pub(crate) fn toggle(app: &mut App) -> iced::Task<Message> {
     if app.runtime_state.stashed {
-        return unstash(app);
+        return reappear(app);
     }
     if app.runtime_state.overlay.is_some() {
         exit_picker(app);
@@ -80,7 +82,7 @@ pub(crate) fn toggle(app: &mut App) -> iced::Task<Message> {
 }
 
 pub(crate) fn toggle_stash(app: &mut App) -> iced::Task<Message> {
-    if app.runtime_state.stashed { unstash(app) } else { stash(app) }
+    if app.runtime_state.stashed { reappear(app) } else { stash(app) }
 }
 
 pub(crate) fn stash(app: &mut App) -> iced::Task<Message> {
@@ -94,6 +96,18 @@ pub(crate) fn stash(app: &mut App) -> iced::Task<Message> {
     app.scene.release_while_hidden();
     log::info!("stashed the overlay");
     crate::shell::stash_surface(id, true)
+}
+
+pub(crate) fn reappear(app: &mut App) -> iced::Task<Message> {
+    let was_stashed = app.runtime_state.stashed;
+    let shown = unstash(app);
+    if was_stashed {
+        app.theme.armed = false;
+        app.apply_bar_default();
+        app.chrome.snap_filter_bar();
+        app.apply_search_default();
+    }
+    shown
 }
 
 pub(crate) fn unstash(app: &mut App) -> iced::Task<Message> {

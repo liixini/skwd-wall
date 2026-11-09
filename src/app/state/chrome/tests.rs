@@ -3,7 +3,8 @@ use super::*;
 #[test]
 fn fade_then_orientation_switch() {
     let motion = MotionProfile::new(100.0, 200.0, 300.0);
-    let mut chrome = ChromeState::new(true, false, motion);
+    let mut chrome =
+        ChromeState::new(skwd_config::FilterBarVisibility::Always, false, false, motion);
     chrome.filter_bar_visible = false;
     chrome.sync_filter_bar(false);
     assert_eq!(chrome.filter_bar_reveal.target, 0.0);

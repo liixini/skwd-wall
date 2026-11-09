@@ -488,7 +488,7 @@ impl App {
             self.flush_pending_filter();
         }
         if !self.scene.open_fade_settled() {
-            self.chrome.bar.cache.clear();
+            self.chrome.bar.cache.repaint();
             self.chrome.cache.clear();
         }
         {
@@ -540,7 +540,7 @@ impl App {
     fn tick_overlays(&mut self, dt: f32) {
         crate::app::update::arrange::tick(self, dt);
         if self.chrome.tick_filter_bar(dt) {
-            self.chrome.bar.cache.clear();
+            self.chrome.bar.cache.repaint();
         }
         if self.panels.settings.open {
             self.panels.settings.entrance.tick(dt);
@@ -556,7 +556,7 @@ impl App {
         }
         if !self.chrome.bar.menu_scroll.settled() {
             self.chrome.bar.menu_scroll.tick(dt);
-            self.chrome.bar.cache.clear();
+            self.chrome.bar.cache.repaint();
         }
         for pane in self.chrome.pane_scrolls.values_mut() {
             if !pane.spring.settled() {

@@ -70,7 +70,7 @@ impl SceneCore {
     }
 
     pub fn hand_pointer(&mut self, x: f32, y: f32, hit: Option<usize>) {
-        let (x, y) = self.frame_pointer(x, y);
+        let (x, y) = self.unplace_pointer(x, y);
         let (vw, vh) = self.viewport;
         let hp = self.xp.hand;
         if let Some((last_x, last_y)) = self.hand.drag {
@@ -106,7 +106,7 @@ impl SceneCore {
     }
 
     pub fn hand_drag_start(&mut self, x: f32, y: f32) {
-        self.hand.drag = Some(self.frame_pointer(x, y));
+        self.hand.drag = Some(self.unplace_pointer(x, y));
     }
 
     pub fn hand_drag_end(&mut self) {

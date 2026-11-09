@@ -1,3 +1,5 @@
+use iced::Rectangle;
+
 use super::layout_helpers::vis_range;
 use super::model::{RebuildCtx, RebuildSinks, SceneCore};
 
@@ -7,10 +9,10 @@ impl SceneCore {
         ctx: &mut RebuildCtx<'_>,
         sinks: &mut RebuildSinks<'_>,
         entrance: f32,
-    ) {
+    ) -> Option<Rectangle> {
         let count = ctx.filtered.len();
         if count == 0 {
-            return;
+            return None;
         }
         self.current = self.current.min(count - 1);
         self.camera.set_zeta(1.0);
@@ -81,6 +83,8 @@ impl SceneCore {
             );
         }
         self.push_flip_old(sinks.instances, sinks.wanted);
+        let half_span = natural_span * fit;
+        Some(Rectangle { x: cx - half_span, y: cy - height * 0.5, width: 2.0 * half_span, height })
     }
 }
 

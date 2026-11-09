@@ -58,7 +58,7 @@ impl Arrange {
             if let Some(plate) = plate {
                 return Some(Hit::Tool(plate.tool));
             }
-            if target == Target::Picker {
+            if target == Target::Picker && self.board.resizable {
                 for index in 0..CORNERS.len() {
                     let reach = Rect::centred(corner(frame, index), [2.0 * FRAME.gem_hit; 2]);
                     if reach.contains(at) {

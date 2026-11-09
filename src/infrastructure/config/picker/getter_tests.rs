@@ -3,6 +3,7 @@
 use super::*;
 use crate::contracts::picker::{SANDY_SWAP_STYLES, sandy_style_index};
 use serde_json::{Value, json};
+use skwd_config::FilterBarVisibility;
 
 fn cfg(data: Value) -> Config {
     Config {
@@ -484,13 +485,15 @@ fn filter_bar_orientation_bounds() {
 fn general_getters() {
     let conf = cfg(json!({
         "general": {"uiScale": 1.5, "maxFps": 165.0,
-                    "closeOnSelection": true, "filterBarAlwaysVisible": false},
+                    "closeOnSelection": true, "filterBarVisibility": "hidden",
+                    "searchAlwaysVisible": true},
         "wallpaperVolume": 70, "wallpaperMute": false
     }));
     assert_eq!(conf.ui_scale(), 1.5);
     assert_eq!(conf.max_fps(), 165.0);
     assert!(conf.close_on_selection());
-    assert!(!conf.filter_bar_always_visible());
+    assert_eq!(conf.filter_bar_visibility(), FilterBarVisibility::Hidden);
+    assert!(conf.search_always_visible());
     assert_eq!(conf.wallpaper_volume(), 70);
     assert!(!conf.wallpaper_mute());
 }
@@ -501,7 +504,8 @@ fn general_defaults_clamps() {
     assert_eq!(def.ui_scale(), 1.0);
     assert_eq!(def.max_fps(), 120.0);
     assert!(!def.close_on_selection());
-    assert!(def.filter_bar_always_visible());
+    assert_eq!(def.filter_bar_visibility(), FilterBarVisibility::Always);
+    assert!(!def.search_always_visible());
     assert_eq!(def.wallpaper_volume(), 100);
     assert!(def.wallpaper_mute());
     assert_eq!(cfg(json!({"general": {"uiScale": 9.0}})).ui_scale(), 2.0);
@@ -828,4 +832,12 @@ fn shared_config_parity() {
     assert_eq!(gui.wallpaper_mute(), skwd_config::wallpaper_mute(root));
     assert_eq!(gui.video_preview_enabled(), skwd_config::video_preview_enabled(root));
     assert_eq!(gui.video_preview_delay_ms(), skwd_config::video_preview_delay_ms(root));
+}
+
+#[test]
+fn bar_visibility_migrates() {
+    let old = |on: bool| cfg(json!({"general": {"filterBarAlwaysVisible": on}}));
+    assert_eq!(old(true).filter_bar_visibility(), FilterBarVisibility::Always);
+    assert_eq!(old(false).filter_bar_visibility(), FilterBarVisibility::Hover);
+    assert_eq!(old(false).str_path(skwd_config::keys::general::FILTER_BAR_VISIBILITY), "hover");
 }

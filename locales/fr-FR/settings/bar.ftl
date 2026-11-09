@@ -3,9 +3,10 @@ settings-bar-filter-desc = La bande de boutons de type, de tri et de filtre au-d
 settings-bar-filter-say = Affiche { $val }{ $buttons }{ $end } et { $val }{ $sorts }{ $end }, disposés { $orientation ->
         [vertical] verticalement
        *[horizontal] horizontalement
-    }. { $pinned ->
-        [yes] Elle reste épinglée.
-       *[no] Elle se masque jusqu’à ce que vous en ayez besoin.
+    }. { $visibility ->
+        [hover] Elle s’affiche tant que le pointeur la survole.
+        [hidden] Elle reste masquée jusqu’à ce que vous appuyiez sur son raccourci.
+       *[always] Elle reste épinglée.
     } Style visuel : { $style }.
 settings-bar-button-count = { $shown ->
         [one] { $shown } bouton
@@ -18,7 +19,7 @@ settings-bar-sort-count = { $shown ->
 settings-bar-offers = Ce qu’elle propose
 settings-bar-behaves = Son comportement
 settings-bar-buttons = Boutons de la barre
-settings-bar-pinned-hint = Épinglée au lieu de se masquer seule
+settings-bar-search-pinned-hint = S’ouvre avec le sélecteur
 settings-bar-placed = L’emplacement de la barre se règle dans Disposition.
 settings-bar-sizes = Plages de taille
 settings-bar-sizes-desc = Les plages de résolution que filtre le bouton Taille.

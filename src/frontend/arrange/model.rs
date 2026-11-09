@@ -165,6 +165,7 @@ pub(crate) struct Board {
     pub(crate) shelves: Vec<Shelf>,
     pub(crate) style: Style,
     pub(crate) grid: Option<Grid>,
+    pub(crate) resizable: bool,
     pub(crate) steps: usize,
     pub(crate) displays: bool,
     pub(crate) copy: Option<Copy>,

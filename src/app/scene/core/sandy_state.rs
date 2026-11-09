@@ -29,19 +29,9 @@ impl SceneCore {
 
     pub fn sandy_pointer(&mut self, x: f32, y: f32, hit: Option<usize>, count: usize) {
         let (vw, vh) = self.viewport;
-        let frame = self.picker_frame.and_then(|_| self.picker_frame_bounds());
-        if frame.is_some_and(|bounds| !bounds.contains(iced::Point::new(x, y))) {
-            if self.sandy.edge_pan != 0.0 || self.sandy.cam_free {
-                self.sandy.edge_pan = 0.0;
-                self.sandy.cam_free = false;
-                self.motion.needs_frame = true;
-            }
-            return;
-        }
         let (source_x, source_y) = self.unplace_pointer(x, y);
-        let edge_x = self.frame_pointer(x, y).0;
         let local_y = source_y - self.xp.sandy.offset_y * vh * 0.5;
-        let pan = edge_pan(edge_x, local_y, vw, vh, self.xp.sandy.strip_h());
+        let pan = edge_pan(source_x, local_y, vw, vh, self.xp.sandy.strip_h());
         if pan != self.sandy.edge_pan {
             self.sandy.edge_pan = pan;
             self.motion.needs_frame = true;

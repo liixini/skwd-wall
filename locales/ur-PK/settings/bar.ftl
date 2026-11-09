@@ -3,16 +3,17 @@ settings-bar-filter-desc = پکر کے اوپر قسم، ترتیب اور فل�
 settings-bar-filter-say = { $val }{ $buttons }{ $end } اور { $val }{ $sorts }{ $end } دکھاتا ہے، { $orientation ->
         [vertical] عمودی
        *[horizontal] افقی
-    } ترتیب میں۔ { $pinned ->
-        [yes] یہ ہمیشہ پن رہتا ہے۔
-       *[no] ضرورت پڑنے تک یہ چھپا رہتا ہے۔
+    } ترتیب میں۔ { $visibility ->
+        [hover] پوائنٹر اس پر رہنے تک یہ دکھائی دیتا ہے۔
+        [hidden] اس کی کی بائنڈ دبانے تک یہ چھپا رہتا ہے۔
+       *[always] یہ ہمیشہ پن رہتا ہے۔
     } بصری انداز: { $style }۔
 settings-bar-button-count = { $all } میں سے { $shown } بٹن
 settings-bar-sort-count = { $all } میں سے { $shown } ترتیبیں
 settings-bar-offers = اس میں کیا ہے
 settings-bar-behaves = یہ کیسے برتاؤ کرتا ہے
 settings-bar-buttons = بار کے بٹن
-settings-bar-pinned-hint = خود بخود چھپنے کے بجائے پن
+settings-bar-search-pinned-hint = پکر کے ساتھ کھلتا ہے
 settings-bar-placed = بار کی جگہ لے آؤٹ میں طے ہوتی ہے۔
 settings-bar-sizes = سائز کی حدیں
 settings-bar-sizes-desc = ریزولوشن کی حدیں جن سے سائز بٹن فلٹر کرتا ہے۔

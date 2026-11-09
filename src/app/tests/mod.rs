@@ -68,21 +68,32 @@ use std::time::{Duration, Instant};
 static TEST_DIR_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 pub(crate) fn test_app() -> App {
+    app_from(json!({}))
+}
+
+pub(crate) fn app_from(extra: Value) -> App {
     let dir = std::env::temp_dir().join(format!(
         "skwd-app-test-{}-{}",
         std::process::id(),
         TEST_DIR_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     ));
     std::fs::create_dir_all(&dir).unwrap();
-    let mut config = Config::from_data(json!({
+    let mut data = json!({
         "paths": {
             "cache": dir.join("cache").to_string_lossy(),
             "wallpaper": "/wp",
             "videoWallpaper": "/vids"
         }
-    }));
+    });
+    if let (Some(base), Value::Object(extra)) = (data.as_object_mut(), extra) {
+        base.extend(extra);
+    }
+    let mut config = Config::from_data(data);
     config.config_path = dir.join("config.json");
-    App::with_config_using(config, |_| crate::infrastructure::ipc::DaemonClient::recording())
+    let mut app =
+        App::with_config_using(config, |_| crate::infrastructure::ipc::DaemonClient::recording());
+    app.scene.begin_open_fade();
+    app
 }
 
 fn open_section(app: &mut App, title: &str) -> crate::frontend::settings::Section {

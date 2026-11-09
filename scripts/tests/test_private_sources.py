@@ -68,9 +68,9 @@ class PrivateSourcePolicyTests(unittest.TestCase):
             self.assertNotIn(f"repository: liixini/skwd-{name.replace('_', '-')}", workflow)
         self.assertNotIn("skwd-iced-graphics", workflow)
         for repository, revision in (
-            ("skwd-deck", "73d4735f2eda3ca0b5892ca749471162f16f2920"),
-            ("skwd-paper", "4f485c2c6307f2dfe30a095e85f4ff9cbd6bf057"),
-            ("skwd-lens", "0cb154b063ce6ff022864edeedd3bd06b3468876"),
+            ("skwd-deck", "d27e9c7908817d81e62bf263d0be6e64e624f812"),
+            ("skwd-paper", "0fc716e3b535bf8c8406b22c37ac129940072bf6"),
+            ("skwd-lens", "fe9933e1200eddc9ca79c13a5ec55b4a48eed195"),
             ("skwd-verify", "caa56c33c26917d9e9713ce8cee35ec2b0697e97"),
         ):
             self.assertIn(f"repository: liixini/{repository}", workflow)

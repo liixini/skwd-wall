@@ -1,10 +1,12 @@
 use crate::contracts::settings::corners::{self, CornerKeys};
 use crate::contracts::settings::{
-    EFFECT_NAMES, GraphicsTier, SHOW_SORT_PREFIX, SHOW_TYPE_PREFIX, keys,
+    EFFECT_NAMES, FilterBarVisibility, GraphicsTier, SHOW_SORT_PREFIX, SHOW_TYPE_PREFIX, keys,
 };
+use crate::domain::input::{InputAction, InputMap};
 use crate::i18n::{settings_sand_meter_detail, tr, tr_args};
 
 use super::super::corners as corner;
+use super::super::folio::default_text;
 use super::super::tables::motion_speed_options;
 use super::builder::{folder_dropdown_options, type_chip_label};
 use super::{ActionId, Builder, Control};
@@ -12,6 +14,8 @@ use super::{ActionId, Builder, Control};
 const PIXELS: &str = "px";
 const PERCENT: &str = "%";
 const TIMES: &str = "x";
+const HIDDEN_DESC: &str = "settings-filter-visibility-hidden-desc";
+const UNBOUND_DESC: &str = "settings-filter-visibility-hidden-unbound-desc";
 
 fn corner_rows(builder: &mut Builder<'_>, keys: &CornerKeys) {
     let words = corner::words(corner::style(builder.cfg, keys));
@@ -21,6 +25,14 @@ fn corner_rows(builder: &mut Builder<'_>, keys: &CornerKeys) {
     for (path, label) in keys.values.iter().zip(words.corners) {
         builder.num(tr(label), "", path, PIXELS);
     }
+}
+
+fn hidden_desc(map: &InputMap) -> String {
+    let triggers = map.triggers(InputAction::FilterBar);
+    if triggers.is_empty() {
+        return tr(UNBOUND_DESC).to_string();
+    }
+    tr_args!(HIDDEN_DESC, binding => default_text(triggers))
 }
 
 pub(super) fn tab_selector(builder: &mut Builder<'_>) {
@@ -1219,9 +1231,25 @@ pub(super) fn tab_filter(builder: &mut Builder<'_>, folders: &[String]) {
         crate::i18n::text("settings-filter-visibility-card"),
         tr("settings-filter-visibility-card-desc"),
     );
+    let visibility = builder.cfg.text(keys::general::FILTER_BAR_VISIBILITY);
+    let desc = match FilterBarVisibility::from_key(&visibility) {
+        Some(FilterBarVisibility::Hover) => tr("settings-filter-visibility-hover-desc").to_string(),
+        Some(FilterBarVisibility::Hidden) => hidden_desc(&builder.cfg.bindings()),
+        _ => tr("settings-filter-visibility-always-desc").to_string(),
+    };
+    builder.dropdown_setting(
+        tr("settings-filter-visibility-label"),
+        &desc,
+        crate::contracts::settings::schema::setting::general::FILTER_BAR_VISIBILITY,
+        &[
+            (FilterBarVisibility::Always.key(), tr("settings-filter-visibility-always")),
+            (FilterBarVisibility::Hover.key(), tr("settings-filter-visibility-hover")),
+            (FilterBarVisibility::Hidden.key(), tr("settings-filter-visibility-hidden")),
+        ],
+    );
     builder.toggle_setting(
-        tr("settings-filter-always-visible-label"),
-        tr("settings-filter-always-visible-desc"),
-        crate::contracts::settings::schema::setting::general::FILTER_BAR_ALWAYS_VISIBLE,
+        tr("settings-search-always-visible-label"),
+        tr("settings-search-always-visible-desc"),
+        crate::contracts::settings::schema::setting::general::SEARCH_ALWAYS_VISIBLE,
     );
 }

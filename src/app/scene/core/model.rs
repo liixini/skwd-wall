@@ -84,8 +84,7 @@ pub(super) struct SceneMotionState {
 impl SceneMotionState {
     fn new() -> Self {
         let profile = MotionProfile::default();
-        let mut entrance = profile.spring(0.0, MotionTier::Fast);
-        entrance.retarget(1.0);
+        let entrance = profile.spring(1.0, MotionTier::Fast);
         let mut visibility = profile.spring(1.0, MotionTier::Standard);
         visibility.retarget(1.0);
         Self {

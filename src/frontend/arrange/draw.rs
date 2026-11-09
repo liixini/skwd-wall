@@ -159,7 +159,7 @@ fn frame(pen: &mut Pen<'_>, arrange: &Arrange, tones: &Tones) {
         Some(Press::Gem { corner, .. }) => Some(*corner),
         _ => None,
     };
-    if target == Target::Picker {
+    if target == Target::Picker && arrange.board.resizable {
         let hovered = match arrange.hover {
             Some((Hit::Gem(corner), _)) => Some(corner),
             _ => None,

@@ -94,7 +94,7 @@ pub(super) fn toggle_theme_panel(app: &mut App) -> Task<Message> {
         app.chrome.bar.menu = None;
     } else if !app.menu_capturing() {
         app.theme.bar_open = true;
-        app.chrome.filter_bar_visible = true;
+        app.chrome.set_filter_bar(true);
         app.set_base_swatch();
         app.call_tracked("theme.backends", json!({}), Pending::ThemeBackends);
         app.call_tracked("theme.apps", json!({}), Pending::AppThemes);
