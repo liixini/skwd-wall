@@ -28,6 +28,8 @@
 > [!IMPORTANT]
 > Skwd-wall v2 beta is here! It is fully functional and extremely performant - but in beta due to me still adding large features. Keep tuned!
 > Join us on [Discord](https://discord.gg/cgxy8EEVmz) if you want to be part of the steering the direction of the beta, report bugs or just chat :)
+>
+> Known issues: The drawing transition has issues with some videos, on NixOS & symlinks.
 
 ### A video is a thousand pictures, so many videos are priceless - Ancient proverb (probably)
 
